@@ -1,0 +1,1513 @@
+llm:
+  model: "granite4.1:8b"
+  temperature: 0.05
+  max_tokens: 10000
+
+
+# ============================================================
+# PFADE
+# ============================================================
+
+paths:
+  input_csv: "interview_export.csv"
+  output_md: "clusterer_output.md"
+
+
+# ============================================================
+# OUTPUT
+# ============================================================
+
+output:
+  sample_quotes: 3
+
+
+# ============================================================
+# SPALTEN
+# ============================================================
+
+columns:
+  code: "Code"
+  segment: "Segment"
+  person: "Dokumentname"
+  optional: []
+
+
+# ============================================================
+# KONTEXT
+# ============================================================
+
+context:
+
+  project_description: |
+    Die Daten stammen aus leitfadengestützten qualitativen Interviews.
+    Die Interviewdaten wurden vorab thematisch bzw. kategorienbasiert kodiert.
+    Die Aussagen repräsentieren subjektive Perspektiven der befragten Personen.
+    Das LLM darf KEINE Inhalte aus theoretischen Modellen oder externem Wissen ergänzen.
+
+  participants: |
+    Befragte Personen eines qualitativen Forschungsprojekts.
+    Angaben zur konkreten Population, Institution, Region und zum Untersuchungskontext
+    wurden für diese öffentliche Beispielkonfiguration bewusst verallgemeinert.
+    Keine Annahmen über Motivation, Hintergründe oder persönliche Eigenschaften.
+
+  methodology: |
+    Leitfadengestützte, halbstrukturierte Interviews.
+    Qualitative, kategorienbasierte Inhaltsanalyse.
+    Clusterbildung ausschließlich inhaltsbasiert auf Grundlage der gelieferten Daten.
+
+
+# ============================================================
+# ANALYSE-EINSTELLUNGEN
+# ============================================================
+
+analysis_settings:
+  relation_analysis:
+    # Schutz vor quadratischem Wachstum bei sehr großen Codesystemen.
+    max_pairs: 80
+    max_segments_per_path: 6
+
+
+# ============================================================
+# PROMPTS
+# ============================================================
+
+prompts:
+
+
+  # ============================================================
+  # REGELN FÜR SEGMENTE UND CLUSTER
+  # ============================================================
+
+  strict_rules_segments: |
+    WICHTIG:
+
+    - Segmente werden als JSON-Objekte übergeben.
+    - Jedes Segmentobjekt enthält:
+        * id   → vollständige SegmentID
+        * text → Segmentinhalt
+
+    - DU MUSST diese Struktur verwenden.
+    - DU MUSST die SegmentIDs aus den Objekten übernehmen.
+    - DU MUSST die Segmenttexte aus den Objekten übernehmen.
+
+    --------------------------------------------------
+    ZITATE
+    --------------------------------------------------
+
+    - Zitate müssen wortwörtlich übernommen werden.
+    - Segmenttexte dürfen NICHT verändert, gekürzt oder paraphrasiert werden.
+    - Keine sprachlichen Korrekturen innerhalb von Zitaten.
+    - Keine Halluzinationen.
+
+    --------------------------------------------------
+    SEGMENTIDS
+    --------------------------------------------------
+
+    - SegmentIDs sind FIXE Werte.
+    - SegmentIDs müssen EXAKT übernommen werden.
+    - SegmentIDs bestehen IMMER aus vollständigem Dokumentnamen + "#SEG" + fünfstelliger Nummer.
+    - SegmentIDs dürfen NIEMALS gekürzt oder rekonstruiert werden.
+    - SegmentIDs dürfen NICHT aus Segmenttexten extrahiert werden.
+    - SegmentIDs dürfen NICHT aus anderen Informationen erzeugt werden.
+
+    --------------------------------------------------
+    CLUSTERBILDUNG
+    --------------------------------------------------
+
+    - Segmente dürfen für die Clusterbildung gruppiert, sortiert und ausgewählt werden.
+    - Du darfst Segmente thematisch zu Clustern zusammenfassen.
+    - Du darfst Segmentlisten pro Cluster erzeugen.
+    - Segmenttexte und SegmentIDs dürfen dabei NICHT verändert werden.
+
+    --------------------------------------------------
+    CLUSTER-NAMEN
+    --------------------------------------------------
+
+    - Cluster-Namen maximal 4 Wörter.
+    - Definitionen maximal 4 Sätze.
+    - Keine Anführungszeichen in Definitionen.
+
+    --------------------------------------------------
+    CLUSTERABGRENZUNG
+    --------------------------------------------------
+
+    - Cluster sollen möglichst eindeutig sein.
+    - Ähnliche Cluster sind erlaubt, wenn Segmente thematisch eng beieinander liegen.
+    - Definitionen dürfen ähnlich sein, aber NICHT identisch.
+    - Namen dürfen ähnlich sein, aber NICHT identisch.
+
+    --------------------------------------------------
+    INHALTLICHE GRENZEN
+    --------------------------------------------------
+
+    - Keine theoretischen Ergänzungen.
+    - Keine externen Informationen.
+    - Keine Annahmen über Motivation, Hintergründe oder Ursachen.
+    - Keine Halluzinationen.
+    - Nur Inhalte verwenden, die aus den gelieferten Segmenten hervorgehen.
+
+
+  # ============================================================
+  # GLOBALE REGELN
+  # ============================================================
+
+  strict_rules_global: |
+    WICHTIG:
+
+    - Keine Halluzinationen.
+    - Keine theoretischen Ergänzungen.
+    - Keine externen Informationen.
+    - Keine Inhalte ergänzen, die nicht aus den gelieferten Daten stammen.
+    - Keine Annahmen über Personen, Motivation, Hintergründe oder Ursachen.
+    - Aussagen müssen aus den gelieferten Zusammenfassungen, Definitionen,
+      Clusterinhalten oder SWOT-Ergebnissen ableitbar sein.
+    - Keine Anführungszeichen in Definitionen.
+    - JSON nur, wenn ausdrücklich gefordert.
+
+    Bei Interpretationen gilt:
+
+    - Interpretation ist erlaubt, wenn sie unmittelbar aus den gelieferten
+      Inhalten ableitbar ist.
+    - Neue Ursachen, Wirkungen oder Zusammenhänge dürfen nicht erfunden werden.
+    - Allgemeines Wissen darf nicht als empirischer Befund ausgegeben werden.
+
+
+  # ============================================================
+  # SWOT-REGELN
+  # ============================================================
+
+  swot_strict_rules: |
+    WICHTIG:
+
+    Du führst eine streng datenbasierte qualitative SWOT-Analyse durch.
+
+    --------------------------------------------------
+    DATENGRUNDLAGE
+    --------------------------------------------------
+
+    Nutze ausschließlich:
+
+    - die gelieferten Cluster,
+    - die Clusterdefinitionen,
+    - die gelieferten Clusterzusammenfassungen,
+    - die gelieferten Originalsegmente.
+
+    Keine externen Informationen.
+    Keine theoretischen Modelle.
+    Kein allgemeines Wissen als empirischer Befund.
+    Keine Annahmen über Personen, Motive, Ursachen oder Hintergründe.
+
+    Clusterzusammenfassungen dienen als Verdichtung derselben empirischen Daten.
+    Wenn eine Zusammenfassung einem Originalsegment widerspricht, hat das
+    Originalsegment Vorrang.
+
+    --------------------------------------------------
+    ANALYTISCHE EBENE
+    --------------------------------------------------
+
+    Ein SWOT-Befund ist eine kurze analytische Verdichtung und darf nicht nur
+    ein Originalsegment wiederholen.
+
+    Interpretation ist erlaubt, wenn sie unmittelbar aus dem gelieferten
+    Material ableitbar ist.
+
+    Neue Ursachen, Wirkungen oder Zusammenhänge dürfen nicht erfunden werden.
+
+    --------------------------------------------------
+    SWOT-DIMENSIONEN
+    --------------------------------------------------
+
+    STÄRKEN:
+    Bereits sichtbare positive, förderliche, hilfreiche oder funktionierende
+    Aspekte innerhalb der gelieferten Daten.
+
+    SCHWÄCHEN:
+    Bereits sichtbare negative, hinderliche, belastende, problematische oder
+    unzureichende Aspekte innerhalb der gelieferten Daten.
+
+    CHANCEN:
+    Positive Entwicklungsmöglichkeiten oder Potenziale, die sich unmittelbar
+    aus den gelieferten Aussagen ableiten lassen.
+
+    RISIKEN:
+    Mögliche ungünstige Entwicklungen, Spannungen oder Gefährdungen, die sich
+    unmittelbar aus den gelieferten Aussagen ableiten lassen.
+
+    Chancen und Risiken dürfen damit vorsichtige analytische Ableitungen sein,
+    müssen aber im Material selbst angelegt sein.
+
+    --------------------------------------------------
+    EMPIRISCHE BELEGE
+    --------------------------------------------------
+
+    Jeder SWOT-Befund muss durch mindestens eine vorhandene SegmentID gestützt
+    werden.
+
+    SegmentIDs sind fixe Werte und müssen exakt aus den gelieferten Segmenten
+    übernommen werden.
+
+    SegmentIDs dürfen nicht verändert, gekürzt, rekonstruiert oder erfunden
+    werden.
+
+    Das LLM gibt keine Originalzitate zurück. Es nennt ausschließlich die
+    passenden SegmentIDs. Python ergänzt die Originaltexte anschließend direkt
+    aus dem validierten Segment-Mapping.
+
+    --------------------------------------------------
+    ANZAHL DER BEFUNDE
+    --------------------------------------------------
+
+    Prüfe jede SWOT-Dimension systematisch.
+
+    Erzeuge nur empirisch belegte Befunde.
+    Fülle Dimensionen nicht künstlich auf.
+    Leere Listen sind ausdrücklich erlaubt.
+
+    --------------------------------------------------
+    AUSGABE
+    --------------------------------------------------
+
+    Gib ausschließlich gültiges JSON zurück.
+
+    Verwende ausschließlich diese vier Schlüssel:
+
+    - "Stärken"
+    - "Schwächen"
+    - "Chancen"
+    - "Risiken"
+
+    Jeder Befund muss exakt diese drei Schlüssel besitzen:
+
+    - "thema"
+    - "analyse"
+    - "segment_ids"
+
+    Keine zusätzlichen Schlüssel.
+    Keine Markdown-Codeblöcke.
+    Keine Erläuterungen außerhalb des JSON.
+
+
+  # ============================================================
+  # JSON-SCHEMA CLUSTERER
+  # ============================================================
+
+  json_schema: |
+    [
+      {
+        "cluster_name": "string (max. 4 Wörter)",
+        "definition": "string (max. 4 Sätze)",
+        "segments": ["SegmentID1", "SegmentID2"]
+      }
+    ]
+
+
+  # ============================================================
+  # CLUSTER-ANALYSE
+  # ============================================================
+
+  cluster_analysis:
+    system: |
+      {context}
+
+      Du bist ein Analysemodell für qualitative Inhaltsanalyse.
+
+      {strict_rules_segments}
+
+    user: |
+      Analysiere die Segmente der Subkategorie "{subcat}".
+
+      Facetten:
+      {facets}
+
+      Verwende folgende Struktur:
+
+      {json_schema}
+
+      Segmente (JSON-Objekte mit id und text):
+
+      {segments}
+
+      Bilde Cluster ausschließlich auf Grundlage der inhaltlichen
+      Gemeinsamkeiten der gelieferten Segmente.
+
+      WICHTIG:
+
+      Im Feld "segments" des Outputs dürfen ausschließlich die
+      vorhandenen SegmentIDs als Strings stehen.
+
+      Beispiel:
+
+      "segments": [
+        "Dokument#SEG00001",
+        "Dokument#SEG00002"
+      ]
+
+      Gib NICHT die vollständigen Segmentobjekte im Feld "segments" zurück.
+
+      Gib ausschließlich ein JSON-Array zurück.
+
+
+  # ============================================================
+  # SELF REPAIR
+  # ============================================================
+
+  self_repair:
+    system: |
+      {context}
+
+      Du reparierst fehlerhafte Cluster streng regelbasiert.
+
+      {strict_rules_segments}
+
+    user: |
+      Repariere die folgenden Cluster.
+
+      Originalsegmente:
+      {segments}
+
+      Fehlerhafte Cluster:
+      {clusters}
+
+      Überprüfe insbesondere:
+
+      - Sind alle SegmentIDs exakt aus den Originalsegmenten übernommen?
+      - Enthält "segments" ausschließlich SegmentIDs als Strings?
+      - Wurden Segmenttexte nicht verändert?
+      - Sind die Cluster inhaltlich nachvollziehbar?
+      - Sind die Cluster voneinander unterscheidbar?
+      - Sind Clustername und Definition regelkonform?
+
+      Das Feld "segments" muss exakt so aussehen:
+
+      "segments": [
+        "Dokument#SEG00001",
+        "Dokument#SEG00002"
+      ]
+
+      Gib ausschließlich ein JSON-Array zurück.
+
+
+  # ============================================================
+  # CLUSTER-ZUSAMMENFASSUNG
+  # ============================================================
+
+  cluster_summary:
+    system: |
+      {context}
+
+      Du fasst Cluster präzise zusammen.
+
+      {strict_rules_global}
+
+      Gib KEIN JSON aus.
+
+    user: |
+      Fasse die folgenden Cluster zusammen:
+
+      {clusters}
+
+      Clustername:
+      {cluster_name}
+
+      Definition:
+      {definition}
+
+      Zugehörige Originalsegmente:
+
+      {quotes}
+
+      Die Zusammenfassung darf ausschließlich die in den Clustern
+      und Originalsegmenten enthaltenen Informationen wiedergeben.
+
+      Max. 6 Sätze.
+
+
+  # ============================================================
+  # KATEGORIE-ZUSAMMENFASSUNG
+  # ============================================================
+
+  category_summary:
+    system: |
+      {context}
+
+      Du erstellst wissenschaftliche Zusammenfassungen.
+
+      {strict_rules_global}
+
+      Gib KEIN JSON aus.
+
+    user: |
+      Fasse die Kategorie "{category}" zusammen:
+
+      {subcats}
+
+      Berücksichtige ausschließlich die gelieferten Inhalte.
+
+      Max. 10 Sätze.
+
+
+  # ============================================================
+  # META-ANALYSE
+  # ============================================================
+
+  meta_analysis:
+    system: |
+      {context}
+
+      Du erstellst eine Meta-Analyse basierend auf Zusammenfassungen
+      und Definitionen.
+
+      {strict_rules_global}
+
+    user: |
+      Erstelle eine Meta-Analyse auf Grundlage der folgenden Kategorien:
+
+      {categories}
+
+      Fasse übergreifende inhaltliche Muster zusammen.
+
+      Verwende ausschließlich Informationen aus den gelieferten Daten.
+
+      Keine externen Theorien.
+
+      Keine neuen empirischen Aussagen.
+
+
+  # ============================================================
+  # SWOT-ANALYSE
+  # ============================================================
+
+  swot_analysis:
+    system: |
+      {context}
+
+      Du führst eine qualitative, streng datenbasierte SWOT-Analyse durch.
+
+      {swot_strict_rules}
+
+      Analysiert wird jeweils genau EIN vollständiger Codepfad:
+
+      Hauptkategorie > Subkategorie > Facette
+
+      Die SWOT soll den vorliegenden Codepfad analytisch ausleuchten und
+      nicht künstlich möglichst viele Einträge produzieren.
+
+      Gleichzeitig sollst du vorhandene positive, negative sowie unmittelbar
+      erkennbare Entwicklungsmöglichkeiten und Spannungsrisiken aktiv prüfen.
+
+      CHANCEN und RISIKEN dürfen analytisch abgeleitet werden, wenn die
+      Entwicklungsmöglichkeit bzw. mögliche problematische Entwicklung direkt
+      aus den gelieferten Aussagen hervorgeht.
+
+      Es dürfen dafür keine externen Ursachen, Wirkungen oder Annahmen ergänzt
+      werden.
+
+      Jeder SWOT-Befund muss durch mindestens eine tatsächlich gelieferte
+      SegmentID belegt sein.
+
+    user: |
+      Erstelle eine SWOT-Analyse für den vollständigen Codepfad:
+
+      {category}
+
+      Grundlage sind ausschließlich die folgenden Cluster dieses Codepfads,
+      einschließlich Clusterdefinitionen, Clusterzusammenfassungen und
+      Originalsegmenten:
+
+      {clusters}
+
+      --------------------------------------------------
+      ANALYSELOGIK
+      --------------------------------------------------
+
+      Prüfe systematisch alle vier Dimensionen:
+
+      STÄRKEN
+      Positive, förderliche, hilfreiche oder funktionierende Aspekte, die
+      innerhalb der gelieferten Daten bereits sichtbar sind.
+
+      SCHWÄCHEN
+      Negative, hinderliche, belastende, problematische oder unzureichende
+      Aspekte, die innerhalb der gelieferten Daten sichtbar sind.
+
+      CHANCEN
+      Positive Entwicklungsmöglichkeiten oder Potenziale, die sich unmittelbar
+      aus den gelieferten Aussagen ableiten lassen.
+
+      Ein vorhandener Wunsch, eine Fähigkeit, eine Ressource, eine positive
+      Erfahrung oder eine erkennbare Entwicklungsmöglichkeit kann eine Chance
+      begründen, wenn diese Ableitung im Material selbst angelegt ist.
+
+      RISIKEN
+      Mögliche ungünstige Entwicklungen, Spannungen oder Gefährdungen, die sich
+      unmittelbar aus den gelieferten Aussagen ableiten lassen.
+
+      Eine erkennbare Unsicherheit, Begrenzung, Belastung, Diskrepanz oder
+      Spannung kann ein Risiko begründen, wenn die mögliche problematische
+      Entwicklung direkt im Material angelegt ist.
+
+      --------------------------------------------------
+      WICHTIGE GRENZE
+      --------------------------------------------------
+
+      SWOT bedeutet hier NICHT, externes strategisches Wissen hinzuzufügen.
+
+      Formuliere Chancen und Risiken ausschließlich als vorsichtige
+      datenbasierte Ableitungen aus dem vorhandenen Interviewmaterial.
+
+      Erfinde keine Ursachen.
+      Erfinde keine Folgen, die im Material nicht angelegt sind.
+      Nutze keine externen Theorien.
+      Nutze kein allgemeines Wissen über bestimmte Berufsgruppen oder Teilnehmendengruppen.
+
+      Wenn eine Dimension trotz systematischer Prüfung nicht ausreichend
+      belegt ist, verwende eine leere Liste.
+
+      --------------------------------------------------
+      AUSGABEFORMAT
+      --------------------------------------------------
+
+      Gib ausschließlich gültiges JSON zurück.
+
+      Das JSON muss exakt diese vier Schlüssel enthalten:
+
+      {
+        "Stärken": [
+          {
+            "thema": "Kurzer analytischer Themenname",
+            "analyse": "Kurze datenbasierte analytische Verdichtung",
+            "segment_ids": ["Dokument#SEG00001"]
+          }
+        ],
+        "Schwächen": [],
+        "Chancen": [],
+        "Risiken": []
+      }
+
+      Jeder einzelne Befund muss exakt diese drei Schlüssel besitzen:
+
+      - "thema"
+      - "analyse"
+      - "segment_ids"
+
+      Verwende unter "segment_ids" ausschließlich IDs, die in den gelieferten
+      Originalsegmenten tatsächlich vorkommen.
+
+      Kopiere Segmenttexte NICHT in das JSON.
+      Python ergänzt die Originalzitate später anhand der validierten IDs.
+
+      Ein Befund ohne empirischen Beleg darf nicht ausgegeben werden.
+
+      Keine zusätzlichen Schlüssel.
+      Kein Markdown.
+      Kein Text außerhalb des JSON.
+
+
+  # ============================================================
+  # META-SWOT
+  # ============================================================
+
+  meta_swot:
+    system: |
+      {context}
+
+      Du clusterst bereits vorhandene SWOT-Befunde derselben SWOT-Dimension.
+
+      {strict_rules_global}
+
+      Du erhältst ausschließlich Befunde aus EINER Dimension:
+
+      {category}
+
+      Jeder Befund besitzt eine feste finding_id und einen festen source_id.
+
+      finding_ids und source_ids dürfen nicht verändert oder erfunden werden.
+
+      Deine Aufgabe ist ausschließlich, inhaltlich ähnliche Befunde zu
+      sinnvollen Themenclustern zusammenzufassen.
+
+      SWOT-Dimensionen werden niemals vermischt.
+
+      Du entscheidest NICHT selbst, ob ein Cluster ein übergreifendes Muster
+      ist. Das berechnet Python anschließend anhand der source_ids.
+
+    user: |
+      Clustere die folgenden SWOT-Befunde der Dimension "{category}":
+
+      {clusters}
+
+      --------------------------------------------------
+      AUFGABE
+      --------------------------------------------------
+
+      1. Identifiziere inhaltlich ähnliche oder eng zusammengehörige Befunde.
+
+      2. Fasse solche Befunde zu einem gemeinsamen Themencluster zusammen.
+
+      3. Formuliere je Cluster:
+         - einen kurzen Themenname,
+         - eine datenbasierte Verdichtung,
+         - die finding_ids der zugehörigen Befunde.
+
+      4. Sehr unterschiedliche Befunde dürfen nicht künstlich zusammengeführt
+         werden.
+
+      5. Ein einzelner Befund darf auch allein in einem Cluster stehen.
+
+      6. Verwende ausschließlich vorhandene finding_ids.
+
+      7. Füge keine neuen empirischen Aussagen hinzu.
+
+      --------------------------------------------------
+      AUSGABEFORMAT
+      --------------------------------------------------
+
+      Gib ausschließlich gültiges JSON zurück:
+
+      {
+        "cluster": [
+          {
+            "thema": "Kurzer Name des Themenclusters",
+            "verdichtung": "Datenbasierte Verdichtung der zugeordneten Befunde",
+            "finding_ids": ["STR0001", "STR0004"]
+          }
+        ]
+      }
+
+      Verwende exakt den Schlüssel "cluster".
+
+      Jeder Cluster besitzt exakt:
+
+      - "thema"
+      - "verdichtung"
+      - "finding_ids"
+
+      Keine zusätzlichen Schlüssel.
+      Kein Markdown.
+      Kein Text außerhalb des JSON.
+
+
+  # ============================================================
+  # PERSONENANALYSE
+  # ============================================================
+
+  person_analysis:
+    system: |
+      {context}
+
+      Du führst eine qualitative, fallbezogene Personenanalyse durch.
+
+      {strict_rules_global}
+
+      Die Analyse ist ausdrücklich KEIN psychologisches Persönlichkeitsprofil.
+
+      Verwende ausschließlich die gelieferten Segmenttexte, Clusterdefinitionen
+      und Clusterzusammenfassungen dieser Person.
+
+      Keine Diagnosen.
+      Keine Zuschreibung stabiler Charaktereigenschaften.
+      Keine Annahmen über Motive, Ursachen oder Hintergründe.
+      Keine externen Informationen oder Theorien.
+
+      Formuliere nur Aussagen, die aus den gelieferten Daten unmittelbar
+      ableitbar sind.
+
+      Spannungsfelder oder Kontraste dürfen nur benannt werden, wenn
+      unterschiedliche oder gegensätzliche Aussagen derselben Person
+      tatsächlich in den gelieferten Daten vorhanden sind.
+
+      SegmentIDs dürfen niemals verändert oder erfunden werden.
+
+    user: |
+      Analysiere ausschließlich folgende Person und ihre empirischen Daten:
+
+      {persons}
+
+      Erstelle eine fallbezogene Verdichtung mit:
+
+      1. zentralen Themen,
+      2. wiederkehrenden oder deutlich formulierten Perspektiven,
+      3. inneren Spannungsfeldern, sofern empirisch belegt,
+      4. kontrastierenden Aspekten innerhalb des Falls, sofern empirisch belegt,
+      5. einer kurzen Gesamtverdichtung.
+
+      Verweise bei analytischen Aussagen auf die zugehörigen vorhandenen
+      SegmentIDs. Verwende ausschließlich SegmentIDs aus dem Input.
+
+      Gib ausschließlich gültiges JSON in exakt dieser Struktur zurück:
+
+      {
+        "zentrale_themen": [
+          {
+            "thema": "Kurzer Themenname",
+            "verdichtung": "Datenbasierte Verdichtung",
+            "segment_ids": ["Person#SEG00001"]
+          }
+        ],
+        "perspektiven": [
+          {
+            "aussage": "Datenbasierte Perspektive",
+            "segment_ids": ["Person#SEG00001"]
+          }
+        ],
+        "spannungsfelder": [
+          {
+            "beschreibung": "Empirisch belegtes Spannungsfeld",
+            "segment_ids": ["Person#SEG00001", "Person#SEG00007"]
+          }
+        ],
+        "kontrastierende_aspekte": [
+          {
+            "beschreibung": "Empirisch belegter Kontrast",
+            "segment_ids": ["Person#SEG00003", "Person#SEG00009"]
+          }
+        ],
+        "gesamtverdichtung": "Kurze fallbezogene Gesamtverdichtung"
+      }
+
+      Fülle keine Kategorie künstlich auf.
+      Leere Listen sind ausdrücklich erlaubt.
+      Keine zusätzlichen Schlüssel.
+      Kein Markdown.
+      Kein Text außerhalb des JSON.
+
+
+  # ============================================================
+  # PERSONENVERGLEICH UND TYPENBILDUNG
+  # ============================================================
+
+  person_comparison:
+    system: |
+      {context}
+
+      Du vergleichst bereits erstellte qualitative Personenanalysen.
+
+      {strict_rules_global}
+
+      Nutze ausschließlich die gelieferten Personenanalysen.
+
+      Die Typenbildung ist rein deskriptiv und datenbasiert.
+      Sie darf keine psychologischen Persönlichkeitstypen erzeugen.
+
+      Keine Diagnosen.
+      Keine externen Theorien.
+      Keine Annahmen über Motive oder Ursachen.
+
+      Eine Person darf nur dann einem Typ zugeordnet werden, wenn ihre
+      Personenanalyse die kennzeichnenden Merkmale dieses Typs tatsächlich stützt.
+
+      Erzwinge keine vollständige Typenzuordnung.
+      Personen dürfen unzugeordnet bleiben.
+
+    user: |
+      Vergleiche die folgenden Personenanalysen:
+
+      {persons}
+
+      Arbeite folgende Ebenen heraus:
+
+      1. gemeinsame inhaltliche Muster über mehrere Personen,
+      2. zentrale Unterschiede zwischen Personen,
+      3. vorsichtige qualitative Typenbildung auf Grundlage ähnlicher Muster,
+      4. Personen, die keinem Typ belastbar zugeordnet werden können,
+      5. eine kurze Gesamtverdichtung des Vergleichs.
+
+      Gib ausschließlich gültiges JSON in exakt dieser Struktur zurück:
+
+      {
+        "gemeinsame_muster": [
+          {
+            "thema": "Kurzer Themenname",
+            "verdichtung": "Übergreifende Verdichtung",
+            "personen": ["Person A", "Person B"]
+          }
+        ],
+        "zentrale_unterschiede": [
+          {
+            "thema": "Unterschiedsthema",
+            "beschreibung": "Beschreibung des Unterschieds",
+            "personenpositionen": [
+              {
+                "person": "Person A",
+                "position": "Datenbasierte Position"
+              }
+            ]
+          }
+        ],
+        "typen": [
+          {
+            "typ_name": "Kurzer Typenname",
+            "beschreibung": "Deskriptive, datenbasierte Typenbeschreibung",
+            "personen": ["Person A", "Person B"],
+            "merkmale": ["Merkmal 1", "Merkmal 2"]
+          }
+        ],
+        "nicht_zugeordnete_personen": [
+          {
+            "person": "Person C",
+            "begruendung": "Warum keine belastbare Zuordnung möglich ist"
+          }
+        ],
+        "gesamtvergleich": "Kurze Gesamtsynthese"
+      }
+
+      Verwende ausschließlich vorhandene Personennamen.
+      Fülle keine Listen künstlich auf.
+      Keine zusätzlichen Schlüssel.
+      Kein Markdown.
+      Kein Text außerhalb des JSON.
+
+
+  # ============================================================
+  # KONTRAST- UND NEGATIVFALLANALYSE
+  # ============================================================
+
+  contrast_analysis:
+    system: |
+      {context}
+
+      Du führst eine qualitative Kontrast- und Negativfallanalyse durch.
+
+      {strict_rules_global}
+
+      Nutze ausschließlich die gelieferten Personenanalysen sowie den
+      daraus erzeugten Personenvergleich und die Typenbildung.
+
+      Ein Negativfall ist hier eine Person, deren datenbasierte Aussagen
+      einem dominanten oder wiederkehrenden Muster ganz oder teilweise
+      widersprechen, es einschränken oder deutlich relativieren.
+
+      Erfinde keine Abweichungen.
+      Erzwinge keine Negativfälle.
+      Keine externen Theorien.
+      Keine neuen empirischen Inhalte.
+
+    user: |
+      Analysiere folgende verdichtete Ergebnisse:
+
+      {data}
+
+      Identifiziere:
+
+      1. dominante oder häufig wiederkehrende Muster,
+      2. empirisch belegte Negativ- oder Kontrastfälle,
+      3. Spannungen zwischen vorhandenen Typen,
+      4. notwendige Relativierungen übergreifender Aussagen,
+      5. eine kurze Gesamteinordnung.
+
+      Gib ausschließlich gültiges JSON in exakt dieser Struktur zurück:
+
+      {
+        "dominante_muster": [
+          {
+            "muster": "Mustername",
+            "beschreibung": "Datenbasierte Beschreibung",
+            "getragen_von": ["Person A", "Person B"]
+          }
+        ],
+        "negativfaelle": [
+          {
+            "person": "Person C",
+            "bezugs_muster": "Muster, von dem der Fall abweicht",
+            "abweichung": "Konkrete Abweichung",
+            "begruendung": "Warum dies als Kontrast-/Negativfall einzuordnen ist"
+          }
+        ],
+        "spannungen_zwischen_typen": [
+          {
+            "typen": ["Typ A", "Typ B"],
+            "beschreibung": "Datenbasierte Spannung"
+          }
+        ],
+        "relativierungen": [
+          {
+            "aussage": "Zu relativierende übergreifende Aussage",
+            "bedeutung": "Wie der Kontrastfall diese Aussage einschränkt"
+          }
+        ],
+        "gesamteinordnung": "Kurze Gesamteinordnung"
+      }
+
+      Verwende ausschließlich vorhandene Personen- und Typennamen.
+      Leere Listen sind erlaubt.
+      Keine zusätzlichen Schlüssel.
+      Kein Markdown.
+      Kein Text außerhalb des JSON.
+
+
+  # ============================================================
+  # ZUSAMMENHANGSANALYSE
+  # ============================================================
+
+  relation_analysis:
+    system: |
+      {context}
+
+      Du führst eine qualitative Zusammenhangsanalyse zwischen bereits
+      gebildeten Codepfaden durch.
+
+      {strict_rules_global}
+
+      Analysiere ausschließlich die gelieferten Kandidatenpaare.
+      Jedes Kandidatenpaar besitzt eine feste pair_id.
+
+      Eine Beziehung darf nur ausgegeben werden, wenn beide Seiten durch
+      konkrete gelieferte SegmentIDs belegt werden können.
+
+      Erlaubte Beziehungstypen sind ausschließlich:
+      - tritt_gemeinsam_auf
+      - steht_in_spannung_zu
+      - wird_miteinander_verknuepft
+      - scheint_voraussetzung_zu_sein
+      - wird_als_folge_beschrieben
+      - sonstige_beziehung
+
+      WICHTIG:
+      - Ko-Vorkommen ist keine Kausalität.
+      - Voraussetzung oder Folge darf nur verwendet werden, wenn dies im
+        gelieferten Material selbst entsprechend beschrieben wird.
+      - Erfinde keine Beziehungen.
+      - Erzwinge keine Relation für jedes Kandidatenpaar.
+      - Verwende ausschließlich vorhandene pair_ids und SegmentIDs.
+
+    user: |
+      Untersuche folgende Kandidatenpaare:
+
+      {data}
+
+      Gib ausschließlich gültiges JSON in exakt dieser Struktur zurück:
+
+      {
+        "beziehungen": [
+          {
+            "pair_id": "PAIR0001",
+            "thema": "Kurzer Name der Beziehung",
+            "beziehungstyp": "steht_in_spannung_zu",
+            "beschreibung": "Datenbasierte Beschreibung der Relation",
+            "segment_ids_a": ["Dokument#SEG00001"],
+            "segment_ids_b": ["Dokument#SEG00002"]
+          }
+        ],
+        "gesamteinordnung": "Kurze datenbasierte Einordnung"
+      }
+
+      Keine zusätzlichen Schlüssel.
+      Leere Listen sind erlaubt.
+      Kein Markdown.
+      Kein Text außerhalb des JSON.
+
+
+  # ============================================================
+  # AMBIVALENZ- UND WIDERSPRUCHSANALYSE
+  # ============================================================
+
+  ambiguity_analysis:
+    system: |
+      {context}
+
+      Du analysierst intrapersonelle Ambivalenzen und Spannungen innerhalb
+      eines einzelnen qualitativen Falls.
+
+      {strict_rules_global}
+
+      Eine Ambivalenz liegt nur dann vor, wenn dieselbe Person zwei
+      unterschiedliche, spannungsreiche oder widersprüchliche Positionen
+      äußert und beide Pole durch konkrete gelieferte SegmentIDs belegt sind.
+
+      WICHTIG:
+      - Nicht jede Differenz ist ein Widerspruch.
+      - Keine psychologischen Diagnosen oder Persönlichkeitszuschreibungen.
+      - Keine externen Theorien.
+      - Keine erfundenen Ambivalenzen.
+      - Verwende nur SegmentIDs der gelieferten Person.
+
+    user: |
+      Analysiere folgenden Fall:
+
+      {data}
+
+      Suche ausschließlich nach empirisch belegten intrapersonellen
+      Spannungen oder Ambivalenzen.
+
+      Gib ausschließlich gültiges JSON in exakt dieser Struktur zurück:
+
+      {
+        "ambivalenzen": [
+          {
+            "thema": "Kurzer Name des Spannungsfelds",
+            "beschreibung": "Datenbasierte Beschreibung",
+            "position_a": "Erste Position",
+            "position_b": "Zweite Position",
+            "segment_ids_a": ["Dokument#SEG00001"],
+            "segment_ids_b": ["Dokument#SEG00007"]
+          }
+        ],
+        "gesamteinordnung": "Kurze fallbezogene Einordnung"
+      }
+
+      Leere Listen sind ausdrücklich erlaubt.
+      Keine zusätzlichen Schlüssel.
+      Kein Markdown.
+      Kein Text außerhalb des JSON.
+
+
+  # ============================================================
+  # EVIDENCE AUDIT
+  # ============================================================
+
+  evidence_audit:
+    system: |
+      {context}
+
+      Du unterstützt einen qualitativen Evidence-Audit.
+
+      {strict_rules_global}
+
+      WICHTIG:
+      Die empirische Breite eines Befundes wird NICHT von dir bewertet.
+      Personenanzahl, Segmentanzahl und Anzahl der Quellbereiche werden
+      deterministisch durch Python berechnet.
+
+      Deine einzige Aufgabe ist zu prüfen, ob gelieferte Negativfälle oder
+      intrapersonelle Ambivalenzen einen bestimmten Audit-Befund tatsächlich
+      einschränken, relativieren oder ihm entgegenstehen.
+
+      Verwende ausschließlich vorhandene audit_ids und counter_ids.
+      Ordne einen möglichen Gegenbeleg nur zu, wenn der inhaltliche Bezug
+      aus den gelieferten Analysen klar hervorgeht.
+      Erzwinge keine Zuordnung.
+
+    user: |
+      Prüfe folgende Audit-Befunde und möglichen Gegenbelege:
+
+      {data}
+
+      Gib ausschließlich gültiges JSON in exakt dieser Struktur zurück:
+
+      {
+        "zuordnungen": [
+          {
+            "audit_id": "EVA0001",
+            "gegenbeleg_ids": ["NEG0001", "AMB0002"],
+            "einordnung": "Kurze Erklärung, wie diese Gegenbelege den Befund relativieren"
+          }
+        ]
+      }
+
+      Wenn kein Gegenbeleg passt, darf ein Audit-Befund fehlen.
+      Keine zusätzlichen Schlüssel.
+      Kein Markdown.
+      Kein Text außerhalb des JSON.
+
+
+  # ============================================================
+  # GESAMTSYNTHESE
+  # ============================================================
+
+  overall_synthesis:
+    system: |
+      {context}
+
+      Du erstellst eine abschließende qualitative Gesamtsynthese aus mehreren
+      bereits erzeugten analytischen Ebenen.
+
+      {strict_rules_global}
+
+      Nutze ausschließlich die im Payload unter
+      "verfuegbare_analytische_quellen" aufgeführten Quellen und die dazu
+      gelieferten Analyseergebnisse.
+
+      Die Gesamtsynthese soll vorhandene Ergebnisse zusammenführen, ohne die
+      ursprünglichen Interviewdaten neu zu interpretieren.
+
+      Keine externen Theorien.
+      Keine neuen empirischen Befunde.
+      Keine neuen Ursachen oder Wirkungen.
+      Keine psychologischen Zuschreibungen.
+
+      Unterschiede, Ambivalenzen, Gegenbefunde und Einschränkungen des
+      Evidence-Audits dürfen nicht geglättet werden.
+
+      Quellenangaben müssen exakt aus den gelieferten Quellenbezeichnungen
+      übernommen werden.
+
+    user: |
+      Erstelle eine abschließende Gesamtsynthese aus folgenden analytischen
+      Ergebnissen:
+
+      {data}
+
+      Arbeite heraus:
+
+      1. die wichtigsten Kernergebnisse,
+      2. übergreifende Muster, die von mehreren Analyseebenen gestützt werden,
+      3. Beziehungen zwischen Themen, soweit sie bereits analytisch belegt sind,
+      4. Ambivalenzen, Gegenmuster und notwendige Relativierungen,
+      5. die im Evidence-Audit sichtbare empirische Breite und deren Grenzen,
+      6. eine kurze methodische Einordnung der Aussagegrenzen,
+      7. eine abschließende datenbasierte Gesamtverdichtung.
+
+      Fasse nur Inhalte zusammen, die bereits in den gelieferten Ergebnissen
+      enthalten sind. Erzwinge keine Übereinstimmung.
+
+      Gib ausschließlich gültiges JSON in exakt dieser Struktur zurück:
+
+      {
+        "kernergebnisse": [
+          {
+            "thema": "Kurzer Themenname",
+            "verdichtung": "Datenbasierte Verdichtung",
+            "quellen": ["Exakte Quellenbezeichnung aus dem Payload"]
+          }
+        ],
+        "uebergreifende_muster": [
+          {
+            "thema": "Kurzer Mustername",
+            "verdichtung": "Übergreifende Verdichtung",
+            "quellen": ["Exakte Quellenbezeichnung aus dem Payload"]
+          }
+        ],
+        "spannungen_und_relativierungen": [
+          {
+            "aussage": "Zu relativierende oder spannungsreiche Aussage",
+            "einordnung": "Datenbasierte Einordnung",
+            "quellen": ["Exakte Quellenbezeichnung aus dem Payload"]
+          }
+        ],
+        "methodische_einordnung": [
+          "Kurze Aussage zu den Grenzen der vorliegenden Datenbasis"
+        ],
+        "gesamtsynthese": "Abschließende Gesamtverdichtung"
+      }
+
+      Keine zusätzlichen Schlüssel.
+      Leere Listen sind erlaubt.
+      Kein Markdown.
+      Kein Text außerhalb des JSON.
+
+  # ============================================================
+  # EXECUTIVE SUMMARY
+  # ============================================================
+
+  executive_summary:
+    system: |
+      {context}
+
+      Du erstellst eine Executive Summary.
+
+      {strict_rules_global}
+
+      Gib Fließtext aus.
+
+    user: |
+      Erstelle eine Executive Summary basierend auf:
+
+      {data}
+
+      Struktur:
+
+      1. Kernerkenntnisse (max. 6 Sätze)
+      2. Bedeutung (max. 6 Sätze)
+      3. Empfehlungen (max. 6 Sätze)
+
+      Die Empfehlungen müssen ausschließlich auf den gelieferten
+      Ergebnissen basieren.
+
+      Keine externen Informationen.
+
+      Keine neuen empirischen Befunde.
+
+
+  # ============================================================
+  # GLOSSAR
+  # ============================================================
+
+  glossary_generation:
+    system: |
+      {context}
+
+      Du erstellst ein Glossar.
+
+      {strict_rules_global}
+
+    user: |
+      Erstelle eine Markdown-Tabelle:
+
+      Begriff | Definition | Beispiel
+
+      Begriffe:
+
+      {terms}
+
+      Verwende ausschließlich die gelieferten Begriffe und Inhalte.
+
+# ============================================================
+# MODULARER WORKFLOW
+# ============================================================
+# Neue Module können hier ergänzt werden, ohne workflow.py zu ändern.
+# - depends_on steuert die Reihenfolge als Abhängigkeitsgraph.
+# - args sind die Kommandozeilenargumente des jeweiligen Scripts.
+# - outputs werden nach jedem Modul auf Existenz geprüft.
+# - report.markdown nimmt die Datei automatisch in gesamtbericht.md auf.
+
+pipeline:
+  modules:
+
+    - id: clusterer
+      name: Clusteranalyse
+      script: clusterer.py
+      enabled: true
+      depends_on: []
+      args:
+        - --config
+        - "{config}"
+        - --csv
+        - "{input_csv}"
+        - --out-md
+        - clusterer_output.md
+        - --out-json
+        - clusters_output.json
+        - --idmap-json
+        - id_to_text.json
+        - --plots-dir
+        - plots
+        - "{log_raw_flag}"
+      outputs:
+        - clusterer_output.md
+        - clusters_output.json
+        - id_to_text.json
+      report:
+        title: Clusteranalyse
+        markdown: clusterer_output.md
+
+    - id: summarizer
+      name: Cluster-Zusammenfassungen
+      script: summarizer.py
+      enabled: true
+      depends_on: [clusterer]
+      args:
+        - --config
+        - "{config}"
+        - --clusters-json
+        - clusters_output.json
+        - --idmap-json
+        - id_to_text.json
+        - --out-md
+        - summary_v1.md
+        - --out-json
+        - summary_v1.json
+      outputs: [summary_v1.md, summary_v1.json]
+      report:
+        title: Cluster-Zusammenfassungen
+        markdown: summary_v1.md
+
+    - id: swot
+      name: SWOT-Analysen
+      script: swot.py
+      enabled: true
+      depends_on: [summarizer]
+      args:
+        - --config
+        - "{config}"
+        - --clusters-json
+        - clusters_output.json
+        - --idmap-json
+        - id_to_text.json
+        - --summary-json
+        - summary_v1.json
+        - --out-md
+        - swot_v1.md
+        - --out-json
+        - swot_v1.json
+      outputs: [swot_v1.md, swot_v1.json]
+      report:
+        title: SWOT-Analysen
+        markdown: swot_v1.md
+
+    - id: meta_swot
+      name: Meta-SWOT
+      script: meta_swot.py
+      enabled: true
+      depends_on: [swot]
+      args:
+        - --config
+        - "{config}"
+        - --swot-json
+        - swot_v1.json
+        - --out-md
+        - meta_swot_v1.md
+        - --out-json
+        - meta_swot_v1.json
+      outputs: [meta_swot_v1.md, meta_swot_v1.json]
+      report:
+        title: Meta-SWOT
+        markdown: meta_swot_v1.md
+
+    - id: person_analysis
+      name: Personenanalyse
+      script: person_analysis.py
+      enabled: true
+      depends_on: [summarizer]
+      args:
+        - --config
+        - "{config}"
+        - --clusters-json
+        - clusters_output.json
+        - --idmap-json
+        - id_to_text.json
+        - --summary-json
+        - summary_v1.json
+        - --out-md
+        - person_analysis_v1.md
+        - --out-json
+        - person_analysis_v1.json
+      outputs: [person_analysis_v1.md, person_analysis_v1.json]
+      report:
+        title: Personenanalysen
+        markdown: person_analysis_v1.md
+
+    - id: person_comparison
+      name: Personenvergleich und Typenbildung
+      script: person_comparison.py
+      enabled: true
+      depends_on: [person_analysis]
+      args:
+        - --config
+        - "{config}"
+        - --person-json
+        - person_analysis_v1.json
+        - --out-md
+        - person_comparison_v1.md
+        - --out-json
+        - person_comparison_v1.json
+      outputs: [person_comparison_v1.md, person_comparison_v1.json]
+      report:
+        title: Personenvergleich und Typenbildung
+        markdown: person_comparison_v1.md
+
+    - id: contrast_analysis
+      name: Kontrast- und Negativfallanalyse
+      script: contrast_analysis.py
+      enabled: true
+      depends_on: [person_analysis, person_comparison]
+      args:
+        - --config
+        - "{config}"
+        - --person-json
+        - person_analysis_v1.json
+        - --comparison-json
+        - person_comparison_v1.json
+        - --out-md
+        - contrast_analysis_v1.md
+        - --out-json
+        - contrast_analysis_v1.json
+      outputs: [contrast_analysis_v1.md, contrast_analysis_v1.json]
+      report:
+        title: Kontrast- und Negativfallanalyse
+        markdown: contrast_analysis_v1.md
+
+    - id: relation_analysis
+      name: Zusammenhangsanalyse
+      script: relation_analysis.py
+      enabled: true
+      depends_on: [summarizer]
+      args:
+        - --config
+        - "{config}"
+        - --clusters-json
+        - clusters_output.json
+        - --idmap-json
+        - id_to_text.json
+        - --summary-json
+        - summary_v1.json
+        - --out-md
+        - relation_analysis_v1.md
+        - --out-json
+        - relation_analysis_v1.json
+      outputs: [relation_analysis_v1.md, relation_analysis_v1.json]
+      report:
+        title: Zusammenhangsanalyse
+        markdown: relation_analysis_v1.md
+
+    - id: ambiguity_analysis
+      name: Ambivalenz- und Widerspruchsanalyse
+      script: ambiguity_analysis.py
+      enabled: true
+      depends_on: [person_analysis]
+      args:
+        - --config
+        - "{config}"
+        - --person-json
+        - person_analysis_v1.json
+        - --idmap-json
+        - id_to_text.json
+        - --out-md
+        - ambiguity_analysis_v1.md
+        - --out-json
+        - ambiguity_analysis_v1.json
+      outputs: [ambiguity_analysis_v1.md, ambiguity_analysis_v1.json]
+      report:
+        title: Ambivalenz- und Widerspruchsanalyse
+        markdown: ambiguity_analysis_v1.md
+
+    - id: evidence_audit
+      name: Evidence-Audit
+      script: evidence_audit.py
+      enabled: true
+      depends_on: [swot, meta_swot, contrast_analysis, ambiguity_analysis]
+      args:
+        - --config
+        - "{config}"
+        - --swot-json
+        - swot_v1.json
+        - --meta-swot-json
+        - meta_swot_v1.json
+        - --contrast-json
+        - contrast_analysis_v1.json
+        - --ambiguity-json
+        - ambiguity_analysis_v1.json
+        - --idmap-json
+        - id_to_text.json
+        - --out-md
+        - evidence_audit_v1.md
+        - --out-json
+        - evidence_audit_v1.json
+      outputs: [evidence_audit_v1.md, evidence_audit_v1.json]
+      report:
+        title: Evidence-Audit
+        markdown: evidence_audit_v1.md
+
+    - id: overall_synthesis
+      name: Gesamtsynthese
+      script: overall_synthesis.py
+      enabled: true
+      depends_on:
+        - meta_swot
+        - person_comparison
+        - contrast_analysis
+        - relation_analysis
+        - ambiguity_analysis
+        - evidence_audit
+      args:
+        - --config
+        - "{config}"
+        - --source-json
+        - Meta-SWOT=meta_swot_v1.json
+        - --source-json
+        - Personenvergleich=person_comparison_v1.json
+        - --source-json
+        - Kontrastanalyse=contrast_analysis_v1.json
+        - --source-json
+        - Zusammenhangsanalyse=relation_analysis_v1.json
+        - --source-json
+        - Ambivalenzanalyse=ambiguity_analysis_v1.json
+        - --source-json
+        - Evidence-Audit=evidence_audit_v1.json
+        - --out-md
+        - overall_synthesis_v1.md
+        - --out-json
+        - overall_synthesis_v1.json
+      outputs: [overall_synthesis_v1.md, overall_synthesis_v1.json]
+      report:
+        title: Gesamtsynthese
+        markdown: overall_synthesis_v1.md
