@@ -18,10 +18,10 @@ Aus den kodierten Segmenten entstehen schrittweise **inhaltliche Cluster, Zusamm
 Der gesamte Workflow wird mit einem einzigen Kommando gestartet:
 
 ```bash
-python workflow.py
+python 00_WORKFLOW_RUNNER.py
 ```
 
-Die Besonderheit der aktuellen Architektur: **`workflow.py` kennt keine fest einprogrammierte Modulliste mehr.** Reihenfolge, Abhängigkeiten, Argumente, Outputs und Berichtseinbindung werden vollständig über `config_v2.yaml` gesteuert. Neue Analysebausteine können dadurch ergänzt werden, ohne den Orchestrator umzubauen.
+Die Besonderheit der aktuellen Architektur: **`00_WORKFLOW_RUNNER.py` kennt keine fest einprogrammierte Modulliste mehr.** Reihenfolge, Abhängigkeiten, Argumente, Outputs und Berichtseinbindung werden vollständig über `config_v2.yaml` gesteuert. Neue Analysebausteine können dadurch ergänzt werden, ohne den Orchestrator umzubauen.
 
 ---
 
@@ -410,19 +410,19 @@ Die konfigurierte CSV in den Projektordner legen oder beim Start explizit angebe
 ## 6. Workflow starten
 
 ```bash
-python workflow.py
+python 00_WORKFLOW_RUNNER.py
 ```
 
 Oder:
 
 ```bash
-python workflow.py --csv interview_export.csv
+python 00_WORKFLOW_RUNNER.py --csv interview_export.csv
 ```
 
 Mit eigenem Output-Verzeichnis:
 
 ```bash
-python workflow.py \
+python 00_WORKFLOW_RUNNER.py \
   --csv interview_export.csv \
   --output-dir meine_analyse
 ```
@@ -493,7 +493,7 @@ Ein Modul sieht beispielsweise so aus:
     markdown: ambiguity_analysis_v1.md
 ```
 
-`workflow.py`:
+`00_WORKFLOW_RUNNER.py`:
 
 1. liest die Moduldefinitionen,
 2. prüft Abhängigkeiten,
@@ -543,7 +543,7 @@ Danach wird nur die YAML erweitert:
     markdown: mein_modul_v1.md
 ```
 
-**`workflow.py` muss dafür nicht verändert werden.**
+**`00_WORKFLOW_RUNNER.py` muss dafür nicht verändert werden.**
 
 Das macht die Pipeline zu einem kleinen erweiterbaren Framework für qualitative LLM-gestützte Analysebausteine.
 
@@ -709,7 +709,7 @@ python overall_synthesis.py
 Im normalen Betrieb ist jedoch der modulare Runner vorgesehen:
 
 ```bash
-python workflow.py
+python 00_WORKFLOW_RUNNER.py
 ```
 
 ---
@@ -717,7 +717,7 @@ python workflow.py
 # 📁 Projektstruktur
 
 ```text
-workflow.py
+00_WORKFLOW_RUNNER.py
 config_v2.yaml
 │
 ├── clusterer.py
@@ -798,7 +798,7 @@ Mitarbeit an wesentlichen Teilen der modularen Architektur, der Analysebausteine
 # 🎉 Los geht's
 
 ```bash
-python workflow.py
+python 00_WORKFLOW_RUNNER.py
 ```
 
 **Kodierte Interviewdaten rein → modulare qualitative Analysen → nachvollziehbare Zwischenprodukte → Gesamtsynthese → `gesamtbericht.md`.**
