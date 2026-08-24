@@ -878,13 +878,13 @@ Frei nutzbar für Forschung, Lehre und Entwicklung entsprechend den Bedingungen 
 
 Initiierung und fachliche Weiterentwicklung des Projekts aus dem Anwendungskontext qualitativer Interviewforschung.
 
-### ChatGPT · OpenAI
+### ChatGPT und OpenAI Codex · OpenAI
 
 **Softwarearchitektur · Code-Co-Authoring · Refactoring · Debugging · Testdesign · Promptarchitektur · Dokumentation**
 
 Mitarbeit an wesentlichen Teilen der modularen Architektur, der Analysebausteine, JSON-Schnittstellen, Fehlerbehandlung, Tests und Dokumentation.
 
-> **Hinweis zur KI-gestützten Entwicklung:** Teile des Codes und der Dokumentation wurden in Zusammenarbeit mit ChatGPT von OpenAI entwickelt. KI-generierter oder KI-überarbeiteter Code sollte vor produktiver oder wissenschaftlicher Nutzung geprüft und validiert werden.
+> **Hinweis zur KI-gestützten Entwicklung:** Teile des Codes und der Dokumentation – einschließlich der Coding-Validierungsmodule – wurden in Zusammenarbeit mit ChatGPT und OpenAI Codex entwickelt. KI-generierter oder KI-überarbeiteter Code sollte vor produktiver oder wissenschaftlicher Nutzung geprüft und validiert werden.
 
 ---
 
