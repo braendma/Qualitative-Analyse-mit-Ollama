@@ -1,0 +1,28 @@
+[
+  {
+    "segment_id": "Interview_01#SEG00000",
+    "human_code": "Berufsbild > Autonomie > positiv > Gestaltungsspielraum",
+    "verification": "bestätigt",
+    "confidence": "hoch",
+    "begruendung": "Das Segment benennt ausdrücklich eigenständige Gestaltung.",
+    "alternative_codes": []
+  },
+  "keine gültige JSON-Antwort",
+  {
+    "segment_id": "Interview_02#SEG00001",
+    "human_code": "Berufsbild > Belastung > negativ > Zeitdruck",
+    "verification": "bestätigt",
+    "confidence": "hoch",
+    "begruendung": "Die knappe verfügbare Zeit entspricht der Definition.",
+    "alternative_codes": []
+  },
+  {
+    "segment_id": "Interview_03#SEG00002",
+    "human_code": "Motivation > Sozial > positiv > Unterstützung",
+    "verification": "bestätigt",
+    "confidence": "hoch",
+    "begruendung": "Das Unterstützen Lernender wird explizit genannt.",
+    "alternative_codes": []
+  }
+]
+

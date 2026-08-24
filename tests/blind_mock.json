@@ -1,0 +1,25 @@
+[
+  {
+    "segment_id": "Interview_01#SEG00000",
+    "predicted_code": "Berufsbild > Autonomie > positiv > Gestaltungsspielraum",
+    "confidence": "hoch",
+    "begruendung": "Eigenständige Gestaltung ist der zentrale Inhalt.",
+    "alternative_codes": []
+  },
+  "Antwort ohne JSON",
+  {
+    "segment_id": "Interview_02#SEG00001",
+    "predicted_code": "Berufsbild > Belastung > negativ > Zeitdruck",
+    "confidence": "hoch",
+    "begruendung": "Das Segment beschreibt ausdrücklich zu wenig Zeit.",
+    "alternative_codes": []
+  },
+  {
+    "segment_id": "Interview_03#SEG00002",
+    "predicted_code": "Berufsbild > Autonomie > positiv > Gestaltungsspielraum",
+    "confidence": "niedrig",
+    "begruendung": "Die Zuordnung bleibt unsicher.",
+    "alternative_codes": ["Motivation > Sozial > positiv > Unterstützung"]
+  }
+]
+

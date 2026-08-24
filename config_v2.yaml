@@ -9,7 +9,8 @@ llm:
 # ============================================================
 
 paths:
-  input_csv: "interview_export.csv"
+  input_csv: "maxqda_export.csv"
+  category_system_csv: "Kategoriesystem.csv"
   output_md: "clusterer_output.md"
 
 
@@ -68,10 +69,89 @@ analysis_settings:
 
 
 # ============================================================
+# CODING-VALIDIERUNG / RAW-AUDIT
+# ============================================================
+
+coding_validation:
+  # false: nur normale Logs und validierte Outputs
+  # true: zusätzliche append-only JSONL-Dateien mit unveränderten
+  #       LLM-Antworten für Verify und Blind-Coding
+  log_raw_llm_output: false
+
+
+# ============================================================
 # PROMPTS
 # ============================================================
 
 prompts:
+
+  # ============================================================
+  # CODING-VALIDIERUNG GEGEN EXTERNES KATEGORIENSYSTEM
+  # ============================================================
+
+  code_verification:
+    system: |
+      {context}
+
+      Du prüfst einen bereits menschlich vergebenen vollständigen Codepfad
+      ausschließlich gegen das bereitgestellte Kategoriensystem.
+
+      Strenge Regeln:
+      - Keine psychologische Interpretation oder Profilierung.
+      - Keine neuen Codes, Umformulierungen von Codes oder externen Kategorien.
+      - Nutze ausschließlich Segment, Definition und Ankerbeispiel.
+      - Verändere weder segment_id noch human_code.
+      - Alternativcodes dürfen nur vollständige Codepfade aus dem Codebuch sein.
+      - Bei unzureichender Evidenz verwende unklar und niedrige Konfidenz.
+      - Gib ausschließlich ein einzelnes gültiges JSON-Objekt zurück.
+
+    user: |
+      Segment-ID: {segment_id}
+      Segmenttext: {segment}
+      Menschlich vergebener vollständiger Codepfad: {human_code}
+      Definition und Ankerbeispiel des Zielcodes: {target_code}
+      Vollständiges Kategoriesystem: {codebook}
+
+      Ausgabe exakt als:
+      {
+        "segment_id": "unveränderte Segment-ID",
+        "human_code": "unveränderter menschlicher Codepfad",
+        "verification": "bestätigt|teilweise_passend|nicht_passend|unklar",
+        "confidence": "hoch|mittel|niedrig",
+        "begruendung": "knappe text- und regelbasierte Begründung",
+        "alternative_codes": ["nur existierende vollständige Codepfade"]
+      }
+
+  blind_coding:
+    system: |
+      {context}
+
+      Du codierst ein Segment blind anhand des externen Kategoriensystems.
+      Der menschlich vergebene Code wird dir nicht mitgeteilt.
+
+      Strenge Regeln:
+      - Keine psychologische Interpretation oder Profilierung.
+      - Keine neuen Codes und keine Umformulierungen vorhandener Codepfade.
+      - predicted_code muss exakt ein vollständiger Codepfad aus dem Codebuch,
+        unklar oder keine_zuordnung sein.
+      - alternative_codes dürfen nur vollständige Codepfade des Codebuchs sein.
+      - Nutze Definitionen und Ankerbeispiele; kein externes Wissen.
+      - Verändere die segment_id nicht.
+      - Gib ausschließlich ein einzelnes gültiges JSON-Objekt zurück.
+
+    user: |
+      Segment-ID: {segment_id}
+      Segmenttext: {segment}
+      Vollständiges Kategoriesystem: {codebook}
+
+      Ausgabe exakt als:
+      {
+        "segment_id": "unveränderte Segment-ID",
+        "predicted_code": "vollständiger Codepfad|unklar|keine_zuordnung",
+        "confidence": "hoch|mittel|niedrig",
+        "begruendung": "knappe text- und regelbasierte Begründung",
+        "alternative_codes": ["nur existierende vollständige Codepfade"]
+      }
 
 
   # ============================================================
@@ -1280,6 +1360,79 @@ pipeline:
         title: Clusteranalyse
         markdown: clusterer_output.md
 
+    - id: code_verification
+      name: Code-Verifikation
+      script: code_verification.py
+      enabled: true
+      depends_on: [clusterer]
+      args:
+        - --config
+        - "{config}"
+        - --input-csv
+        - "{input_csv}"
+        - --idmap-json
+        - id_to_text.json
+        - --out-md
+        - code_verification_v1.md
+        - --out-json
+        - code_verification_v1.json
+        - --log-file
+        - code_verification.log
+      outputs: [code_verification_v1.md, code_verification_v1.json, code_verification.log]
+      report:
+        title: Code-Verifikation
+        markdown: code_verification_v1.md
+
+    - id: blind_coding
+      name: Blind-Coding
+      script: blind_coding.py
+      enabled: true
+      depends_on: [clusterer]
+      args:
+        - --config
+        - "{config}"
+        - --input-csv
+        - "{input_csv}"
+        - --idmap-json
+        - id_to_text.json
+        - --out-md
+        - blind_coding_v1.md
+        - --out-json
+        - blind_coding_v1.json
+        - --log-file
+        - blind_coding.log
+      outputs: [blind_coding_v1.md, blind_coding_v1.json, blind_coding.log]
+      report:
+        title: Blind-Coding
+        markdown: blind_coding_v1.md
+
+    - id: coding_agreement
+      name: Human–LLM Coding Agreement
+      script: coding_agreement.py
+      enabled: true
+      depends_on: [code_verification, blind_coding]
+      args:
+        - --config
+        - "{config}"
+        - --input-csv
+        - "{input_csv}"
+        - --verify-json
+        - code_verification_v1.json
+        - --blind-json
+        - blind_coding_v1.json
+        - --out-md
+        - coding_agreement_v1.md
+        - --out-json
+        - coding_agreement_v1.json
+        - --out-confusion-png
+        - coding_agreement_confusion.png
+        - --log-file
+        - coding_agreement.log
+      outputs: [coding_agreement_v1.md, coding_agreement_v1.json, coding_agreement.log]
+      report:
+        title: Human–LLM Coding Agreement
+        markdown: coding_agreement_v1.md
+
     - id: summarizer
       name: Cluster-Zusammenfassungen
       script: summarizer.py
@@ -1511,3 +1664,4 @@ pipeline:
       report:
         title: Gesamtsynthese
         markdown: overall_synthesis_v1.md
+

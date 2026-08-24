@@ -1,0 +1,51 @@
+llm:
+  model: mock
+  temperature: 0
+  max_tokens: 2000
+
+paths:
+  input_csv: synthetic_segments.csv
+  category_system_csv: synthetic_categories.csv
+
+columns:
+  code: Code
+  segment: Segment
+  person: Dokumentname
+
+context: {}
+
+coding_validation:
+  log_raw_llm_output: true
+
+prompts:
+  code_verification:
+    system: "Prüfe strikt. Keine neuen Codes."
+    user: "segment_id={segment_id}\nsegment={segment}\nhuman_code={human_code}\ntarget={target_code}\ncodebook={codebook}"
+  blind_coding:
+    system: "Codiere blind. Keine neuen Codes."
+    user: "segment_id={segment_id}\nsegment={segment}\ncodebook={codebook}"
+
+pipeline:
+  modules:
+    - id: code_verification
+      script: code_verification.py
+      enabled: true
+      depends_on: []
+      args: [--config, "{config}", --input-csv, "{input_csv}", --mock-responses-json, "verify_mock.json", --out-md, code_verification_v1.md, --out-json, code_verification_v1.json, --log-file, code_verification.log]
+      outputs: [code_verification_v1.md, code_verification_v1.json, code_verification.log]
+      report: {title: Code-Verifikation, markdown: code_verification_v1.md}
+    - id: blind_coding
+      script: blind_coding.py
+      enabled: true
+      depends_on: []
+      args: [--config, "{config}", --input-csv, "{input_csv}", --mock-responses-json, "blind_mock.json", --out-md, blind_coding_v1.md, --out-json, blind_coding_v1.json, --log-file, blind_coding.log]
+      outputs: [blind_coding_v1.md, blind_coding_v1.json, blind_coding.log]
+      report: {title: Blind-Coding, markdown: blind_coding_v1.md}
+    - id: coding_agreement
+      script: coding_agreement.py
+      enabled: true
+      depends_on: [code_verification, blind_coding]
+      args: [--config, "{config}", --input-csv, "{input_csv}", --verify-json, code_verification_v1.json, --blind-json, blind_coding_v1.json, --out-md, coding_agreement_v1.md, --out-json, coding_agreement_v1.json, --out-confusion-png, coding_agreement_confusion.png, --log-file, coding_agreement.log]
+      outputs: [coding_agreement_v1.md, coding_agreement_v1.json, coding_agreement.log]
+      report: {title: Human–LLM Coding Agreement, markdown: coding_agreement_v1.md}
+

@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+.venv/
+workflow_output/
+*.log
+*_raw.jsonl
+plots/
+

@@ -13,7 +13,7 @@
 
 Diese Pipeline unterstützt die **mehrstufige qualitative Auswertung bereits kodierter Interviewdaten** – beispielsweise aus einem MAXQDA-CSV-Export – mit einem lokal über **Ollama** ausgeführten Large Language Model.
 
-Aus den kodierten Segmenten entstehen schrittweise **inhaltliche Cluster, Zusammenfassungen, facettenbezogene SWOT-Analysen, Meta-SWOTs, Personenanalysen, Fallvergleiche, Kontrast- und Negativfallanalysen, Zusammenhangsanalysen, Ambivalenzanalysen, ein Evidence-Audit und eine abschließende Gesamtsynthese**.
+Aus den kodierten Segmenten entstehen schrittweise **inhaltliche Cluster, Zusammenfassungen, facettenbezogene SWOT-Analysen, Meta-SWOTs, Personenanalysen, Fallvergleiche, Kontrast- und Negativfallanalysen, Zusammenhangsanalysen, Ambivalenzanalysen, ein Evidence-Audit und eine abschließende Gesamtsynthese**. Drei zusätzliche Module prüfen menschliche Codes gegen ein externes Kategoriesystem, führen ein blindes LLM-Coding durch und berechnen ein deterministisches **Human–LLM Coding Agreement**.
 
 Der gesamte Workflow wird mit einem einzigen Kommando gestartet:
 
@@ -40,6 +40,11 @@ Die Besonderheit der aktuellen Architektur: **`00_WORKFLOW_RUNNER.py` kennt kein
 - 🧪 **Evidence-Audit für empirische Breite und Gegenbelege**
 - 👥 **Fallbezogene Personenanalyse und vorsichtige Typenbildung**
 - 🧠 **Abschließende Gesamtsynthese über mehrere Analyseebenen**
+- ✅ **Code-Verifikation gegen Definitionen und Ankerbeispiele**
+- 🙈 **Blind-Coding ohne Kenntnis des menschlichen Codes**
+- 📐 **Deterministisches Human–LLM Coding Agreement mit Konfusionsmatrix**
+- ⏱️ **Dynamische Fortschritts- und Restzeitanzeige für lange LLM-Läufe**
+- 🧾 **Separate Modul-Logs und optionaler LLM-Raw-Audit als JSONL**
 
 ---
 
@@ -51,8 +56,13 @@ Kodierter CSV-Export
         ▼
 ┌──────────────────────────────┐
 │ 1. Clusteranalyse            │
-└──────────────┬───────────────┘
-               ▼
+└───────┬──────────────┬───────┘
+        │              │
+        │              ├──► Code-Verifikation ──┐
+        │              └──► Blind-Coding ───────┤
+        │                                        ▼
+        │                         Human–LLM Coding Agreement
+        ▼
 ┌──────────────────────────────┐
 │ 2. Cluster-Zusammenfassungen │
 └───────┬──────────┬───────────┘
@@ -92,6 +102,35 @@ Kodierter CSV-Export
                      ▼
                gesamtbericht.md
 ```
+
+---
+
+# ✅ Coding-Validierung und Human–LLM Agreement
+
+Die drei Qualitätssicherungsmodule werden wie alle anderen Schritte ausschließlich über `config_v2.yaml` eingebunden:
+
+1. **`code_verification`** prüft den menschlich vergebenen vollständigen Codepfad gegen Definition und Ankerbeispiel des externen Kategoriesystems. Ergebnisse sind `bestätigt`, `teilweise_passend`, `nicht_passend` oder `unklar`.
+2. **`blind_coding`** erhält Segment und Codebuch, aber nicht den menschlichen Code. Zulässig sind nur vorhandene vollständige Codepfade sowie `unklar` und `keine_zuordnung`.
+3. **`coding_agreement`** arbeitet rein deterministisch und berechnet exakte sowie hierarchische Übereinstimmung, Verwechslungspaare, Fallstatus, eine Konfusionsmatrix und – nur wenn methodisch sinnvoll – exploratives Cohen's Kappa für single-label nominale exakte Codes.
+
+Alle LLM-genannten Codepfade und Segment-IDs werden gegen die tatsächlichen Eingaben validiert. Erfundene Alternativcodes werden verworfen und protokolliert. Strukturell weiterhin ungültige Hauptantworten werden kontrolliert als `unklar` weitergeführt, statt den gesamten Workflow abzubrechen.
+
+Die Kennzahlen werden ausdrücklich als **Human–LLM Coding Agreement** bezeichnet und nicht als klassische Interrater-Reliabilität zwischen unabhängigen menschlichen Ratern.
+
+Während Verify und Blind-Coding zeigt die Konsole dynamisch:
+
+```text
+[Code-Verifikation] [########------------] 320/844 (37.91%) | Laufzeit 00:42:10 | Restzeit ca. 01:09:04
+```
+
+Optional können die unveränderten LLM-Antworten als append-only JSONL-Audit gespeichert werden:
+
+```yaml
+coding_validation:
+  log_raw_llm_output: false  # auf true setzen für Raw-Audit
+```
+
+Bei `true` entstehen `code_verification_raw.jsonl` und `blind_coding_raw.jsonl`. Diese Dateien können sensible, aus Interviewmaterial abgeleitete Inhalte enthalten und sollten nicht ungeprüft geteilt werden.
 
 ---
 
@@ -357,8 +396,8 @@ gesamtbericht.md
 ## 1. Repository klonen
 
 ```bash
-git clone <REPOSITORY-URL>
-cd <REPOSITORY>
+git clone https://github.com/braendma/Qualitative-Analyse-mit-Ollama.git
+cd Qualitative-Analyse-mit-Ollama
 ```
 
 ## 2. Virtuelle Umgebung erstellen
@@ -403,9 +442,16 @@ Ollama installieren und ein geeignetes Modell laden, beispielsweise:
 ollama pull granite4.1:8b
 ```
 
-## 5. CSV bereitstellen
+## 5. Beispieldaten
 
-Die konfigurierte CSV in den Projektordner legen oder beim Start explizit angeben.
+Das Repository enthält bereits zwei aufeinander abgestimmte fiktive UTF-8-Testdateien mit Semikolon-Trennung:
+
+```text
+maxqda_export.csv    # 60 synthetische Segmente aus 10 fiktiven Interviews
+Kategoriesystem.csv # 12 passende Codepfade mit Definitionen und Ankerbeispielen
+```
+
+Damit kann der Workflow nach Installation von Ollama und Modell direkt gestartet werden. Für eigene Daten werden beide Dateien ersetzt oder die Pfade in `config_v2.yaml` angepasst.
 
 ## 6. Workflow starten
 
@@ -413,17 +459,17 @@ Die konfigurierte CSV in den Projektordner legen oder beim Start explizit angebe
 python 00_WORKFLOW_RUNNER.py
 ```
 
-Oder:
+Mit einer anderen Interview-CSV:
 
 ```bash
-python 00_WORKFLOW_RUNNER.py --csv interview_export.csv
+python 00_WORKFLOW_RUNNER.py --csv eigener_export.csv
 ```
 
 Mit eigenem Output-Verzeichnis:
 
 ```bash
 python 00_WORKFLOW_RUNNER.py \
-  --csv interview_export.csv \
+  --csv eigener_export.csv \
   --output-dir meine_analyse
 ```
 
@@ -450,6 +496,19 @@ Interview_02;Hauptthema > Unterthema > Facette A;"Weiteres Beispielsegment."
 ```
 
 Die tatsächlichen Spaltennamen können in `config_v2.yaml` angepasst werden.
+
+Für Code-Verifikation und Blind-Coding wird zusätzlich `Kategoriesystem.csv` erwartet. Mindestens erforderlich sind:
+
+```text
+Kategorie
+Unterkategorie
+Ausprägung
+Facette
+Definition
+Ankerbeispiel
+```
+
+Leere Hierarchieebenen sind zulässig. Der vollständige Codepfad wird aus allen nichtleeren Ebenen in der Reihenfolge `Kategorie > Unterkategorie > Ausprägung > Facette` gebildet. Jeder im Interviewexport verwendete Code sollte exakt einem solchen Pfad entsprechen.
 
 ---
 
@@ -558,6 +617,17 @@ workflow_output/
 ├── clusters_output.json
 ├── id_to_text.json
 │
+├── code_verification_v1.md
+├── code_verification_v1.json
+├── code_verification.log
+├── blind_coding_v1.md
+├── blind_coding_v1.json
+├── blind_coding.log
+├── coding_agreement_v1.md
+├── coding_agreement_v1.json
+├── coding_agreement_confusion.png
+├── coding_agreement.log
+│
 ├── summary_v1.md
 ├── summary_v1.json
 │
@@ -617,6 +687,9 @@ Dazu gehören:
 - Retry- und Self-Repair-Mechanismen
 - separate JSON-Zwischenprodukte
 - Workflow-Manifest und Logs
+- Validierung sämtlicher LLM-genannter Codes gegen `Kategoriesystem.csv`
+- deterministische Rückführung von Originaltexten statt frei erzeugter Zitate
+- kontrolliertes `unklar` statt Übernahme strukturell ungültiger LLM-Antworten
 
 Ein LLM kann dennoch Fehler machen. Die Pipeline reduziert bestimmte Fehlertypen, ersetzt aber keine wissenschaftliche Prüfung.
 
@@ -643,7 +716,9 @@ Trotzdem gilt:
 
 Vor Veröffentlichung, Weitergabe, Cloud-Uploads oder dem Teilen von Debug-Dateien sollten personenbezogene Inhalte geprüft und gegebenenfalls anonymisiert oder pseudonymisiert werden.
 
-Für öffentliche Repositories empfiehlt sich eine neutralisierte Beispielkonfiguration wie `config_github.yaml`.
+Das gilt besonders für die optionalen Dateien `code_verification_raw.jsonl` und `blind_coding_raw.jsonl`, da sie unveränderte Modellausgaben enthalten.
+
+Die mitgelieferte `config_v2.yaml`, `maxqda_export.csv` und `Kategoriesystem.csv` sind neutralisierte bzw. vollständig fiktive öffentliche Beispiele.
 
 ---
 
@@ -686,6 +761,12 @@ Unter anderem können kontrolliert geprüft werden:
 
 LLM-Antworten können für Integrationstests gemockt werden, sodass ein Großteil der Programmlogik unabhängig vom lokal installierten Modell testbar bleibt.
 
+Die Coding-Validierungstests laufen ohne Ollama:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
 ---
 
 # 🧰 Einzelne Module manuell starten
@@ -703,6 +784,9 @@ python contrast_analysis.py
 python relation_analysis.py
 python ambiguity_analysis.py
 python evidence_audit.py
+python code_verification.py
+python blind_coding.py
+python coding_agreement.py
 python overall_synthesis.py
 ```
 
@@ -719,6 +803,8 @@ python 00_WORKFLOW_RUNNER.py
 ```text
 00_WORKFLOW_RUNNER.py
 config_v2.yaml
+maxqda_export.csv
+Kategoriesystem.csv
 │
 ├── clusterer.py
 ├── clusterer_core.py
@@ -740,6 +826,13 @@ config_v2.yaml
 ├── ambiguity_analysis_core.py
 ├── evidence_audit.py
 ├── evidence_audit_core.py
+├── code_verification.py
+├── code_verification_core.py
+├── blind_coding.py
+├── blind_coding_core.py
+├── coding_agreement.py
+├── coding_agreement_core.py
+├── coding_validation_common.py
 ├── overall_synthesis.py
 ├── overall_synthesis_core.py
 ├── plot_core.py
@@ -802,3 +895,4 @@ python 00_WORKFLOW_RUNNER.py
 ```
 
 **Kodierte Interviewdaten rein → modulare qualitative Analysen → nachvollziehbare Zwischenprodukte → Gesamtsynthese → `gesamtbericht.md`.**
+
