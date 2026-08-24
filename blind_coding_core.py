@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import json
 import logging
-import sys
 import time
 from datetime import datetime
 from typing import Callable
@@ -43,13 +42,14 @@ def _show_progress(current: int, total: int, started: float) -> None:
     bar = "#" * filled + "-" * (width - filled)
     elapsed = time.monotonic() - started
     eta = ((elapsed / current) * (total - current)) if current else None
-    ending = "\n" if current >= total else "\r"
-    print(
-        f"[Blind-Coding] [{bar}] {current}/{total} "
-        f"({ratio:6.2%}) | Laufzeit {_duration(elapsed)} | Restzeit ca. {_duration(eta)}",
-        end=ending,
-        file=sys.stderr,
-        flush=True,
+    LOGGER.info(
+        "[Blind-Coding] [%s] %s/%s (%6.2f%%) | Laufzeit %s | Restzeit ca. %s",
+        bar,
+        current,
+        total,
+        ratio * 100,
+        _duration(elapsed),
+        _duration(eta),
     )
 
 

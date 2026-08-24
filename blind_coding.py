@@ -25,6 +25,10 @@ def configure_logging(log_file: str) -> None:
         ],
         force=True,
     )
+    # Die HTTP-Transportmeldungen würden die segmentbezogene Fortschrittsanzeige
+    # überlagern. Warnungen und Fehler der Transportbibliotheken bleiben sichtbar.
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 
 def main(argv=None):

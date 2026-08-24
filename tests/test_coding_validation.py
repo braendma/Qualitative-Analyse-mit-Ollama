@@ -106,6 +106,12 @@ class CodingValidationTests(unittest.TestCase):
                 log_path = Path(temp_dir) / filename
                 self.assertTrue(log_path.is_file(), msg=f"Fehlender Log: {filename}")
                 self.assertGreater(log_path.stat().st_size, 0)
+            verification_log = (Path(temp_dir) / "code_verification.log").read_text(encoding="utf-8")
+            blind_log = (Path(temp_dir) / "blind_coding.log").read_text(encoding="utf-8")
+            self.assertIn("[Code-Verifikation] [", verification_log)
+            self.assertIn("3/3 (100.00%)", verification_log)
+            self.assertIn("[Blind-Coding] [", blind_log)
+            self.assertIn("3/3 (100.00%)", blind_log)
             agreement_log = (Path(temp_dir) / "coding_agreement.log").read_text(encoding="utf-8")
             self.assertIn("Agreement abgeschlossen", agreement_log)
             for filename in ("code_verification_raw.jsonl", "blind_coding_raw.jsonl"):
