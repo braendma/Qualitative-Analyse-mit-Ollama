@@ -2,20 +2,16 @@
 
 ## Methodische Einordnung, Qualitätssicherung und verwandte Arbeiten
 
-> **Status dieser Dokumentation:** August 2026.  
-> Dieses Dokument beschreibt die methodische Logik der Pipeline und ordnet sie in die aktuelle Literatur zu LLM-gestützter qualitativer Analyse ein. Es ist keine Behauptung, dass die verwendeten Einzelmethoden neu sind oder dass LLM-basierte Auswertung menschliche qualitative Forschung ersetzen kann.
+> **Stand der Dokumentation:** August 2026.  
+> Die vorliegende Dokumentation beschreibt die methodische Logik der Pipeline und ordnet diese in die Forschung zur LLM-gestützten qualitativen Analyse ein. Die Darstellung begründet keinen Neuheitsanspruch für einzelne Methoden und setzt LLM-basierte Auswertung nicht mit menschlicher qualitativer Forschung gleich.
 
 ## 1. Ziel und methodischer Anspruch
 
-Dieses Repository stellt eine modulare, lokal ausführbare Pipeline zur Unterstützung der qualitativen Auswertung bereits kodierter Interviewdaten bereit. Die aktuelle Architektur verbindet Clusterung und Zusammenfassungen mit SWOT/Meta-SWOT, fallbezogenen Personenanalysen, Personenvergleichen, Kontrast- und Negativfallanalyse, Zusammenhangs- und Ambivalenzanalyse, einem Evidence-Audit und einer abschließenden Synthese. Ergänzend existieren drei Module zur Prüfung von Codierungen: Code-Verifikation, Blind-Coding und ein deterministisch berechnetes Human–LLM Coding Agreement [1].
+Das Repository stellt eine modulare, lokal ausführbare Pipeline zur Unterstützung der qualitativen Auswertung bereits kodierter Interviewdaten bereit. Die Architektur verbindet Clusterung und Zusammenfassungen mit SWOT- und Meta-SWOT-Analysen, fallbezogenen Personenanalysen, Personenvergleichen, Kontrast- und Negativfallanalysen, Zusammenhangs- und Ambivalenzanalysen, einem Evidence-Audit sowie einer abschließenden Synthese. Ergänzend werden mit Code-Verifikation, Blind-Coding und einem deterministisch berechneten Human–LLM Coding Agreement drei Verfahren zur Prüfung vorhandener Codierungen bereitgestellt [1].
 
-Der methodische Anspruch ist bewusst begrenzt:
+Der methodische Anspruch besteht dabei nicht darin, das Vertrauen in einzelne LLM-Ausgaben zu erhöhen. Im Vordergrund stehen vielmehr die Nachvollziehbarkeit, Prüfbarkeit und empirische Rückbindung des Analyseprozesses. Das Projekt beansprucht dementsprechend weder LLM-basiertes Coding noch qualitative Inhaltsanalyse, Intercoder-Vergleiche oder lokale Sprachmodelle als eigenständige methodische Neuerungen. Für diese Bestandteile liegen etablierte methodische und technische Vorläufer vor [2–7].
 
-**Nicht das Vertrauen in eine einzelne LLM-Antwort soll erhöht werden, sondern die Nachvollziehbarkeit, Prüfbarkeit und empirische Rückbindung des gesamten Analyseprozesses.**
-
-Das Projekt beansprucht daher nicht, LLM-basiertes Coding, qualitative Inhaltsanalyse, Intercoder-Vergleiche oder lokale Sprachmodelle erfunden zu haben. Diese Bausteine besitzen etablierte methodische und technische Vorläufer. Der Beitrag des Repositories liegt in ihrer konkreten, modularen Kombination sowie in Schutzmechanismen, die bekannte Schwächen generativer Sprachmodelle in qualitativen Workflows sichtbar und teilweise technisch kontrollierbar machen sollen.
-
-Die Pipeline ist als **Assistenzsystem** zu verstehen. Wissenschaftliche Fragestellung, Kategorienbildung bzw. Auswahl des Kategoriensystems, Interpretation, Reflexion, Bewertung von Grenzfällen und Verantwortung für Schlussfolgerungen verbleiben bei den Forschenden.
+Die Eigenständigkeit des Ansatzes ergibt sich aus der konkreten Zusammenführung dieser Bestandteile in einer modularen Pipeline sowie aus der Implementierung von Schutzmechanismen, mit denen bekannte Schwächen generativer Sprachmodelle sichtbar und teilweise technisch kontrollierbar werden. Die Pipeline wird daher als Assistenzsystem verstanden. Forschungsfrage, Auswahl oder Entwicklung des Kategoriensystems, Interpretation, Reflexion, Bewertung von Grenzfällen sowie die Verantwortung für die Schlussfolgerungen verbleiben bei den Forschenden.
 
 ---
 
@@ -23,354 +19,219 @@ Die Pipeline ist als **Assistenzsystem** zu verstehen. Wissenschaftliche Fragest
 
 ### 2.1 Qualitative Inhaltsanalyse und KI als Assistenz
 
-Kuckartz und Rädiker behandeln in der 6. Auflage ihrer *Qualitativen Inhaltsanalyse* generative KI ausdrücklich als mögliches Werkzeug und als analytische Assistenz. Ihr neues Kapitel zur KI diskutiert Anwendungen entlang verschiedener Phasen qualitativer Inhaltsanalyse und betont zugleich, dass die Delegation analytischer Aufgaben an KI methodisch reflektiert werden muss [2, 3].
+Kuckartz und Rädiker behandeln generative KI in der sechsten Auflage ihrer *Qualitativen Inhaltsanalyse* ausdrücklich als mögliches Werkzeug und als analytische Assistenz. Die Anwendungen werden entlang verschiedener Phasen qualitativer Inhaltsanalyse diskutiert, wobei zugleich die methodische Reflexion der Delegation analytischer Aufgaben an KI hervorgehoben wird [2, 3]. Diese Unterscheidung zwischen Werkzeug und Assistenz bildet einen zentralen Bezugspunkt der vorliegenden Pipeline.
 
-Für dieses Repository ist diese Unterscheidung zwischen **Werkzeug** und **Assistenz** zentral. Ein LLM kann beispielsweise große Mengen bereits kodierter Segmente strukturieren, alternative Lesarten vorschlagen oder Muster verdichten. Daraus folgt jedoch nicht, dass seine Ausgabe den Status eines methodisch abgesicherten Forschungsbefunds erhält.
+Ein Large Language Model (LLM) kann große Mengen bereits kodierter Segmente strukturieren, alternative Lesarten vorschlagen oder vorhandene Muster verdichten. Aus dieser technischen Leistungsfähigkeit ergibt sich jedoch nicht, dass die erzeugte Ausgabe den Status eines methodisch abgesicherten Forschungsbefunds erhält. Der deutschsprachige Band *KI in der qualitativen Forschung* erweitert diese Perspektive auf den gesamten Forschungsprozess und behandelt neben den verfügbaren Werkzeugen insbesondere Fragen der Dokumentation, Kategorienbildung und methodischen Kontrolle [4]. Damit verschiebt sich die Fragestellung von der grundsätzlichen Nutzung generativer KI hin zu den Bedingungen, unter denen deren Einsatz transparent, kontrolliert und wissenschaftlich verantwortbar erfolgen kann.
 
-Der 2026 erschienene deutschsprachige Band *KI in der qualitativen Forschung* von Kempny, Annac, Yilmaz-Aslan und Brzoska erweitert diese Diskussion über den gesamten Forschungsprozess. Er behandelt unter anderem Herausforderungen des KI-Einsatzes, KI-Werkzeuge, Dokumentation im Forschungsjournal sowie Kodierung und Kategorienbildung mit KI [4]. Damit wird deutlich, dass die methodische Frage inzwischen weniger lautet, **ob** LLMs in qualitativen Workflows vorkommen, sondern unter welchen Bedingungen ihre Nutzung transparent, kontrolliert und verantwortbar gestaltet werden kann.
+### 2.2 Kritik an automatisierter qualitativer Inhaltsanalyse
 
-### 2.2 Kritische Befunde: Mayrings Erfahrungsbericht
+Für diese Einordnung ist Mayrings Erfahrungsbericht zur qualitativen Inhaltsanalyse mit ChatGPT von besonderer Bedeutung. Die untersuchten Modellversionen erreichten trotz unterschiedlich detaillierter Instruktionen lediglich grobe Annäherungen an die zugrunde gelegte Musterlösung. Festgestellt wurden unter anderem Fehler bei der Umsetzung inhaltsanalytischer Konzepte sowie beim Erkennen weniger offensichtlicher Textinhalte [5].
 
-Besonders relevant ist Mayrings systematischer Erfahrungsbericht zur qualitativen Inhaltsanalyse mit ChatGPT. In seinen Testläufen mit ChatGPT 3.5 und GPT-4 führten sowohl allgemeine als auch detailliertere Anweisungen lediglich zu groben Annäherungen an seine Musterlösung und zu zahlreichen Fehlern. Mayring berichtet unter anderem Probleme bei der korrekten Umsetzung inhaltsanalytischer Konzepte und beim Erkennen weniger offensichtlicher Textinhalte [5].
+Aus diesen Befunden wird für die vorliegende Pipeline nicht die Annahme abgeleitet, dass eine weiter optimierte Einzelanweisung die methodischen Probleme automatisierter Inhaltsanalyse behebt. Stattdessen werden komplexe Analyseaufgaben in getrennte Schritte zerlegt, Ein- und Ausgaben strukturell begrenzt, deterministisch überprüfbare Operationen aus dem LLM herausgelöst sowie generierte Befunde auf das empirische Ausgangsmaterial zurückgeführt. Die Kritik wird damit unmittelbar in Architekturentscheidungen übersetzt.
 
-Diese Kritik ist für die Architektur des Repositories produktiv: Die Konsequenz besteht **nicht** darin, eine bessere Einmal-Promptformulierung zu suchen und danach von einer „automatischen qualitativen Inhaltsanalyse“ auszugehen. Stattdessen wird versucht, komplexe Analyseaufgaben zu zerlegen, Eingaben und Ausgaben strukturell zu begrenzen, maschinell überprüfbare Teile aus dem LLM herauszunehmen und Ergebnisse auf ihre empirischen Quellen zurückzuführen.
+### 2.3 Empirische Befunde zum LLM-basierten Coding
 
-### 2.3 Internationale Forschung zu LLM-Coding
+Internationale Studien weisen für LLM-basiertes Coding ein differenziertes Bild auf. Xiao et al. zeigen, dass LLMs bei deduktivem Coding auf Basis eines expertengestützten Codebooks relevante Übereinstimmungen mit menschlichen Codierungen erreichen können [6]. QualiGPT überträgt diese Grundidee auf induktive und deduktive Szenarien und untersucht die Übereinstimmung zwischen menschlichen und LLM-basierten Codierungen mit Reliabilitätsmaßen [7].
 
-Auch internationale Studien zeigen ein gemischtes Bild. Xiao et al. demonstrierten bereits 2023, dass LLMs bei deduktivem Coding mit einem expertengestützten Codebook faire bis substanzielle Übereinstimmungen mit menschlichen Codierungen erreichen können [6]. QualiGPT erweitert diese Idee auf induktive und deduktive Szenarien und bewertet die Übereinstimmung zwischen menschlichen und LLM-basierten Codierungen mit Inter-Rater-Reliability-Maßen [7].
+Die Leistungsfähigkeit hängt jedoch deutlich von Aufgabe, Code, Promptgestaltung und Interpretationstiefe ab. Für ein lokal bzw. serverseitig installiertes Llama-3-Modell wurden bei der deduktiven Analyse psychosozialer Interviewdaten substanzielle Übereinstimmungen festgestellt, gleichzeitig jedoch erhebliche Unterschiede zwischen einzelnen Codes sowie unerwünschte Elaborationen und Halluzinationen in Zusammenfassungen berichtet [8]. Vergleichbare Einschränkungen zeigen sich bei Implementierungsinterviews: LLMs können mehr Textstellen codieren als menschliche Rater:innen, während nuancierte Interpretation, Kontextualisierung und die Auflösung mehrdeutiger Klassifikationen weiterhin menschliche Expertise erfordern [9].
 
-Neuere Arbeiten bestätigen zugleich, dass Leistungsfähigkeit stark von Aufgabe, Code, Prompting und gewünschter Interpretationstiefe abhängt. Ein serverseitig installiertes Llama-3-Modell erreichte bei der deduktiven Analyse psychosozialer Interviewdaten zwar substanzielle Übereinstimmungen, zeigte aber deutliche Unterschiede zwischen Codes; bei Zusammenfassungen wurden außerdem unerwünschte Elaborationen und Halluzinationen beobachtet. Die Autoren empfehlen deshalb ausdrücklich ein kollaboratives Modell mit menschlicher Prüfung, induktivem Coding und weiterer Interpretation [8].
+Auch für reflexive thematische Analyse wird die Unterstützungsleistung zurückhaltend beurteilt. Vikan et al. berichten bei einem offline betriebenen LLM unter anderem Probleme durch irreführende Prompts, Übersetzungsfehler und weitere Modellfehler [10]. Bei kulturell und emotional komplexen Interviews zeigt sich außerdem, dass Oberflächeninhalte vergleichsweise gut erfasst werden können, während kulturelle und emotionale Nuancen teilweise nivelliert werden. Human-in-the-loop-Verfahren bleiben deshalb für Interpretationsbreite und Validität relevant [11].
 
-Eine Studie zu deduktiver qualitativer Inhaltsanalyse in Implementierungsinterviews zeigt ebenfalls, dass LLMs mehr Textstellen codieren können als Menschen und dass Übereinstimmung je nach deskriptivem oder interpretativem Code variiert. Nuancierte Interpretation, Kontextualisierung und die Auflösung mehrdeutiger Klassifikationen blieben von menschlicher Expertise abhängig [9].
-
-Auch die Forschung zu reflexiver thematischer Analyse ist zurückhaltend. Vikan et al. fanden bei einem offline betriebenen LLM nur begrenzte Unterstützung für reflexive thematische Analyse und verweisen auf Probleme wie irreführende Prompts, Übersetzungsfehler und andere Modellfehler [10]. Eine aktuelle Untersuchung kulturell und emotional komplexer Interviews berichtet, dass ChatGPT Oberflächeninhalte gut erfassen kann, kulturelle und emotionale Nuancen jedoch abflacht; Human-in-the-loop-Aufsicht war für Interpretationsbreite und Validität wesentlich [11].
-
-Diese Befunde sprechen gegen die Vorstellung eines universellen „KI-Coders“. Sie sprechen eher für **aufgabenspezifische, überprüfbare Assistenz**.
+Aus diesen Befunden ergibt sich keine hinreichende Grundlage für die Annahme eines universell einsetzbaren KI-Coders. Sie stützen vielmehr eine aufgabenspezifische Verwendung, bei der LLM-Ausgaben überprüfbar bleiben und mit menschlicher Interpretation verbunden werden.
 
 ---
 
-## 3. Aus bekannten Kritikpunkten abgeleitete Designprinzipien
+## 3. Aus der bisherigen Kritik abgeleitete Designprinzipien
 
-Die Pipeline versucht nicht, die methodischen Probleme von LLMs als „gelöst“ darzustellen. Stattdessen werden konkrete Risiken dort, wo es technisch möglich ist, durch Architekturentscheidungen adressiert.
+Die methodischen Probleme von LLMs werden durch die Pipeline nicht als gelöst vorausgesetzt. Soweit Risiken technisch adressierbar sind, werden vielmehr zusätzliche Kontrollschritte eingeführt. Die folgenden Abschnitte stellen jeweils die zugrunde liegende Problemlage, die implementierte Gegenmaßnahme sowie die verbleibende Grenze dar.
 
-### 3.1 Kein monolithischer „Analysiere meine Interviews“-Prompt
+### 3.1 Zerlegung komplexer Analyseaufgaben
 
-Ein wesentliches Risiko besteht darin, ein vollständiges Interviewkorpus an ein LLM zu übergeben und unmittelbar eine fertige Interpretation zu erwarten. Dadurch werden Segmentierung, Kategorienanwendung, Abstraktion, Evidenzauswahl und Synthese in einem kaum überprüfbaren Vorgang vermischt.
+Die Übergabe eines vollständigen Interviewkorpus mit der Aufforderung, unmittelbar eine umfassende qualitative Interpretation zu erzeugen, verbindet Segmentierung, Kategorienanwendung, Abstraktion, Evidenzauswahl und Synthese in einem nur eingeschränkt überprüfbaren Verarbeitungsschritt. Die Pipeline zerlegt diese Aufgaben deshalb in getrennte Module mit expliziten Ein- und Ausgaben [1]. Strukturierte JSON-Zwischenprodukte ermöglichen die unabhängige Prüfung einzelner Verarbeitungsschritte, während Reihenfolge und Abhängigkeiten der Module über YAML deklariert werden.
 
-Die Pipeline zerlegt den Prozess deshalb in getrennte Module mit expliziten Inputs und Outputs [1]. Zwischenprodukte werden als strukturierte JSON-Dateien gespeichert und können unabhängig inspiziert werden. Die Modulreihenfolge und Abhängigkeiten werden über YAML deklariert.
+Diese Zerlegung entspricht Befunden, nach denen auf einzelne Codes zugeschnittene Aufgaben teilweise höhere Übereinstimmungen erreichen als die gleichzeitige Verarbeitung eines vollständigen Codebooks [12]. Auch für deduktive Codierung wurden Vorteile schrittweise zerlegter Aufgaben berichtet [13]. Aus der Modularisierung ergibt sich damit eine höhere Prüfbarkeit und Fehlerlokalisierbarkeit. Eine semantisch korrekte Interpretation wird dadurch jedoch nicht gewährleistet.
 
-Diese Zerlegung ist auch mit empirischen Befunden vereinbar: In einer Studie zu reflexiver Inhaltsanalyse erzielten auf einzelne Codes zugeschnittene Aufgaben teilweise deutlich bessere Übereinstimmung als die Verarbeitung des gesamten Codebooks in einem einzigen Prompt [12]. Eine weitere Studie zur deduktiven Codierung fand die stärksten Ergebnisse bei einer schrittweisen Aufgabenzerlegung [13].
+### 3.2 Trennung menschlicher und LLM-basierter Codierung
 
-**Adressiertes Risiko:** Überlastete Prompts, vermischte Analyseschritte, geringe Fehlerlokalisierbarkeit.
+Die Pipeline kann von bereits menschlich kodierten Segmenten ausgehen [1]. Das LLM ersetzt die ursprüngliche Codierung daher nicht zwangsläufig, sondern kann nachgelagerte Analyseaufgaben übernehmen oder die vorhandene Codierung in einem separaten Prüfpfad untersuchen. Diese Trennung entspricht Human-in-the-loop-Ansätzen, in denen die konzeptuelle Verantwortung für Definitionen, Zusammenführungen und Interpretationsrahmen bei den Forschenden verbleibt [8, 9, 11, 14].
 
-**Verbleibende Grenze:** Auch ein modularer LLM-Schritt kann semantisch falsch sein. Modularisierung erhöht Prüfbarkeit, nicht automatisch Validität.
+Damit wird die Gleichsetzung einer generierten Klassifikation mit einer wissenschaftlich verantworteten Codierung vermieden. Gleichzeitig ist zu berücksichtigen, dass auch menschliche Codierungen interpretativ sind und nicht ohne Weiteres als fehlerfreier Goldstandard verstanden werden können.
 
-### 3.2 Human Coding und LLM Coding werden getrennt behandelt
+### 3.3 Trennung von Code-Verifikation und Blind-Coding
 
-Die Pipeline kann von bereits menschlich kodierten Segmenten ausgehen [1]. Das LLM muss daher nicht zwangsläufig die ursprüngliche Codierung ersetzen. Stattdessen kann es nachgelagerte Analyseaufgaben übernehmen oder die vorhandene Codierung in einem separaten Prüfpfad untersuchen.
+`code_verification` prüft einen bereits menschlich vergebenen vollständigen Codepfad anhand von Definition und Ankerbeispiel. `blind_coding` erhält demgegenüber Segment und Codebuch, jedoch nicht den menschlich vergebenen Zielcode [1]. Beide Verfahren beantworten damit unterschiedliche Fragen und werden getrennt gespeichert.
 
-Diese Trennung folgt einem Human-in-the-loop-Verständnis, wie es auch in aktueller Forschung empfohlen wird [8, 9, 11]. Neuere kollaborative Ansätze gehen noch weiter und lassen Menschen ausdrücklich die konzeptuelle Autorität über Definitionen, Zusammenführungen und Interpretationsrahmen behalten [14].
+Eine Verifikation mit bekanntem Zielcode kann Hinweise auf die Plausibilität einer bestehenden Zuordnung liefern, ist jedoch gegenüber Bestätigungstendenzen anfällig. Blind-Coding ermöglicht eine unabhängigere erneute Klassifikation, ohne das LLM dadurch mit einem unabhängigen menschlichen Rater gleichzusetzen. Modelltraining, Promptgestaltung, Modellversion und Codebook beeinflussen die Entscheidung weiterhin.
 
-**Adressiertes Risiko:** Gleichsetzung von LLM-Ausgabe und wissenschaftlicher Codierung.
+### 3.4 Begrenzung der zulässigen Codes
 
-**Verbleibende Grenze:** Menschliche Codierung ist selbst interpretativ und nicht automatisch ein fehlerfreier „Goldstandard“.
+Beim Blind-Coding sind ausschließlich vorhandene vollständige Codepfade sowie definierte Sonderfälle wie `unklar` oder `keine_zuordnung` zulässig. Vom LLM erzeugte Codes werden gegen das eingelesene Kategoriensystem validiert; nicht vorhandene Alternativcodes werden verworfen bzw. protokolliert [1]. Die explizite Bereitstellung von Definitionen und Coding-Regeln entspricht dabei etablierten codebook-basierten Ansätzen [6, 9].
 
-### 3.3 Code-Verifikation ist von Blind-Coding getrennt
+Durch diese Begrenzung lassen sich halluzinierte Kategorien technisch erkennen. Daraus folgt jedoch nicht, dass ein formal gültiger Code inhaltlich zutreffend ist. Die Schema-Validierung kontrolliert die Zulässigkeit der Ausgabe, nicht deren interpretative Richtigkeit.
 
-`code_verification` prüft einen bereits menschlich vergebenen vollständigen Codepfad gegen Definition und Ankerbeispiel. `blind_coding` erhält dagegen Segment und Codebuch, jedoch nicht den menschlichen Code [1].
+### 3.5 Deterministische Berechnung des Human–LLM Agreements
 
-Das ist methodisch wichtig: Eine Prüfung, bei der das Modell den erwarteten menschlichen Code bereits kennt, misst etwas anderes als eine unabhängige erneute Klassifikation. Beide Perspektiven werden deshalb getrennt gespeichert.
+Das Modul `coding_agreement` überlässt die Ermittlung der Übereinstimmung nicht dem LLM. Exakte und hierarchische Übereinstimmungen, Verwechslungspaare, Fallstatus und Konfusionsmatrix werden programmatisch aus den gespeicherten Codierungen berechnet. Cohen's Kappa wird nur in methodisch geeigneten single-label-nominalen Konstellationen explorativ ausgewiesen [1].
 
-**Adressiertes Risiko:** Bestätigungsbias bzw. scheinbare Validierung durch Offenlegung des Zielcodes.
+Die Vorgehensweise folgt dem Grundsatz, deterministisch berechenbare Ergebnisse nicht durch ein generatives Modell schätzen zu lassen. Intercoder-Reliability kann in qualitativer Inhaltsanalyse zur Diagnose problematischer Codes und zur Weiterentwicklung eines Kategoriensystems beitragen [15]. Entsprechend werden auch in aktuellen LLM-Studien Kappa, Alpha, Accuracy oder F1 zur externen Bewertung der Modellcodierung eingesetzt [7, 8, 13].
 
-**Verbleibende Grenze:** Blind-Coding macht das LLM nicht zu einem unabhängigen menschlichen Rater. Modelltraining, Prompt, Modellversion und Codebook beeinflussen weiterhin die Entscheidung.
+Die Kennzahlen werden im Repository bewusst als Human–LLM Coding Agreement bezeichnet [1]. Eine hohe Übereinstimmung belegt weder interpretative Validität noch die Richtigkeit des menschlichen Referenzcodes. Agreement wird daher als diagnostische Kennzahl und nicht als Wahrheitsmaß verwendet.
 
-### 3.4 Das Codebook begrenzt zulässige Antworten
+### 3.6 Trennung von Interpretation und Originalevidenz
 
-Beim Blind-Coding sind nur vorhandene vollständige Codepfade sowie definierte Sonderfälle wie `unklar` oder `keine_zuordnung` zulässig. LLM-genannte Codes werden gegen das tatsächlich eingelesene Kategoriensystem validiert; erfundene Alternativcodes werden verworfen bzw. protokolliert [1].
+Jedes Segment erhält eine global eindeutige ID. In evidenzgebundenen Analyseschritten verweist das Modell auf vorhandene Segment-IDs, die anschließend validiert werden. Der tatsächliche Interviewtext wird deterministisch aus `id_to_text.json` zurückgeführt [1]. Der Verarbeitungsweg lässt sich vereinfacht wie folgt darstellen:
 
-Diese Strategie knüpft an Forschung zum codebook-basierten deduktiven Coding an, in der die explizite Bereitstellung von Definitionen und strukturierten Coding-Regeln zentral ist [6, 9].
+`LLM-Interpretation → validierte Segment-ID → deterministische Rückführung → Originaltext`
 
-**Adressiertes Risiko:** Halluzinierte Kategorien, semantisch plausible, aber im Kategoriensystem nicht existente Labels.
+Das Originalzitat muss damit nicht aus einer generierten Modellantwort rekonstruiert werden. Erfundenen oder veränderten Zitaten sowie nicht überprüfbaren Evidenzbehauptungen wird dadurch technisch entgegengewirkt. Eine vorhandene Textstelle kann jedoch weiterhin falsch interpretiert oder selektiv als Beleg ausgewählt werden. Die technische Provenienz ersetzt dementsprechend keine inhaltliche Prüfung.
 
-**Verbleibende Grenze:** Ein formal gültiger Code kann inhaltlich trotzdem falsch sein.
+### 3.7 Deterministische Ermittlung zählbarer Evidenzmerkmale
 
-### 3.5 Agreement wird deterministisch berechnet
+Der Evidence-Audit berücksichtigt unter anderem die Anzahl stützender Personen, Segmente und Analysepfade sowie Gegenbelege, Ambivalenzen und Relativierungen. Zählbare Merkmale werden programmatisch ermittelt und nicht durch das LLM frei erzeugt [1]. Damit werden Interpretation und deterministische Aggregation voneinander getrennt.
 
-Das Modul `coding_agreement` lässt das LLM **nicht** selbst entscheiden, wie hoch seine Übereinstimmung mit menschlicher Codierung ist. Exakte und hierarchische Übereinstimmung, Verwechslungspaare, Fallstatus und Konfusionsmatrix werden programmatisch aus den gespeicherten Codierungen berechnet; Cohen's Kappa wird nur in methodisch geeigneten single-label-nominalen Situationen explorativ ausgewiesen [1].
+Der Audit beschreibt, wie breit ein Befund innerhalb des vorliegenden Materials abgestützt ist. Diese empirische Breite ist nicht mit statistischer Signifikanz oder Repräsentativität gleichzusetzen. Ebenso kann ein einzelner Negativfall für die qualitative Interpretation theoretisch bedeutsamer sein als ein häufig auftretendes Muster.
 
-Das folgt einem allgemeinen Prinzip klassischer Qualitätssicherung: Wenn ein Ergebnis deterministisch aus Daten berechnet werden kann, sollte es nicht durch ein generatives Modell geschätzt werden. Intercoder-Reliability kann in qualitativer Inhaltsanalyse zur Diagnose problematischer Codes und zur Verbesserung eines Kategoriensystems beitragen [15]. Aktuelle LLM-Studien verwenden entsprechend Kappa, Alpha, Accuracy oder F1 zur externen Bewertung der Modellcodierung [7, 8, 13].
+### 3.8 Kontrast-, Negativfall- und Ambivalenzanalyse
 
-Das Repository bezeichnet diese Kennzahlen bewusst als **Human–LLM Coding Agreement** und nicht pauschal als klassische Interrater-Reliabilität zwischen zwei menschlichen Ratern [1].
+Generative Zusammenfassungen verdichten umfangreiches Material, wodurch Minderheitenpositionen, Widersprüche oder fallinterne Spannungen verloren gehen können. Aktuelle Studien berichten in diesem Zusammenhang von zu breiten Oberbegriffen, übermäßiger Granularität sowie einem Verlust von Kontext und Nuance [9, 11].
 
-**Adressiertes Risiko:** vom LLM erfundene oder inkonsistent berechnete Reliabilitätskennzahlen.
+Die Pipeline enthält deshalb eigene Module für Kontrast- und Negativfälle sowie für intrapersonelle Ambivalenzen [1]. Dominante Muster werden dadurch systematisch mit widersprechender oder relativierender Evidenz konfrontiert. Diese Gegenmaßnahme reduziert das Risiko einer vorschnellen Homogenisierung, gewährleistet jedoch nicht, dass sämtliche relevanten Gegenbeispiele durch das LLM erkannt werden.
 
-**Verbleibende Grenze:** Hohe Übereinstimmung beweist weder interpretative Validität noch die Richtigkeit des menschlichen Referenzcodes. Agreement ist ein Diagnoseinstrument, kein Wahrheitsmaß.
+### 3.9 Begrenzung kausaler und personenbezogener Interpretationen
 
-### 3.6 Interpretation und Originalevidenz werden technisch getrennt
+Die Zusammenhangsanalyse kann gemeinsames Auftreten, Ergänzungen oder Spannungsverhältnisse beschreiben, soll daraus jedoch keine unbelegten Kausalbeziehungen ableiten. Personenanalysen und Typenbildungen werden ebenso nicht als psychologische Diagnosen verstanden [1]. Dadurch wird der Übergang von deskriptiven Interviewdaten zu unbelegten Ursachen-, Wirkungs- oder Persönlichkeitsaussagen begrenzt.
 
-Ein besonders wichtiges Designprinzip ist die Trennung von generierter Interpretation und Originalmaterial. Jedes Segment erhält eine global eindeutige ID. In evidenzgebundenen Analyseschritten soll das Modell auf vorhandene Segment-IDs verweisen. Die IDs werden validiert und der tatsächliche Interviewtext anschließend deterministisch aus `id_to_text.json` zurückgeführt [1].
+Promptbasierte Regeln können entsprechende Überinterpretationen reduzieren, jedoch nicht vollständig ausschließen. Die abschließende Bewertung bleibt deshalb eine Aufgabe der Forschenden.
 
-Vereinfacht:
+### 3.10 Strukturierte Zwischenprodukte und Auditierbarkeit
 
-`LLM-Interpretation -> validierte Segment-ID -> Python-Lookup -> Originaltext`
+Die Pipeline verwendet JSON-Zwischenprodukte, Modul-Logs, ein Workflow-Manifest sowie optional append-only gespeicherte unveränderte LLM-Antworten für Code-Verifikation und Blind-Coding [1]. Neben den Endberichten können damit auch die vorgelagerten Verarbeitungsschritte untersucht werden.
 
-Damit muss das LLM ein Originalzitat nicht aus seinem eigenen Ausgabekontext reproduzieren.
+Diese Ausrichtung entspricht der zunehmenden Forderung nach Transparenz und Auditierbarkeit LLM-gestützter qualitativer Forschung. Das COREQ+LLM-Projekt nennt Halluzinationen sowie Risiken für Reproduzierbarkeit, Validität und Trustworthiness als zentrale Herausforderungen und verweist auf fehlende Standards für eine transparente Dokumentation der LLM-Nutzung [16]. Die Diskussion um *technological reflexivity* erweitert diese Perspektive, indem der Einfluss von Modell, Interface und Mensch–Algorithmus-Interaktion auf die Erkenntnisproduktion selbst zum Gegenstand der methodischen Reflexion wird [17].
 
-**Adressiertes Risiko:** erfundene, veränderte oder ungenau rekonstruierte „Originalzitate“ sowie schwer überprüfbare Evidenzbehauptungen.
-
-**Verbleibende Grenze:** Eine tatsächlich existierende Textstelle kann vom LLM falsch interpretiert oder selektiv als Beleg ausgewählt werden. Provenienz ersetzt keine hermeneutische Prüfung.
-
-### 3.7 Zählbare Evidenzmerkmale werden nicht vom LLM erfunden
-
-Der Evidence-Audit berücksichtigt unter anderem die Zahl stützender Personen, Segmente und Analysepfade sowie Gegenbelege, Ambivalenzen und Relativierungen. Zählbare Merkmale werden in Python berechnet und nicht vom LLM frei erzeugt [1].
-
-Das ist eine bewusste Trennung zwischen **Interpretation** und **deterministischer Aggregation**. Der Audit soll zeigen, wie breit ein Befund im vorhandenen Material abgestützt ist, ohne diese Breite mit statistischer Signifikanz gleichzusetzen.
-
-**Adressiertes Risiko:** plausible, aber numerisch falsche Aussagen des LLM über Häufigkeiten oder empirische Abdeckung.
-
-**Verbleibende Grenze:** Häufigkeit bzw. Breite ist kein Ersatz für qualitative Bedeutung. Ein einzelner Negativfall kann theoretisch wichtiger sein als ein häufiges Muster.
-
-### 3.8 Kontrast-, Negativfall- und Ambivalenzanalyse gegen vorschnelle Homogenisierung
-
-LLM-Zusammenfassungen besitzen einen starken Verdichtungscharakter. Gerade dadurch können Minderheitenpositionen, Widersprüche oder fallinterne Spannungen verschwinden. Aktuelle Studien berichten ebenfalls von zu breiten „umbrella terms“, übermäßiger Granularität oder Verlust von Kontext und Nuance [9, 11].
-
-Die Pipeline enthält deshalb eigene Module für Kontrast- und Negativfälle sowie für intrapersonelle Ambivalenzen [1]. Dominante Muster sollen dadurch nicht automatisch als widerspruchsfreie Gesamtaussage des Materials erscheinen.
-
-**Adressiertes Risiko:** Glättung, Mehrheitsbias und Verlust widersprechender Evidenz bei Synthesen.
-
-**Verbleibende Grenze:** Auch die Suche nach Gegenbelegen wird teilweise durch ein LLM durchgeführt und kann relevante Gegenbelege übersehen.
-
-### 3.9 Keine automatische Kausalität oder psychologische Diagnostik
-
-Die Zusammenhangsanalyse darf Beziehungen wie gemeinsames Auftreten, Ergänzung oder Spannungsverhältnis beschreiben, soll daraus aber keine unbelegten Kausalbeziehungen ableiten. Personenanalysen und Typenbildungen werden ausdrücklich nicht als psychologische Diagnosen verstanden [1].
-
-**Adressiertes Risiko:** Überinterpretation sprachlicher Muster und Übergang von deskriptiven Daten zu unbelegten Ursachen-, Wirkungs- oder Persönlichkeitsaussagen.
-
-**Verbleibende Grenze:** Promptregeln können Überinterpretation reduzieren, aber nicht vollständig verhindern; die finale Prüfung bleibt menschliche Aufgabe.
-
-### 3.10 Strukturierte Outputs, Logs und optionale Raw-Audits
-
-Die Pipeline verwendet JSON-Zwischenprodukte, Modul-Logs, ein Workflow-Manifest und optional append-only gespeicherte unveränderte LLM-Antworten für Code-Verifikation und Blind-Coding [1]. Dadurch können nicht nur Endberichte, sondern auch Zwischenschritte untersucht werden.
-
-Diese Ausrichtung passt zu der wachsenden Forderung nach Transparenz und Auditierbarkeit bei LLM-gestützter qualitativer Forschung. Das COREQ+LLM-Projekt nennt Halluzinationen sowie Risiken für Reproduzierbarkeit, Validität und Trustworthiness als zentrale Herausforderungen und verweist auf fehlende Normen für transparente LLM-Nutzung [16]. Auch die neuere Diskussion um „technological reflexivity“ fordert, den Einfluss von Modell, Interface und Mensch–Algorithmus-Interaktion auf die Erkenntnisproduktion selbst zum Gegenstand methodischer Reflexion zu machen [17].
-
-**Adressiertes Risiko:** Black-Box-Analyse und fehlende Rekonstruktion des technischen Analysepfads.
-
-**Verbleibende Grenze:** Ein technischer Audit-Trail dokumentiert, *was* passiert ist; er beweist nicht, dass die interpretative Entscheidung wissenschaftlich angemessen war.
+Ein technischer Audit-Trail ermöglicht die Rekonstruktion des Analysewegs. Die methodische Angemessenheit einer Interpretation wird dadurch nicht automatisch nachgewiesen.
 
 ---
 
-## 4. Lokale LLM-Verarbeitung als Datenschutz- und Reproduzierbarkeitsentscheidung
+## 4. Lokale LLM-Verarbeitung, Datenschutz und Reproduzierbarkeit
 
-Die Pipeline nutzt lokale Modelle über Ollama [1]. Bei entsprechend lokaler Konfiguration muss Interviewmaterial für die Modellinferenz nicht an einen externen kommerziellen LLM-Dienst übertragen werden.
+Die Pipeline nutzt lokale Modelle über Ollama [1]. Bei vollständig lokaler Konfiguration muss das Interviewmaterial für die Modellinferenz nicht an einen externen kommerziellen LLM-Dienst übertragen werden. Für qualitative Interviews ist diese Eigenschaft insbesondere deshalb relevant, weil auch pseudonymisierte Texte sensible Kontextinformationen enthalten können. Datenschutz und ethische Fragen werden dementsprechend auch in der aktuellen methodischen Literatur als Bestandteil des Einsatzes generativer KI behandelt [3, 4].
 
-Dies ist insbesondere für qualitative Interviews relevant, weil selbst pseudonymisierte Texte sensible Kontextinformationen enthalten können. Kuckartz und Rädiker beziehen Datenschutz und ethische Fragen ausdrücklich in ihre Diskussion generativer KI ein [3].
+Lokale Verarbeitung ist jedoch nicht mit Datenschutzkonformität gleichzusetzen. Rechtsgrundlage und Einwilligung, Anonymisierung bzw. Pseudonymisierung, Speicherorte und Backups, Zugriffsrechte, Log- und Debugdateien, die Veröffentlichung von Beispieldaten sowie institutionelle Vorgaben und Forschungsethik sind unabhängig vom Inferenzort zu prüfen. Dies gilt insbesondere für Raw-Audit-Dateien, die aus Interviewmaterial abgeleitete Inhalte enthalten können [1].
 
-Lokale Verarbeitung ist jedoch **kein Synonym für Datenschutzkonformität**. Forschende müssen weiterhin unter anderem prüfen:
-
-- Rechtsgrundlage und Einwilligung,
-- Anonymisierung bzw. Pseudonymisierung,
-- Speicherorte und Backups,
-- Zugriffsrechte,
-- Log- und Debugdateien,
-- Veröffentlichung von Beispieldaten,
-- Modell- und Softwareherkunft,
-- institutionelle Vorgaben und Forschungsethik.
-
-Die Pipeline warnt deshalb insbesondere vor der ungeprüften Weitergabe von Raw-Audit-Dateien, die aus Interviewmaterial abgeleitete Inhalte enthalten können [1].
-
-Lokale Modelle können zusätzlich die technische Reproduzierbarkeit verbessern, weil Modellname und Konfiguration kontrollierbarer dokumentiert werden können. Sie beseitigen Reproduzierbarkeitsprobleme aber nicht: Modellupdates, Samplingparameter, Hardware, Kontextlänge und nichtdeterministische Inferenz können weiterhin zu unterschiedlichen Resultaten führen.
+Die lokale Ausführung kann zugleich die technische Reproduzierbarkeit unterstützen, da Modell und Konfiguration kontrollierbarer dokumentiert werden können. Modellupdates, Samplingparameter, Hardware, Kontextlänge und nichtdeterministische Inferenz können dennoch zu unterschiedlichen Ergebnissen führen. Aus lokaler Verarbeitung folgt daher weder vollständige Reproduzierbarkeit noch methodische Validität.
 
 ---
 
 ## 5. Reproduzierbarkeit, Stabilität und Modellabhängigkeit
 
-LLM-Ausgaben sind nicht deterministisch im gleichen Sinn wie klassische Statistikfunktionen. Deshalb sollte zwischen mindestens drei Ebenen unterschieden werden:
+Für LLM-basierte Analysen sind technische Reproduzierbarkeit, Output-Stabilität und interpretative Robustheit voneinander zu unterscheiden. Technische Reproduzierbarkeit bezieht sich auf identische Daten, Softwarestände und Konfigurationen. Output-Stabilität beschreibt die Ähnlichkeit wiederholter LLM-Läufe, während interpretative Robustheit die Vergleichbarkeit von Befunden über Modelle, Prompts oder Forschende hinweg betrifft.
 
-1. **technische Reproduzierbarkeit** – gleiche Daten, gleiche Softwareversion, gleiche Konfiguration;
-2. **Output-Stabilität** – ähnliche Ergebnisse über wiederholte LLM-Läufe;
-3. **interpretative Robustheit** – ähnliche oder zumindest nachvollziehbar unterschiedliche Befunde über Modelle, Prompts oder Forschende hinweg.
+Das Repository adressiert derzeit vor allem die technische Ebene durch YAML-Konfiguration, strukturierte Zwischenprodukte, Logs, Tests und definierte Modulabhängigkeiten [1]. Eine systematische Stabilitätsanalyse über mehrere Läufe sowie ein Vergleich verschiedener Ollama-Modelle stellen weiterführende Entwicklungsschritte dar. `quallmer` bietet für vergleichbare Fragestellungen bereits Funktionen zur Wiederholung von Codierungen mit unterschiedlichen Modellen und Einstellungen, zur Validierung gegen menschliche Goldstandards sowie zur Erstellung eines Audit-Trails [18].
 
-Das Repository adressiert derzeit vor allem die erste Ebene durch YAML-Konfiguration, strukturierte Zwischenprodukte, Logs, Tests und klar definierte Modulabhängigkeiten [1]. Eine systematische Stabilitätsanalyse über mehrere Runs und ein Vergleich verschiedener Ollama-Modelle sind als mögliche Erweiterungen ausgewiesen [1].
-
-Andere aktuelle Werkzeuge gehen bereits explizit in diese Richtung. Das R-Paket `quallmer` bietet beispielsweise Funktionen zur Wiederholung von Codierungen mit unterschiedlichen Modellen und Einstellungen, zur Validierung gegen menschliche Goldstandards und zur Erstellung eines Audit-Trails [18]. Solche Ansätze sind wichtige Prior Art und zugleich ein sinnvoller Referenzpunkt für zukünftige Erweiterungen dieser Pipeline.
-
-Eine methodisch starke Weiterentwicklung wäre daher:
-
-- identische Stichproben mehrfach mit demselben Modell auszuführen,
-- mehrere lokale Modelle zu vergleichen,
-- Prompt- und Temperatureinstellungen zu dokumentieren,
-- Stabilität pro Code statt nur global zu betrachten,
-- besonders instabile Segmente gezielt menschlich zu prüfen.
+Auf dieser Basis erscheint für zukünftige Untersuchungen insbesondere die wiederholte Analyse identischer Stichproben mit demselben Modell, der Vergleich mehrerer lokaler Modelle sowie die Dokumentation von Prompt- und Temperatureinstellungen angezeigt. Stabilität sollte dabei nicht ausschließlich global, sondern auch auf Ebene einzelner Codes und Segmente betrachtet werden. Instabile Fälle können anschließend gezielt einer menschlichen Prüfung zugeführt werden.
 
 ---
 
-## 6. Reflexivität statt bloßer Automatisierung
+## 6. Reflexivität als Bestandteil der Analyse
 
-Eine rein technische Validierung reicht für qualitative Forschung nicht aus. Ibrahim und Voyer argumentieren für **technological reflexivity**: Forschende sollten nicht nur ihre eigene Position, sondern auch Modellbias, Interaktion mit dem System, Promptentscheidungen und den Einfluss digitaler Werkzeuge auf die Erkenntnisproduktion reflektieren [17].
+Eine technische Validierung bildet nur einen Teil der Qualitätssicherung qualitativer Forschung. Ibrahim und Voyer fassen unter *technological reflexivity* die Anforderung, neben der eigenen Position der Forschenden auch Modellbias, Interaktion mit dem System, Promptentscheidungen und den Einfluss digitaler Werkzeuge auf die Erkenntnisproduktion zu reflektieren [17]. Prahl konkretisiert diese Perspektive mit einer AI-Reflexivity Checklist, anhand derer vor der Analyse geprüft werden kann, ob eine Aufgabe delegiert, assistiert oder primär menschlich bearbeitet werden sollte [19].
 
-Prahl operationalisiert diese Idee in einer AI-Reflexivity Checklist, die vor der Analyse klären soll, ob eine Aufgabe eher delegiert, assistiert oder menschlich geführt werden sollte. Kriterien sind unter anderem Kontextvariation, Erfahrungs- und Bedeutungstiefe, ethische Exposition und Reversibilität von Outputs [19].
+Für die Pipeline folgt daraus, dass Analyseschritte nicht als methodisch gleichwertig behandelt werden. Deskriptive Strukturierung unterscheidet sich von latenter Interpretation; emotional, kulturell oder biografisch stark kontextgebundene Passagen erfordern eine intensivere menschliche Prüfung. Modelloutput wird dementsprechend als analytischer Vorschlag und nicht als neutrale Beobachtung behandelt.
 
-Für die Nutzung dieses Repositories bedeutet das praktisch:
-
-- Nicht jeder Analyseschritt ist gleichermaßen für LLM-Unterstützung geeignet.
-- Deskriptive Strukturierung ist methodisch anders zu bewerten als latente Interpretation.
-- Emotional, kulturell oder biografisch stark kontextgebundene Passagen benötigen besondere Vorsicht.
-- Modelloutput sollte als analytischer Vorschlag behandelt werden, nicht als neutrale Beobachtung.
-- Abweichungen zwischen Mensch und LLM sind nicht nur „Fehler“, sondern können Hinweise auf unklare Kategorien, unterschiedliche Lesarten oder blinde Flecken liefern.
-
-Damit wird Human–LLM Agreement nicht ausschließlich als Leistungsranking verstanden. Uneinigkeit kann selbst diagnostisch relevant sein.
+Abweichungen zwischen menschlicher und LLM-basierter Codierung sind dabei nicht ausschließlich als Modellfehler zu interpretieren. Sie können ebenso auf unklare Kategorien, unterschiedliche Lesarten oder problematische Grenzfälle hinweisen. Human–LLM Agreement besitzt damit neben der quantitativen Beschreibung der Übereinstimmung eine diagnostische Funktion für die weitere qualitative Prüfung.
 
 ---
 
-## 7. Verhältnis zu verwandten Softwareprojekten und Workflows
+## 7. Verhältnis zu verwandten Arbeiten
 
-Das Repository steht in einem wachsenden Ökosystem von Werkzeugen für LLM-gestützte qualitative Analyse.
+Die Pipeline steht in einem wachsenden Forschungs- und Softwarefeld zur LLM-gestützten qualitativen Analyse. Die folgenden Arbeiten weisen in Teilbereichen deutliche Überschneidungen auf und sind deshalb für die Einordnung des Projekts besonders relevant.
 
-### QualiGPT
+### 7.1 QualiGPT
 
-QualiGPT wurde entwickelt, um LLM-basiertes qualitatives Coding zugänglicher und transparenter zu machen. Es unterstützt induktive und deduktive Coding-Szenarien und vergleicht LLM- mit menschlicher Codierung über Reliability-Maße [7]. Gemeinsam ist beiden Ansätzen die Idee, LLM-Coding nicht ungeprüft als Endergebnis zu behandeln. Die vorliegende Pipeline legt ihren Schwerpunkt darüber hinaus auf die Verarbeitung bereits kodierter Interviewsegmente und auf nachgelagerte, miteinander verbundene Analyseebenen.
+QualiGPT unterstützt induktive und deduktive Coding-Szenarien und vergleicht LLM-basierte mit menschlichen Codierungen anhand von Reliabilitätsmaßen [7]. Mit dem vorliegenden Repository besteht damit eine Überschneidung hinsichtlich der kontrollierten Prüfung LLM-basierter Codierung. Die Pipeline legt darüber hinaus einen Schwerpunkt auf die Verarbeitung bereits kodierter Interviewsegmente sowie auf miteinander verbundene nachgelagerte Analyseebenen.
 
-### quallmer
+### 7.2 quallmer
 
-`quallmer` ist ein R-Werkzeugkasten für codebook-basiertes LLM-Coding. Besonders relevant sind Funktionen für Agreement, Goldstandard-Validierung, Modell-/Setting-Vergleiche und Audit-Trails [18]. Damit überschneidet sich `quallmer` deutlich mit dem Qualitätssicherungsbereich dieses Projekts. Der Schwerpunkt dieses Repositories liegt jedoch stärker auf einer mehrstufigen Interviewanalyse nach der Codierung – einschließlich Fall-, Kontrast-, Ambivalenz-, Beziehungs-, SWOT-/Meta-SWOT- und Evidence-Audit-Schritten.
+`quallmer` stellt einen R-Werkzeugkasten für codebook-basiertes LLM-Coding bereit. Funktionen für Agreement, Goldstandard-Validierung, Modell- und Einstellungsvergleiche sowie Audit-Trails überschneiden sich unmittelbar mit dem Qualitätssicherungsbereich dieses Projekts [18]. Die vorliegende Pipeline erweitert diesen Schwerpunkt um eine mehrstufige Analyse nach der Codierung, die Fall-, Kontrast-, Ambivalenz-, Zusammenhangs-, SWOT-, Meta-SWOT- und Evidence-Audit-Schritte miteinander verbindet.
 
-### Multi-Stage LLM Pipeline mit Expert Validation
+### 7.3 Mehrstufige LLM-Pipeline mit Expert:innenvalidierung
 
-Eine 2026 publizierte Proof-of-Concept-Studie verwendete deutschsprachig erhobene Interviews aus Österreich, die für die LLM-Analyse ins Englische übersetzt wurden, und verglich eine mehrstufige LLM-Pipeline mit einer manuellen Baseline. Expert:innen sahen relevante thematische Überschneidungen, kritisierten aber unter anderem Granularität, vage Konzepte und Kontextabhängigkeit; die Outputs wurden als nach menschlicher Revision nutzbar bewertet [20].
+Eine 2026 publizierte Proof-of-Concept-Studie untersuchte deutschsprachig erhobene Interviews aus Österreich, die für die LLM-Analyse ins Englische übersetzt wurden, und verglich eine mehrstufige LLM-Pipeline mit einer manuellen Baseline [20]. Expert:innen stellten relevante thematische Überschneidungen fest, kritisierten jedoch unter anderem die Granularität, vage Konzepte und die Kontextabhängigkeit der erzeugten Ergebnisse. Die Ausgaben wurden insbesondere nach menschlicher Revision als nutzbar beurteilt.
 
-Diese Arbeit ist besonders relevante Prior Art für die Idee einer **mehrstufigen** LLM-Pipeline. Das vorliegende Repository unterscheidet sich jedoch in Ziel und Architektur: Es verarbeitet bereits kodierte Segmente, kann lokal mit Ollama arbeiten und implementiert explizite technische Provenienz- und Validierungsschritte wie Segment-ID-Rückführung, Blind-Coding, deterministisches Agreement und Evidence-Audit.
+Diese Arbeit bildet relevante Prior Art für die grundsätzliche Verwendung mehrstufiger LLM-Pipelines. Die vorliegende Implementierung unterscheidet sich hinsichtlich ihres Ausgangsmaterials und der technischen Qualitätssicherung: Sie verarbeitet bereits kodierte Segmente, kann lokal über Ollama ausgeführt werden und verbindet Segment-ID-Rückführung, Blind-Coding, deterministisches Agreement sowie Evidence-Audit in einem gemeinsamen Workflow [1].
 
-### Weitere lokale bzw. auditierbare Ansätze
+### 7.4 Weitere lokale und auditierbare Ansätze
 
-Neuere Open-Source-Projekte zeigen, dass lokale Verarbeitung, Goldstandard-Kalibrierung, Blind-Coding und Audit-Trails zunehmend zu eigenständigen Designzielen werden. `Concord` kombiniert beispielsweise AI-codierte Korpora mit Gold-Kalibrierung, Blind-Doppelcodierung, Agreement-Statistik und einem Ledger-basierten Replikationspfad [21]. `interview-analysis` positioniert das LLM ausdrücklich als vorläufigen First-Cycle-Coder und fordert menschliche Validierung der Ergebnisse [22].
+Neuere Open-Source-Projekte zeigen, dass lokale Verarbeitung, Goldstandard-Kalibrierung, Blind-Coding und Audit-Trails zunehmend eigenständige Entwicklungsziele darstellen. `Concord` verbindet beispielsweise KI-codierte Korpora mit Gold-Kalibrierung, Blind-Doppelcodierung, Agreement-Statistik und einem Ledger-basierten Replikationspfad [21]. `interview-analysis` positioniert das LLM ausdrücklich als vorläufigen First-Cycle-Coder und fordert eine menschliche Validierung der Ergebnisse [22].
 
-Diese Überschneidungen sind **kein Plagiatsindiz**, sondern zeigen eine Konvergenz des Feldes auf ähnliche Qualitätsprobleme: Provenienz, Validierung, Blindheit, Stabilität und menschliche Verantwortlichkeit.
-
----
-
-## 8. Was an diesem Repository nicht als Neuheitsanspruch verstanden werden sollte
-
-Folgende Bestandteile besitzen klare methodische oder technische Vorläufer und werden hier nicht als originäre Erfindungen beansprucht:
-
-- qualitative Inhaltsanalyse,
-- deduktives oder induktives Coding,
-- Kategorien- und Codebook-basierte Analyse,
-- Intercoder- bzw. Agreement-Maße,
-- Cohen's Kappa und Konfusionsmatrizen,
-- LLM-basiertes Coding,
-- Human–LLM-Vergleiche,
-- lokale Open-Source-LLMs und Ollama,
-- strukturierte JSON-Ausgaben,
-- Fallvergleich und Negativfallanalyse,
-- SWOT als analytisches Schema,
-- Audit-Trails als Prinzip qualitativer Qualitätssicherung.
-
-Die Eigenständigkeit des Projekts sollte deshalb nicht über einzelne Methoden behauptet werden. Sie liegt – soweit aus der hier berücksichtigten öffentlich zugänglichen Literatur und Software ersichtlich – vor allem in der **konkreten Zusammenstellung und Implementierung** eines YAML-gesteuerten lokalen Workflows für bereits kodierte Interviewdaten sowie in der Kombination von:
-
-- Code-Verifikation,
-- Blind-Coding,
-- deterministischem Human–LLM Agreement,
-- validierten Segment-IDs,
-- deterministischer Rückführung von Originaltexten,
-- mehrstufigen Fall-, Kontrast-, Ambivalenz- und Zusammenhangsanalysen,
-- Evidence-Audit mit programmatisch berechneten Evidenzmerkmalen und
-- abschließender Synthese über mehrere Analyseebenen.
-
-Diese Aussage ist bewusst als **Abgrenzung**, nicht als Prioritäts- oder Alleinstellungsbehauptung formuliert. Das Forschungs- und Softwarefeld entwickelt sich schnell; ähnliche Funktionen können unabhängig entstehen oder nachträglich veröffentlicht werden.
+Die Überschneidungen mit diesen Ansätzen sind kein Hinweis auf eine Übernahme fremder Arbeit. Vielmehr zeigen sie, dass unterschiedliche Projekte auf vergleichbare methodische Probleme reagieren, insbesondere auf Anforderungen hinsichtlich Provenienz, Validierung, Blindheit, Stabilität und menschlicher Verantwortlichkeit. Für die Abgrenzung des vorliegenden Repositories ist deshalb nicht die Neuheit einzelner Komponenten, sondern deren konkrete Zusammenführung maßgeblich.
 
 ---
 
-## 9. Was die Pipeline trotz der Schutzmechanismen nicht leisten kann
+## 8. Abgrenzung des Neuheitsanspruchs
 
-### 9.1 Kein automatischer Nachweis interpretativer Richtigkeit
+Qualitative Inhaltsanalyse, deduktives und induktives Coding, Kategorien- und Codebook-basierte Analyse, Intercoder- bzw. Agreement-Maße, Cohen's Kappa, Konfusionsmatrizen, LLM-basiertes Coding, Human–LLM-Vergleiche, lokale Open-Source-LLMs, strukturierte JSON-Ausgaben, Fall- und Negativfallanalysen, SWOT sowie Audit-Trails besitzen methodische oder technische Vorläufer [2–22]. Diese Bestandteile werden im Repository nicht als originäre Erfindungen beansprucht.
 
-Eine Segment-ID kann korrekt sein, während die Interpretation der Passage falsch ist. Eine Konfusionsmatrix kann korrekt berechnet sein, während das Kategoriensystem theoretisch ungeeignet ist.
+Die Eigenständigkeit liegt, soweit anhand der berücksichtigten Literatur und Software nachvollziehbar, in der konkreten Zusammenstellung und Implementierung eines YAML-gesteuerten lokalen Workflows für bereits kodierte Interviewdaten. Dabei werden Code-Verifikation, Blind-Coding und deterministisches Human–LLM Agreement mit validierten Segment-IDs, deterministischer Rückführung von Originaltexten, mehrstufigen Fall-, Kontrast-, Ambivalenz- und Zusammenhangsanalysen, einem Evidence-Audit mit programmatisch ermittelten Evidenzmerkmalen sowie einer abschließenden Synthese verbunden [1].
 
-### 9.2 Kein Ersatz für Kontextwissen
-
-LLMs können kulturelle, biografische, organisationale oder emotionale Bedeutungen nivellieren [11]. Das ist besonders problematisch, wenn latente Bedeutungen und nicht nur manifeste Inhalte untersucht werden.
-
-### 9.3 Kein neutraler zweiter menschlicher Coder
-
-Human–LLM Agreement ist nicht identisch mit klassischer Intercoder-Reliabilität. Ein Sprachmodell besitzt keine menschliche Sozialisation, Feldkenntnis oder Forschungserfahrung und ist zugleich durch Trainingsdaten und technische Modellarchitektur geprägt.
-
-### 9.4 Keine statistische Repräsentativität
-
-Der Evidence-Audit beschreibt empirische Breite innerhalb des vorhandenen qualitativen Materials. Viele stützende Personen oder Segmente erzeugen keine populationsstatistische Signifikanz.
-
-### 9.5 Keine Garantie gegen Halluzinationen
-
-Schema-Validierung, ID-Prüfung und kontrollierte Kategorien können bestimmte Halluzinationstypen verhindern oder sichtbar machen. Freie Interpretationen können trotzdem falsche Behauptungen enthalten.
-
-### 9.6 Keine vollständige Reproduzierbarkeit allein durch lokale Modelle
-
-Auch lokale Inferenz kann variieren. Für wissenschaftliche Verwendung sollten Modellname, Modellversion bzw. Hash soweit verfügbar, Parameter, Promptversion, Softwarestand und Datenversion dokumentiert werden.
+Diese Abgrenzung ist nicht als Prioritäts- oder Alleinstellungsbehauptung zu verstehen. Das Forschungs- und Softwarefeld entwickelt sich dynamisch, sodass vergleichbare Funktionen unabhängig entwickelt oder nachträglich veröffentlicht werden können. Vor einer wissenschaftlichen Publikation ist daher eine erneute systematische Prüfung der verwandten Arbeiten angezeigt.
 
 ---
 
-## 10. Empfohlene Nutzung in wissenschaftlichen Projekten
+## 9. Grenzen der Schutzmechanismen
 
-Für wissenschaftliche Anwendungen empfiehlt sich ein kontrollierter Workflow:
+Die implementierten Kontrollschritte begrenzen spezifische Fehlerquellen, ohne die grundsätzlichen methodischen Grenzen generativer Modelle aufzuheben. Eine validierte Segment-ID gewährleistet beispielsweise die Existenz einer Textstelle, nicht jedoch deren korrekte Interpretation. Ebenso kann eine Konfusionsmatrix formal korrekt berechnet sein, während das zugrunde liegende Kategoriensystem theoretisch ungeeignet ist.
 
-1. **Forschungsfrage und qualitative Methode vor dem LLM-Einsatz festlegen.**
-2. **Kategoriensystem und Codiereinheit explizit dokumentieren.**
-3. **Menschliche Codierung bzw. eine unabhängige menschliche Stichprobe erhalten.**
-4. **LLM-Aufgaben möglichst eng und nachvollziehbar definieren.**
-5. **Blind-Coding verwenden, wenn unabhängige Übereinstimmung untersucht werden soll.**
-6. **Agreement programmatisch und pro Kategorie prüfen.**
-7. **Uneinigkeiten qualitativ inspizieren, statt nur einen globalen Kennwert zu berichten.**
-8. **Originalevidenz über Segment-IDs zurückverfolgen.**
-9. **Kontrast- und Negativfälle gezielt prüfen.**
-10. **Modelle, Prompts, Parameter, Softwareversionen und Änderungen dokumentieren.**
-11. **LLM-generierte Synthesen gegen Primärmaterial und Zwischenergebnisse prüfen.**
-12. **Im Methodenabschnitt transparent berichten, welche Aufgaben Mensch, LLM und deterministischer Code jeweils übernommen haben.**
+LLMs ersetzen außerdem kein feld- oder kontextspezifisches Wissen. Kulturelle, biografische, organisationale oder emotionale Bedeutungen können nivelliert werden, insbesondere wenn latente statt ausschließlich manifeste Inhalte untersucht werden [11]. Human–LLM Agreement ist daher nicht mit klassischer Intercoder-Reliabilität zwischen zwei menschlichen Rater:innen gleichzusetzen.
 
-Für besonders sensible, latente oder kulturell kontextgebundene Analysen sollte die menschliche Interpretationsrolle größer sein als bei rein deskriptiven Klassifikationsaufgaben. Das entspricht der aktuellen Forschung, die LLMs eher als Assistenz- oder Augmentationswerkzeug denn als autonomen qualitativen Forscher einordnet [8–11, 14, 19].
+Der Evidence-Audit beschreibt die empirische Breite innerhalb des vorhandenen qualitativen Materials, begründet jedoch keine populationsstatistische Repräsentativität. Ebenso verhindern Schema-Validierung, ID-Prüfung und kontrollierte Kategorien nicht sämtliche Halluzinationen, da freie Interpretationen weiterhin sachlich falsche Aussagen enthalten können. Schließlich führt auch lokale Inferenz nicht zu vollständiger Reproduzierbarkeit. Für wissenschaftliche Anwendungen sind Modellname, Modellversion bzw. Hash, Parameter, Promptversion, Softwarestand und Datenversion soweit möglich zu dokumentieren.
 
 ---
 
-## 11. Transparenz zur KI-gestützten Entwicklung dieses Repositories
+## 10. Empfohlene Verwendung in wissenschaftlichen Projekten
 
-Neben der LLM-Nutzung **innerhalb** der Analysepipeline wurde auch die Software selbst KI-gestützt entwickelt. Das Repository weist ChatGPT und OpenAI Codex transparent als Mitwirkende an Softwarearchitektur, Code-Co-Authoring, Refactoring, Debugging, Testdesign, Promptarchitektur und Dokumentation aus [1].
+Für wissenschaftliche Anwendungen ergibt sich aus den vorstehenden Überlegungen ein kontrollierter Ablauf. Forschungsfrage und qualitative Methode sollten vor dem LLM-Einsatz festgelegt sowie Kategoriensystem und Codiereinheit dokumentiert werden. Eine menschliche Codierung oder zumindest eine unabhängig menschlich codierte Stichprobe ermöglicht anschließend die Prüfung LLM-basierter Zuordnungen.
 
-Diese Offenlegung ist wichtig, weil zwei Ebenen voneinander unterschieden werden müssen:
+LLM-Aufgaben sollten eng begrenzt und nachvollziehbar formuliert werden. Sofern eine unabhängige Übereinstimmung untersucht wird, ist Blind-Coding einer Verifikation mit bekanntem Zielcode vorzuziehen. Agreement-Kennzahlen sollten programmatisch und zusätzlich auf Ebene einzelner Kategorien ausgewertet werden, wobei Abweichungen qualitativ zu prüfen sind. Originalevidenz ist über Segment-IDs auf das Primärmaterial zurückzuführen; Kontrast- und Negativfälle sind gezielt in die Interpretation einzubeziehen.
 
-1. **KI als Gegenstand bzw. Werkzeug der Forschungsmethode**, und
-2. **KI als Entwicklungswerkzeug für die Forschungssoftware**.
-
-KI-gestützt erzeugter Code ist nicht allein deshalb wissenschaftlich validiert. Die relevante Frage ist, ob Implementierung, Berechnungen, Datenflüsse und methodische Annahmen geprüft und getestet wurden. Die modulare Architektur und die vorhandenen Tests unterstützen diese Prüfung, ersetzen aber weder Code Review noch fachliche Validierung.
+Für die Dokumentation sind Modelle, Prompts, Parameter, Softwareversionen und relevante Änderungen festzuhalten. LLM-generierte Synthesen sollten gegen Primärmaterial und Zwischenprodukte geprüft werden. Im Methodenabschnitt einer Publikation ist zudem transparent auszuweisen, welche Aufgaben durch Forschende, LLM und deterministischen Programmcode übernommen wurden. Bei sensiblen, latenten oder kulturell stark kontextgebundenen Analysen ist eine stärkere menschliche Interpretationsrolle angezeigt als bei deskriptiven Klassifikationsaufgaben [8–11, 14, 19].
 
 ---
 
-## 12. Zusammenfassung der Qualitätssicherungslogik
+## 11. Transparenz zur KI-gestützten Softwareentwicklung
 
-| Bekannte Herausforderung | Reaktion der Pipeline | Was dadurch nicht bewiesen wird |
+Neben der LLM-Nutzung innerhalb der Analysepipeline wurde auch die Software KI-gestützt entwickelt. Das Repository weist ChatGPT und OpenAI Codex als Mitwirkende an Softwarearchitektur, Code-Co-Authoring, Refactoring, Debugging, Testdesign, Promptarchitektur und Dokumentation aus [1].
+
+Damit werden zwei Ebenen voneinander getrennt: die Nutzung von KI als Werkzeug innerhalb des Forschungsprozesses sowie die Nutzung von KI als Entwicklungswerkzeug für die Forschungssoftware. KI-gestützt erzeugter Programmcode ist nicht allein aufgrund seiner Erzeugungsweise wissenschaftlich validiert. Maßgeblich ist vielmehr, ob Implementierung, Berechnungen, Datenflüsse und methodische Annahmen überprüft und getestet werden. Die modulare Architektur und die vorhandenen Tests unterstützen diese Prüfung, ersetzen jedoch weder Code Review noch fachliche Validierung.
+
+---
+
+## 12. Übersicht der Qualitätssicherungslogik
+
+| Bekannte Herausforderung | Gegenmaßnahme der Pipeline | Verbleibende Grenze |
 |---|---|---|
-| LLM ignoriert oder erfindet Kategorien | Validierung gegen externes Kategoriensystem | inhaltliche Richtigkeit der gewählten Kategorie |
-| Bestätigungsbias bei Prüfung vorhandener Codes | separates Blind-Coding ohne menschlichen Zielcode | Unabhängigkeit im Sinn eines menschlichen Raters |
-| instabile oder erfundene Agreement-Werte | deterministische Python-Berechnung | interpretative Validität |
-| halluzinierte/veränderte Zitate | Segment-ID-Validierung + Originaltext-Lookup | korrekte Interpretation des Zitats |
-| erfundene Häufigkeiten | deterministische Evidence-Berechnungen | statistische Repräsentativität |
-| Verlust von Minderheitenpositionen | Kontrast-/Negativfallanalyse | vollständiges Auffinden aller Gegenfälle |
-| Glättung innerer Widersprüche | Ambivalenzanalyse | vollständige hermeneutische Erfassung |
-| unbelegte Kausalität | explizite Beschränkung der Zusammenhangsanalyse | Ausschluss jeder Überinterpretation |
-| Black-Box-Workflow | JSON-Zwischenprodukte, Logs, Manifest, optional Raw-Audit | methodische Angemessenheit jedes Schritts |
-| Datenschutzrisiko externer APIs | lokale Ollama-Inferenz möglich | automatische DSGVO-/Ethikkonformität |
-| Modellabhängigkeit | dokumentierbare lokale Modelle und Konfiguration | vollständige Output-Reproduzierbarkeit |
+| LLM erzeugt nicht vorhandene Kategorien | Validierung gegen externes Kategoriensystem | inhaltliche Richtigkeit des formal gültigen Codes |
+| Bestätigung vorhandener menschlicher Codes | separates Blind-Coding ohne Zielcode | keine Unabhängigkeit im Sinne eines menschlichen Raters |
+| instabile oder erfundene Agreement-Werte | deterministische Berechnung | keine Aussage über interpretative Validität |
+| halluzinierte oder veränderte Zitate | Segment-ID-Validierung und Originaltext-Rückführung | keine Garantie korrekter Interpretation |
+| erfundene Häufigkeiten | programmatische Evidenzberechnung | keine statistische Repräsentativität |
+| Verlust von Minderheitenpositionen | Kontrast- und Negativfallanalyse | Gegenfälle können übersehen werden |
+| Glättung fallinterner Widersprüche | Ambivalenzanalyse | keine vollständige hermeneutische Erfassung |
+| unbelegte Kausalität | Beschränkung der Zusammenhangsanalyse | Überinterpretation bleibt grundsätzlich möglich |
+| nicht nachvollziehbarer Analyseweg | JSON-Zwischenprodukte, Logs, Manifest und optionaler Raw-Audit | technische Dokumentation belegt keine methodische Angemessenheit |
+| Datenschutzrisiko externer Dienste | lokale Ollama-Inferenz möglich | keine automatische Datenschutz- oder Ethikkonformität |
+| Modellabhängigkeit | dokumentierbare lokale Modelle und Konfiguration | keine vollständige Output-Reproduzierbarkeit |
 
 ---
 
 ## 13. Fazit
 
-Der aktuelle Forschungsstand rechtfertigt weder die pauschale Behauptung, LLMs könnten qualitative Interviewanalyse zuverlässig automatisieren, noch die Annahme, sie seien für qualitative Forschung grundsätzlich ungeeignet. Empirische Studien zeigen brauchbare Ergebnisse insbesondere bei klar begrenzten Coding-Aufgaben, gleichzeitig aber erhebliche Abhängigkeit von Codebook, Prompt, Modell, Kontext und Interpretationstiefe [6–13, 20].
+Der Forschungsstand rechtfertigt weder die pauschale Annahme einer zuverlässigen Automatisierbarkeit qualitativer Interviewanalyse noch die grundsätzliche Zurückweisung von LLMs für qualitative Forschungsprozesse. Für klar begrenzte Coding-Aufgaben werden relevante Übereinstimmungen berichtet, während die Ergebnisse zugleich erheblich von Codebook, Promptgestaltung, Modell, Kontext und Interpretationstiefe abhängen [6–13, 20].
 
-Die Architektur dieses Repositories folgt deshalb einem vorsichtigen Grundsatz:
+Aus diesen Befunden ergibt sich für die Pipeline eine arbeitsteilige Qualitätssicherungslogik. Generative Modelle werden für Aufgaben eingesetzt, bei denen sprachliche Strukturierung und Interpretation einen analytischen Beitrag leisten können. Deterministisch berechenbare oder validierbare Operationen werden demgegenüber programmatisch ausgeführt. Die wissenschaftliche Interpretations- und Entscheidungsverantwortung verbleibt bei den Forschenden.
 
-> **Generative Interpretation dort einsetzen, wo sie analytischen Mehrwert bieten kann; deterministische Berechnung und Validierung dort einsetzen, wo Ergebnisse technisch überprüfbar sind; und die wissenschaftliche Interpretations- und Entscheidungsverantwortung beim Menschen belassen.**
-
-Die Schutzmechanismen sollen LLM-Fehler nicht unsichtbar machen, sondern möglichst früh lokalisieren, empirische Rückverfolgung ermöglichen und die Grenzen automatisierter Interpretation offenlegen.
+Die implementierten Schutzmechanismen zielen dementsprechend nicht darauf, Modellfehler grundsätzlich auszuschließen. Sie sollen Fehler lokalisierbarer machen, die Rückführung auf empirische Evidenz unterstützen und die Grenzen automatisierter Interpretation nachvollziehbar dokumentieren.
 
 ---
 
@@ -435,4 +296,4 @@ Misra, R., Dahal, R., Kirk, B., Khan, R., Dogan, G., Chataut, R., & Gyawali, P. 
 
 ## Zitier- und Aktualisierungshinweis
 
-Diese Datei dokumentiert den methodischen Stand des Projekts und die zum angegebenen Zeitpunkt identifizierte verwandte Literatur. Da sich Forschung und Open-Source-Software zu LLM-gestützter qualitativer Analyse sehr schnell entwickeln, sollte die Related-Work-Sektion vor einer wissenschaftlichen Publikation erneut systematisch recherchiert und bibliografisch geprüft werden.
+Die Datei dokumentiert den methodischen Stand des Projekts und die zum angegebenen Zeitpunkt identifizierten verwandten Arbeiten. Da sich Forschung und Open-Source-Software zur LLM-gestützten qualitativen Analyse dynamisch entwickeln, ist die Literatur- und Softwareabgrenzung vor einer wissenschaftlichen Publikation erneut systematisch zu prüfen.
