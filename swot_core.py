@@ -61,6 +61,8 @@ def llm_swot(system_prompt: str, user_prompt: str, ollama_params: dict) -> str:
             model=ollama_params["model"],
             temperature=ollama_params["temperature"],
             max_tokens=ollama_params["max_tokens"],
+            think=ollama_params.get("think"),
+            log_thinking=ollama_params.get("log_thinking", False),
         )
 
         logger.info(
@@ -112,6 +114,8 @@ Kein Markdown. Kein Text außerhalb des JSON.
             model=ollama_params["model"],
             temperature=0.0,
             max_tokens=ollama_params["max_tokens"],
+            think=ollama_params.get("think"),
+            log_thinking=ollama_params.get("log_thinking", False),
         )
         if content:
             return content.strip()

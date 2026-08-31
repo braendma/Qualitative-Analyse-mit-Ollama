@@ -21,6 +21,8 @@ def _llm(system_prompt, user_prompt, ollama_params):
             model=ollama_params["model"],
             temperature=ollama_params["temperature"],
             max_tokens=ollama_params["max_tokens"],
+            think=ollama_params.get("think"),
+            log_thinking=ollama_params.get("log_thinking", False),
         )
         logger.info("\n===== RAW AMBIGUITY OUTPUT =====\n%s\n================================\n", content)
         if content:
@@ -47,6 +49,8 @@ Keine neuen Inhalte. Kein Markdown. Kein Text außerhalb des JSON.
         model=ollama_params["model"],
         temperature=0.0,
         max_tokens=ollama_params["max_tokens"],
+        think=ollama_params.get("think"),
+        log_thinking=ollama_params.get("log_thinking", False),
     ) or ""
 
 

@@ -21,6 +21,8 @@ def llm_contrast_analysis(system_prompt: str, user_prompt: str, ollama_params: d
             model=ollama_params["model"],
             temperature=ollama_params["temperature"],
             max_tokens=ollama_params["max_tokens"],
+            think=ollama_params.get("think"),
+            log_thinking=ollama_params.get("log_thinking", False),
         )
         logger.info("\n===== RAW KONTRASTANALYSE OUTPUT =====\n%s\n======================================\n", content)
         if content:
@@ -53,6 +55,8 @@ Kein Markdown. Keine neuen Inhalte.
             model=ollama_params["model"],
             temperature=0.0,
             max_tokens=ollama_params["max_tokens"],
+            think=ollama_params.get("think"),
+            log_thinking=ollama_params.get("log_thinking", False),
         )
         if content:
             return content.strip()

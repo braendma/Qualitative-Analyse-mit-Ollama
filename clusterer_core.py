@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+import re
 from datetime import datetime
 
 import pandas as pd
@@ -102,11 +103,98 @@ def safe_json_loads(text, fallback=None):
 # -----------------------------------------------------
 # Ollama Chat Wrapper
 # -----------------------------------------------------
+_THINK_BLOCK_RE = re.compile(
+    r"<think\b[^>]*>.*?</think>\s*",
+    flags=re.IGNORECASE | re.DOTALL,
+)
+
+
+def _response_value(container, key: str, default=""):
+    """Liest Felder aus Dict- und Ollama-Pydantic-Antworten."""
+    if container is None:
+        return default
+    if isinstance(container, dict):
+        return container.get(key, default)
+    return getattr(container, key, default)
+
+
+def _normalize_think(think):
+    """Normalisiert die in YAML erlaubten Thinking-Einstellungen."""
+    if think is None or isinstance(think, bool):
+        return think
+    if isinstance(think, str):
+        value = think.strip().lower()
+        if value in {"true", "on", "yes"}:
+            return True
+        if value in {"false", "off", "no", "none"}:
+            return False
+        if value in {"low", "medium", "high", "max"}:
+            return value
+    raise ValueError(
+        "Ungültiger llm.think-Wert. Erlaubt sind true, false, "
+        "low, medium, high oder max."
+    )
+
+
+def strip_embedded_thinking(content: str) -> str:
+    """Entfernt alte/eingebettete <think>-Blöcke aus der Endantwort."""
+    text = str(content or "")
+    if not text:
+        return ""
+
+    # Vollständige Blöcke werden unabhängig von ihrer Position entfernt.
+    text, block_count = _THINK_BLOCK_RE.subn("", text)
+    removed = block_count > 0
+
+    # Manche Templates beginnen den Think-Block bereits im Prompt. Dann kann
+    # die Antwort nur das schließende Tag enthalten. In diesem Fall ist alles
+    # vor dem letzten </think> Reasoning und nur der Rest die Endantwort.
+    lower = text.lower()
+    closing_tag = "</think>"
+    last_close = lower.rfind(closing_tag)
+    if last_close >= 0:
+        text = text[last_close + len(closing_tag):]
+        removed = True
+
+    # Ein offener, nicht abgeschlossener Block bedeutet gewöhnlich, dass
+    # num_predict während des Reasonings ausgeschöpft wurde. Er darf nicht an
+    # die nachgelagerten JSON-Parser weitergegeben werden.
+    open_match = re.search(r"<think\b[^>]*>", text, flags=re.IGNORECASE)
+    if open_match:
+        logger.warning(
+            "[Ollama] Unvollständiger <think>-Block erkannt; "
+            "die Antwort wird als unvollständig behandelt."
+        )
+        text = text[:open_match.start()]
+        removed = True
+
+    if removed:
+        logger.debug("[Ollama] Eingebetteten Think-Block entfernt.")
+
+    return text.strip()
+
+
+def _retry_without_think(exc: Exception) -> bool:
+    """Erkennt Client- und Serverfehler wegen fehlender Thinking-Unterstützung."""
+    error_text = str(getattr(exc, "error", exc)).lower()
+    return any(
+        marker in error_text
+        for marker in (
+            "unexpected keyword argument 'think'",
+            'unexpected keyword argument "think"',
+            "does not support thinking",
+            "invalid think value",
+        )
+    )
+
+
 def ollama_chat(
     messages,
     model,
     temperature,
-    max_tokens
+    max_tokens,
+    think=None,
+    log_thinking=False,
 ):
     """
     Zentraler Ollama-Wrapper.
@@ -114,20 +202,60 @@ def ollama_chat(
 
     try:
 
-        response = ollama.chat(
-            model=model,
-            messages=messages,
-            options={
+        request = {
+            "model": model,
+            "messages": messages,
+            "stream": False,
+            "options": {
                 "temperature": temperature,
                 "num_predict": max_tokens
-            }
-        )
+            },
+        }
 
-        return response[
-            "message"
-        ][
-            "content"
-        ]
+        normalized_think = _normalize_think(think)
+        if normalized_think is not None:
+            # Beim Ollama-Python-Client ist think ein Top-Level-Argument und
+            # kein Eintrag innerhalb von options.
+            request["think"] = normalized_think
+
+        try:
+            response = ollama.chat(**request)
+        except Exception as exc:
+            # Alte Python-Clients kennen das Argument noch nicht; klassische
+            # Modelle bzw. ältere Server können es serverseitig ablehnen. In
+            # beiden Fällen bleibt die Pipeline kompatibel und verwendet die
+            # Voreinstellung des Modells.
+            if "think" not in request or not _retry_without_think(exc):
+                raise
+            logger.warning(
+                "[Ollama] Client, Server oder Modell akzeptiert die explizite "
+                "think-Einstellung nicht. Request wird ohne think und damit "
+                "mit der Modell-Voreinstellung wiederholt. Für Thinking-Modelle "
+                "gegebenenfalls 'pip install -U ollama' ausführen."
+            )
+            request.pop("think", None)
+            response = ollama.chat(**request)
+
+        message = _response_value(response, "message", {})
+        content = _response_value(message, "content", "") or ""
+        thinking = _response_value(message, "thinking", "") or ""
+
+        if thinking:
+            logger.debug(
+                "[Ollama] Separates Reasoning empfangen (%s Zeichen).",
+                len(thinking),
+            )
+            if log_thinking:
+                logger.debug("[Ollama-Reasoning]\n%s", thinking)
+
+        content = strip_embedded_thinking(content)
+        if not content and thinking:
+            logger.warning(
+                "[Ollama] Reasoning vorhanden, aber keine Endantwort. "
+                "Möglicherweise wurde num_predict ausgeschöpft."
+            )
+
+        return content
 
     except Exception as e:
 
@@ -171,7 +299,9 @@ def llm_cluster(
             ],
             model=ollama_params["model"],
             temperature=ollama_params["temperature"],
-            max_tokens=ollama_params["max_tokens"]
+            max_tokens=ollama_params["max_tokens"],
+            think=ollama_params.get("think"),
+            log_thinking=ollama_params.get("log_thinking", False),
         )
 
         if content:
@@ -218,7 +348,9 @@ def llm_self_repair(
             ],
             model=ollama_params["model"],
             temperature=ollama_params["temperature"],
-            max_tokens=ollama_params["max_tokens"]
+            max_tokens=ollama_params["max_tokens"],
+            think=ollama_params.get("think"),
+            log_thinking=ollama_params.get("log_thinking", False),
         )
 
         if content:
@@ -635,7 +767,12 @@ def run_clustering(
 
     md_lines.append(
         f"- Max Tokens: "
-        f"**{ollama_params['max_tokens']}**\n\n"
+        f"**{ollama_params['max_tokens']}**\n"
+    )
+
+    md_lines.append(
+        f"- Thinking: "
+        f"**{ollama_params.get('think', 'Modell-Voreinstellung')}**\n\n"
     )
 
     # -------------------------------------------------

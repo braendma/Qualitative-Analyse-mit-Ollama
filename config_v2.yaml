@@ -1,7 +1,13 @@
 llm:
   model: "granite4.1:8b"
   temperature: 0.05
+  # Reasoning und Endantwort teilen sich dieses Ausgabelimit.
   max_tokens: 10000
+  # Erlaubt: true, false, low, medium, high, max.
+  # Unterstützte Werte hängen vom gewählten Modell und von Ollama ab.
+  think: false
+  # Reasoning wird standardmäßig weder in Outputs noch in Logs geschrieben.
+  log_thinking: false
 
 
 # ============================================================

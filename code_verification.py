@@ -69,6 +69,8 @@ def main(argv=None):
         "model": llm_cfg.get("model", "granite4.1:8b"),
         "temperature": float(llm_cfg.get("temperature", 0.0)),
         "max_tokens": int(llm_cfg.get("max_tokens", 4000)),
+        "think": llm_cfg.get("think"),
+        "log_thinking": bool(llm_cfg.get("log_thinking", False)),
     }
     mock_path = None
     if args.mock_responses_json:
