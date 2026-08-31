@@ -28,6 +28,7 @@ Die Besonderheit der aktuellen Architektur: **`00_WORKFLOW_RUNNER.py` kennt kein
 ## ✨ Highlights
 
 - 🏠 **Lokale LLM-Verarbeitung mit Ollama**
+- 🧠 **Kompatibel mit Thinking- und klassischen Non-Thinking-Modellen**
 - 🧩 **Modularer YAML-gesteuerter Workflow**
 - 🔗 **Automatische Abhängigkeitsauflösung zwischen Modulen**
 - 🧾 **JSON-Zwischenprodukte für Auditierbarkeit und Weiterverwendung**
@@ -436,11 +437,128 @@ ollama
 
 ## 4. Ollama vorbereiten
 
-Ollama installieren und ein geeignetes Modell laden, beispielsweise:
+Ollama installieren und ein geeignetes Modell laden. Die Pipeline unterstützt
+sowohl Thinking- als auch klassische Non-Thinking-Modelle. Für aktuelle
+Thinking-Modelle sollte auch der Ollama-Python-Client aktuell sein:
 
 ```bash
-ollama pull granite4.1:8b
+python -m pip install --upgrade ollama
 ```
+
+Die Modellparameter werden zentral in `config_v2.yaml` eingestellt. Es gibt
+keine universell optimale Konfiguration: Insbesondere `temperature`, `think`
+und `max_tokens` können beeinflussen, ob ein Modell nach dem Reasoning
+zuverlässig eine Endantwort liefert. Reasoning und Endantwort teilen sich das
+mit `max_tokens` gesetzte Ausgabelimit.
+
+Die folgenden Konfigurationen sind Startpunkte. Je nach Quantisierung,
+Promptlänge, Hardware sowie Ollama- und Modellversion kann eine Anpassung
+erforderlich sein.
+
+### Beispiel: Qwen 3.8 27B
+
+```bash
+ollama pull qwen3.8:27b
+```
+
+```yaml
+llm:
+  model: "qwen3.8:27b"
+  temperature: 1.0
+  max_tokens: 16000
+  think: true
+  log_thinking: false
+```
+
+### Beispiel: Gemma 4
+
+Diese Konfiguration wurde mit `gemma4:12b` erfolgreich getestet und lieferte
+sowohl separates Reasoning als auch eine reguläre JSON-Endantwort:
+
+```bash
+ollama pull gemma4:12b
+```
+
+```yaml
+llm:
+  model: "gemma4:12b"
+  temperature: 1.0
+  # Reasoning und Endantwort teilen sich dieses Ausgabelimit.
+  max_tokens: 16000
+  think: true
+  log_thinking: false
+```
+
+Falls im Log `Reasoning vorhanden, aber keine Endantwort` erscheint, sollte
+zunächst dieselbe Konfiguration mit `think: false` getestet werden. Funktioniert
+die direkte Antwort, kann Thinking anschließend wieder isoliert aktiviert
+werden. Ein höheres `max_tokens` kann bei besonders langem Reasoning helfen.
+
+### Beispiel: Granite 4.2
+
+```bash
+ollama pull granite4.2:30b
+```
+
+```yaml
+llm:
+  model: "granite4.2:30b"
+  temperature: 1.0
+  max_tokens: 16000
+  think: "low"
+  log_thinking: false
+```
+
+Je nach Hardware kann stattdessen `granite4.2:8b` oder `granite4.2:3b`
+verwendet werden. Granite 4.2 akzeptiert boolesche Werte und Reasoning-Stufen:
+
+```yaml
+think: false   # Thinking vollständig deaktivieren
+think: true    # Thinking mit der Modell-Voreinstellung aktivieren
+think: "low"   # kürzeres Reasoning
+think: "high"  # ausführliches Reasoning
+```
+
+Für die qualitative Clusterbildung ist `think: "low"` ein guter erster Test.
+Bei schwierigen Analyseaufgaben kann anschließend `think: "high"` verglichen
+werden.
+
+### Parameter kontrolliert abstimmen
+
+Bei Problemen empfiehlt sich ein Vergleich, bei dem jeweils nur ein Parameter
+verändert wird:
+
+1. Mit der vom Modell empfohlenen Temperatur beginnen.
+2. `think: false` testen, um eine direkte Endantwort zu prüfen.
+3. Thinking danach mit `true` oder einer unterstützten Stufe aktivieren.
+4. `max_tokens` erhöhen, wenn Reasoning vorhanden ist, aber die Endantwort fehlt.
+
+Die im Log gemeldete Reasoning-Länge wird in Zeichen angegeben und ist daher
+nicht mit der Tokenzahl gleichzusetzen. Gemma 4 verwendet modellseitig unter
+anderem `top_p: 0.95` und `top_k: 64`; Qwen 3.8 verwendet unter anderem
+`top_p: 0.95` und `top_k: 20`. Diese Werte sind bereits im jeweiligen
+Ollama-Modell hinterlegt. Die Pipeline übergibt aus der YAML derzeit
+`temperature`, `max_tokens` und `think`; zusätzliche YAML-Zeilen für `top_p`
+oder `top_k` hätten ohne eine Programmerweiterung noch keine Wirkung.
+
+Wird `think` weggelassen, entscheidet die Modell-Voreinstellung. Das deaktiviert
+Thinking bei Modellen mit standardmäßig aktivem Reasoning nicht sicher. Für
+einen eindeutigen Test ohne Reasoning sollte `think: false` gesetzt werden.
+
+### Verarbeitung und Rückwärtskompatibilität
+
+- Moderne Ollama-Versionen liefern Reasoning in `message.thinking` und die
+  Endantwort in `message.content`. Nur die Endantwort gelangt in die fachliche
+  Auswertung.
+- Eingebettete `<think>...</think>`-Blöcke älterer Modelle oder Templates werden
+  vor der JSON-Auswertung entfernt.
+- Ein abgebrochener Think-Block wird als unvollständige Antwort behandelt,
+  sodass die vorhandene Wiederholungslogik greift.
+- Akzeptiert ein älterer Python-Client, Server oder ein Non-Thinking-Modell den
+  Parameter `think` nicht, wird der Request automatisch ohne diesen Parameter
+  wiederholt.
+- `log_thinking: false` verhindert die vollständige Ausgabe des Reasonings. Das
+  Reasoning wird unabhängig davon nicht Bestandteil der Ergebnis-JSONs.
 
 ## 5. Beispieldaten
 
@@ -758,10 +876,14 @@ Unter anderem können kontrolliert geprüft werden:
 - Meta-Clustering
 - Evidence-Berechnungen
 - automatische Berichtserstellung
+- Trennung von Reasoning und Endantwort
+- Bereinigung vollständiger und abgebrochener `<think>`-Blöcke
+- Fallback für Non-Thinking-Modelle und ältere Ollama-Clients
 
 LLM-Antworten können für Integrationstests gemockt werden, sodass ein Großteil der Programmlogik unabhängig vom lokal installierten Modell testbar bleibt.
 
-Die Coding-Validierungstests laufen ohne Ollama:
+Die Coding-Validierungs- und Thinking-Tests laufen ohne Ollama-Server und ohne
+geladenes Modell:
 
 ```bash
 python -m unittest discover -s tests -v

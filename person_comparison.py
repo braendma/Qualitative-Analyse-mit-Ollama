@@ -31,9 +31,11 @@ def main(argv=None):
         config = yaml.safe_load(f)
     llm_cfg = config.get("llm", {})
     ollama_params = {
-        "model": llm_cfg.get("model", "granite4.1:8b"),
+        "model": llm_cfg.get("model", "granite4.2:8b"),
         "temperature": float(llm_cfg.get("temperature", 0.05)),
         "max_tokens": int(llm_cfg.get("max_tokens", 10000)),
+        "think": llm_cfg.get("think"),
+        "log_thinking": bool(llm_cfg.get("log_thinking", False)),
     }
 
     md, json_output = build_person_comparison(

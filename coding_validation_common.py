@@ -215,6 +215,8 @@ def default_llm(messages: list[dict], params: dict) -> str:
         model=params["model"],
         temperature=params.get("temperature", 0.0),
         max_tokens=params.get("max_tokens", 4000),
+        think=params.get("think"),
+        log_thinking=params.get("log_thinking", False),
     )
 
 

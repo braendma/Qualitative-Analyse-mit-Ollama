@@ -21,6 +21,8 @@ def llm_person_analysis(system_prompt: str, user_prompt: str, ollama_params: dic
             model=ollama_params["model"],
             temperature=ollama_params["temperature"],
             max_tokens=ollama_params["max_tokens"],
+            think=ollama_params.get("think"),
+            log_thinking=ollama_params.get("log_thinking", False),
         )
         logger.info("\n===== RAW PERSONENANALYSE OUTPUT =====\n%s\n======================================\n", content)
         if content:
@@ -72,6 +74,8 @@ Keine neuen Inhalte hinzufügen. Kein Markdown. Keine Erklärung.
             model=ollama_params["model"],
             temperature=0.0,
             max_tokens=ollama_params["max_tokens"],
+            think=ollama_params.get("think"),
+            log_thinking=ollama_params.get("log_thinking", False),
         )
         if content:
             return content.strip()

@@ -78,7 +78,7 @@ def main(argv=None):
     ollama_params = {
         "model": llm_cfg.get(
             "model",
-            "granite4.1:8b"
+            "granite4.2:8b"
         ),
         "temperature": float(
             llm_cfg.get(
@@ -91,7 +91,9 @@ def main(argv=None):
                 "max_tokens",
                 10000
             )
-        )
+        ),
+        "think": llm_cfg.get("think"),
+        "log_thinking": bool(llm_cfg.get("log_thinking", False)),
     }
 
     prompts = config.get(
