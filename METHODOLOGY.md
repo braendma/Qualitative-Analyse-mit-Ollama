@@ -19,7 +19,7 @@ Die Eigenständigkeit des Ansatzes ergibt sich aus der konkreten Zusammenführun
 
 ### 2.1 Qualitative Inhaltsanalyse und KI als Assistenz
 
-Kuckartz und Rädiker behandeln generative KI in der sechsten Auflage ihrer *Qualitativen Inhaltsanalyse* ausdrücklich als mögliches Werkzeug und als analytische Assistenz. Die Anwendungen werden entlang verschiedener Phasen qualitativer Inhaltsanalyse diskutiert, wobei zugleich die methodische Reflexion der Delegation analytischer Aufgaben an KI hervorgehoben wird [2, 3]. Diese Unterscheidung zwischen Werkzeug und Assistenz bildet einen zentralen Bezugspunkt der vorliegenden Pipeline.
+Kuckartz und Rädiker behandeln generative KI in der sechsten Auflage ihrer *Qualitativen Inhaltsanalyse* ausdrücklich als mögliches Werkzeug und als analytische Assistenz. Die Anwendungen werden entlang verschiedener Phasen qualitativer Inhaltsanalyse diskutiert, wobei zugleich die methodische Reflexion der Delegation analytischer Aufgaben an KI hervorgehoben wird [2]. Diese Unterscheidung zwischen Werkzeug und Assistenz bildet einen zentralen Bezugspunkt der vorliegenden Pipeline.
 
 Ein Large Language Model (LLM) kann große Mengen bereits kodierter Segmente strukturieren, alternative Lesarten vorschlagen oder vorhandene Muster verdichten. Aus dieser technischen Leistungsfähigkeit ergibt sich jedoch nicht, dass die erzeugte Ausgabe den Status eines methodisch abgesicherten Forschungsbefunds erhält. Der deutschsprachige Band *KI in der qualitativen Forschung* erweitert diese Perspektive auf den gesamten Forschungsprozess und behandelt neben den verfügbaren Werkzeugen insbesondere Fragen der Dokumentation, Kategorienbildung und methodischen Kontrolle [4]. Damit verschiebt sich die Fragestellung von der grundsätzlichen Nutzung generativer KI hin zu den Bedingungen, unter denen deren Einsatz transparent, kontrolliert und wissenschaftlich verantwortbar erfolgen kann.
 
@@ -33,7 +33,7 @@ Aus diesen Befunden wird für die vorliegende Pipeline nicht die Annahme abgelei
 
 Internationale Studien weisen für LLM-basiertes Coding ein differenziertes Bild auf. Xiao et al. zeigen, dass LLMs bei deduktivem Coding auf Basis eines expertengestützten Codebooks relevante Übereinstimmungen mit menschlichen Codierungen erreichen können [6]. QualiGPT überträgt diese Grundidee auf induktive und deduktive Szenarien und untersucht die Übereinstimmung zwischen menschlichen und LLM-basierten Codierungen mit Reliabilitätsmaßen [7].
 
-Die Leistungsfähigkeit hängt jedoch deutlich von Aufgabe, Code, Promptgestaltung und Interpretationstiefe ab. Für ein lokal bzw. serverseitig installiertes Llama-3-Modell wurden bei der deduktiven Analyse psychosozialer Interviewdaten substanzielle Übereinstimmungen festgestellt, gleichzeitig jedoch erhebliche Unterschiede zwischen einzelnen Codes sowie unerwünschte Elaborationen und Halluzinationen in Zusammenfassungen berichtet [8]. Vergleichbare Einschränkungen zeigen sich bei Implementierungsinterviews: LLMs können mehr Textstellen codieren als menschliche Rater:innen, während nuancierte Interpretation, Kontextualisierung und die Auflösung mehrdeutiger Klassifikationen weiterhin menschliche Expertise erfordern [9].
+Die Leistungsfähigkeit hängt jedoch deutlich von Aufgabe, Code, Promptgestaltung und Interpretationstiefe ab. Für ein lokal bzw. serverseitig installiertes Llama-3-Modell wurden bei der deduktiven Analyse psychosozialer Interviewdaten substanzielle Übereinstimmungen festgestellt, gleichzeitig jedoch erhebliche Unterschiede zwischen einzelnen Codes sowie unerwünschte Elaborationen und Halluzinationen in Zusammenfassungen berichtet [8]. Vergleichbare Einschränkungen zeigen sich bei Implementierungsinterviews: In der Studie identifizierten LLMs mehr Textstellen als die menschliche Codierung, wobei dies nicht automatisch eine höhere Qualität bedeutete und zusätzliche menschliche Prüfung erforderlich blieb [9].
 
 Auch für reflexive thematische Analyse wird die Unterstützungsleistung zurückhaltend beurteilt. Vikan et al. berichten bei einem offline betriebenen LLM unter anderem Probleme durch irreführende Prompts, Übersetzungsfehler und weitere Modellfehler [10]. Bei kulturell und emotional komplexen Interviews zeigt sich außerdem, dass Oberflächeninhalte vergleichsweise gut erfasst werden können, während kulturelle und emotionale Nuancen teilweise nivelliert werden. Human-in-the-loop-Verfahren bleiben deshalb für Interpretationsbreite und Validität relevant [11].
 
@@ -49,7 +49,7 @@ Die methodischen Probleme von LLMs werden durch die Pipeline nicht als gelöst v
 
 Die Übergabe eines vollständigen Interviewkorpus mit der Aufforderung, unmittelbar eine umfassende qualitative Interpretation zu erzeugen, verbindet Segmentierung, Kategorienanwendung, Abstraktion, Evidenzauswahl und Synthese in einem nur eingeschränkt überprüfbaren Verarbeitungsschritt. Die Pipeline zerlegt diese Aufgaben deshalb in getrennte Module mit expliziten Ein- und Ausgaben [1]. Strukturierte JSON-Zwischenprodukte ermöglichen die unabhängige Prüfung einzelner Verarbeitungsschritte, während Reihenfolge und Abhängigkeiten der Module über YAML deklariert werden.
 
-Diese Zerlegung entspricht Befunden, nach denen auf einzelne Codes zugeschnittene Aufgaben teilweise höhere Übereinstimmungen erreichen als die gleichzeitige Verarbeitung eines vollständigen Codebooks [12]. Auch für deduktive Codierung wurden Vorteile schrittweise zerlegter Aufgaben berichtet [13]. Aus der Modularisierung ergibt sich damit eine höhere Prüfbarkeit und Fehlerlokalisierbarkeit. Eine semantisch korrekte Interpretation wird dadurch jedoch nicht gewährleistet.
+Diese Zerlegung entspricht Befunden, nach denen auf einzelne Codes zugeschnittene Aufgaben teilweise höhere Übereinstimmungen erreichen als die gleichzeitige Verarbeitung eines vollständigen Codebooks [12]. Auch für deduktive Codierung wurden Vorteile schrittweise zerlegter Aufgaben berichtet [13]. Diese Studien stützen die Vorteile einer Aufgabenzerlegung, arbeiten jedoch mit codeweise zugeschnittenen oder eigens optimierten Interventionen. Sie beschreiben daher nicht unmittelbar die standardisierte Promptlogik des vorliegenden Workflows. Aus der Modularisierung ergibt sich eine höhere Prüfbarkeit und Fehlerlokalisierbarkeit. Eine semantisch korrekte Interpretation wird dadurch jedoch nicht gewährleistet.
 
 ### 3.2 Trennung menschlicher und LLM-basierter Codierung
 
@@ -65,7 +65,7 @@ Eine Verifikation mit bekanntem Zielcode kann Hinweise auf die Plausibilität ei
 
 ### 3.4 Begrenzung der zulässigen Codes
 
-Beim Blind-Coding sind ausschließlich vorhandene vollständige Codepfade sowie definierte Sonderfälle wie `unklar` oder `keine_zuordnung` zulässig. Vom LLM erzeugte Codes werden gegen das eingelesene Kategoriensystem validiert; nicht vorhandene Alternativcodes werden verworfen bzw. protokolliert [1]. Die explizite Bereitstellung von Definitionen und Coding-Regeln entspricht dabei etablierten codebook-basierten Ansätzen [6, 9].
+Beim Blind-Coding sind ausschließlich vorhandene vollständige Codepfade sowie definierte Sonderfälle wie `unklar` oder `keine_zuordnung` zulässig. Vom LLM erzeugte Codes werden gegen das eingelesene Kategoriensystem validiert; nicht vorhandene Alternativcodes werden verworfen bzw. protokolliert [1]. Die Pipeline verwendet je Modul standardisierte, in der YAML-Konfiguration hinterlegte Promptvorlagen. Bei Modellvergleichen bleiben diese Vorlagen unverändert; befüllt werden lediglich die vorgesehenen Platzhalter für Projektkontext, Segmentmaterial, Kategorien und Definitionen sowie analytische Zwischenprodukte [1]. Das Kategoriensystem bildet damit einen externen Analyseinput und nicht die Grundlage jeweils neu formulierter Prompts.
 
 Durch diese Begrenzung lassen sich halluzinierte Kategorien technisch erkennen. Daraus folgt jedoch nicht, dass ein formal gültiger Code inhaltlich zutreffend ist. Die Schema-Validierung kontrolliert die Zulässigkeit der Ausgabe, nicht deren interpretative Richtigkeit.
 
@@ -107,7 +107,7 @@ Promptbasierte Regeln können entsprechende Überinterpretationen reduzieren, je
 
 Die Pipeline verwendet JSON-Zwischenprodukte, Modul-Logs, ein Workflow-Manifest sowie optional append-only gespeicherte unveränderte LLM-Antworten für Code-Verifikation und Blind-Coding [1]. Neben den Endberichten können damit auch die vorgelagerten Verarbeitungsschritte untersucht werden.
 
-Diese Ausrichtung entspricht der zunehmenden Forderung nach Transparenz und Auditierbarkeit LLM-gestützter qualitativer Forschung. Das COREQ+LLM-Projekt nennt Halluzinationen sowie Risiken für Reproduzierbarkeit, Validität und Trustworthiness als zentrale Herausforderungen und verweist auf fehlende Standards für eine transparente Dokumentation der LLM-Nutzung [16]. Die Diskussion um *technological reflexivity* erweitert diese Perspektive, indem der Einfluss von Modell, Interface und Mensch–Algorithmus-Interaktion auf die Erkenntnisproduktion selbst zum Gegenstand der methodischen Reflexion wird [17].
+Diese Ausrichtung entspricht der zunehmenden Forderung nach Transparenz und Auditierbarkeit LLM-gestützter qualitativer Forschung. Das als Studienprotokoll veröffentlichte und noch in Entwicklung befindliche COREQ+LLM-Projekt nennt Halluzinationen sowie Risiken für Reproduzierbarkeit, Validität und Trustworthiness als zentrale Herausforderungen [16]. Eine inzwischen veröffentlichte Scoping-Review von 75 Studien zeigt zudem erhebliche Lücken bei der Dokumentation von Modellversionen, Bereitstellungsformen, Parametern, Prompts und Validierungsverfahren [3]. Die Diskussion um *technological reflexivity* erweitert diese Perspektive, indem der Einfluss von Modell, Interface und Mensch–Algorithmus-Interaktion auf die Erkenntnisproduktion selbst zum Gegenstand der methodischen Reflexion wird [17].
 
 Ein technischer Audit-Trail ermöglicht die Rekonstruktion des Analysewegs. Die methodische Angemessenheit einer Interpretation wird dadurch nicht automatisch nachgewiesen.
 
@@ -115,7 +115,7 @@ Ein technischer Audit-Trail ermöglicht die Rekonstruktion des Analysewegs. Die 
 
 ## 4. Lokale LLM-Verarbeitung, Datenschutz und Reproduzierbarkeit
 
-Die Pipeline nutzt lokale Modelle über Ollama [1]. Bei vollständig lokaler Konfiguration muss das Interviewmaterial für die Modellinferenz nicht an einen externen kommerziellen LLM-Dienst übertragen werden. Für qualitative Interviews ist diese Eigenschaft insbesondere deshalb relevant, weil auch pseudonymisierte Texte sensible Kontextinformationen enthalten können. Datenschutz und ethische Fragen werden dementsprechend auch in der aktuellen methodischen Literatur als Bestandteil des Einsatzes generativer KI behandelt [3, 4].
+Die Pipeline nutzt lokale Modelle über Ollama [1]. Bei vollständig lokaler Konfiguration muss das Interviewmaterial für die Modellinferenz nicht an einen externen kommerziellen LLM-Dienst übertragen werden. Für qualitative Interviews ist diese Eigenschaft insbesondere deshalb relevant, weil auch pseudonymisierte Texte sensible Kontextinformationen enthalten können. Datenschutz und ethische Fragen werden dementsprechend auch in der aktuellen methodischen Literatur als Bestandteil des Einsatzes generativer KI behandelt [2, 4].
 
 Lokale Verarbeitung ist jedoch nicht mit Datenschutzkonformität gleichzusetzen. Rechtsgrundlage und Einwilligung, Anonymisierung bzw. Pseudonymisierung, Speicherorte und Backups, Zugriffsrechte, Log- und Debugdateien, die Veröffentlichung von Beispieldaten sowie institutionelle Vorgaben und Forschungsethik sind unabhängig vom Inferenzort zu prüfen. Dies gilt insbesondere für Raw-Audit-Dateien, die aus Interviewmaterial abgeleitete Inhalte enthalten können [1].
 
@@ -159,7 +159,7 @@ QualiGPT unterstützt induktive und deduktive Coding-Szenarien und vergleicht LL
 
 Eine 2026 publizierte Proof-of-Concept-Studie untersuchte deutschsprachig erhobene Interviews aus Österreich, die für die LLM-Analyse ins Englische übersetzt wurden, und verglich eine mehrstufige LLM-Pipeline mit einer manuellen Baseline [20]. Expert:innen stellten relevante thematische Überschneidungen fest, kritisierten jedoch unter anderem die Granularität, vage Konzepte und die Kontextabhängigkeit der erzeugten Ergebnisse. Die Ausgaben wurden insbesondere nach menschlicher Revision als nutzbar beurteilt.
 
-Diese Arbeit bildet relevante Prior Art für die grundsätzliche Verwendung mehrstufiger LLM-Pipelines. Die vorliegende Implementierung unterscheidet sich hinsichtlich ihres Ausgangsmaterials und der technischen Qualitätssicherung: Sie verarbeitet bereits kodierte Segmente, kann lokal über Ollama ausgeführt werden und verbindet Segment-ID-Rückführung, Blind-Coding, deterministisches Agreement sowie Evidence-Audit in einem gemeinsamen Workflow [1].
+Diese Arbeit bildet relevante Prior Art für die grundsätzliche Verwendung mehrstufiger LLM-Pipelines. Während dort ein progressives Codebook innerhalb der LLM-Pipeline aufgebaut wird, verarbeitet der vorliegende Workflow ein extern entwickeltes Kategoriensystem und bereits kodierte Segmente. Die vorliegende Implementierung unterscheidet sich zudem hinsichtlich der technischen Qualitätssicherung: Sie kann lokal über Ollama ausgeführt werden und verbindet Segment-ID-Rückführung, Blind-Coding, deterministisches Agreement sowie Evidence-Audit in einem gemeinsamen Workflow [1].
 
 ### 7.4 Weitere lokale und auditierbare Ansätze
 
@@ -227,7 +227,7 @@ Damit werden zwei Ebenen voneinander getrennt: die Nutzung von KI als Werkzeug i
 
 ## 13. Fazit
 
-Der Forschungsstand rechtfertigt weder die pauschale Annahme einer zuverlässigen Automatisierbarkeit qualitativer Interviewanalyse noch die grundsätzliche Zurückweisung von LLMs für qualitative Forschungsprozesse. Für klar begrenzte Coding-Aufgaben werden relevante Übereinstimmungen berichtet, während die Ergebnisse zugleich erheblich von Codebook, Promptgestaltung, Modell, Kontext und Interpretationstiefe abhängen [6–13, 20].
+Der Forschungsstand rechtfertigt weder die pauschale Annahme einer zuverlässigen Automatisierbarkeit qualitativer Interviewanalyse noch die grundsätzliche Zurückweisung von LLMs für qualitative Forschungsprozesse. Für klar begrenzte Coding-Aufgaben werden relevante Übereinstimmungen berichtet, während die Ergebnisse zugleich erheblich von Codebook, Promptgestaltung, Modell, Kontext und Interpretationstiefe abhängen [3, 6–13, 20].
 
 Aus diesen Befunden ergibt sich für die Pipeline eine arbeitsteilige Qualitätssicherungslogik. Generative Modelle werden für Aufgaben eingesetzt, bei denen sprachliche Strukturierung und Interpretation einen analytischen Beitrag leisten können. Deterministisch berechenbare oder validierbare Operationen werden demgegenüber programmatisch ausgeführt. Die wissenschaftliche Interpretations- und Entscheidungsverantwortung verbleibt bei den Forschenden.
 
@@ -237,54 +237,54 @@ Die implementierten Schutzmechanismen zielen dementsprechend nicht darauf, Model
 
 ## Literatur und verwandte Ressourcen
 
-**[1]** Brändle, M. (2026). *Qualitative Analyse-Pipeline mit Ollama*. GitHub Repository.  
-https://github.com/braendma/Qualitative-Analyse-mit-Ollama
+**[1]** Brändle, M. (2026). *Qualitative Analyse-Pipeline mit Ollama*. GitHub Repository, Version 0.1.0.  
+https://github.com/braendma/Qualitative-Analyse-mit-Ollama (Abruf: 31. August 2026)
 
-**[2]** Kuckartz, U., & Rädiker, S. (2024). *Qualitative Inhaltsanalyse. Methoden, Praxis, Umsetzung mit Software und künstlicher Intelligenz* (6. Aufl.). Beltz Juventa. ISBN 978-3-7799-7912-8.
-
-**[3]** Kuckartz, U., & Rädiker, S. (2024). Kapitel 10: Unterstützung durch künstliche Intelligenz. Leseprobe zur 6. Auflage.  
+**[2]** Kuckartz, U., & Rädiker, S. (2024). *Qualitative Inhaltsanalyse. Methoden, Praxis, Umsetzung mit Software und künstlicher Intelligenz* (6. Aufl.). Beltz Juventa. ISBN 978-3-7799-7912-8. Kapitel-10-Leseprobe:  
 https://qualitativeinhaltsanalyse.de/documents/Kuckartz_Raediker_2024_Qualitative_Inhaltsanalyse_K10_Leseprobe.pdf
+
+**[3]** Kempny, C., Frings, J., Rust, P., Meister, S., & Fehring, L. (2026). The use and methodological reporting of large language models in qualitative research: A scoping review. *BMC Medical Research Methodology, 26*, 137. https://doi.org/10.1186/s12874-026-02913-1
 
 **[4]** Kempny, C., Annac, K., Yilmaz-Aslan, Y., & Brzoska, P. (2026). *KI in der qualitativen Forschung: Von der Studienplanung bis zur Datenauswertung*. Springer. https://doi.org/10.1007/978-3-662-73089-8
 
 **[5]** Mayring, P. (2025). Qualitative Inhaltsanalyse mit ChatGPT: Fallstricke, grobe Annäherungen und grobe Fehler. Ein Erfahrungsbericht. *Forum Qualitative Sozialforschung / Forum: Qualitative Social Research, 26*(1), Art. 4. https://doi.org/10.17169/fqs-26.1.4252
 
-**[6]** Xiao, Z., Yuan, X., Liao, Q. V., Abdelghani, R., & Oudeyer, P.-Y. (2023). *Supporting Qualitative Analysis with Large Language Models: Combining Codebook with GPT-3 for Deductive Coding*. arXiv:2304.10548. https://arxiv.org/abs/2304.10548
+**[6]** Xiao, Z., Yuan, X., Liao, Q. V., Abdelghani, R., & Oudeyer, P.-Y. (2023). Supporting Qualitative Analysis with Large Language Models: Combining Codebook with GPT-3 for Deductive Coding. In *Proceedings of the 28th International Conference on Intelligent User Interfaces Companion* (pp. 75–78). ACM. https://doi.org/10.1145/3581754.3584136
 
 **[7]** Zhang, H., Wu, C., Xie, J., Rubino, F., Graver, S., Kim, C. M., Carroll, J. M., & Cai, J. (2024). *When Qualitative Research Meets Large Language Model: Exploring the Potential of QualiGPT as a Tool for Qualitative Coding*. arXiv:2407.14925. https://arxiv.org/abs/2407.14925
 
-**[8]** *Deductively coding psychosocial autopsy interview data using a few-shot learning large language model*. (2025). *Frontiers in Public Health*. https://doi.org/10.3389/fpubh.2025.1512537
+**[8]** Balt, E., Salmi, S., Bhulai, S., Vrinzen, S., Eikelenboom, M., Gilissen, R., Creemers, D., Popma, A., & Mérelle, S. (2025). Deductively coding psychosocial autopsy interview data using a few-shot learning large language model. *Frontiers in Public Health, 13*, 1512537. https://doi.org/10.3389/fpubh.2025.1512537
 
-**[9]** *Large language models for deductive qualitative content analysis in dementia-focused embedded pragmatic clinical trials: A comparative methodological study*. (2026). *Implementation Science Communications*. https://doi.org/10.1186/s43058-026-00953-8
+**[9]** Turner, J., Hey, S. P., Baker, Z. G., Mor, V., & Sullivan, J. L. (2026). Large language models for deductive qualitative content analysis in dementia-focused embedded pragmatic clinical trials: A comparative methodological study. *Implementation Science Communications, 7*, 130. https://doi.org/10.1186/s43058-026-00953-8
 
 **[10]** Vikan, M., Aryan, R., Kannelønning, M. S., Riegler, M. A., & Danielsen, S. O. (2026). Reflecting on LLM Support in Reflexive Thematic Analysis: An Exploratory Study. *Qualitative Health Research, 36*(2–3), 191–205. https://doi.org/10.1177/10497323251365211
 
-**[11]** *Using ChatGPT for thematic analysis of qualitative interviews in cultural research: a methodological investigation*. (2026). *Asian Journal of Psychiatry, 122*, 105071. https://doi.org/10.1016/j.ajp.2026.105071
+**[11]** Umer, M., Asif, M., Xue, S., Jones, B. D. M., Dennis, C.-L., Naeem, F., Mulsant, B. H., & Husain, M. I. (2026). Using ChatGPT for thematic analysis of qualitative interviews in cultural research: A methodological investigation. *Asian Journal of Psychiatry, 122*, 105071. https://doi.org/10.1016/j.ajp.2026.105071
 
-**[12]** *Scaling hermeneutics: a guide to qualitative coding with LLMs for reflexive content analysis*. (2025). *EPJ Data Science*. https://doi.org/10.1140/epjds/s13688-025-00548-8
+**[12]** Dunivin, Z. O. (2025). Scaling hermeneutics: A guide to qualitative coding with LLMs for reflexive content analysis. *EPJ Data Science, 14*, 28. https://doi.org/10.1140/epjds/s13688-025-00548-8
 
-**[13]** Hila, A., & Hauser, E. (2025). *Assessing the Reliability of Large Language Models for Deductive Qualitative Coding: A Comparative Study of ChatGPT Interventions*. arXiv:2507.14384. https://arxiv.org/abs/2507.14384
+**[13]** Hila, A., & Hauser, E. (2025). Assessing the reliability of large language models for deductive qualitative coding: A comparative intervention study with ChatGPT. *Proceedings of the Association for Information Science and Technology, 62*(1), 275–285. https://doi.org/10.1002/pra2.1255
 
 **[14]** Liu, A., Sun, M., Esbenshade, L., Xiao, M., Tian, V., Zhang, Z., & He, K. (2026). *Human-LLM Collaborative Inductive Coding for Conceptualizing K-12 Educator AI Use*. arXiv:2607.28889. https://arxiv.org/abs/2607.28889
 
 **[15]** Burla, L., Knierim, B., Barth, J., Liewald, K., Duetz, M., & Abel, T. (2008). From text to codings: intercoder reliability assessment in qualitative content analysis. *Nursing Research, 57*(2), 113–117. https://pubmed.ncbi.nlm.nih.gov/18347483/
 
-**[16]** *Extension of the Consolidated Criteria for Reporting Qualitative Research Guideline to Large Language Models (COREQ+LLM): Protocol for a Multiphase Study*. (2025). https://pmc.ncbi.nlm.nih.gov/articles/PMC12508663/
+**[16]** Fehring, L., Frings, J., Rust, P., Kempny, C., Thürmann, P. A., & Meister, S. (2025). Extension of the Consolidated Criteria for Reporting Qualitative Research Guideline to Large Language Models (COREQ+LLM): Protocol for a Multiphase Study. *JMIR Research Protocols, 14*, e78682. https://doi.org/10.2196/78682
 
 **[17]** Ibrahim, E. I., & Voyer, A. (2026). Qualitative research with LLM chatbots: Technological reflexivity for interpretative technology. *Qualitative Research*. https://doi.org/10.1177/14687941251390794
 
 **[18]** `quallmer`: Qualitative analysis with large language models. GitHub Repository.  
-https://github.com/quallmer/quallmer
+https://github.com/quallmer/quallmer (Abruf: 31. August 2026)
 
-**[19]** Prahl, A. (2026). The AI-Reflexivity Checklist (ARC): A Pre-Analysis Pause for LLM-Assisted Coding. *Qualitative Health Research*. https://doi.org/10.1177/10497323251401503
+**[19]** Prahl, A. (2026). The AI-Reflexivity Checklist (ARC): A Pre-Analysis Pause for LLM-Assisted Coding. *Qualitative Health Research, 36*(2–3), 181–190. https://doi.org/10.1177/10497323251401503
 
-**[20]** *Multi-Stage LLM Pipeline to Support Qualitative Content Analysis – A Proof of Concept Experiment with Expert Validation*. (2026). https://doi.org/10.3233/SHTI260065
+**[20]** Forster, E., Kartschmit, N., Klager, E., Mosor, E., Schuster, B., Mosor, E., Stamm, T., & Donsa, K. (2026). Multi-Stage LLM Pipeline to Support Qualitative Content Analysis – A Proof of Concept Experiment with Expert Validation. In G. Schreier et al. (Eds.), *dHealth 2026: Proceedings of the 20th Health Informatics Meets Digital Health Conference* (pp. 110–116). IOS Press. https://doi.org/10.3233/SHTI260065
 
 **[21]** `concord`: Instrument-grade qualitative text analysis. GitHub Repository.  
-https://github.com/emollick/concord
+https://github.com/emollick/concord (Abruf: 31. August 2026)
 
 **[22]** `interview-analysis`: CLI tool to support non-interpretive interview coding. GitHub Repository.  
-https://github.com/DennisSchulmeister/interview-analysis
+https://github.com/DennisSchulmeister/interview-analysis (Abruf: 31. August 2026)
 
 ### Ergänzende aktuelle Literatur
 
