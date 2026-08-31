@@ -455,6 +455,29 @@ Die folgenden Konfigurationen sind Startpunkte. Je nach Quantisierung,
 Promptlänge, Hardware sowie Ollama- und Modellversion kann eine Anpassung
 erforderlich sein.
 
+### Beispiel: Granite 4.1 30B ohne Thinking
+
+`granite4.1:30b` ist ein geeignetes Non-Thinking-Beispiel für direkte,
+strukturierte Antworten. Die niedrige Temperatur dient als stabiler
+Ausgangspunkt für möglichst reproduzierbare qualitative Auswertungen:
+
+```bash
+ollama pull granite4.1:30b
+```
+
+```yaml
+llm:
+  model: "granite4.1:30b"
+  temperature: 0.05
+  max_tokens: 10000
+  think: false
+  log_thinking: false
+```
+
+Je nach verfügbarer Hardware kann stattdessen `granite4.1:8b` oder
+`granite4.1:3b` verwendet werden. `think: false` macht hier ausdrücklich klar,
+dass eine direkte Endantwort ohne separate Reasoning-Phase erwartet wird.
+
 ### Beispiel: Qwen 3.8 27B
 
 ```bash
