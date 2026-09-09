@@ -84,7 +84,8 @@ class ThinkingSupportTests(unittest.TestCase):
             "message": {"content": "<think>Noch nicht fertig"}
         }])
 
-        self.assertEqual(self.call_wrapper(fake), "")
+        with self.assertRaises(clusterer_core.LLMResponseError):
+            self.call_wrapper(fake)
 
     def test_old_python_client_is_retried_without_think_argument(self):
         fake = FakeOllama([
@@ -123,3 +124,4 @@ class ThinkingSupportTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

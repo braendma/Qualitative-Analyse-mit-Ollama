@@ -8,6 +8,10 @@ Neue Analysemodule werden ausschließlich in config_v2.yaml unter
 """
 
 import argparse
+import os
+import uuid
+import importlib.metadata
+from runtime_support import atomic_json, atomic_text, fingerprint, file_hash
 import json
 import logging
 import re
@@ -115,7 +119,13 @@ def run_step(module: dict, command: list[str], cwd: Path):
     LOGGER.info("Befehl: %s", " ".join(str(x) for x in command))
     LOGGER.info("=" * 72)
 
-    result = subprocess.run(command, cwd=str(cwd), text=True)
+    previous = {}
+    for output in module.get("outputs", []):
+        path = cwd / output
+        if path.is_file():
+            previous[output] = (path.stat().st_mtime_ns, file_hash(path))
+    child_env = {**os.environ, "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"}
+    result = subprocess.run(command, cwd=str(cwd), text=True, encoding="utf-8", env=child_env)
     if result.returncode != 0:
         raise RuntimeError(
             f"Workflow abgebrochen: Modul '{module['id']}' endete mit Exit-Code {result.returncode}."
@@ -124,6 +134,14 @@ def run_step(module: dict, command: list[str], cwd: Path):
     missing = []
     for output in module.get("outputs", []) or []:
         path = cwd / str(output)
+        if path.is_file() and str(output) in previous and previous[str(output)] == (path.stat().st_mtime_ns, file_hash(path)):
+            raise RuntimeError(f"Modul {module['id']} hat alten Output nicht erneuert: {output}")
+        if path.is_file() and path.suffix == '.json':
+            value = json.loads(path.read_text(encoding='utf-8'))
+            if not isinstance(value, dict):
+                raise ValueError(f"Ergebnis muss ein JSON-Objekt sein: {output}")
+            if value.get('processing_status', 'completed') != 'completed':
+                raise RuntimeError(f"Modul {module['id']} lieferte unvollständige Ergebnisse: {output}")
         if not path.exists():
             missing.append(str(output))
     if missing:
@@ -186,7 +204,7 @@ def build_full_report(output_dir: Path, modules: list[dict], created_at: str) ->
         report.append(text + "\n\n---\n\n")
 
     report_path = output_dir / "gesamtbericht.md"
-    report_path.write_text("".join(report), encoding="utf-8")
+    atomic_text(report_path, "".join(report))
     return report_path
 
 
@@ -198,6 +216,8 @@ def main(argv=None):
     parser.add_argument("--csv", "-i", default=None)
     parser.add_argument("--output-dir", "-o", default="workflow_output")
     parser.add_argument("--log-raw", action="store_true")
+    parser.add_argument("--resume", default=None, help="Laufverzeichnis eines unterbrochenen Laufs")
+    parser.add_argument("--validate-only", action="store_true", help="Nur CSV, Codebuch und Pipeline prüfen; kein Modellaufruf")
     args = parser.parse_args(argv)
 
     script_dir = Path(__file__).resolve().parent
@@ -218,92 +238,98 @@ def main(argv=None):
     if not csv_path.is_file():
         raise FileNotFoundError(f"CSV nicht gefunden: {csv_path}")
 
-    output_dir = resolve_path(script_dir, args.output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(message)s",
-        handlers=[
-            logging.FileHandler(output_dir / "workflow.log", encoding="utf-8"),
-            logging.StreamHandler(),
-        ],
-    )
-
     modules = topological_order(normalize_modules(config))
-    runtime = {
-        "config": str(config_path),
-        "input_csv": str(csv_path),
-        "output_dir": str(output_dir),
-        "python": sys.executable,
-        "log_raw_flag": "--log-raw" if args.log_raw else "",
+    from coding_validation_common import load_codebook, load_segments
+    codebook_config = config.get("paths", {}).get("category_system_csv")
+    if not codebook_config:
+        raise ValueError("paths.category_system_csv fehlt.")
+    _, code_index = load_codebook(resolve_path(config_path.parent, codebook_config))
+    input_segments = load_segments(csv_path, config.get("columns", {}))
+    unknown = sum(s.human_code not in code_index for s in input_segments)
+    if unknown:
+        raise ValueError(f"{unknown} Codierzeilen passen nicht zum Codebuch. Codepfade vor dem Lauf abgleichen.")
+    if args.validate_only:
+        print(json.dumps({"status": "valid", "segments": len(input_segments), "code_paths": len(code_index),
+                          "modules": len(modules), "model_calls": 0}))
+        return
+    provenance = {
+        "input_sha256": file_hash(csv_path),
+        "config_sha256": file_hash(config_path),
+        "code": {p.name: file_hash(p) for p in sorted(script_dir.glob("*.py"))},
+        "dependencies": {name: importlib.metadata.version(name) for name in ("pandas", "PyYAML", "ollama", "matplotlib")},
+        "llm": config.get("llm", {}),
     }
-
-    started_at = datetime.now().isoformat()
-    completed_steps = []
-
+    codebook_path = config.get("paths", {}).get("category_system_csv")
+    if codebook_path:
+        provenance["codebook_sha256"] = file_hash(resolve_path(config_path.parent, codebook_path))
+    try:
+        provenance["commit"] = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=script_dir, stderr=subprocess.DEVNULL, text=True).strip()
+    except (OSError, subprocess.CalledProcessError):
+        provenance["commit"] = None
+    # Commit is descriptive; code content is the authoritative resume identity.
+    identity = fingerprint({k: v for k, v in provenance.items() if k != "commit"})
+    if args.resume:
+        output_dir = Path(args.resume).resolve()
+        manifest = json.loads((output_dir / "workflow_manifest.json").read_text(encoding="utf-8"))
+        if manifest.get("fingerprint") != identity:
+            raise ValueError("Wiederaufnahme abgelehnt: Eingaben, Konfiguration, Code oder Abhängigkeiten geändert.")
+        run_id = manifest["run_id"]
+        completed_steps = list(manifest["completed_steps"])
+        # A failed result is not a checkpoint. Reuse only verified completed modules.
+        for module in modules:
+            if module["id"] in completed_steps:
+                for filename in module.get("outputs", []):
+                    path = output_dir / filename
+                    if not path.is_file() or (path.suffix != '.log' and file_hash(path) != manifest.get("output_hashes", {}).get(filename)):
+                        raise ValueError(f"Wiederaufnahme abgelehnt: Output verändert oder fehlt: {filename}")
+    else:
+        run_id = datetime.now().strftime("%Y%m%dT%H%M%S") + "-" + uuid.uuid4().hex[:8]
+        output_dir = resolve_path(script_dir, args.output_dir) / run_id
+        output_dir.mkdir(parents=True, exist_ok=False)
+        completed_steps = []
+        manifest = {"run_id": run_id, "started_at": datetime.now().isoformat(),
+                    "fingerprint": identity, "provenance": provenance,
+                    "completed_steps": [], "output_hashes": {}}
+        atomic_text(output_dir / "config_snapshot.yaml", config_path.read_text(encoding="utf-8"))
+    os.environ["WORKFLOW_RUN_ID"] = run_id
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s",
+        handlers=[logging.FileHandler(output_dir / "workflow.log", encoding="utf-8"), logging.StreamHandler()], force=True)
+    runtime = {"config": str(config_path), "input_csv": str(csv_path), "output_dir": str(output_dir),
+               "python": sys.executable, "log_raw_flag": "--log-raw" if args.log_raw else ""}
+    manifest.update(status="running", output_dir=str(output_dir))
+    if "error" in manifest:
+        manifest.setdefault("failure_history", []).append({"failed_at": manifest.pop("failed_at", None), "error": manifest.pop("error")})
+    manifest.pop("finished_at", None)
+    atomic_json(output_dir / "workflow_manifest.json", manifest)
     try:
         for module in modules:
+            if module["id"] in completed_steps:
+                continue
             script_path = resolve_path(script_dir, module["script"])
             if not script_path.is_file():
-                raise FileNotFoundError(
-                    f"Script für Modul '{module['id']}' nicht gefunden: {script_path}"
-                )
-
-            rendered_args = []
-            for value in module.get("args", []) or []:
-                rendered = render_arg(value, runtime).strip()
-                if rendered:
-                    rendered_args.append(rendered)
-
-            command = [sys.executable, str(script_path), *rendered_args]
+                raise FileNotFoundError(script_path)
+            rendered = [render_arg(value, runtime).strip() for value in module.get("args", [])]
+            command = [sys.executable, str(script_path), *[v for v in rendered if v]]
             run_step(module, command, output_dir)
             completed_steps.append(module["id"])
-
+            manifest["completed_steps"] = list(completed_steps)
+            for filename in module.get("outputs", []):
+                path = output_dir / filename
+                if path.is_file():
+                    manifest["output_hashes"][filename] = file_hash(path)
+            atomic_json(output_dir / "workflow_manifest.json", manifest)
+        finished_at = datetime.now().isoformat()
+        report_path = build_full_report(output_dir, modules, finished_at)
+        manifest.update(status="success", finished_at=finished_at, gesamtbericht=str(report_path))
+        atomic_json(output_dir / "workflow_manifest.json", manifest)
+        LOGGER.info("Workflow abgeschlossen. Lauf-ID: %s. Bericht: %s", run_id, report_path)
     except Exception as exc:
-        manifest = {
-            "started_at": started_at,
-            "failed_at": datetime.now().isoformat(),
-            "status": "failed",
-            "completed_steps": completed_steps,
-            "error": str(exc),
-            "input_csv": str(csv_path),
-            "config": str(config_path),
-        }
-        (output_dir / "workflow_manifest.json").write_text(
-            json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
-        )
+        manifest.update(status="failed", failed_at=datetime.now().isoformat(), error=str(exc))
+        atomic_json(output_dir / "workflow_manifest.json", manifest)
         raise
-
-    finished_at = datetime.now().isoformat()
-    report_path = build_full_report(output_dir, modules, finished_at)
-
-    declared_outputs = []
-    for module in modules:
-        for output in module.get("outputs", []) or []:
-            if output not in declared_outputs:
-                declared_outputs.append(output)
-    declared_outputs.extend(["gesamtbericht.md", "workflow_manifest.json"])
-
-    manifest = {
-        "started_at": started_at,
-        "finished_at": finished_at,
-        "status": "success",
-        "completed_steps": completed_steps,
-        "input_csv": str(csv_path),
-        "config": str(config_path),
-        "output_dir": str(output_dir),
-        "gesamtbericht": str(report_path),
-        "outputs": declared_outputs,
-    }
-    (output_dir / "workflow_manifest.json").write_text(
-        json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
-
-    LOGGER.info("=" * 72)
-    LOGGER.info("Workflow vollständig abgeschlossen: %s Module", len(modules))
-    LOGGER.info("Gesamtbericht: %s", report_path)
-    LOGGER.info("=" * 72)
 
 
 if __name__ == "__main__":

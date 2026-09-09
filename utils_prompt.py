@@ -63,3 +63,4 @@ def build_prompt_for_module(module_key: str, prompts: dict, context: dict, **kwa
         return result
 
     return safe_format(system_template), safe_format(user_template)
+

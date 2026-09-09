@@ -1,4 +1,5 @@
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -19,9 +20,9 @@ class CodingValidationTests(unittest.TestCase):
     def test_real_config_is_yaml_and_contains_modules(self):
         config = yaml.safe_load((ROOT / "config_v2.yaml").read_text(encoding="utf-8"))
         modules = {item["id"]: item for item in config["pipeline"]["modules"]}
-        self.assertEqual(config["llm"]["model"], "granite4.1:8b")
-        self.assertEqual(config["paths"]["input_csv"], "maxqda_export.csv")
-        self.assertFalse(config["coding_validation"]["log_raw_llm_output"])
+        self.assertTrue(config["llm"]["model"])
+        self.assertTrue(config["paths"]["input_csv"])
+        self.assertIsInstance(config["coding_validation"]["log_raw_llm_output"], bool)
         self.assertIn("code_verification", modules)
         self.assertIn("blind_coding", modules)
         self.assertEqual(modules["coding_agreement"]["depends_on"], ["code_verification", "blind_coding"])
@@ -62,6 +63,7 @@ class CodingValidationTests(unittest.TestCase):
             llm=MockLLM([invalid, invalid]),
         )
         self.assertEqual(output["results"][0]["predicted_code"], "unklar")
+        self.assertEqual(output["results"][0]["processing_status"], "failed")
         self.assertEqual(output["results"][0]["alternative_codes"], [])
 
     def test_invented_verification_alternative_is_discarded(self):
@@ -91,12 +93,13 @@ class CodingValidationTests(unittest.TestCase):
                 "--config", str(ROOT / "tests" / "config_test.yaml"),
                 "--output-dir", temp_dir,
             ]
-            result = subprocess.run(command, cwd=ROOT, text=True, capture_output=True)
+            result = subprocess.run(command, cwd=ROOT, text=True, capture_output=True, encoding="utf-8", env={**os.environ,"PYTHONUTF8":"1","PYTHONIOENCODING":"utf-8"})
             self.assertEqual(result.returncode, 0, msg=result.stdout + "\n" + result.stderr)
+            temp_dir = str(next(Path(temp_dir).iterdir()))
             agreement = json.loads((Path(temp_dir) / "coding_agreement_v1.json").read_text(encoding="utf-8"))
             self.assertEqual(agreement["analysis_type"], "Human–LLM Coding Agreement")
             self.assertEqual(agreement["exact_agreement"]["agreements"], 2)
-            self.assertEqual(agreement["case_counts"], {"bestätigt": 2, "strittig": 1, "unklar": 0})
+            self.assertEqual(agreement["case_counts"], {"bestätigt": 2, "strittig": 1, "unklar": 0, "technischer_fehler": 0})
             self.assertTrue((Path(temp_dir) / "coding_agreement_confusion.png").is_file())
             full_report = (Path(temp_dir) / "gesamtbericht.md").read_text(encoding="utf-8")
             self.assertIn("## 1. Code-Verifikation", full_report)

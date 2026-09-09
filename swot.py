@@ -5,6 +5,7 @@ import yaml
 import logging
 import argparse
 import json
+from runtime_support import atomic_json, atomic_text
 
 from swot_core import build_swot
 
@@ -93,6 +94,7 @@ def main(argv=None):
     )
 
     ollama_params = {
+        **llm_cfg,
         "model": llm_cfg.get(
             "model",
             "granite4.1:8b"
@@ -150,17 +152,7 @@ def main(argv=None):
     # -------------------------------------------------
     # JSON
     # -------------------------------------------------
-    with open(
-        args.out_json,
-        "w",
-        encoding="utf-8"
-    ) as f:
-        json.dump(
-            json_output,
-            f,
-            ensure_ascii=False,
-            indent=2
-        )
+    atomic_json(args.out_json, json_output)
 
     logger.info(
         f"[SWOT] Markdown geschrieben nach: {args.out_md}"

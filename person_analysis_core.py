@@ -1,8 +1,10 @@
+from response_schemas import schema_for, require_structure
 # person_analysis_core.py
 
 import json
 import logging
 from datetime import datetime
+from runtime_support import person_for_segment
 
 from utils_prompt import build_prompt_for_module
 from clusterer_core import ollama_chat, safe_json_loads
@@ -23,6 +25,7 @@ def llm_person_analysis(system_prompt: str, user_prompt: str, ollama_params: dic
             max_tokens=ollama_params["max_tokens"],
             think=ollama_params.get("think"),
             log_thinking=ollama_params.get("log_thinking", False),
+            settings={**ollama_params, "response_schema": schema_for("person_analysis")},
         )
         logger.info("\n===== RAW PERSONENANALYSE OUTPUT =====\n%s\n======================================\n", content)
         if content:
@@ -76,6 +79,7 @@ Keine neuen Inhalte hinzufügen. Kein Markdown. Keine Erklärung.
             max_tokens=ollama_params["max_tokens"],
             think=ollama_params.get("think"),
             log_thinking=ollama_params.get("log_thinking", False),
+            settings={**ollama_params, "response_schema": schema_for("person_analysis")},
         )
         if content:
             return content.strip()
@@ -98,6 +102,7 @@ def build_summary_index(summary_data: dict):
         key = (
             item.get("hauptkategorie"),
             item.get("subkategorie"),
+            item.get("auspraegung"),
             item.get("facette"),
             item.get("cluster_name"),
         )
@@ -110,13 +115,14 @@ def get_cluster_summary(cluster: dict, exact_index: dict, name_index: dict) -> s
     key = (
         cluster.get("hauptkategorie"),
         cluster.get("subkategorie"),
+        cluster.get("auspraegung"),
         cluster.get("facette"),
         cluster.get("cluster_name"),
     )
     return exact_index.get(key) or name_index.get(cluster.get("cluster_name"), "")
 
 
-def build_person_payloads(clusters: list, id_to_text: dict, summary_data: dict) -> dict:
+def build_person_payloads(clusters: list, id_to_text: dict, summary_data: dict, metadata=None) -> dict:
     exact_index, name_index = build_summary_index(summary_data)
     persons = {}
 
@@ -138,7 +144,7 @@ def build_person_payloads(clusters: list, id_to_text: dict, summary_data: dict) 
             if not sid:
                 continue
 
-            person = person_from_segment_id(sid)
+            person = person_for_segment(sid, metadata)
             pdata = persons.setdefault(
                 person,
                 {
@@ -199,7 +205,7 @@ def _normalize_list(parsed, key, text_key, allowed_ids):
         else:
             text = str(entry).strip()
             segment_ids = []
-        if text:
+        if text and segment_ids:
             out.append({text_key: text, "segment_ids": segment_ids})
     return out
 
@@ -224,7 +230,7 @@ def normalize_person_analysis(parsed: dict, allowed_ids: set, id_to_text: dict) 
             thema = str(entry).strip()
             verdichtung = ""
             ids = []
-        if thema or verdichtung:
+        if (thema or verdichtung) and ids:
             zentrale_themen.append({
                 "thema": thema or "Unbenanntes Thema",
                 "verdichtung": verdichtung,
@@ -236,7 +242,7 @@ def normalize_person_analysis(parsed: dict, allowed_ids: set, id_to_text: dict) 
         "perspektiven": _normalize_list(parsed, "perspektiven", "aussage", allowed_ids),
         "spannungsfelder": _normalize_list(parsed, "spannungsfelder", "beschreibung", allowed_ids),
         "kontrastierende_aspekte": _normalize_list(parsed, "kontrastierende_aspekte", "beschreibung", allowed_ids),
-        "gesamtverdichtung": str(parsed.get("gesamtverdichtung", "")).strip(),
+        "gesamtverdichtung": " ".join(x["verdichtung"] for x in zentrale_themen),
     }
 
     used_ids = []
@@ -275,6 +281,7 @@ def build_person_analysis(
         cluster_data.get("clusters", []),
         id_to_text,
         summary_data,
+        cluster_data.get("segment_metadata"),
     )
 
     results = {}
@@ -304,11 +311,12 @@ def build_person_analysis(
 
         if parsed is None:
             logger.error(f"[Personenanalyse] Keine verwertbare Antwort für {person}.")
-            continue
+            raise ValueError(f"Personenanalyse fehlgeschlagen: {person}")
 
+        require_structure(parsed, "person_analysis")
         normalized = normalize_person_analysis(parsed, allowed_ids, id_to_text)
         if normalized is None:
-            continue
+            raise ValueError(f"Ungültige Personenanalyse: {person}")
 
         categories = sorted({
             ctx.get("hauptkategorie")
@@ -372,3 +380,4 @@ def build_person_analysis(
             md.append("_Keine ausgewählten Belege._\n\n")
 
     return "\n".join(md), json_output
+

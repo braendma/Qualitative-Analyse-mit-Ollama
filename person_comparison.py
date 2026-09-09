@@ -3,6 +3,7 @@
 
 import argparse
 import json
+from runtime_support import atomic_json, atomic_text
 import logging
 import yaml
 
@@ -31,6 +32,7 @@ def main(argv=None):
         config = yaml.safe_load(f)
     llm_cfg = config.get("llm", {})
     ollama_params = {
+        **llm_cfg,
         "model": llm_cfg.get("model", "granite4.2:8b"),
         "temperature": float(llm_cfg.get("temperature", 0.05)),
         "max_tokens": int(llm_cfg.get("max_tokens", 10000)),
@@ -45,10 +47,8 @@ def main(argv=None):
         context=config.get("context", {}),
     )
 
-    with open(args.out_md, "w", encoding="utf-8") as f:
-        f.write(md)
-    with open(args.out_json, "w", encoding="utf-8") as f:
-        json.dump(json_output, f, ensure_ascii=False, indent=2)
+    atomic_text(args.out_md, md)
+    atomic_json(args.out_json, json_output)
 
     logger.info(f"[Personenvergleich] Markdown geschrieben: {args.out_md}")
     logger.info(f"[Personenvergleich] JSON geschrieben: {args.out_json}")
@@ -56,3 +56,4 @@ def main(argv=None):
 
 if __name__ == "__main__":
     main()
+

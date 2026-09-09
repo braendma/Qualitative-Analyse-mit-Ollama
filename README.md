@@ -9,6 +9,12 @@
 
 ---
 
+## Reproduzierbarkeit und Beispieldaten
+
+Die aktuelle Version prüft Eingaben vor dem Start, erhält vollständige Codepfade, trennt technische Fehler von inhaltlichen Enthaltungen und unterstützt isolierte Läufe mit Wiederaufnahme. Die öffentliche Konfiguration verwendet lokales Ollama. Details und geänderte Aufrufe stehen in [ROBUSTNESS.md](ROBUSTNESS.md).
+
+Die mitgelieferten [Beispieldaten](DEMO_DATA.md) umfassen 38 vollständig erfundene Codierzeilen, sechs fiktive Personen und zwölf Codepfade mit einer bis vier Ebenen. Sie enthalten keine Originalinterviews.
+
 ## 🌟 Kurzbeschreibung
 
 Diese Pipeline unterstützt die **mehrstufige qualitative Auswertung bereits kodierter Interviewdaten** – beispielsweise aus einem MAXQDA-CSV-Export – mit einem lokal über **Ollama** ausgeführten Large Language Model.
@@ -51,57 +57,59 @@ Die Besonderheit der aktuellen Architektur: **`00_WORKFLOW_RUNNER.py` kennt kein
 
 # 🧩 Aktueller Analyse-Workflow
 
-```text
-Kodierter CSV-Export
-        │
-        ▼
-┌──────────────────────────────┐
-│ 1. Clusteranalyse            │
-└───────┬──────────────┬───────┘
-        │              │
-        │              ├──► Code-Verifikation ──┐
-        │              └──► Blind-Coding ───────┤
-        │                                        ▼
-        │                         Human–LLM Coding Agreement
-        ▼
-┌──────────────────────────────┐
-│ 2. Cluster-Zusammenfassungen │
-└───────┬──────────┬───────────┘
-        │          │
-        │          ├──────────────────────────────┐
-        │          │                              │
-        ▼          ▼                              ▼
-┌────────────┐ ┌──────────────────┐      ┌────────────────────┐
-│ 3. SWOT    │ │ 5. Personen-     │      │ 8. Zusammenhangs-  │
-│ pro Pfad   │ │ analyse          │      │ analyse            │
-└─────┬──────┘ └───────┬──────────┘      └─────────┬──────────┘
-      ▼                ▼                           │
-┌──────────────┐ ┌──────────────────┐              │
-│ 4. Meta-SWOT│ │ 6. Personen-     │              │
-│             │ │ vergleich / Typen│              │
-└──────┬───────┘ └───────┬──────────┘              │
-       │                 ▼                         │
-       │        ┌──────────────────┐               │
-       │        │ 7. Kontrast- /   │               │
-       │        │ Negativfallanalyse│              │
-       │        └────────┬─────────┘               │
-       │                 │                         │
-       │        ┌────────▼─────────┐               │
-       │        │ 9. Ambivalenz-   │               │
-       │        │ analyse          │               │
-       │        └────────┬─────────┘               │
-       │                 │                         │
-       └────────────┬────┴───────────────┬─────────┘
-                    ▼                    │
-          ┌──────────────────────┐       │
-          │ 10. Evidence-Audit   │◄──────┘
-          └──────────┬───────────┘
-                     ▼
-          ┌──────────────────────┐
-          │ 11. Gesamtsynthese   │
-          └──────────┬───────────┘
-                     ▼
-               gesamtbericht.md
+```mermaid
+flowchart TD
+  clusterer["Clusteranalyse"]
+  code_verification["Code-Verifikation"]
+  blind_coding["Blind-Coding"]
+  coding_agreement["Human–LLM Coding Agreement"]
+  summarizer["Cluster-Zusammenfassungen"]
+  swot["SWOT-Analysen"]
+  meta_swot["Meta-SWOT"]
+  person_analysis["Personenanalyse"]
+  person_comparison["Personenvergleich und Typenbildung"]
+  contrast_analysis["Kontrast- und Negativfallanalyse"]
+  relation_analysis["Zusammenhangsanalyse"]
+  ambiguity_analysis["Ambivalenz- und Widerspruchsanalyse"]
+  evidence_audit["Evidence-Audit"]
+  overall_synthesis["Gesamtsynthese"]
+  clusterer -. Bericht .-> gesamtbericht["Gesamtbericht"]
+  clusterer --> code_verification
+  code_verification -. Bericht .-> gesamtbericht["Gesamtbericht"]
+  clusterer --> blind_coding
+  blind_coding -. Bericht .-> gesamtbericht["Gesamtbericht"]
+  code_verification --> coding_agreement
+  blind_coding --> coding_agreement
+  coding_agreement -. Bericht .-> gesamtbericht["Gesamtbericht"]
+  clusterer --> summarizer
+  summarizer -. Bericht .-> gesamtbericht["Gesamtbericht"]
+  summarizer --> swot
+  swot -. Bericht .-> gesamtbericht["Gesamtbericht"]
+  swot --> meta_swot
+  meta_swot -. Bericht .-> gesamtbericht["Gesamtbericht"]
+  summarizer --> person_analysis
+  person_analysis -. Bericht .-> gesamtbericht["Gesamtbericht"]
+  person_analysis --> person_comparison
+  person_comparison -. Bericht .-> gesamtbericht["Gesamtbericht"]
+  person_analysis --> contrast_analysis
+  person_comparison --> contrast_analysis
+  contrast_analysis -. Bericht .-> gesamtbericht["Gesamtbericht"]
+  summarizer --> relation_analysis
+  relation_analysis -. Bericht .-> gesamtbericht["Gesamtbericht"]
+  person_analysis --> ambiguity_analysis
+  ambiguity_analysis -. Bericht .-> gesamtbericht["Gesamtbericht"]
+  swot --> evidence_audit
+  meta_swot --> evidence_audit
+  contrast_analysis --> evidence_audit
+  ambiguity_analysis --> evidence_audit
+  evidence_audit -. Bericht .-> gesamtbericht["Gesamtbericht"]
+  meta_swot --> overall_synthesis
+  person_comparison --> overall_synthesis
+  contrast_analysis --> overall_synthesis
+  relation_analysis --> overall_synthesis
+  ambiguity_analysis --> overall_synthesis
+  evidence_audit --> overall_synthesis
+  overall_synthesis -. Bericht .-> gesamtbericht["Gesamtbericht"]
 ```
 
 ---
@@ -1040,4 +1048,5 @@ python 00_WORKFLOW_RUNNER.py
 ```
 
 **Kodierte Interviewdaten rein → modulare qualitative Analysen → nachvollziehbare Zwischenprodukte → Gesamtsynthese → `gesamtbericht.md`.**
+
 

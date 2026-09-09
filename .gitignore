@@ -6,3 +6,11 @@ workflow_output/
 *_raw.jsonl
 plots/
 
+
+
+.env
+.env.*
+config.private*.yaml
+config.cloud*.yaml
+*_checkpoint.json
+private_delivery/

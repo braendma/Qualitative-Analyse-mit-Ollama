@@ -1,3 +1,4 @@
+from response_schemas import schema_for, require_structure
 # contrast_analysis_core.py
 
 import json
@@ -23,6 +24,7 @@ def llm_contrast_analysis(system_prompt: str, user_prompt: str, ollama_params: d
             max_tokens=ollama_params["max_tokens"],
             think=ollama_params.get("think"),
             log_thinking=ollama_params.get("log_thinking", False),
+            settings={**ollama_params, "response_schema": schema_for("contrast_analysis")},
         )
         logger.info("\n===== RAW KONTRASTANALYSE OUTPUT =====\n%s\n======================================\n", content)
         if content:
@@ -57,6 +59,7 @@ Kein Markdown. Keine neuen Inhalte.
             max_tokens=ollama_params["max_tokens"],
             think=ollama_params.get("think"),
             log_thinking=ollama_params.get("log_thinking", False),
+            settings={**ollama_params, "response_schema": schema_for("contrast_analysis")},
         )
         if content:
             return content.strip()
@@ -181,6 +184,7 @@ def build_contrast_analysis(
     if parsed is None:
         raise ValueError("Kontrastanalyse konnte nicht als JSON gelesen werden.")
 
+    require_structure(parsed, "contrast_analysis")
     result = normalize_contrast(parsed, source_people, type_names)
     if result is None:
         raise ValueError("Kontrastanalyse besitzt kein verwertbares Format.")
@@ -222,3 +226,4 @@ def build_contrast_analysis(
         md.append("_Keine zusätzlichen Relativierungen._\n")
 
     return "\n".join(md), json_output
+

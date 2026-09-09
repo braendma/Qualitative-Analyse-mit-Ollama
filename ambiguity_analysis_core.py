@@ -1,3 +1,4 @@
+from response_schemas import schema_for, require_structure
 # ambiguity_analysis_core.py
 
 import json
@@ -23,6 +24,7 @@ def _llm(system_prompt, user_prompt, ollama_params):
             max_tokens=ollama_params["max_tokens"],
             think=ollama_params.get("think"),
             log_thinking=ollama_params.get("log_thinking", False),
+            settings={**ollama_params, "response_schema": schema_for("ambiguity_analysis")},
         )
         logger.info("\n===== RAW AMBIGUITY OUTPUT =====\n%s\n================================\n", content)
         if content:
@@ -51,6 +53,7 @@ Keine neuen Inhalte. Kein Markdown. Kein Text außerhalb des JSON.
         max_tokens=ollama_params["max_tokens"],
         think=ollama_params.get("think"),
         log_thinking=ollama_params.get("log_thinking", False),
+        settings={**ollama_params, "response_schema": schema_for("ambiguity_analysis")},
     ) or ""
 
 
@@ -147,11 +150,12 @@ def build_ambiguity_analysis(
             parsed = safe_json_loads(_repair(raw, ollama_params))
         if parsed is None:
             logger.error("[Ambivalenzanalyse] Keine verwertbare Antwort für %s.", person)
-            continue
+            raise ValueError(f"Ambivalenzanalyse fehlgeschlagen: {person}")
 
+        require_structure(parsed, "ambiguity_analysis")
         normalized = normalize_person_ambiguities(parsed, allowed_ids, id_to_text)
         if normalized is None:
-            continue
+            raise ValueError(f"Ungültige Ambivalenzanalyse: {person}")
 
         # IDs workflowweit innerhalb dieses Outputs eindeutig machen.
         for item in normalized["ambivalenzen"]:
@@ -198,3 +202,4 @@ def build_ambiguity_analysis(
                 md.append(f"> `{b['segment_id']}` {b['text']}\n\n")
 
     return "".join(md), json_output
+

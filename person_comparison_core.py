@@ -1,3 +1,4 @@
+from response_schemas import schema_for, require_structure
 # person_comparison_core.py
 
 import json
@@ -23,6 +24,7 @@ def llm_person_comparison(system_prompt: str, user_prompt: str, ollama_params: d
             max_tokens=ollama_params["max_tokens"],
             think=ollama_params.get("think"),
             log_thinking=ollama_params.get("log_thinking", False),
+            settings={**ollama_params, "response_schema": schema_for("person_comparison")},
         )
         logger.info("\n===== RAW PERSONENVERGLEICH OUTPUT =====\n%s\n========================================\n", content)
         if content:
@@ -58,6 +60,7 @@ Keine neuen Inhalte. Kein Markdown. Keine Erklärung.
             max_tokens=ollama_params["max_tokens"],
             think=ollama_params.get("think"),
             log_thinking=ollama_params.get("log_thinking", False),
+            settings={**ollama_params, "response_schema": schema_for("person_comparison")},
         )
         if content:
             return content.strip()
@@ -190,6 +193,7 @@ def build_person_comparison(
     if parsed is None:
         raise ValueError("Personenvergleich konnte nicht als JSON gelesen werden.")
 
+    require_structure(parsed, "person_comparison")
     comparison = normalize_comparison(parsed, source_people)
     if comparison is None:
         raise ValueError("Personenvergleich besitzt kein verwertbares Format.")
@@ -239,3 +243,4 @@ def build_person_comparison(
         md.append("_Keine._\n")
 
     return "\n".join(md), json_output
+

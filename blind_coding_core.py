@@ -21,6 +21,8 @@ from coding_validation_common import (
     markdown_escape,
 )
 from utils_prompt import build_prompt_for_module
+from runtime_support import Checkpoint, checkpoint_identity
+from llm_client import LLMResponseError
 
 CONFIDENCES = {"hoch", "mittel", "niedrig"}
 LOGGER = logging.getLogger("blind_coding")
@@ -102,17 +104,24 @@ def blind_code_segments(
     llm_params: dict,
     raw_log_path: str | None = None,
     llm: Callable = default_llm,
+    checkpoint_path: str | None = None,
 ) -> tuple[str, dict]:
     allowed_codes = {entry.code for entry in codebook}
     codebook_payload = json.dumps(
         [entry.as_prompt_dict() for entry in codebook], ensure_ascii=False
     )
     results = []
+    checkpoint = Checkpoint(checkpoint_path, checkpoint_identity(segments, codebook, prompts, context, llm_params))
     raw_writer = RawJsonlWriter(raw_log_path, "blind_coding") if raw_log_path else None
     total = len(segments)
     started = time.monotonic()
     _show_progress(0, total, started)
     for position, segment in enumerate(segments, start=1):
+        cached = checkpoint.get(segment.segment_id)
+        if cached:
+            results.append(cached)
+            _show_progress(position, total, started)
+            continue
         # Absichtlich wird hier weder human_code noch ein daraus abgeleiteter Zielcode übergeben.
         system_prompt, user_prompt = build_prompt_for_module(
             "blind_coding",
@@ -130,9 +139,9 @@ def blind_code_segments(
                 llm=llm,
                 raw_callback=(raw_writer.callback_for(segment.segment_id) if raw_writer else None),
             )
-        except ValueError as exc:
+        except (ValueError, LLMResponseError) as exc:
             LOGGER.warning(
-                "[Blind-Coding] Strukturell ungültige LLM-Antwort für %s; Fall wird als unklar fortgeführt: %s",
+                "[Blind-Coding] Strukturell ungültige LLM-Antwort für %s; Fall erhält processing_status=failed: %s",
                 segment.segment_id,
                 exc,
             )
@@ -140,9 +149,13 @@ def blind_code_segments(
                 "segment_id": segment.segment_id,
                 "predicted_code": "unklar",
                 "confidence": "niedrig",
+                "processing_status": "failed",
+                "error_type": "invalid_response",
                 "begruendung": "Die LLM-Antwort blieb nach Self-Repair strukturell ungültig; es wurde kein nicht validierter Code übernommen.",
                 "alternative_codes": [],
             }
+        result.setdefault("processing_status", "completed")
+        checkpoint.save(segment.segment_id, result)
         results.append(result)
         _show_progress(position, total, started)
     output = {
@@ -150,6 +163,9 @@ def blind_code_segments(
         "created_at": datetime.now().isoformat(),
         "codebook_size": len(codebook),
         "segment_count": len(segments),
+        "processing_status": "completed" if all(r["processing_status"] == "completed" for r in results) else "incomplete",
+        "processing_counts": {key: sum(r["processing_status"] == key for r in results) for key in ("completed", "failed", "invalid_input")},
+        "confidence_note": "Konfidenz ist eine unkalibrierte Selbsteinschätzung des Modells.",
         "results": results,
     }
     return render_markdown(output), output
@@ -163,11 +179,13 @@ def render_markdown(output: dict) -> str:
         "| Segment-ID | Vorhergesagter Code | Konfidenz | Begründung | Alternativen |\n",
         "|---|---|---|---|---|\n",
     ]
+    lines.insert(1, f"Verarbeitungsstatus: **{output['processing_status']}**. {output['processing_counts']}\n\nKonfidenz = unkalibrierte Modellselbsteinschätzung.\n\n")
     for row in output["results"]:
         alternatives = ", ".join(row["alternative_codes"]) or "–"
         lines.append(
-            f"| {markdown_escape(row['segment_id'])} | {markdown_escape(row['predicted_code'])} | "
+            f"| {markdown_escape(row['segment_id'])} | {row.get('processing_status', 'completed')}: {markdown_escape(row['predicted_code'])} | "
             f"{row['confidence']} | {markdown_escape(row['begruendung'])} | {markdown_escape(alternatives)} |\n"
         )
     return "".join(lines)
+
 

@@ -1,3 +1,4 @@
+from response_schemas import schema_for, require_structure
 # swot_core.py
 
 import json
@@ -63,6 +64,7 @@ def llm_swot(system_prompt: str, user_prompt: str, ollama_params: dict) -> str:
             max_tokens=ollama_params["max_tokens"],
             think=ollama_params.get("think"),
             log_thinking=ollama_params.get("log_thinking", False),
+            settings={**ollama_params, "response_schema": schema_for("swot")},
         )
 
         logger.info(
@@ -116,6 +118,7 @@ Kein Markdown. Kein Text außerhalb des JSON.
             max_tokens=ollama_params["max_tokens"],
             think=ollama_params.get("think"),
             log_thinking=ollama_params.get("log_thinking", False),
+            settings={**ollama_params, "response_schema": schema_for("swot")},
         )
         if content:
             return content.strip()
@@ -134,6 +137,7 @@ def build_summary_index(summary_data):
         exact_key = (
             summary.get("hauptkategorie"),
             summary.get("subkategorie"),
+            summary.get("auspraegung"),
             summary.get("facette"),
             cluster_name,
         )
@@ -148,6 +152,7 @@ def find_cluster_summary(cluster, exact_index, name_index):
     exact_key = (
         cluster.get("hauptkategorie"),
         cluster.get("subkategorie"),
+        cluster.get("auspraegung"),
         cluster.get("facette"),
         cluster_name,
     )
@@ -170,16 +175,17 @@ def group_clusters_by_path(clusters):
 
         key = (
             cluster.get("hauptkategorie") or "Unbekannt",
-            cluster.get("subkategorie") or "Unbekannt",
-            cluster.get("facette") or "Unbekannt",
+            cluster.get("subkategorie") or "",
+            cluster.get("auspraegung"),
+            cluster.get("facette") or "",
         )
         groups.setdefault(key, []).append(cluster)
 
     return groups
 
 
-def make_source_id(haupt, sub, facette):
-    return f"{haupt} > {sub} > {facette}"
+def make_source_id(haupt, sub, facette, auspraegung=None):
+    return " > ".join(x for x in (haupt, sub, auspraegung, facette) if x)
 
 
 def _clean_string(value, fallback=""):
@@ -316,8 +322,8 @@ def build_swot(
 
     swot_results = OrderedDict()
 
-    for (haupt, sub, facette), path_clusters in path_groups.items():
-        source_id = make_source_id(haupt, sub, facette)
+    for (haupt, sub, auspraegung, facette), path_clusters in path_groups.items():
+        source_id = " > ".join(x for x in (haupt, sub, auspraegung, facette) if x)
         logger.info("[SWOT] Erstelle SWOT für: %s", source_id)
 
         cluster_payload = []
@@ -362,6 +368,8 @@ def build_swot(
                 "hauptkategorie": haupt,
                 "subkategorie": sub,
                 "facette": facette,
+                "auspraegung": auspraegung,
+                "code_path": source_id,
                 "clusters": cluster_payload,
             },
             ensure_ascii=False,
@@ -389,21 +397,24 @@ def build_swot(
 
         if parsed is None:
             logger.error("[SWOT] Keine gültige SWOT für '%s'.", source_id)
-            parsed = {dimension: [] for dimension in DIMENSIONS}
+            raise ValueError(f"SWOT fehlgeschlagen: {source_id}")
 
+        require_structure(parsed, "swot")
         normalized = normalize_swot(
             parsed,
             allowed_segment_ids=allowed_segment_ids,
             id_to_text=id_to_text,
         )
         if normalized is None:
-            normalized = {dimension: [] for dimension in DIMENSIONS}
+            raise ValueError(f"Ungültige SWOT-Struktur: {source_id}")
 
         unique_segment_ids = list(dict.fromkeys(allowed_segment_ids))
         swot_results[source_id] = {
             "hauptkategorie": haupt,
             "subkategorie": sub,
             "facette": facette,
+                "auspraegung": auspraegung,
+                "code_path": source_id,
             "cluster_count": len(path_clusters),
             "segment_count": len(unique_segment_ids),
             **normalized,
@@ -411,6 +422,7 @@ def build_swot(
 
     json_output = {
         "created_at": datetime.now().isoformat(),
+        "segment_metadata": cluster_data.get("segment_metadata", {}),
         "source_cluster_created_at": cluster_data.get("created_at"),
         "analysis_level": "hauptkategorie > subkategorie > facette",
         "swot_unit_count": len(swot_results),
@@ -450,3 +462,4 @@ def build_swot(
                 md.append("\n")
 
     return "".join(md), json_output
+

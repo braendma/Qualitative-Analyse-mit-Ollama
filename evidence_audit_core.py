@@ -1,3 +1,5 @@
+from batching import bounded_batches
+from response_schemas import schema_for, require_structure
 # evidence_audit_core.py
 
 import json
@@ -5,6 +7,7 @@ import logging
 from datetime import datetime
 
 from clusterer_core import ollama_chat, safe_json_loads
+from runtime_support import person_for_segment
 from meta_swot_core import DIMENSIONS, flatten_findings
 from utils_prompt import build_prompt_for_module
 
@@ -25,7 +28,7 @@ def _flatten_lookup(swot_data: dict) -> dict:
     }
 
 
-def build_audit_items(meta_swot_data: dict, finding_lookup: dict) -> list:
+def build_audit_items(meta_swot_data: dict, finding_lookup: dict, metadata=None) -> list:
     items = []
     meta = meta_swot_data.get("meta_swot", {})
 
@@ -46,7 +49,7 @@ def build_audit_items(meta_swot_data: dict, finding_lookup: dict) -> list:
                 sid for finding in findings for sid in finding.get("segment_ids", [])
             ))
             sources = list(dict.fromkeys(f["source_id"] for f in findings))
-            persons = list(dict.fromkeys(_person_from_sid(sid) for sid in segment_ids))
+            persons = list(dict.fromkeys(person_for_segment(sid, metadata) for sid in segment_ids))
             items.append({
                 "audit_id": f"EVA{len(items) + 1:04d}",
                 "dimension": dimension,
@@ -67,7 +70,7 @@ def build_audit_items(meta_swot_data: dict, finding_lookup: dict) -> list:
             if finding is None:
                 continue
             segment_ids = list(dict.fromkeys(finding.get("segment_ids", [])))
-            persons = list(dict.fromkeys(_person_from_sid(sid) for sid in segment_ids))
+            persons = list(dict.fromkeys(person_for_segment(sid, metadata) for sid in segment_ids))
             items.append({
                 "audit_id": f"EVA{len(items) + 1:04d}",
                 "dimension": dimension,
@@ -134,6 +137,7 @@ def _llm(system_prompt, user_prompt, ollama_params):
             max_tokens=ollama_params["max_tokens"],
             think=ollama_params.get("think"),
             log_thinking=ollama_params.get("log_thinking", False),
+            settings={**ollama_params, "response_schema": schema_for("evidence_audit")},
         )
         logger.info("\n===== RAW EVIDENCE AUDIT OUTPUT =====\n%s\n=====================================\n", content)
         if content:
@@ -141,7 +145,7 @@ def _llm(system_prompt, user_prompt, ollama_params):
     return ""
 
 
-def _repair(broken_output, ollama_params):
+def _repair(broken_output, ollama_params, source_prompt=None):
     system = """
 Du reparierst ausschließlich JSON für einen Evidence-Audit.
 Gib genau ein Objekt mit dem Schlüssel \"zuordnungen\" zurück.
@@ -150,42 +154,42 @@ audit_id, gegenbeleg_ids, einordnung.
 gegenbeleg_ids ist eine Liste von Strings.
 Keine neuen Inhalte. Kein Markdown. Kein Text außerhalb des JSON.
 """.strip()
+    if source_prompt:
+        system = ("Prüfe die ursprünglichen Audit-Befunde anhand der gelieferten Gegenbelege erneut. "
+                  "Gib für jede gelieferte audit_id genau einen Eintrag in zuordnungen zurück. "
+                  "Ohne passenden Gegenbeleg: gegenbeleg_ids=[], mit kurzer einordnung. "
+                  "Nur gelieferte IDs. Antworte ausschließlich als JSON-Objekt.")
     return ollama_chat(
         [
             {"role": "system", "content": system},
-            {"role": "user", "content": f"Repariere folgende Antwort:\n\n{broken_output}"},
+            {"role": "user", "content": (source_prompt or "") + f"\nUnvollständige oder ungültige vorherige Antwort:\n{broken_output}"},
         ],
         model=ollama_params["model"],
         temperature=0.0,
         max_tokens=ollama_params["max_tokens"],
         think=ollama_params.get("think"),
         log_thinking=ollama_params.get("log_thinking", False),
+        settings={**ollama_params, "response_schema": schema_for("evidence_audit")},
     ) or ""
 
 
 def normalize_mappings(parsed: dict, audit_ids: set, counters_by_id: dict) -> dict:
-    result = {audit_id: {"gegenbeleg_ids": [], "einordnung": ""} for audit_id in audit_ids}
-    if not isinstance(parsed, dict):
-        return result
-
-    raw = parsed.get("zuordnungen", [])
-    if not isinstance(raw, list):
-        raw = [raw] if raw else []
-    for entry in raw:
+    if not isinstance(parsed, dict) or not isinstance(parsed.get("zuordnungen"), list):
+        raise ValueError("Audit fehlgeschlagen: zuordnungen muss eine Liste sein.")
+    result = {}
+    for entry in parsed["zuordnungen"]:
         if not isinstance(entry, dict):
-            continue
-        audit_id = str(entry.get("audit_id", "")).strip()
-        if audit_id not in audit_ids:
-            continue
-        ids = [
-            str(x).strip()
-            for x in entry.get("gegenbeleg_ids", [])
-            if str(x).strip() in counters_by_id
-        ]
-        result[audit_id] = {
-            "gegenbeleg_ids": list(dict.fromkeys(ids)),
-            "einordnung": str(entry.get("einordnung", "")).strip(),
-        }
+            raise ValueError("Audit-Zuordnung muss ein Objekt sein.")
+        aid = entry.get("audit_id")
+        ids = entry.get("gegenbeleg_ids")
+        if not isinstance(aid, str) or aid not in audit_ids or aid in result:
+            raise ValueError("Unbekannte oder doppelte Audit-ID.")
+        if not isinstance(ids, list) or any(not isinstance(x, str) or x not in counters_by_id for x in ids):
+            raise ValueError("Audit enthält ungültige Gegenbeleg-IDs.")
+        result[aid] = {"gegenbeleg_ids": list(dict.fromkeys(ids)),
+                       "einordnung": str(entry.get("einordnung", "")).strip()}
+    if set(result) != audit_ids:
+        raise ValueError("Audit unvollständig: erwartete Audit-IDs fehlen.")
     return result
 
 
@@ -234,7 +238,7 @@ def build_evidence_audit(
         )
         finding_lookup = _flatten_lookup(swot_data)
 
-    audit_items = build_audit_items(meta_data, finding_lookup)
+    audit_items = build_audit_items(meta_data, finding_lookup, swot_data.get("segment_metadata"))
     counter_candidates = build_counter_candidates(contrast_data, ambiguity_data)
     counters_by_id = {x["counter_id"]: x for x in counter_candidates}
 
@@ -251,20 +255,20 @@ def build_evidence_audit(
             ],
             "moegliche_gegenbelege": counter_candidates,
         }
-        system_prompt, user_prompt = build_prompt_for_module(
-            "evidence_audit",
-            prompts=prompts,
-            context=context,
-            data=json.dumps(payload, ensure_ascii=False, indent=2),
-        )
-        raw = _llm(system_prompt, user_prompt, ollama_params)
-        parsed = safe_json_loads(raw)
-        if parsed is None:
-            logger.warning("[Evidence-Audit] Ungültiges JSON; starte Repair.")
-            parsed = safe_json_loads(_repair(raw, ollama_params))
-        mappings = normalize_mappings(
-            parsed or {}, {x["audit_id"] for x in audit_items}, counters_by_id
-        )
+        def build_batch(batch):
+            return build_prompt_for_module("evidence_audit", prompts=prompts, context=context,
+                data=json.dumps({**payload, "audit_befunde": batch}, ensure_ascii=False, indent=2))
+        mappings = {}
+        for batch, system_prompt, user_prompt in bounded_batches(payload["audit_befunde"], build_batch, ollama_params):
+            raw = _llm(system_prompt, user_prompt, ollama_params)
+            parsed = safe_json_loads(raw)
+            try:
+                part = normalize_mappings(parsed, {x["audit_id"] for x in batch}, counters_by_id)
+            except ValueError:
+                parsed = safe_json_loads(_repair(raw, ollama_params, user_prompt))
+                part = normalize_mappings(parsed, {x["audit_id"] for x in batch}, counters_by_id)
+            mappings.update(part)
+
     else:
         mappings = {x["audit_id"]: {"gegenbeleg_ids": [], "einordnung": ""} for x in audit_items}
 
@@ -290,6 +294,8 @@ def build_evidence_audit(
             "segment_count": segment_count,
             "evidenzbreite": evidence_breadth(source_count, person_count),
             "status": status,
+            "processing_status": "completed",
+            "counter_check_status": "completed" if counter_candidates else "not_applicable",
             "gegenbeleg_count": counter_count,
             "gegenbelege": counter_items,
             "relativierende_einordnung": mapping["einordnung"],
@@ -306,6 +312,7 @@ def build_evidence_audit(
         "source_contrast_created_at": contrast_data.get("created_at"),
         "source_ambiguity_created_at": ambiguity_data.get("created_at"),
         "audited_finding_count": len(audited),
+        "processing_status": "completed",
         "methodischer_hinweis": (
             "Evidenzbreite beschreibt ausschließlich die Verteilung innerhalb des vorliegenden qualitativen Materials; "
             "sie ist weder statistische Signifikanz noch ein quantitatives Gütemaß."

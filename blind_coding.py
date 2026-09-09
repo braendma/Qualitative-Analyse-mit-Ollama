@@ -7,6 +7,7 @@ import logging
 from pathlib import Path
 
 import yaml
+from runtime_support import atomic_json, atomic_text
 
 from blind_coding_core import blind_code_segments
 from coding_validation_common import MockLLM, load_codebook, load_segments, resolve_config_path
@@ -36,10 +37,11 @@ def main(argv=None):
     parser.add_argument("--config", "-c", default="config_v2.yaml")
     parser.add_argument("--input-csv", "-i", default=None)
     parser.add_argument("--codebook-csv", default=None)
-    parser.add_argument("--idmap-json", default="id_to_text.json")
+    parser.add_argument("--idmap-json", default=None)
     parser.add_argument("--out-md", default="blind_coding_v1.md")
     parser.add_argument("--out-json", default="blind_coding_v1.json")
     parser.add_argument("--log-file", default="blind_coding.log")
+    parser.add_argument("--checkpoint", default=None)
     parser.add_argument("--mock-responses-json", default=None, help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
     configure_logging(args.log_file)
@@ -66,6 +68,7 @@ def main(argv=None):
     segments = load_segments(input_path, config.get("columns", {}), args.idmap_json)
     llm_cfg = config.get("llm", {})
     params = {
+        **llm_cfg,
         "model": llm_cfg.get("model", "granite4.1:8b"),
         "temperature": float(llm_cfg.get("temperature", 0.0)),
         "max_tokens": int(llm_cfg.get("max_tokens", 4000)),
@@ -81,10 +84,11 @@ def main(argv=None):
     markdown, output = blind_code_segments(
         segments, codebook, config.get("prompts", {}), config.get("context", {}), params,
         raw_log_path=raw_log_path,
+        checkpoint_path=args.checkpoint or ("blind_coding_checkpoint.json" if config.get("coding_validation", {}).get("checkpoint", True) else None),
         **({"llm": llm} if llm else {})
     )
-    Path(args.out_md).write_text(markdown, encoding="utf-8")
-    Path(args.out_json).write_text(json.dumps(output, ensure_ascii=False, indent=2), encoding="utf-8")
+    atomic_text(args.out_md, markdown)
+    atomic_json(args.out_json, output)
     LOGGER.info(
         "Blind-Coding abgeschlossen: %s Segmente, %s Codepfade",
         len(segments),
@@ -98,4 +102,5 @@ if __name__ == "__main__":
     except Exception:
         LOGGER.exception("Blind-Coding fehlgeschlagen")
         raise
+
 

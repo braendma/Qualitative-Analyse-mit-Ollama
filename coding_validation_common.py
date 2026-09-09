@@ -82,6 +82,7 @@ class Segment:
     text: str
     human_code: str
     person: str
+    unit_id: str | None = None
 
 
 CODEBOOK_ALIASES = {
@@ -118,6 +119,8 @@ def load_codebook(path: str | Path) -> tuple[list[CodebookEntry], dict[str, Code
             raise ValueError(f"Kategoriesystem Zeile {row_index + 2}: leerer Codepfad.")
         code = PATH_SEPARATOR.join(parts)
         bucket = grouped.setdefault(code, {**values, "definitions": [], "anchors": []})
+        if any(bucket[k] != values[k] for k in ("kategorie", "unterkategorie", "auspraegung", "facette")):
+            raise ValueError(f"Mehrdeutige Hierarchie für Codepfad: {code}")
         if values["definition"] and values["definition"] not in bucket["definitions"]:
             bucket["definitions"].append(values["definition"])
         if values["ankerbeispiel"] and values["ankerbeispiel"] not in bucket["anchors"]:
@@ -151,6 +154,23 @@ def load_segments(
     frame = pd.read_csv(path, sep=";", encoding="utf-8-sig", dtype=str, keep_default_na=False)
     if frame.empty:
         raise ValueError("Interview-/MAXQDA-CSV enthält keine Segmente.")
+    segments = segments_from_frame(frame, columns_config)
+    if id_to_text_path:
+        id_path = Path(id_to_text_path)
+        if not id_path.is_file():
+            raise FileNotFoundError(f"Explizites Segmentmapping fehlt: {id_path}")
+        id_map = json.loads(id_path.read_text(encoding="utf-8"))
+        if not isinstance(id_map, dict):
+            raise ValueError("id_to_text muss ein JSON-Objekt sein.")
+        for segment in segments:
+            if segment.segment_id not in id_map:
+                raise ValueError(f"Mapping enthält Segment-ID nicht: {segment.segment_id}")
+            if id_map[segment.segment_id] != segment.text:
+                raise ValueError(f"Textabweichung zwischen CSV und Mapping: {segment.segment_id}")
+    return segments
+
+
+def segments_from_frame(frame, columns_config=None):
     cfg = columns_config or {}
     code_col = resolve_column(frame.columns, cfg.get("code"), ("Code", "Codes", "human_code"), "human_code")
     text_col = resolve_column(frame.columns, cfg.get("segment"), ("Segment", "Segmenttext", "Text"), "segment")
@@ -166,27 +186,41 @@ def load_segments(
     seen = set()
     for index, row in frame.reset_index(drop=True).iterrows():
         person = _clean(row[person_col])
-        text = _clean(row[text_col])
-        human_code = _clean(row[code_col])
+        text = str(row[text_col])
+        human_code = PATH_SEPARATOR.join(x.strip() for x in str(row[code_col]).split(">") if x.strip())
         segment_id = _clean(row[id_col]) if id_col else f"{person}#SEG{index:05d}"
         if not segment_id or segment_id in seen:
             raise ValueError(f"Ungültige oder doppelte Segment-ID in Eingabezeile {index + 2}: {segment_id!r}")
-        if not text:
+        if not person:
+            raise ValueError(f"Dokument-/Personenkennung fehlt in Eingabezeile {index + 2}.")
+        if not text.strip():
             raise ValueError(f"Leerer Segmenttext in Eingabezeile {index + 2} ({segment_id}).")
         seen.add(segment_id)
-        segments.append(Segment(segment_id, text, human_code, person))
+        unit_col = cfg.get("unit_id")
+        if unit_col and unit_col not in frame.columns:
+            raise ValueError(f"Konfigurierte Einheiten-ID-Spalte fehlt: {unit_col}")
+        unit_id = _clean(row[unit_col]) if unit_col else None
+        if unit_col and not unit_id:
+            raise ValueError("Leere Einheiten-ID.")
+        segments.append(Segment(segment_id, text, human_code, person, unit_id))
 
-    if id_to_text_path:
-        id_path = Path(id_to_text_path)
-        if id_path.is_file():
-            id_map = json.loads(id_path.read_text(encoding="utf-8"))
-            if not isinstance(id_map, dict):
-                raise ValueError("id_to_text muss ein JSON-Objekt sein.")
-            for segment in segments:
-                mapped = id_map.get(segment.segment_id)
-                if mapped is not None and _clean(mapped) != segment.text:
-                    raise ValueError(f"Textabweichung zwischen CSV und id_to_text für {segment.segment_id}.")
     return segments
+
+
+def code_hierarchy(code, codebook=None):
+    parts = [p.strip() for p in str(code).split(">") if p.strip()]
+    if not 1 <= len(parts) <= 4:
+        raise ValueError(f"Codepfad benötigt 1 bis 4 Ebenen: {code!r}")
+    path = PATH_SEPARATOR.join(parts)
+    if codebook is not None:
+        if path not in codebook:
+            raise ValueError(f"Codepfad fehlt im Codebuch: {path}")
+        e = codebook[path]
+        return path, (e.kategorie, e.unterkategorie, e.auspraegung, e.facette)
+    # Backward-compatible explicit positional convention without a codebook.
+    if len(parts) == 3:
+        return path, (parts[0], parts[1], "", parts[2])
+    return path, tuple(parts + [""] * (4 - len(parts)))
 
 
 def parse_json_object(text: str) -> dict | None:
@@ -217,6 +251,7 @@ def default_llm(messages: list[dict], params: dict) -> str:
         max_tokens=params.get("max_tokens", 4000),
         think=params.get("think"),
         log_thinking=params.get("log_thinking", False),
+        settings=params,
     )
 
 
@@ -247,6 +282,14 @@ def call_json_with_repair(
     llm: Callable[[list[dict], dict], str] = default_llm,
     raw_callback: Callable[[dict], None] | None = None,
 ) -> dict:
+    fields = {"segment_id": {"type": "string"}, "confidence": {"type": "string", "enum": ["hoch", "mittel", "niedrig"]},
+              "begruendung": {"type": "string"}, "alternative_codes": {"type": "array", "items": {"type": "string"}}}
+    is_verify = any("human_code" in m["content"] for m in messages)
+    if is_verify:
+        fields.update(human_code={"type": "string"}, verification={"type": "string", "enum": ["bestätigt", "teilweise_passend", "nicht_passend", "unklar"]})
+    else:
+        fields["predicted_code"] = {"type": "string"}
+    params = {**params, "response_schema": {"type": "object", "properties": fields, "required": list(fields), "additionalProperties": False}}
     raw = llm(messages, params)
     parsed = parse_json_object(raw)
     if parsed is not None:
@@ -337,6 +380,7 @@ class RawJsonlWriter:
             payload = {
                 "timestamp": datetime.now().isoformat(),
                 "module": self.module,
+                "run_id": __import__("os").environ.get("WORKFLOW_RUN_ID"),
                 "segment_id": segment_id,
                 **event,
             }

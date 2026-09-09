@@ -1,4 +1,12 @@
 llm:
+  # Local inference remains opt-in; tests use mocks or a separate cloud config.
+  host: "http://localhost:11434"
+  api_key_env: "OLLAMA_API_KEY"
+  num_ctx: 65536
+  timeout_seconds: 180
+  max_attempts: 3
+  retry_delay_seconds: 1
+  structured_outputs: true
   model: "granite4.1:8b"
   temperature: 0.05
   # Reasoning und Endantwort teilen sich dieses Ausgabelimit.
@@ -36,6 +44,8 @@ columns:
   code: "Code"
   segment: "Segment"
   person: "Dokumentname"
+  segment_id: segment_id
+  unit_id: PassageID
   optional: []
 
 
@@ -79,6 +89,7 @@ analysis_settings:
 # ============================================================
 
 coding_validation:
+  checkpoint: true
   # false: nur normale Logs und validierte Outputs
   # true: zusätzliche append-only JSONL-Dateien mit unveränderten
   #       LLM-Antworten für Verify und Blind-Coding
@@ -1180,7 +1191,7 @@ prompts:
         ]
       }
 
-      Wenn kein Gegenbeleg passt, darf ein Audit-Befund fehlen.
+      Jede gelieferte audit_id muss genau einmal beantwortet werden. Wenn kein Gegenbeleg passt, gib gegenbeleg_ids: [] und eine kurze einordnung zurück. Kein Audit-Befund darf fehlen.
       Keine zusätzlichen Schlüssel.
       Kein Markdown.
       Kein Text außerhalb des JSON.
@@ -1671,3 +1682,10 @@ pipeline:
         title: Gesamtsynthese
         markdown: overall_synthesis_v1.md
 
+
+
+# Kappa requires explicit confirmation AND a configured unique columns.unit_id.
+# Until then, report row-level agreement with coverage only.
+coding_agreement:
+  label_mode: multi_label
+  independent_units_confirmed: false

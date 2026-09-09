@@ -91,3 +91,9 @@ python 00_WORKFLOW_RUNNER.py
 Für Tests liegt unter `tests/` ein synthetischer semikolon-getrennter Datensatz
 mit Mock-LLM-Antworten. Der Test benötigt kein laufendes Ollama-Modell.
 
+
+
+
+## Fehlerbehandlung, Laufverzeichnisse und Wiederaufnahme
+
+Siehe [ROBUSTNESS.md](ROBUSTNESS.md) für Vorprüfung, vollständige Hierarchien, technische Statusfelder, Checkpoints, Kontextgrenzen und Agreement-Voraussetzungen. Neue Ergebnisse liegen unter `workflow_output/LAUF-ID/`. `--resume` akzeptiert nur unveränderte Eingaben und überprüfte Ergebnisse. Die künstlichen Beispieldaten sind in [DEMO_DATA.md](DEMO_DATA.md) beschrieben.

@@ -1,9 +1,12 @@
+from batching import bounded_batches
+from response_schemas import schema_for, require_structure
 # relation_analysis_core.py
 
 import itertools
 import json
 import logging
 from datetime import datetime
+from runtime_support import person_for_segment
 
 from clusterer_core import ollama_chat, safe_json_loads
 from utils_prompt import build_prompt_for_module
@@ -26,9 +29,12 @@ def _person_from_sid(sid: str) -> str:
 
 
 def _path_for_cluster(cluster: dict) -> str:
+    if cluster.get("code_path"):
+        return cluster["code_path"]
     parts = [
         cluster.get("hauptkategorie"),
         cluster.get("subkategorie"),
+        cluster.get("auspraegung"),
         cluster.get("facette"),
     ]
     return " > ".join(str(x).strip() for x in parts if x is not None and str(x).strip())
@@ -42,6 +48,7 @@ def _summary_index(summary_data: dict) -> dict:
         key = (
             item.get("hauptkategorie"),
             item.get("subkategorie"),
+            item.get("auspraegung"),
             item.get("facette"),
             item.get("cluster_name"),
         )
@@ -49,7 +56,7 @@ def _summary_index(summary_data: dict) -> dict:
     return index
 
 
-def build_units(clusters: list, id_to_text: dict, summary_data: dict) -> dict:
+def build_units(clusters: list, id_to_text: dict, summary_data: dict, metadata=None) -> dict:
     summaries = _summary_index(summary_data)
     units = {}
 
@@ -77,6 +84,7 @@ def build_units(clusters: list, id_to_text: dict, summary_data: dict) -> dict:
         key = (
             cluster.get("hauptkategorie"),
             cluster.get("subkategorie"),
+            cluster.get("auspraegung"),
             cluster.get("facette"),
             cluster.get("cluster_name"),
         )
@@ -93,10 +101,10 @@ def build_units(clusters: list, id_to_text: dict, summary_data: dict) -> dict:
     for unit in units.values():
         unit["segment_ids"] = list(dict.fromkeys(unit["segment_ids"]))
         unit["personen"] = list(
-            dict.fromkeys(_person_from_sid(sid) for sid in unit["segment_ids"])
+            dict.fromkeys(person_for_segment(sid, metadata) for sid in unit["segment_ids"])
         )
         unit["segmente"] = [
-            {"id": sid, "text": str(id_to_text.get(sid, ""))}
+            {"id": sid, "text": str(id_to_text.get(sid, "")), "person": person_for_segment(sid, metadata)}
             for sid in unit["segment_ids"]
             if sid in id_to_text
         ]
@@ -125,23 +133,31 @@ def build_candidate_pairs(units: dict, max_pairs: int, max_segments_per_path: in
     for idx, (_, path_a, path_b, shared) in enumerate(selected, start=1):
         a = units[path_a]
         b = units[path_b]
-        shared_set = set(shared)
-        sample_a = [
-            s for s in a["segmente"]
-            if _person_from_sid(s["id"]) in shared_set
-        ][:max_segments_per_path]
-        sample_b = [
-            s for s in b["segmente"]
-            if _person_from_sid(s["id"]) in shared_set
-        ][:max_segments_per_path]
+        sample_a, sample_b, sampled_people = [], [], []
+        if max_segments_per_path < 1:
+            raise ValueError("max_segments_per_path muss positiv sein.")
+        by_person_a = {p: [x for x in a["segmente"] if x.get("person") == p or (not x.get("person") and _person_from_sid(x["id"]) == p)] for p in shared}
+        by_person_b = {p: [x for x in b["segmente"] if x.get("person") == p or (not x.get("person") and _person_from_sid(x["id"]) == p)] for p in shared}
+        # Round-robin: preserve paired persons before adding more quotes per person.
+        for depth in range(max_segments_per_path):
+            for p in shared:
+                if len(sample_a) >= max_segments_per_path:
+                    break
+                if len(by_person_a[p]) > depth and len(by_person_b[p]) > depth:
+                    sample_a.append(by_person_a[p][depth])
+                    sample_b.append(by_person_b[p][depth])
+                    if p not in sampled_people:
+                        sampled_people.append(p)
 
         payload.append(
             {
                 "pair_id": f"PAIR{idx:04d}",
                 "pfad_a": path_a,
                 "pfad_b": path_b,
-                "gemeinsame_personen": shared,
-                "anzahl_gemeinsame_personen": len(shared),
+                "gemeinsame_personen": sampled_people,
+                "gemeinsame_personen_gesamt": shared,
+                "auswahlregel": "personenweise gepaart, round-robin, deterministisch",
+                "anzahl_gemeinsame_personen": len(sampled_people),
                 "cluster_a": a["cluster"],
                 "cluster_b": b["cluster"],
                 "segmente_a": sample_a,
@@ -165,6 +181,7 @@ def _llm(system_prompt, user_prompt, ollama_params):
             max_tokens=ollama_params["max_tokens"],
             think=ollama_params.get("think"),
             log_thinking=ollama_params.get("log_thinking", False),
+            settings={**ollama_params, "response_schema": schema_for("relation_analysis")},
         )
         logger.info("\n===== RAW RELATION OUTPUT =====\n%s\n===============================\n", content)
         if content:
@@ -191,6 +208,7 @@ Keine neuen Inhalte. Kein Markdown. Kein Text außerhalb des JSON.
         max_tokens=ollama_params["max_tokens"],
         think=ollama_params.get("think"),
         log_thinking=ollama_params.get("log_thinking", False),
+        settings={**ollama_params, "response_schema": schema_for("relation_analysis")},
     ) or ""
 
 
@@ -228,8 +246,13 @@ def normalize_relations(parsed: dict, pair_lookup: dict, id_to_text: dict) -> di
             logger.warning("[Zusammenhangsanalyse] Relation %s ohne beidseitige Belege verworfen.", pair_id)
             continue
 
+        person_a = {x["id"]: x.get("person") or _person_from_sid(x["id"]) for x in pair["segmente_a"]}
+        person_b = {x["id"]: x.get("person") or _person_from_sid(x["id"]) for x in pair["segmente_b"]}
+        shared_evidence = sorted({person_a[sid] for sid in ids_a} & {person_b[sid] for sid in ids_b})
         out.append(
             {
+                "bezugsebene": "innerhalb_person" if shared_evidence else "personenuebergreifend",
+                "beidseitig_belegte_personen": shared_evidence,
                 "relation_id": f"REL{len(out) + 1:04d}",
                 "pair_id": pair_id,
                 "thema": str(entry.get("thema", "")).strip() or "Unbenannte Beziehung",
@@ -269,29 +292,30 @@ def build_relation_analysis(
     with open(summary_json_path, "r", encoding="utf-8") as f:
         summary_data = json.load(f)
 
-    units = build_units(cluster_data.get("clusters", []), id_to_text, summary_data)
+    units = build_units(cluster_data.get("clusters", []), id_to_text, summary_data, cluster_data.get("segment_metadata"))
     pairs, total_candidates = build_candidate_pairs(units, max_pairs, max_segments_per_path)
     pair_lookup = {p["pair_id"]: p for p in pairs}
 
     if not pairs:
         normalized = {"beziehungen": [], "gesamteinordnung": "Keine Codepfad-Paare mit gemeinsamen Fällen gefunden."}
     else:
-        system_prompt, user_prompt = build_prompt_for_module(
-            "relation_analysis",
-            prompts=prompts,
-            context=context,
-            data=json.dumps({"kandidaten": pairs}, ensure_ascii=False, indent=2),
-        )
-        raw = _llm(system_prompt, user_prompt, ollama_params)
-        parsed = safe_json_loads(raw)
-        if parsed is None:
-            logger.warning("[Zusammenhangsanalyse] Ungültiges JSON; starte Repair.")
-            parsed = safe_json_loads(_repair(raw, ollama_params))
-        if parsed is None:
-            raise ValueError("Zusammenhangsanalyse konnte nicht als JSON gelesen werden.")
-        normalized = normalize_relations(parsed, pair_lookup, id_to_text)
-        if normalized is None:
-            raise ValueError("Zusammenhangsanalyse besitzt kein verwertbares Format.")
+        def build_batch(batch):
+            return build_prompt_for_module("relation_analysis", prompts=prompts, context=context,
+                data=json.dumps({"kandidaten": batch}, ensure_ascii=False, indent=2))
+        normalized = {"beziehungen": [], "gesamteinordnung": ""}
+        notes = []
+        for batch, system_prompt, user_prompt in bounded_batches(pairs, build_batch, ollama_params):
+            raw = _llm(system_prompt, user_prompt, ollama_params)
+            parsed = safe_json_loads(raw)
+            if parsed is None:
+                parsed = safe_json_loads(_repair(raw, ollama_params))
+            require_structure(parsed, "relation_analysis")
+            part = normalize_relations(parsed, {p["pair_id"]: p for p in batch}, id_to_text)
+            normalized["beziehungen"].extend(part["beziehungen"])
+            notes.append(part["gesamteinordnung"])
+        normalized["gesamteinordnung"] = "\n\n".join(notes)
+        for index, item in enumerate(normalized["beziehungen"], 1):
+            item["relation_id"] = f"REL{index:04d}"
 
     json_output = {
         "created_at": datetime.now().isoformat(),
@@ -299,7 +323,10 @@ def build_relation_analysis(
         "source_summary_created_at": summary_data.get("created_at"),
         "codepfad_count": len(units),
         "candidate_pair_count_total": total_candidates,
-        "candidate_pair_count_analyzed": len(pairs),
+        "omitted_pair_count": total_candidates - len(pairs),
+        "candidate_pair_count_submitted": len(pairs),
+        "candidate_pair_count_with_relation": len(normalized["beziehungen"]),
+        "candidate_pair_count_without_validated_relation": len(pairs) - len(normalized["beziehungen"]),
         **normalized,
     }
 
@@ -332,3 +359,4 @@ def build_relation_analysis(
             md.append("\n")
 
     return "".join(md), json_output
+

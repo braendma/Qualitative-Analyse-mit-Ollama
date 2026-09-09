@@ -3,6 +3,7 @@
 
 import argparse
 import json
+from runtime_support import atomic_json, atomic_text
 import logging
 from pathlib import Path
 
@@ -55,10 +56,11 @@ def main(argv=None):
     verification = json.loads(Path(args.verify_json).read_text(encoding="utf-8"))
     blind = json.loads(Path(args.blind_json).read_text(encoding="utf-8"))
     markdown, output = calculate_agreement(
-        segments, codebook, verification, blind, confusion_png=args.out_confusion_png
+        segments, codebook, verification, blind, confusion_png=args.out_confusion_png,
+        settings=config.get("coding_agreement", {})
     )
-    Path(args.out_md).write_text(markdown, encoding="utf-8")
-    Path(args.out_json).write_text(json.dumps(output, ensure_ascii=False, indent=2), encoding="utf-8")
+    atomic_text(args.out_md, markdown)
+    atomic_json(args.out_json, output)
     exact = output["exact_agreement"]
     LOGGER.info(
         "Agreement abgeschlossen: %s Segmente, %s vergleichbar, exact=%s/%s, bestätigt=%s, strittig=%s, unklar=%s",
@@ -82,4 +84,5 @@ if __name__ == "__main__":
     except Exception:
         LOGGER.exception("Human–LLM Coding Agreement fehlgeschlagen")
         raise
+
 

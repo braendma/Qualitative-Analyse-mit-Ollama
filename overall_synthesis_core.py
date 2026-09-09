@@ -1,3 +1,4 @@
+from response_schemas import schema_for, require_structure
 # overall_synthesis_core.py
 
 import json
@@ -8,6 +9,18 @@ from clusterer_core import ollama_chat, safe_json_loads
 from utils_prompt import build_prompt_for_module
 
 logger = logging.getLogger("overall_synthesis")
+
+
+def project_synthesis_source(value):
+    """Keep analytical findings and reference IDs; omit repeated raw-text expansions."""
+    redundant = {"finding_registry", "segment_metadata", "belege", "belege_a", "belege_b",
+                 "belegbeispiele", "plots", "created_at"}
+    if isinstance(value, dict):
+        return {key: project_synthesis_source(item) for key, item in value.items()
+                if key not in redundant and not (key.startswith("source_") and key.endswith("_created_at"))}
+    if isinstance(value, list):
+        return [project_synthesis_source(item) for item in value]
+    return value
 
 
 def llm_overall_synthesis(system_prompt: str, user_prompt: str, ollama_params: dict) -> str:
@@ -23,6 +36,7 @@ def llm_overall_synthesis(system_prompt: str, user_prompt: str, ollama_params: d
             max_tokens=ollama_params["max_tokens"],
             think=ollama_params.get("think"),
             log_thinking=ollama_params.get("log_thinking", False),
+            settings={**ollama_params, "response_schema": schema_for("overall_synthesis")},
         )
         logger.info(
             "\n===== RAW GESAMTSYNTHESE OUTPUT =====\n%s\n=====================================\n",
@@ -73,6 +87,7 @@ Keine neuen empirischen Inhalte. Kein Markdown. Keine Erklärung.
             max_tokens=ollama_params["max_tokens"],
             think=ollama_params.get("think"),
             log_thinking=ollama_params.get("log_thinking", False),
+            settings={**ollama_params, "response_schema": schema_for("overall_synthesis")},
         )
         if content:
             return content.strip()
@@ -102,7 +117,7 @@ def _normalize_theme_entries(parsed: dict, key: str, allowed_sources: set) -> li
             continue
         thema = str(entry.get("thema", "")).strip()
         verdichtung = str(entry.get("verdichtung", "")).strip()
-        if not thema and not verdichtung:
+        if (not thema and not verdichtung) or not _clean_sources(entry.get("quellen", []), allowed_sources):
             continue
         result.append({
             "thema": thema or "Unbenanntes Thema",
@@ -124,6 +139,8 @@ def normalize_overall_synthesis(parsed: dict, source_labels: list) -> dict:
     for entry in raw:
         if not isinstance(entry, dict):
             continue
+        if not _clean_sources(entry.get("quellen", []), allowed_sources):
+            continue
         tensions.append({
             "aussage": str(entry.get("aussage", "")).strip(),
             "einordnung": str(entry.get("einordnung", "")).strip(),
@@ -140,7 +157,7 @@ def normalize_overall_synthesis(parsed: dict, source_labels: list) -> dict:
         "uebergreifende_muster": _normalize_theme_entries(parsed, "uebergreifende_muster", allowed_sources),
         "spannungen_und_relativierungen": tensions,
         "methodische_einordnung": methodological,
-        "gesamtsynthese": str(parsed.get("gesamtsynthese", "")).strip(),
+        "gesamtsynthese": " ".join(x["verdichtung"] for x in _normalize_theme_entries(parsed, "kernergebnisse", allowed_sources)),
     }
 
 
@@ -171,14 +188,14 @@ def build_overall_synthesis(
     source_labels = list(sources.keys())
     payload = {
         "verfuegbare_analytische_quellen": source_labels,
-        "analysen": sources,
+        "analysen": {label: project_synthesis_source(data) for label, data in sources.items()},
     }
 
     system_prompt, user_prompt = build_prompt_for_module(
         "overall_synthesis",
         prompts=prompts,
         context=context,
-        data=json.dumps(payload, ensure_ascii=False, indent=2),
+        data=json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
     )
 
     raw = llm_overall_synthesis(system_prompt, user_prompt, ollama_params)
@@ -189,11 +206,13 @@ def build_overall_synthesis(
     if parsed is None:
         raise ValueError("Gesamtsynthese konnte nicht als JSON gelesen werden.")
 
+    require_structure(parsed, "overall_synthesis")
     normalized = normalize_overall_synthesis(parsed, source_labels)
     if normalized is None:
         raise ValueError("Gesamtsynthese besitzt kein verwertbares Format.")
 
     json_output = {
+        "input_projection": "Analytische Befunde, Statusfelder und Referenz-IDs; wiederholte Rohtextbelege und Register ausgelassen.",
         "created_at": datetime.now().isoformat(),
         "source_labels": source_labels,
         "source_created_at": source_created_at,

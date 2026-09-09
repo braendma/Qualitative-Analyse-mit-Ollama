@@ -29,6 +29,7 @@ def llm_summary(system_prompt: str, user_prompt: str, ollama_params: dict) -> st
             max_tokens=ollama_params["max_tokens"],
             think=ollama_params.get("think"),
             log_thinking=ollama_params.get("log_thinking", False),
+            settings=ollama_params,
         )
 
         logger.info("\n===== RAW SUMMARY OUTPUT =====\n%s\n==============================\n", content)
@@ -209,6 +210,8 @@ def summarize_clusters(
             "subkategorie": c.get(
                 "subkategorie"
             ),
+            "auspraegung": c.get("auspraegung"),
+            "code_path": c.get("code_path"),
             "facette": c.get(
                 "facette"
             ),
@@ -309,3 +312,4 @@ def summarize_clusters(
     )
 
     return md, json_output
+

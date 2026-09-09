@@ -1,3 +1,4 @@
+from response_schemas import schema_for, require_structure
 # clusterer_core.py
 
 import json
@@ -11,6 +12,9 @@ import ollama
 
 from utils_prompt import build_prompt_for_module
 from plot_core import plot_clusters
+from llm_client import request_chat, LLMResponseError
+from runtime_support import atomic_json
+from coding_validation_common import segments_from_frame, code_hierarchy
 
 
 logger = logging.getLogger("clusterer")
@@ -188,82 +192,21 @@ def _retry_without_think(exc: Exception) -> bool:
     )
 
 
-def ollama_chat(
-    messages,
-    model,
-    temperature,
-    max_tokens,
-    think=None,
-    log_thinking=False,
-):
-    """
-    Zentraler Ollama-Wrapper.
-    """
-
-    try:
-
-        request = {
-            "model": model,
-            "messages": messages,
-            "stream": False,
-            "options": {
-                "temperature": temperature,
-                "num_predict": max_tokens
-            },
-        }
-
-        normalized_think = _normalize_think(think)
-        if normalized_think is not None:
-            # Beim Ollama-Python-Client ist think ein Top-Level-Argument und
-            # kein Eintrag innerhalb von options.
-            request["think"] = normalized_think
-
-        try:
-            response = ollama.chat(**request)
-        except Exception as exc:
-            # Alte Python-Clients kennen das Argument noch nicht; klassische
-            # Modelle bzw. ältere Server können es serverseitig ablehnen. In
-            # beiden Fällen bleibt die Pipeline kompatibel und verwendet die
-            # Voreinstellung des Modells.
-            if "think" not in request or not _retry_without_think(exc):
-                raise
-            logger.warning(
-                "[Ollama] Client, Server oder Modell akzeptiert die explizite "
-                "think-Einstellung nicht. Request wird ohne think und damit "
-                "mit der Modell-Voreinstellung wiederholt. Für Thinking-Modelle "
-                "gegebenenfalls 'pip install -U ollama' ausführen."
-            )
-            request.pop("think", None)
-            response = ollama.chat(**request)
-
-        message = _response_value(response, "message", {})
-        content = _response_value(message, "content", "") or ""
-        thinking = _response_value(message, "thinking", "") or ""
-
-        if thinking:
-            logger.debug(
-                "[Ollama] Separates Reasoning empfangen (%s Zeichen).",
-                len(thinking),
-            )
-            if log_thinking:
-                logger.debug("[Ollama-Reasoning]\n%s", thinking)
-
-        content = strip_embedded_thinking(content)
-        if not content and thinking:
-            logger.warning(
-                "[Ollama] Reasoning vorhanden, aber keine Endantwort. "
-                "Möglicherweise wurde num_predict ausgeschöpft."
-            )
-
-        return content
-
-    except Exception as e:
-
-        logger.error(
-            f"[Ollama] Fehler beim Chat-Request: {e}"
-        )
-
-        return ""
+def ollama_chat(messages, model, temperature, max_tokens, think=None,
+                log_thinking=False, settings=None):
+    request = {"model": model, "messages": messages, "stream": False,
+               "options": {"temperature": temperature, "num_predict": max_tokens}}
+    normalized_think = _normalize_think(think)
+    if normalized_think is not None:
+        request["think"] = normalized_think
+    response = request_chat(ollama, request, settings or {})
+    message = _response_value(response, "message", {})
+    content = strip_embedded_thinking(_response_value(message, "content", ""))
+    if not content or _response_value(response, "done_reason", "") == "length":
+        raise LLMResponseError("Leere oder abgeschnittene Modellantwort; Analyse nicht abgeschlossen.")
+    if log_thinking:
+        logger.debug("[Ollama-Reasoning] %s", _response_value(message, "thinking", ""))
+    return content
 
 
 # -----------------------------------------------------
@@ -302,6 +245,7 @@ def llm_cluster(
             max_tokens=ollama_params["max_tokens"],
             think=ollama_params.get("think"),
             log_thinking=ollama_params.get("log_thinking", False),
+            settings={**ollama_params, "response_schema": schema_for("clusterer")},
         )
 
         if content:
@@ -351,6 +295,7 @@ def llm_self_repair(
             max_tokens=ollama_params["max_tokens"],
             think=ollama_params.get("think"),
             log_thinking=ollama_params.get("log_thinking", False),
+            settings={**ollama_params, "response_schema": schema_for("clusterer")},
         )
 
         if content:
@@ -368,65 +313,8 @@ def llm_self_repair(
 # Code-Hierarchie robust zerlegen
 # -----------------------------------------------------
 def split_code_path(code_string):
-    """
-    Zerlegt beispielsweise:
-
-        A > B > C
-
-    in:
-
-        Hauptkategorie = A
-        Subkategorie   = B
-        Facette         = C
-    """
-
-    if not isinstance(
-        code_string,
-        str
-    ):
-        return (
-            "Unkategorisiert",
-            None,
-            None
-        )
-
-    code_string = code_string.strip()
-
-    if code_string == "":
-        return (
-            "Unkategorisiert",
-            None,
-            None
-        )
-
-    parts = [
-        p.strip()
-        for p in code_string.split(">")
-    ]
-
-    if len(parts) == 1:
-
-        return (
-            parts[0],
-            None,
-            None
-        )
-
-    elif len(parts) == 2:
-
-        return (
-            parts[0],
-            parts[1],
-            None
-        )
-
-    else:
-
-        return (
-            parts[0],
-            parts[1],
-            parts[2]
-        )
+    """Return all four named hierarchy levels without truncation."""
+    return code_hierarchy(code_string)[1]
 
 
 # -----------------------------------------------------
@@ -631,7 +519,9 @@ def run_clustering(
     COL_PERSON="Dokumentname",
     plots_dir="plots",
     log_raw: bool = False,
-    id_to_text_path: str = "id_to_text.json"
+    id_to_text_path: str = "id_to_text.json",
+    codebook=None,
+    columns_config=None
 ):
     """
     Führt die komplette Clustering-Pipeline aus.
@@ -683,47 +573,21 @@ def run_clustering(
     # -------------------------------------------------
     # Globale Segment-IDs erzeugen
     # -------------------------------------------------
-    df["_SegmentID"] = [
-        f"{str(person).strip()}#SEG{idx:05d}"
-        for idx, person in enumerate(df[COL_PERSON])
-    ]
-
-    # -------------------------------------------------
-    # Code-Hierarchie
-    # -------------------------------------------------
-    df[
-        "Hauptkategorie"
-    ], df[
-        "Subkategorie"
-    ], df[
-        "Facette"
-    ] = zip(
-        *df[
-            COL_CODE
-        ].apply(
-            split_code_path
-        )
-    )
-
-    # -------------------------------------------------
-    # Nur vollständige 3-stufige Pfade werden geclustert.
-    # Gruppiert wird nach dem KOMPLETTEN Hierarchiepfad, nicht nur
-    # nach dem Facettennamen. So bleiben gleichnamige Facetten unter
-    # verschiedenen Haupt-/Subkategorien strikt getrennt.
-    # -------------------------------------------------
-    df_clusterable = df[df["Facette"].notna()].copy()
-
-    grouped_facets = df_clusterable.groupby(
-        ["Hauptkategorie", "Subkategorie", "Facette"],
-        sort=True,
-        dropna=False
-    )
+    segments = segments_from_frame(df, columns_config or {
+        "code": COL_CODE, "segment": COL_SEG, "person": COL_PERSON})
+    df["_SegmentID"] = [s.segment_id for s in segments]
+    hierarchies = [code_hierarchy(s.human_code, codebook) for s in segments]
+    df["_CodePath"] = [h[0] for h in hierarchies]
+    levels = {h[0]: h[1] for h in hierarchies}
+    grouped_facets = df.groupby("_CodePath", sort=True, dropna=False)
 
     # -------------------------------------------------
     # Output
     # -------------------------------------------------
     output = {
         "created_at": datetime.now().isoformat(),
+        "processing_status": "completed",
+        "segment_metadata": {s.segment_id: {"person": s.person, "unit_id": s.unit_id} for s in segments},
         "clusters": [],
         "plots": {}
     }
@@ -779,7 +643,8 @@ def run_clustering(
     # Jede eindeutige Kombination aus Hauptkategorie,
     # Subkategorie und Facette clustern
     # -------------------------------------------------
-    for (haupt, sub, facette), df_facet in grouped_facets:
+    for code_path, df_facet in grouped_facets:
+        haupt, sub, auspraegung, facette = levels[code_path]
 
         # Lokalen Index darf man für Iteration zurücksetzen; die globale
         # Segment-ID bleibt als eigene Spalte erhalten.
@@ -851,11 +716,7 @@ def run_clustering(
                 prompts=prompts,
                 context=context,
                 subcat=facette,
-                facets=(
-                    f"{haupt} > "
-                    f"{sub} > "
-                    f"{facette}"
-                ),
+                facets=code_path,
                 segments=json.dumps(
                     segments_payload,
                     ensure_ascii=False
@@ -978,7 +839,7 @@ def run_clustering(
                 f"JSON für Facette {facette}."
             )
 
-            clusters_json = []
+            raise LLMResponseError(f"Clustering fehlgeschlagen: {code_path}")
 
         # -------------------------------------------------
         # JSON-Struktur erkennen
@@ -1012,7 +873,7 @@ def run_clustering(
                 f"für Facette {facette}."
             )
 
-            clusters = []
+            raise LLMResponseError(f"Ungültige Clusterstruktur: {code_path}")
 
         # -------------------------------------------------
         # WICHTIG:
@@ -1030,6 +891,13 @@ def run_clustering(
             [segment["id"] for segment in segments_payload]
         )
 
+        if not clusters:
+            raise LLMResponseError(f"Keine belegten Cluster für vorhandene Eingabe: {code_path}")
+        assigned = {sid for c in clusters for sid in c["segments"]}
+        expected = {s["id"] for s in segments_payload}
+        if assigned != expected:
+            raise LLMResponseError(f"Clusterantwort unvollständig: {len(expected - assigned)} Segmente fehlen.")
+
         # -------------------------------------------------
         # Plot
         # -------------------------------------------------
@@ -1041,13 +909,13 @@ def run_clustering(
             COL_SEG=COL_SEG,
             COL_PERSON=COL_PERSON,
             out_dir=plots_dir,
-            facet=facette
+            facet=" > ".join(x for x in (auspraegung, facette) if x)
         )
 
         if plot_path:
 
             plot_key = (
-                f"{haupt} > {sub} > {facette}"
+                code_path
             )
 
             output[
@@ -1151,6 +1019,8 @@ def run_clustering(
                 "hauptkategorie": haupt,
                 "subkategorie": sub,
                 "facette": facette,
+                "auspraegung": auspraegung,
+                "code_path": code_path,
                 "cluster_name": cname,
                 "definition": definition,
                 "segments": seg_ids,
@@ -1160,49 +1030,7 @@ def run_clustering(
     # -------------------------------------------------
     # id_to_text.json schreiben
     # -------------------------------------------------
-    try:
-
-        absolute_idmap_path = os.path.abspath(
-            id_to_text_path
-        )
-
-        idmap_dir = os.path.dirname(
-            absolute_idmap_path
-        )
-
-        if idmap_dir:
-
-            os.makedirs(
-                idmap_dir,
-                exist_ok=True
-            )
-
-        with open(
-            absolute_idmap_path,
-            "w",
-            encoding="utf-8"
-        ) as fh:
-
-            json.dump(
-                id_to_text,
-                fh,
-                ensure_ascii=False,
-                indent=2
-            )
-
-        logger.info(
-            "[Clusterer] "
-            "Segment-ID/Text-Mapping "
-            f"geschrieben: "
-            f"{absolute_idmap_path}"
-        )
-
-    except Exception as e:
-
-        logger.exception(
-            "[Clusterer] Fehler beim "
-            f"Schreiben von id_to_text: {e}"
-        )
+    atomic_json(id_to_text_path, id_to_text)
 
     # -------------------------------------------------
     # Markdown zusammensetzen
@@ -1212,3 +1040,4 @@ def run_clustering(
     )
 
     return md, output
+

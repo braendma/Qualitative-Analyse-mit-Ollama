@@ -1,3 +1,4 @@
+from response_schemas import schema_for, require_structure
 # meta_swot_core.py
 
 import json
@@ -68,6 +69,7 @@ def llm_meta_swot(system_prompt: str, user_prompt: str, ollama_params: dict) -> 
             max_tokens=ollama_params["max_tokens"],
             think=ollama_params.get("think"),
             log_thinking=ollama_params.get("log_thinking", False),
+            settings={**ollama_params, "response_schema": schema_for("meta_swot")},
         )
 
         logger.info(
@@ -113,6 +115,7 @@ Kein Markdown. Kein Text außerhalb des JSON.
             max_tokens=ollama_params["max_tokens"],
             think=ollama_params.get("think"),
             log_thinking=ollama_params.get("log_thinking", False),
+            settings={**ollama_params, "response_schema": schema_for("meta_swot")},
         )
         if content:
             return content.strip()
@@ -281,8 +284,9 @@ def build_dimension_meta(
             "[Meta-SWOT] Keine gültige Clusterantwort für %s. Alle Befunde bleiben Einzelbefunde.",
             dimension,
         )
-        parsed = {"cluster": []}
+        raise ValueError(f"Meta-SWOT fehlgeschlagen: {dimension}")
 
+    require_structure(parsed, "meta_swot")
     clusters = normalize_cluster_response(parsed, findings_by_id)
 
     cross_patterns = []
@@ -459,3 +463,4 @@ def build_meta_swot(
                 md.append(f"**Quelle:** {single['quelle']}\n\n")
 
     return "".join(md), json_output
+

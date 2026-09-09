@@ -20,6 +20,8 @@ from coding_validation_common import (
     markdown_escape,
 )
 from utils_prompt import build_prompt_for_module
+from runtime_support import Checkpoint, checkpoint_identity
+from llm_client import LLMResponseError
 
 LOGGER = logging.getLogger("code_verification")
 VERIFICATIONS = {"bestätigt", "teilweise_passend", "nicht_passend", "unklar"}
@@ -106,6 +108,7 @@ def verify_segments(
     idmap_reference: str = "id_to_text.json",
     raw_log_path: str | None = None,
     llm: Callable = default_llm,
+    checkpoint_path: str | None = None,
 ) -> tuple[str, dict]:
     by_code = {entry.code: entry for entry in codebook}
     allowed_codes = set(by_code)
@@ -113,18 +116,25 @@ def verify_segments(
         [entry.as_prompt_dict() for entry in codebook], ensure_ascii=False
     )
     results = []
+    checkpoint = Checkpoint(checkpoint_path, checkpoint_identity(segments, codebook, prompts, context, llm_params))
     raw_writer = RawJsonlWriter(raw_log_path, "code_verification") if raw_log_path else None
     total = len(segments)
     started = time.monotonic()
     _show_progress(0, total, started)
 
     for position, segment in enumerate(segments, start=1):
+        cached = checkpoint.get(segment.segment_id)
+        if cached:
+            results.append(cached)
+            _show_progress(position, total, started)
+            continue
         if segment.human_code not in allowed_codes:
             base = {
                 "segment_id": segment.segment_id,
                 "human_code": segment.human_code,
                 "verification": "unklar",
                 "confidence": "niedrig",
+                "processing_status": "invalid_input",
                 "begruendung": "Der menschliche Code ist kein vollständiger Codepfad des geladenen Kategoriesystems.",
                 "alternative_codes": [],
             }
@@ -148,9 +158,9 @@ def verify_segments(
                     llm=llm,
                     raw_callback=(raw_writer.callback_for(segment.segment_id) if raw_writer else None),
                 )
-            except ValueError as exc:
+            except (ValueError, LLMResponseError) as exc:
                 LOGGER.warning(
-                    "[Code-Verifikation] Strukturell ungültige LLM-Antwort für %s; Fall wird als unklar fortgeführt: %s",
+                    "[Code-Verifikation] Strukturell ungültige LLM-Antwort für %s; Fall erhält processing_status=failed: %s",
                     segment.segment_id,
                     exc,
                 )
@@ -159,12 +169,16 @@ def verify_segments(
                     "human_code": segment.human_code,
                     "verification": "unklar",
                     "confidence": "niedrig",
+                    "processing_status": "failed",
+                    "error_type": "invalid_response",
                     "begruendung": "Die LLM-Antwort blieb nach Self-Repair strukturell ungültig; es wurde kein nicht validierter Befund übernommen.",
                     "alternative_codes": [],
                 }
 
+        base.setdefault("processing_status", "completed")
         base["validated_quote"] = segment.text
         base["original_text_ref"] = f"{idmap_reference}::{segment.segment_id}"
+        checkpoint.save(segment.segment_id, base)
         results.append(base)
         _show_progress(position, total, started)
 
@@ -173,6 +187,9 @@ def verify_segments(
         "created_at": datetime.now().isoformat(),
         "codebook_size": len(codebook),
         "segment_count": len(segments),
+        "processing_status": "completed" if all(r["processing_status"] == "completed" for r in results) else "incomplete",
+        "processing_counts": {key: sum(r["processing_status"] == key for r in results) for key in ("completed", "failed", "invalid_input")},
+        "confidence_note": "Konfidenz ist eine unkalibrierte Selbsteinschätzung des Modells.",
         "results": results,
     }
     return render_markdown(output), output
@@ -181,7 +198,8 @@ def verify_segments(
 def render_markdown(output: dict) -> str:
     counts = {key: 0 for key in sorted(VERIFICATIONS)}
     for row in output["results"]:
-        counts[row["verification"]] += 1
+        if row.get("processing_status", "completed") == "completed":
+            counts[row["verification"]] += 1
     lines = [
         "# Code-Verifikation\n\n",
         "Prüfung menschlich vergebener Codes gegen Definitionen und Ankerbeispiele des externen Kategoriensystems. "
@@ -192,13 +210,18 @@ def render_markdown(output: dict) -> str:
     for key, value in counts.items():
         lines.append(f"- {key}: {value}\n")
     lines.extend(["\n## Einzelfälle\n\n", "| Segment-ID | Human-Code | Ergebnis | Konfidenz | Begründung | Alternativen |\n", "|---|---|---|---|---|---|\n"])
+    lines.insert(1, f"Verarbeitungsstatus: **{output['processing_status']}**. {output['processing_counts']}\n\nKonfidenz = unkalibrierte Modellselbsteinschätzung.\n\n")
     for row in output["results"]:
         alternatives = ", ".join(row["alternative_codes"]) or "–"
         lines.append(
             f"| {markdown_escape(row['segment_id'])} | {markdown_escape(row['human_code'])} | "
-            f"{row['verification']} | {row['confidence']} | {markdown_escape(row['begruendung'])} | "
+            f"{row.get('processing_status', 'completed')}: {row['verification']} | {row['confidence']} | {markdown_escape(row['begruendung'])} | "
             f"{markdown_escape(alternatives)} |\n"
         )
-        lines.append(f"\n> **{row['segment_id']}** — {row['validated_quote']}\n\n")
+    lines.append("\n## Originaltexte\n\n")
+    for row in output["results"]:
+        quote = row['validated_quote'].replace('\n', '\n> ')
+        lines.append(f"\n> **{row['segment_id']}** — {quote}\n\n")
     return "".join(lines)
+
 

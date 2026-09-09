@@ -5,9 +5,11 @@ import yaml
 import logging
 import argparse
 import json
+from runtime_support import atomic_json, atomic_text
 import pandas as pd
 
 from clusterer_core import run_clustering
+from coding_validation_common import load_codebook, resolve_config_path
 
 # Logging konfigurieren (schreibt in clusterer_debug.log und stdout)
 logging.basicConfig(
@@ -62,7 +64,7 @@ def main(argv=None):
     df = pd.read_csv(
         input_csv,
         encoding="utf-8",
-        sep=";"
+        sep=";", dtype=str, keep_default_na=False
     )
 
     # -------------------------------------------------
@@ -71,6 +73,7 @@ def main(argv=None):
     llm_cfg = config["llm"]
 
     ollama_params = {
+        **llm_cfg,
         "model": llm_cfg["model"],
         "temperature": float(llm_cfg["temperature"]),
         "max_tokens": int(llm_cfg["max_tokens"]),
@@ -94,25 +97,20 @@ def main(argv=None):
         COL_PERSON=config["columns"]["person"],
         plots_dir=args.plots_dir,
         log_raw=args.log_raw,
-        id_to_text_path=args.idmap_json
+        id_to_text_path=args.idmap_json,
+        codebook=load_codebook(resolve_config_path(args.config, None, config["paths"]["category_system_csv"]))[1],
+        columns_config=config.get("columns", {})
     )
 
     # -------------------------------------------------
     # Markdown schreiben
     # -------------------------------------------------
-    with open(output_md, "w", encoding="utf-8") as f:
-        f.write(md)
+    atomic_text(output_md, md)
 
     # -------------------------------------------------
     # Cluster-JSON schreiben
     # -------------------------------------------------
-    with open(args.out_json, "w", encoding="utf-8") as f:
-        json.dump(
-            json_output,
-            f,
-            ensure_ascii=False,
-            indent=2
-        )
+    atomic_json(args.out_json, json_output)
 
     logger.info(
         f"[Clusterer] Markdown geschrieben nach: {output_md}"
@@ -130,3 +128,4 @@ def main(argv=None):
 
 if __name__ == "__main__":
     main()
+

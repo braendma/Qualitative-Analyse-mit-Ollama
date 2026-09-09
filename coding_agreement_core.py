@@ -114,7 +114,16 @@ def calculate_agreement(
     verification_payload: dict,
     blind_payload: dict,
     confusion_png: str | Path | None = None,
+    settings: dict | None = None,
 ) -> tuple[str, dict]:
+    settings = settings or {}
+    mode = settings.get("label_mode", "unspecified")
+    if mode not in {"unspecified", "single_label", "multi_label"}:
+        raise ValueError("label_mode muss unspecified, single_label oder multi_label sein.")
+    unit_ids = [s.unit_id for s in segments]
+    confirmed = mode == "single_label" and settings.get("independent_units_confirmed") is True
+    if confirmed and (not all(unit_ids) or len(set(unit_ids)) != len(unit_ids)):
+        raise ValueError("Single-Label-Kappa benötigt vollständige eindeutige Einheiten-IDs.")
     expected_ids = {segment.segment_id for segment in segments}
     verification = _index_exact(_rows(verification_payload, "Verify-Output"), expected_ids, "Verify-Output")
     blind = _index_exact(_rows(blind_payload, "Blind-Output"), expected_ids, "Blind-Output")
@@ -130,6 +139,7 @@ def calculate_agreement(
     confusion_pairs = Counter()
     status_counts = Counter()
     cases = []
+    coverage = Counter()
 
     for segment in segments:
         verify_row = verification[segment.segment_id]
@@ -150,7 +160,18 @@ def calculate_agreement(
             if alternative not in allowed_codes:
                 raise ValueError(f"Blind-Output nennt unbekannten Alternativcode {alternative!r}.")
 
-        is_comparable = segment.human_code in allowed_codes and predicted in allowed_codes
+        verify_processing = verify_row.get("processing_status", "completed")
+        blind_processing = blind_row.get("processing_status", "completed")
+        allowed_statuses = {"completed", "failed", "invalid_input"}
+        if verify_processing not in allowed_statuses or blind_processing not in allowed_statuses:
+            raise ValueError("Unbekannter Verarbeitungsstatus im Coding-Output.")
+        coverage["verify_failed"] += verify_processing == "failed"
+        coverage["blind_failed"] += blind_processing == "failed"
+        coverage["invalid_human_code"] += segment.human_code not in allowed_codes
+        coverage["blind_abstentions"] += blind_processing == "completed" and predicted in UNKNOWN_CODES
+        coverage["verify_unclear"] += verify_processing == "completed" and verify_state == "unklar"
+        coverage["assigned"] += blind_processing == "completed" and predicted in allowed_codes
+        is_comparable = segment.human_code in allowed_codes and predicted in allowed_codes and blind_processing == "completed"
         exact = None
         level_matches = {name: None for name in level_names}
         if is_comparable:
@@ -170,7 +191,9 @@ def calculate_agreement(
                     level_correct[name] += int(match)
                     level_matches[name] = match
 
-        if not is_comparable or verify_state == "unklar":
+        if verify_processing == "failed" or blind_processing == "failed":
+            status = "technischer_fehler"
+        elif not is_comparable or verify_state == "unklar":
             status = "unklar"
         elif exact and verify_state == "bestätigt":
             status = "bestätigt"
@@ -198,8 +221,12 @@ def calculate_agreement(
         "n_comparable_exact_codes": comparable,
         "exact_agreement": _agreement(exact_correct, comparable),
         "level_agreement": levels,
-        "cohens_kappa": _cohen_kappa(human_codes, predicted_codes),
-        "case_counts": {name: status_counts[name] for name in ("bestätigt", "strittig", "unklar")},
+        "cohens_kappa": _cohen_kappa(human_codes, predicted_codes) if confirmed else {
+            "calculated": False, "value": None, "reason": "Single-Label-Modus und unabhängige Einheiten mit eindeutigen IDs nicht bestätigt."},
+        "label_mode": mode,
+        "coverage": {**{k: coverage[k] for k in ("assigned", "verify_failed", "blind_failed", "invalid_human_code", "blind_abstentions", "verify_unclear")},
+                     "assignment_rate": coverage["assigned"] / len(segments) if segments else None},
+        "case_counts": {name: status_counts[name] for name in ("bestätigt", "strittig", "unklar", "technischer_fehler")},
         "confusion_matrix": {"labels": labels, "matrix": matrix},
         "confusion_pairs": [
             {"human_code": pair[0], "predicted_code": pair[1], "count": count}
@@ -222,9 +249,12 @@ def render_markdown(output: dict) -> str:
         "**Methodischer Hinweis:** Dies ist ein automatisierter Human–LLM Coding-Agreement-Check und keine klassische Interrater-Reliabilität zwischen unabhängigen menschlichen Ratern.\n\n",
         "## Kennzahlen\n\n",
         f"- Segmente insgesamt: {output['n_segments']}\n",
-        f"- Vergleichbare single-label Codepfade: {output['n_comparable_exact_codes']}\n",
-        f"- Exakte Übereinstimmung: {_rate(exact['rate'])} ({exact['agreements']}/{exact['n_comparable']})\n",
+        f"- Vergleichbare Codepfade (zeilenbezogen): {output['n_comparable_exact_codes']}\n",
+        f"- Exakte Übereinstimmung unter vergleichbaren Fällen: {_rate(exact['rate'])} ({exact['agreements']}/{exact['n_comparable']})\n",
     ]
+    lines.append(f"- Zuordnungsquote: {_rate(output['coverage']['assignment_rate'])}\n")
+    lines.append(f"- Abdeckung / Ausfälle / Enthaltungen: {output['coverage']}\n")
+    lines.append(f"- Label-Modus: {output['label_mode']}; bei Multi-Label keine mengenbasierte Kennzahl.\n")
     for name in ("hauptkategorie", "unterkategorie", "auspraegung", "facette"):
         metric = output["level_agreement"][name]
         lines.append(f"- {name}: {_rate(metric['rate'])} ({metric['agreements']}/{metric['n_comparable']})\n")
@@ -250,4 +280,5 @@ def render_markdown(output: dict) -> str:
             f"{markdown_escape(row['predicted_code'])} | {row['verification']} | {row['case_status']} |\n"
         )
     return "".join(lines)
+
 
