@@ -1,3 +1,12 @@
+# Provider and chart patch · 2026-09-10
+
+- 95 Python tests pass, including the complete mocked workflow, provider request/response formats, refusal and truncation handling, bounded retries, secret separation, selected-provider environment, privacy guards on resume, chart deduplication, and Windows DPAPI key rotation/removal. DPAPI tests run under the regular Windows account; they cannot use the restricted sandbox identity.
+- Eight existing JavaScript regression tests pass. A real headless Edge session verifies the default privacy checkbox, cloud field gating, separate keys, removal, persisted privacy after reload, and HTML category-to-text drilldown. All embedded images load; no JavaScript errors observed.
+- The new Ollama Cloud transport completes cluster analysis and summarization on two public synthetic rows: three successful real requests, no local inference. The exported HTML is generated successfully.
+- OpenAI, Anthropic and Hugging Face adapters are tested with controlled HTTP responses only. Live authentication, account permissions and individual model compatibility still need a provider account. They are not claimed as live-validated.
+- Existing 38-row synthetic results are redrawn without new model requests. Original study data and prior reports remain unchanged. Review-status charts describe the model-run snapshot; they are not live human-review completion counters.
+- No new SDK dependencies or beta release. The public defaults remain local Ollama and artificial inputs.
+
 # Usability-Patch · 10. September 2026
 
 - 84 Python-Tests: 83 bestanden im eingeschränkten Testkonto; der Windows-DPAPI-Test bestand separat im regulären Benutzerkontext. Nach der Serverkorrektur alle 10 Tests der Desktop-/Telegram-Datei erneut erfolgreich.

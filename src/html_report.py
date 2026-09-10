@@ -82,6 +82,11 @@ def build_html_report(directory, modules, created_at, *, filename='gesamtbericht
     data={'schema_version':1,'created_at':str(created_at),'run_id':directory.name,
           'model':str(config.get('llm',{}).get('model','Nicht dokumentiert')),
           'review_note':str(source.get('note','')),'sections':sections,'images':assets,'warnings':list(dict.fromkeys(warnings))}
+    from report_charts import chart_data
+    try: data['charts']=chart_data(directory,modules)
+    except (ValueError,TypeError,KeyError,OSError,AttributeError):
+        data['charts']={}
+        data['warnings'].append('Zusätzliche Übersichten konnten aus den Laufdaten nicht erstellt werden. Modulberichte bleiben verfügbar.')
     # No credentials, complete YAML or file-system paths enter the metadata.
     payload=json.dumps(data,ensure_ascii=False).replace('&','\\u0026').replace('<','\\u003c').replace('>','\\u003e').replace('\u2028','\\u2028').replace('\u2029','\\u2029')
     bundled=inline_assets();hashes=csp_hashes()

@@ -91,6 +91,7 @@ function loadFields(){
   state.modules.forEach(m=>{const label=el('label',undefined,'checkbox'),input=el('input'),text=el('span',m.name);input.type='checkbox';input.value=m.id;input.name='module';input.checked=selected.includes(m.id);input.addEventListener('change',updateModuleSelection);if(moduleHelp[m.id])text.append(el('small',moduleHelp[m.id]));if(m.depends_on.length)text.append(el('small','Benötigt: '+m.depends_on.map(id=>state.modules.find(x=>x.id===id)?.name||id).join(', ')));label.append(input,text);$('modules').append(label);});
   updateModuleSelection();
   renderFiles();
+  if(typeof loadProviderFields==='function')loadProviderFields();
 }
 async function openProject(id){
   if(!id){$('projects').value=project?.id||'';return;}
@@ -109,7 +110,7 @@ function settings(){
   const columns={},book_columns={};Object.keys(columnLabels).forEach(k=>columns[k]=$('segment-columns-'+k).value);
   Object.keys(bookLabels).forEach(k=>book_columns[k]=$('book-columns-'+k).value);
   const think=$('think').value;
-  return {columns,book_columns,model:$('model').value,num_ctx:Number($('num-ctx').value),max_tokens:Number($('max-tokens').value),temperature:Number($('temperature').value),
+  return {...(typeof providerSelection==='function'?providerSelection():{}),columns,book_columns,model:$('model').value,num_ctx:Number($('num-ctx').value),max_tokens:Number($('max-tokens').value),temperature:Number($('temperature').value),
     think:think==='true'?true:think==='false'?false:think,label_mode:$('label-mode').value,
     context:{project_description:$('context-project').value,participants:$('context-persons').value,methodology:$('context-method').value},
     modules:[...document.querySelectorAll('[name=module]:checked')].map(n=>n.value)};
@@ -248,10 +249,11 @@ setInterval(async()=>{if(!project||polling||!['analysis','results'].includes(vie
 function invalidateCheck(event){if(event.target.closest('#view-project, #view-check, #view-analysis'))$('validation-result').hidden=true;}
 document.addEventListener('input',invalidateCheck);
 document.addEventListener('change',invalidateCheck);
-action($('setup-check'),async()=>{const r=await api('setup-check',{model:$('model').value});$('setup-result').replaceChildren();r.checks.forEach(c=>$('setup-result').append(el('p',(c.ok?'✓ ':'✗ ')+c.name+': '+c.detail)));$('setup-result').append(el('p',r.note,'hint'));});
-action($('model-test'),async()=>{$('model-test-dialog').showModal();});
+action($('setup-check'),async()=>{const r=await api('setup-check',{project:needProject(),model:$('model').value,selection:providerSelection()});$('setup-result').replaceChildren();r.checks.forEach(c=>$('setup-result').append(el('p',(c.ok?'✓ ':'✗ ')+c.name+': '+c.detail)));$('setup-result').append(el('p',r.note,'hint'));});
+let pendingModelTest=null;
+action($('model-test'),async()=>{pendingModelTest={project:needProject(),selection:providerSelection()};$('model-test-dialog').showModal();});
 $('model-test-cancel').onclick=()=>$('model-test-dialog').close();
-action($('model-test-confirm'),async()=>{$('model-test-dialog').close();message('Kurzer lokaler Modelltest läuft …');const r=await api('model-test',{model:$('model').value});message(r.message);});
+action($('model-test-confirm'),async()=>{$('model-test-dialog').close();message('Kurzer Modelltest läuft …');const r=await api('model-test',pendingModelTest);message(r.message);});
 action($('category-refresh'),async()=>{const pid=needProject(),r=await api('category-versions?project='+pid);if(project?.id!==pid)return;$('category-baseline').replaceChildren(new Option('Letzte gültige Version',''));r.versions.forEach(v=>$('category-baseline').add(new Option(new Date(v.created*1000).toLocaleString('de-DE')+' · '+v.id.slice(0,8),v.id)));});
 action($('category-compare'),async()=>{const pid=needProject(),r=await api('category-compare',{project:pid,settings:settings(),baseline:$('category-baseline').value||null});if(project?.id!==pid)return;const box=$('category-result');box.replaceChildren(el('p',r.note));if(!r.baseline)return;box.append(el('p',`${r.added.length} neue, ${r.removed.length} entfernte, ${r.changed.length} geänderte Kategorien · ${r.affected_count} betroffene Codierzeilen`));r.added.forEach(c=>box.append(el('p','Neu: '+c.code+' — '+c.definition)));r.removed.forEach(c=>box.append(el('p','Entfernt: '+c.code)));r.changed.forEach(c=>{const d=el('details');d.append(el('summary','Geändert: '+c.code),el('p','Bisher: '+c.before.definition+' · '+c.before.ankerbeispiel),el('p','Jetzt: '+c.after.definition+' · '+c.after.ankerbeispiel));box.append(d);});if(r.affected.length){const d=el('details');d.append(el('summary','Betroffene Codierzeilen (maximal 200)'));r.affected.forEach(c=>d.append(el('p',c.segment_id+' · '+c.code)));box.append(d);}});
 if(typeof initReviews==='function')initReviews();

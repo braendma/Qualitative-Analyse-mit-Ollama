@@ -18,3 +18,5 @@ private_delivery/
 _checkpoints/
 local_app_data/
 telegram.private.json
+
+llm_keys.private.json

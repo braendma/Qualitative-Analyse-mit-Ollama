@@ -88,23 +88,34 @@ def save_confusion_png(labels: list[str], matrix: list[list[int]], path: str | P
         import matplotlib.pyplot as plt
     except ImportError:
         return False
-    size = max(7, min(20, 0.55 * len(labels) + 4))
-    fig, ax = plt.subplots(figsize=(size, size))
-    image = ax.imshow(matrix, cmap="Blues")
-    short = [label if len(label) <= 45 else label[:42] + "…" for label in labels]
-    ax.set_xticks(range(len(labels)), labels=short, rotation=90, fontsize=7)
-    ax.set_yticks(range(len(labels)), labels=short, fontsize=7)
-    ax.set_xlabel("LLM-Code")
-    ax.set_ylabel("Human-Code")
-    ax.set_title("Human–LLM Coding Agreement: Konfusionsmatrix")
-    for row_index, row in enumerate(matrix):
-        for col_index, value in enumerate(row):
-            if value:
-                ax.text(col_index, row_index, str(value), ha="center", va="center", fontsize=7)
-    fig.colorbar(image, ax=ax, fraction=0.046, pad=0.04)
-    fig.tight_layout()
-    fig.savefig(path, dpi=180, bbox_inches="tight")
-    plt.close(fig)
+    import textwrap
+    from matplotlib.colors import LinearSegmentedColormap
+    from matplotlib.ticker import MaxNLocator
+    count=len(labels)
+    size=max(7, min(18, .36*count+5))
+    legend='\n'.join(f'{i+1:02d}  '+('\n     '.join(textwrap.wrap(label,65))) for i,label in enumerate(labels))
+    legend_height=.18*(legend.count('\n')+1)+.6
+    fig=plt.figure(figsize=(size,size+legend_height),facecolor='white')
+    ax=fig.add_axes([.10,(legend_height+.6)/(size+legend_height),.78,(size-1.5)/(size+legend_height)])
+    cmap=LinearSegmentedColormap.from_list('qualitative',['#f2f7f5','#197b80'])
+    maximum=max([v for row in matrix for v in row]+[1])
+    image=ax.imshow(matrix,cmap=cmap,vmin=0,vmax=maximum)
+    numbers=[f'{i+1:02d}' for i in range(count)]
+    ax.set_xticks(range(count),numbers,fontsize=9);ax.set_yticks(range(count),numbers,fontsize=9)
+    ax.tick_params(length=0,pad=7)
+    ax.set_xlabel('Modellcodierung · Code-Nummer',labelpad=12,color='#627572')
+    ax.set_ylabel('Menschliche Codierung · Code-Nummer',labelpad=12,color='#627572')
+    ax.set_title('Codierungsvergleich',loc='left',pad=24,fontsize=20,weight='bold',color='#203b3b')
+    for r,row in enumerate(matrix):
+        for c,value in enumerate(row):
+            if value:ax.text(c,r,str(value),ha='center',va='center',fontsize=8 if count>20 else 10,
+                             color='white' if value>maximum*.55 else '#203b3b')
+    for spine in ax.spines.values():spine.set_visible(False)
+    bar=fig.colorbar(image,ax=ax,fraction=.035,pad=.03)
+    bar.set_label('Codierzeilen');bar.locator=MaxNLocator(integer=True,nbins=5);bar.update_ticks();bar.outline.set_visible(False)
+    fig.text(.10,.16/(size+legend_height),legend,fontsize=9,color='#203b3b',va='bottom',linespacing=1.35)
+    try:fig.savefig(path,dpi=160,bbox_inches='tight',facecolor='white')
+    finally:plt.close(fig)
     return True
 
 

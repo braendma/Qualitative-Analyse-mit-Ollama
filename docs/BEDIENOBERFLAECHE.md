@@ -21,7 +21,7 @@ Ein neues Programmverzeichnis ändert nicht automatisch die private Projektablag
 
 Falls eine passende Python-Umgebung bereits eingerichtet ist, reicht `python -X utf8 src/local_app.py`. Auf anderen Betriebssystemen lässt sich die Oberfläche ebenfalls so starten; die Windows-Startdateien und die dauerhafte Windows-Tokenverschlüsselung sind dort nicht verfügbar.
 
-Die Oberfläche ist nur an `127.0.0.1` gebunden und wird nicht veröffentlicht. Ein zufälliger Sitzungsschlüssel schützt ihre API. Die angezeigte Startadresse gehört ausschließlich auf diesen PC. Die lokale Ollama-Verbindung ist fest eingestellt; Cloud-Modelle sind in dieser Oberfläche nicht vorgesehen.
+Die Oberfläche ist nur an `127.0.0.1` gebunden und wird nicht veröffentlicht. Ein zufälliger Sitzungsschlüssel schützt ihre API. Die angezeigte Startadresse gehört ausschließlich auf diesen PC. Standardmäßig gilt die DSGVO-Sperre mit lokalem Ollama. Cloud-Anbieter sind nach ausdrücklicher Freigabe im Projekt verfügbar; siehe [Handbuch](HANDBUCH.md#datenfreigabe-anbieter-und-schlussel) und [Anbieterhinweise](KI_ANBIETER.md).
 
 ## Ein Projekt bearbeiten
 

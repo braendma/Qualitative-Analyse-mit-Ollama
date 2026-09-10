@@ -2,11 +2,15 @@
 
 Mit diesem Programm kannst du bereits codierte Interviewstellen auswerten und menschliche Codierungen mit Modellvorschlägen vergleichen. Die lokale Bedienoberfläche führt durch Dateiimport, Eingabeprüfung, Modulauswahl und Ergebnisse. Für die normale Bedienung musst du keine Python- oder YAML-Dateien bearbeiten.
 
-Die Auswertung läuft mit einem lokal installierten Ollama-Modell. Modellvorschläge und Berichte müssen fachlich geprüft werden; sie ersetzen keine eigenständige qualitative Analyse.
+Die Auswertung läuft standardmäßig mit lokalem Ollama. Für freigegebene Inhalte sind optional Ollama Cloud, OpenAI, Anthropic und Hugging Face verfügbar; die DSGVO-Sperre ist pro Projekt zunächst aktiviert. Modellvorschläge und Berichte müssen fachlich geprüft werden; sie ersetzen keine eigenständige qualitative Analyse.
 
 **Aktueller Hauptzweig: 0.3.0-dev.** Dieser Entwicklungsstand enthält die neue Prüf- und Rückmeldungsfunktion. Eine neue Beta wurde damit noch nicht veröffentlicht; die bisherige Release-Version bleibt 0.2.0-beta.1.
 
 Das gefaltete **b** von braendma ist jetzt als lokales Programmsignet eingebunden. Über **Handbuch** neben **Telegram-Updates** öffnet sich die vollständige Anleitung mit Bildern und Beispielen, auch ohne Internet.
+
+Neu: lesbarere Clusterdiagramme und Konfusionsmatrix, anklickbare Personen–Kategorien-Übersicht und Fallklassifikation im HTML-Bericht. Cloud-Schlüssel werden separat gespeichert und können je Anbieter ersetzt oder entfernt werden. [Anbieter, Datenfreigabe und Grenzen](docs/KI_ANBIETER.md).
+
+![Clusterdiagramm mit künstlichen Beispieldaten](docs/screenshots/12-clusterdiagramm.jpg)
 
 ## Einstieg
 
@@ -30,7 +34,7 @@ Das gefaltete **b** von braendma ist jetzt als lokales Programmsignet eingebunde
 
 Zum Kennenlernen **„Künstliche Beispieldaten laden“** wählen. Die Demo enthält 50 erfundene Codierzeilen aus 43 Passagen. Das Laden und die Eingabeprüfung benötigen keinen Modellaufruf. Erst **„Prüfen & neuen Lauf starten“** startet die Analyse.
 
-Bei einer bereits eingerichteten Python-Umgebung ist alternativ `python -X utf8 src/local_app.py` möglich. Die Oberfläche verbindet sich mit lokalem Ollama; die Auswahl von Cloud-Modellen ist dort nicht vorgesehen. Einrichtung, Betrieb auf anderen Systemen und Datenablage: [Bedienungsanleitung](docs/BEDIENOBERFLAECHE.md).
+Bei einer bereits eingerichteten Python-Umgebung ist alternativ `python -X utf8 src/local_app.py` möglich. Die Oberfläche verwendet standardmäßig lokales Ollama. Optionale Cloud-Verbindungen werden unter **Analyse → Datenfreigabe und Modell** freigeschaltet. Einrichtung, Betrieb auf anderen Systemen und Datenablage: [Bedienungsanleitung](docs/BEDIENOBERFLAECHE.md).
 
 **Zu den Bildern:** Alle Screenshots zeigen die tatsächliche Oberfläche mit künstlichen Beispieldaten. Sie enthalten keine Interviewdaten einer realen Studie und keine Zugangsdaten. Die Bilder lassen sich für eine größere Ansicht anklicken. Einige zeigen einen Ausschnitt einer längeren Seite; zum nächsten Bereich in der Oberfläche nach unten scrollen.
 
@@ -75,7 +79,7 @@ Unter **„Kategorienversionen vergleichen“** lässt sich eine neue Datei vor 
 
 ## 3. Module auswählen und Analyse starten
 
-Unter **„Analyse“** kannst du zunächst mit **„Systemprüfung ohne Modellaufruf“** Pakete, Schreibrechte, Speicher und die lokale Ollama-Verbindung kontrollieren. Ein gesonderter kurzer Modelltest startet erst nach Bestätigung.
+Unter **„Analyse“** kannst du zunächst mit **„Systemprüfung ohne Modellaufruf“** Pakete, Schreibrechte, Speicher und die gewählte KI-Verbindung kontrollieren. Ein gesonderter kurzer Modelltest startet erst nach Bestätigung.
 
 Unter **„Analyse“** stehen die verfügbaren Module mit Häkchen, kurzer Erklärung und benötigten Vorstufen. Mit **„Auswahl leeren“** kannst du eine eigene Zusammenstellung beginnen. **„Alle auswählen“** und **„Codierungen prüfen“** setzen eine Vorauswahl, die du anschließend anpassen kannst.
 
@@ -1002,7 +1006,7 @@ Insbesondere gilt:
 
 # 🧪 Testbarkeit
 
-Stand 2026-09-10: **78 Python-Tests und acht Browserlogik-Tests** bestehen. Zusätzlich wurden alle **15 Workflow-Module** mit Gemma in Ollama Cloud auf dem künstlichen Datensatz geprüft, eine Gesamtsynthese über zwei Verdichtungsstufen ausgeführt und das Speichern/Laden von Prüfentscheidungen im Browser getestet. Die Cloud-Entwicklungsläufe enthielten dokumentierte Abbrüche und Wiederaufnahmen; sie sind kein unabhängiger Qualitätsbenchmark. Zwei weitere Cloud-Abläufe prüften Kategorienvorschläge aus drei künstlich beurteilten Passagen und eine Folgeanalyse mit korrigierten Codes. Der Windows-Verschlüsselungstest benötigte Zugriff auf das normale Benutzerprofil. Ergebnisse und Grenzen: [TEST_REPORT.md](docs/TEST_REPORT.md).
+Stand 2026-09-10: **95 Python-Tests und acht Browserlogik-Tests** bestehen. Zusätzlich wurden alle **15 Workflow-Module** mit Gemma in Ollama Cloud auf dem künstlichen Datensatz geprüft, eine Gesamtsynthese über zwei Verdichtungsstufen ausgeführt und das Speichern/Laden von Prüfentscheidungen im Browser getestet. Die Cloud-Entwicklungsläufe enthielten dokumentierte Abbrüche und Wiederaufnahmen; sie sind kein unabhängiger Qualitätsbenchmark. Zwei weitere Cloud-Abläufe prüften Kategorienvorschläge aus drei künstlich beurteilten Passagen und eine Folgeanalyse mit korrigierten Codes. Der Windows-Verschlüsselungstest benötigte Zugriff auf das normale Benutzerprofil. Ergebnisse und Grenzen: [TEST_REPORT.md](docs/TEST_REPORT.md).
 
 Durch die modulare JSON-basierte Architektur lassen sich einzelne Stufen unabhängig testen.
 

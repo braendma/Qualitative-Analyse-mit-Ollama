@@ -150,8 +150,17 @@ class ReviewWorkspace:
             if source_settings is None:
                 source_settings={'model':oldcfg['llm']['model'],'context':oldcfg['context'],
                                  'modules':[m['id'] for m in oldcfg['pipeline']['modules'] if m.get('enabled',True)]}
-                source_settings.update({k:oldcfg['llm'].get(k) for k in ('num_ctx','max_tokens','temperature','think')})
+                source_settings.update({k:oldcfg['llm'][k] for k in ('num_ctx','max_tokens','temperature','think','provider','gdpr_relevant') if k in oldcfg['llm']})
             settings=copy.deepcopy(source_settings)
+            if not settings.get('provider'):
+                settings['provider']='ollama_cloud' if oldcfg['llm'].get('host')=='https://ollama.com' else 'ollama_local'
+            # Preparing a historical review must never revoke the current project's privacy choice.
+            current_private=self.project(pid)['settings'].get('gdpr_relevant',True)
+            settings['gdpr_relevant']=current_private
+            if current_private:
+                settings['provider']='ollama_local'
+                if oldcfg['llm'].get('provider','ollama_local')!='ollama_local' or oldcfg['llm'].get('host')=='https://ollama.com':
+                    settings['model']=self.template['llm']['model']
             settings['columns']={'segment_id':'segment_id','unit_id':'PassageID','person':'Dokumentname','code':'Code','segment':'Segment'}
             settings['label_mode']='multi_label'
             settings['book_columns']=dict(zip(('kategorie','unterkategorie','auspraegung','facette','definition','ankerbeispiel'),
@@ -164,6 +173,8 @@ class ReviewWorkspace:
             atomic_text(rev/'segments.csv',out.getvalue())
             atomic_text(rev/'codebook.csv',Path(oldcfg['paths']['category_system_csv']).read_text(encoding='utf-8-sig'))
             cfg=copy.deepcopy(oldcfg);cfg['paths'].update(input_csv=str(rev/'segments.csv'),category_system_csv=str(rev/'codebook.csv'))
+            from llm_providers import selection
+            cfg['llm'].update(selection(settings))
             cfg['columns']=settings['columns'];cfg['coding_agreement'].update(label_mode='multi_label',independent_units_confirmed=False)
             cfg['review_provenance']=source
             atomic_text(rev/'config.yaml',yaml.safe_dump(cfg,allow_unicode=True,sort_keys=False))

@@ -27,6 +27,8 @@ import yaml
 from runtime_support import atomic_json, atomic_text
 from review_workspace import ReviewWorkspace, decisions_xlsx
 from telegram_notifications import Telegram, NoRedirect
+from llm_providers import PROVIDERS, KEY_ENVS, selection
+from provider_keys import ProviderKeys
 
 ROOT = Path(__file__).resolve().parent
 SPEC = importlib.util.spec_from_file_location('desktop_runner', ROOT / '00_WORKFLOW_RUNNER.py')
@@ -106,6 +108,18 @@ def pid_alive(pid):
         return False
 
 
+def reject_secret_settings(settings):
+    # Browser settings are persisted verbatim in revisions: reject credential-like
+    # keys recursively before any snapshot, including passage-ID preparation.
+    if isinstance(settings, dict):
+        for key, value in settings.items():
+            if re.search(r'(api.?key|token(?!s$)|secret|password|authorization|credential)',str(key),re.I):
+                raise ValueError('API-Schlüssel ausschließlich im separaten Schlüsselfeld speichern.')
+            reject_secret_settings(value)
+    elif isinstance(settings, list):
+        for value in settings: reject_secret_settings(value)
+
+
 class App(ReviewWorkspace):
     def __init__(self, directory, template=None):
         self.directory = Path(directory).resolve()
@@ -115,6 +129,7 @@ class App(ReviewWorkspace):
         self.projects_dir.mkdir(parents=True, exist_ok=True)
         self.template = yaml.safe_load((Path(template) if template else DEFAULT_CONFIG).read_text(encoding='utf-8'))
         self.telegram = Telegram(self.directory)
+        self.provider_keys = ProviderKeys(self.directory)
         self.lock = threading.RLock()
         self.active = None
 
@@ -205,6 +220,7 @@ class App(ReviewWorkspace):
     def passage_apply(self, pid, settings, fingerprint, confirmed):
         from passage_ids import apply
         with self.lock:
+            reject_secret_settings(settings)
             project = self.project(pid)
             upload = project['uploads'].get('segments')
             if not upload: raise ValueError('Zuerst eine Interviewdatei auswählen.')
@@ -236,10 +252,9 @@ class App(ReviewWorkspace):
         cfg = copy.deepcopy(self.template)
         provenance=read_json(directory/'project.json').get('review_provenance')
         if provenance: cfg['review_provenance']=provenance
-        model = str(settings.get('model', cfg['llm']['model'])).strip()
-        if not re.fullmatch(r'[A-Za-z0-9_.:/-]{1,160}',model) or 'cloud' in model.lower():
-            raise ValueError('Bitte einen lokalen Ollama-Modellnamen ohne Cloud-Verweis wählen.')
-        cfg['llm'].update(host='http://localhost:11434', model=model, log_thinking=False)
+        reject_secret_settings(settings)
+        selected = selection({'model': cfg['llm']['model'], **settings})
+        cfg['llm'].update(selected, log_thinking=False)
         for key, lower, upper in [('num_ctx',2048,1048576),('max_tokens',128,131072)]:
             cfg['llm'][key] = int(settings.get(key,cfg['llm'][key]))
             if not lower <= cfg['llm'][key] <= upper:
@@ -413,14 +428,15 @@ class App(ReviewWorkspace):
                 folder.mkdir(parents=True)
                 job={'id':jid,'created':time.time(),'config':str(config),'status':'starting'}
             checked=self.validate_config(config)
-            model=yaml.safe_load(config.read_text(encoding='utf-8'))['llm']['model']
-            if model not in self.models()['models']:
-                raise ValueError('Das gewählte lokale Modell ist nicht installiert. In Ollama installieren oder ein vorhandenes Modell wählen.')
+            llm = yaml.safe_load(config.read_text(encoding='utf-8'))['llm']
+            selected = self.authorize_llm(pid, llm)
             pause=folder/'pause.request'
             pause.unlink(missing_ok=True)
             command=[sys.executable,str(ROOT/'00_WORKFLOW_RUNNER.py'),'--config',str(config),'--output-dir',str(folder/'runs'),'--pause-file',str(pause)]
             if resume: command.extend(['--resume',str(manifests[0].parent)])
-            env={k:v for k,v in os.environ.items() if k not in ('OLLAMA_API_KEY','OLLAMA_HOST','WORKFLOW_CHECKPOINT_DIR','WORKFLOW_FINGERPRINT','WORKFLOW_RUN_ID','WORKFLOW_PROGRESS_FILE','WORKFLOW_MODULE')}
+            env={k:v for k,v in os.environ.items() if k not in KEY_ENVS and k not in ('OLLAMA_API_KEY','OLLAMA_HOST','WORKFLOW_CHECKPOINT_DIR','WORKFLOW_FINGERPRINT','WORKFLOW_RUN_ID','WORKFLOW_PROGRESS_FILE','WORKFLOW_MODULE')}
+            if selected['provider'] != 'ollama_local':
+                env[selected['api_key_env']] = self.provider_keys.keys[selected['provider']]
             env.update(PYTHONUTF8='1',PYTHONIOENCODING='utf-8',MPLBACKEND='Agg')
             log=open(folder/'console.log','ab')
             try:
@@ -428,11 +444,59 @@ class App(ReviewWorkspace):
                                          creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
             finally:
                 log.close()
-            job.update(status='running',pid=process.pid,modules=checked['modules'],error='')
+            job.update(status='running',pid=process.pid,modules=checked['modules'],error='',provider=selected['provider'],model=selected['model'])
             atomic_json(folder/'job.json',job)
             self.active=jid
             threading.Thread(target=self.monitor,args=(folder,process,len(checked['modules'])),daemon=True).start()
             return {'id':jid,'status':'running'}
+
+    def privacy(self, pid, private):
+        if type(private) is not bool: raise ValueError('DSGVO-Einstellung muss ein Wahrheitswert sein.')
+        with self.lock:
+            if any(j['status']=='running' for j in self.jobs(pid)):
+                raise ValueError('Die Datenfreigabe lässt sich erst nach Abschluss oder Pause des laufenden Moduls ändern.')
+            directory = self.project_dir(pid)
+            settings = read_json(directory/'settings.json', {})
+            settings['gdpr_relevant'] = private
+            if private:
+                settings['provider'] = 'ollama_local'
+                if 'cloud' in settings.get('model','').lower() or settings.get('host') == 'https://ollama.com':
+                    settings['model'] = self.template['llm']['model']
+            atomic_json(directory/'settings.json', settings)
+            return {'gdpr_relevant': private}
+
+    def authorize_llm(self, pid, llm, *, installed=True):
+        if 'provider' not in llm and llm.get('host') == 'https://ollama.com':
+            llm={**llm,'provider':'ollama_cloud','gdpr_relevant':llm.get('gdpr_relevant',False)}
+        selected = selection(llm)
+        if selected['provider'] != 'ollama_local':
+            if self.project(pid)['settings'].get('gdpr_relevant', True):
+                raise ValueError('Cloud-Lauf gesperrt: Für dieses Projekt ist DSGVO-relevantes Material aktiviert. Freigabe unter Analyse prüfen.')
+            if not self.provider_keys.keys.get(selected['provider']):
+                raise ValueError('API-Schlüssel für den gewählten Anbieter zuerst separat speichern.')
+        else:
+            if os.environ.get('QUALITATIVE_CLOUD_TEST_ONLY') == '1':
+                raise ValueError('Lokale Modellaufrufe sind in dieser Cloud-Testoberfläche deaktiviert.')
+            if installed and selected['model'] not in self.models()['models']:
+                raise ValueError('Das gewählte lokale Modell ist nicht installiert. In Ollama installieren oder ein vorhandenes Modell wählen.')
+        return selected
+
+    def save_provider_key(self, pid, values):
+        if self.project(pid)['settings'].get('gdpr_relevant', True) and not values.get('remove'):
+            raise ValueError('Schlüsselfelder sind bei DSGVO-relevantem Material gesperrt.')
+        return self.provider_keys.save(values.get('provider'), values.get('key',''),
+                                       values.get('persist',False), values.get('remove',False))
+
+    def model_test(self, pid, values):
+        selected = self.authorize_llm(pid, values)
+        import ollama
+        from llm_client import request_chat
+        cfg = {**selected, 'num_ctx': 4096, 'max_attempts': 1, 'timeout_seconds': 90}
+        request = {'model': selected['model'], 'messages': [{'role':'user','content':'Antworte ausschließlich mit OK.'}],
+                   'options': {'num_predict': 256, 'temperature': 0}, 'think': False}
+        response = request_chat(ollama, request, cfg, api_key=self.provider_keys.keys.get(selected['provider']))
+        if not response['message']['content'].strip(): raise ValueError('Keine sichtbare Modellantwort.')
+        return {'ok': True, 'message': PROVIDERS[selected['provider']]['name'] + ': kurze künstliche Testanfrage beantwortet. Kein vollständiger Analysetest.'}
 
     def monitor(self, folder, process, total):
         last_count=0
@@ -515,10 +579,10 @@ class Handler(BaseHTTPRequestHandler):
         parsed=urllib.parse.urlparse(self.path)
         assets={'/':'local_app.html','/app.js':'local_app.js','/app.css':'local_app.css',
                 '/review.js':'review_ui.js','/reports.js':'report_viewer.js',
-                '/passage-ids.js':'passage_ids_ui.js','/logo.jpg':'brand.jpg','/favicon.ico':'brand.jpg',
+                '/providers.js':'providers_ui.js','/passage-ids.js':'passage_ids_ui.js','/logo.jpg':'brand.jpg','/favicon.ico':'brand.jpg',
                 '/handbuch':'../docs/HANDBUCH.html','/manual.css':'../docs/manual.css',
                 '/BEDIENOBERFLAECHE.md':'../docs/BEDIENOBERFLAECHE.md',
-                '/EXTENSIONS.md':'../docs/EXTENSIONS.md','/RELEASE_NOTES.md':'../docs/RELEASE_NOTES.md'}
+                '/KI_ANBIETER.md':'../docs/KI_ANBIETER.md','/EXTENSIONS.md':'../docs/EXTENSIONS.md','/RELEASE_NOTES.md':'../docs/RELEASE_NOTES.md'}
         for screenshot in (ROOT.parent/'docs/screenshots').glob('*.jpg'):
             assets['/screenshots/'+screenshot.name]='../docs/screenshots/'+screenshot.name
         if not self.allowed(auth=parsed.path not in assets): return self.json({'error':'Zugriff abgelehnt. Oberfläche über die Startdatei öffnen.'},403)
@@ -531,7 +595,7 @@ class Handler(BaseHTTPRequestHandler):
             app=self.server.app
             if parsed.path=='/api/state':
                 cfg=app.template
-                return self.json({'projects':app.projects(),'telegram':app.telegram.public(),
+                return self.json({'projects':app.projects(),'telegram':app.telegram.public(),'providers':PROVIDERS,'provider_keys':app.provider_keys.public(),
                     'defaults':{'llm':{k:cfg['llm'].get(k) for k in ('model','num_ctx','max_tokens','temperature','think')},'context':cfg['context'],'columns':cfg['columns']},
                     'modules':[{'id':m['id'],'name':m['name'],'depends_on':m['depends_on']} for m in RUNNER.normalize_modules(cfg)]})
             if parsed.path=='/api/project': return self.json(app.project(get('project')))
@@ -568,6 +632,8 @@ class Handler(BaseHTTPRequestHandler):
             with app.lock:
                 if path=='/api/create': result=app.create(data.get('name',''),data.get('demo',False))
                 elif path=='/api/upload': result=app.upload(data['project'],data['kind'],data['name'],data['data'],data.get('sheet'))
+                elif path=='/api/privacy': result=app.privacy(data['project'],data['gdpr_relevant'])
+                elif path=='/api/provider-key': result=app.save_provider_key(data['project'],data)
                 elif path=='/api/save': result=app.save(data['project'],data['settings'])
                 elif path=='/api/passage-preview': result=app.passage_preview(data['project'],data['columns'])
                 elif path=='/api/passage-apply': result=app.passage_apply(data['project'],data['settings'],data['fingerprint'],data['confirmed'])
@@ -580,19 +646,21 @@ class Handler(BaseHTTPRequestHandler):
                 elif path=='/api/category-compare': result=app.compare_categories(data['project'],data['settings'],data.get('baseline'))
                 elif path=='/api/setup-check':
                     from setup_checks import check_setup
-                    result=check_setup(app,str(data.get('model','')))
+                    result=check_setup(app,str(data.get('model','')),data.get('selection'),data.get('project'))
                 elif path=='/api/model-test':
                     from setup_checks import test_local_model
                     from llm_client import LLMError
                     if app.active is not None or any(j['status']=='running' for p in app.projects() for j in app.jobs(p['id'])):
                         raise ValueError('Während einer Analyse keinen zusätzlichen Modelltest starten.')
-                    try:result=test_local_model(app,str(data.get('model','')))
+                    try:result=app.model_test(data['project'],data['selection'])
                     except LLMError as exc:raise ValueError(str(exc)) from None
                 elif path=='/api/telegram': result=app.telegram.save(data)
                 elif path=='/api/telegram-test': result={'sent':app.telegram.send('start',test=True)}
                 else: return self.json({'error':'Nicht gefunden.'},404)
             self.json(result)
         except (ValueError,OSError,KeyError,TypeError) as exc:
+            if self.path.startswith('/api/provider-key') and not isinstance(exc,ValueError):
+                return self.json({'error':'API-Schlüssel konnte nicht gespeichert werden.'},400)
             self.json({'error':str(exc) if not self.path.startswith('/api/telegram') else
                        (str(exc) if isinstance(exc,ValueError) else 'Telegram-Einstellung konnte nicht gespeichert werden.')},400)
 
