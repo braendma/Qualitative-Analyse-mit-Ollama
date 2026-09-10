@@ -1,4 +1,13 @@
-# Validation of partial checkpoints
+# Validation of the local desktop interface
+
+Date: 2026-09-10. Baseline: `90e0ff38fe0da214b6259b4c63a7bd93a6ec689a`.
+
+- 53 automated tests cover the previous workflow and the new local interface. New tests exercise immutable project revisions, synthetic demo validation (50 rows / 43 passages / 12 paths), dependency selection, column errors, path confinement, HTTP session/Origin/Host checks, token redaction and the actual runner with mocked inference through pause and resume.
+- Telegram tests use fabricated tokens and a mocked network. They verify session-only persistence, replacement, removal, current-user Windows DPAPI encryption/decryption, event selection, content-free messages and sanitized transport errors. DPAPI was verified outside the restricted sandbox under the normal Windows account. No live Telegram message was sent: no real Telegram bot token or destination was provided.
+- A real `gemma4:31b` Cloud smoke test used a configuration produced by the new project interface, with an isolated Cloud override and two artificial input rows. Cluster analysis and summarization completed with three successful model requests. The shipped interface and YAML defaults remain local; no local GPU inference or real study data was used.
+- Browser checks exercised demo creation, default column mappings, validation, disabled Telegram settings with a fabricated token, token removal and result/review preview. This is a Windows development-machine validation, not an installer test across multiple PCs.
+
+## Earlier validation of partial checkpoints
 
 Date: 2026-09-10. Baseline: `6110780a325ad793eaf7b9939b106cf568f1bfdd`.
 

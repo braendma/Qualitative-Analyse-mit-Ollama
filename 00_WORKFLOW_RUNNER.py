@@ -217,6 +217,7 @@ def main(argv=None):
     parser.add_argument("--output-dir", "-o", default="workflow_output")
     parser.add_argument("--log-raw", action="store_true")
     parser.add_argument("--resume", default=None, help="Laufverzeichnis eines unterbrochenen Laufs")
+    parser.add_argument("--pause-file", default=None, help="Nach dem aktuellen Modul pausieren, sobald diese Datei existiert")
     parser.add_argument("--validate-only", action="store_true", help="Nur CSV, Codebuch und Pipeline prüfen; kein Modellaufruf")
     args = parser.parse_args(argv)
 
@@ -313,6 +314,13 @@ def main(argv=None):
         for module in modules:
             if module["id"] in completed_steps:
                 continue
+            if args.pause_file and Path(args.pause_file).is_file():
+                manifest.update(status="paused", current_module=None)
+                atomic_json(output_dir / "workflow_manifest.json", manifest)
+                LOGGER.info("Workflow auf Wunsch zwischen Modulen pausiert.")
+                return
+            manifest["current_module"] = module["id"]
+            atomic_json(output_dir / "workflow_manifest.json", manifest)
             script_path = resolve_path(script_dir, module["script"])
             if not script_path.is_file():
                 raise FileNotFoundError(script_path)
@@ -328,7 +336,7 @@ def main(argv=None):
             atomic_json(output_dir / "workflow_manifest.json", manifest)
         finished_at = datetime.now().isoformat()
         report_path = build_full_report(output_dir, modules, finished_at)
-        manifest.update(status="success", finished_at=finished_at, gesamtbericht=str(report_path))
+        manifest.update(status="success", current_module=None, finished_at=finished_at, gesamtbericht=str(report_path))
         atomic_json(output_dir / "workflow_manifest.json", manifest)
         LOGGER.info("Workflow abgeschlossen. Lauf-ID: %s. Bericht: %s", run_id, report_path)
     except Exception as exc:

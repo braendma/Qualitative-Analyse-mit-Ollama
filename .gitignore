@@ -16,3 +16,5 @@ config.cloud*.yaml
 private_delivery/
 .partial_checkpoints/
 _checkpoints/
+local_app_data/
+telegram.private.json

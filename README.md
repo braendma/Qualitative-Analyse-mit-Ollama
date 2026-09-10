@@ -13,6 +13,8 @@
 
 Geprüfte Teilanalysen bleiben jetzt auch bei einem Abbruch mitten in einem Modul erhalten. Mit `--resume workflow_output/LAUF-ID` werden sie ohne erneuten Modellaufruf wiederverwendet; Eingaben und Einstellungen müssen unverändert sein. Die Zwischenstände liegen privat im jeweiligen Laufordner.
 
+Die neue **lokale Bedienoberfläche** startet unter Windows über `Start_Oberflaeche.cmd` (einmalige Paketinstallation: `Einrichtung.cmd`). Sie bietet Projekte, CSV-Spaltenzuordnung, Eingabeprüfung, Modell- und Modulauswahl, Fortschritt, Pause/Wiederaufnahme sowie Ergebnisvorschau. Optionale Telegram-Updates unterstützen Tokenimport, Wechsel und geschützte Windows-Speicherung. Einrichtung und Datenablage: [BEDIENOBERFLAECHE.md](BEDIENOBERFLAECHE.md).
+
 Die aktuelle Version prüft Eingaben vor dem Start, erhält vollständige Codepfade, trennt technische Fehler von inhaltlichen Enthaltungen und unterstützt isolierte Läufe mit Wiederaufnahme. Die öffentliche Konfiguration verwendet lokales Ollama. Details und geänderte Aufrufe stehen in [ROBUSTNESS.md](ROBUSTNESS.md).
 
 Die mitgelieferten [Beispieldaten](DEMO_DATA.md) umfassen 50 vollständig erfundene Codierzeilen aus 43 Passagen, sechs fiktive Personen und zwölf Codepfade mit einer bis vier Ebenen. Sie enthalten keine Originalinterviews.
@@ -928,7 +930,7 @@ Insbesondere gilt:
 
 # 🧪 Testbarkeit
 
-Stand 2026-09-10: **46 automatisierte Tests** bestehen. Zusätzlich wurden alle **15 Workflow-Module** mit Gemma in Ollama Cloud auf dem künstlichen Datensatz geprüft, eine Gesamtsynthese über zwei Verdichtungsstufen ausgeführt und das Speichern/Laden von Prüfentscheidungen im Browser getestet. Die Cloud-Entwicklungsläufe enthielten dokumentierte Abbrüche und Wiederaufnahmen; sie sind kein unabhängiger Qualitätsbenchmark. Ergebnisse und Grenzen: [TEST_REPORT.md](TEST_REPORT.md).
+Stand 2026-09-10: **53 automatisierte Tests** bestehen. Zusätzlich wurden alle **15 Workflow-Module** mit Gemma in Ollama Cloud auf dem künstlichen Datensatz geprüft, eine Gesamtsynthese über zwei Verdichtungsstufen ausgeführt und das Speichern/Laden von Prüfentscheidungen im Browser getestet. Die Cloud-Entwicklungsläufe enthielten dokumentierte Abbrüche und Wiederaufnahmen; sie sind kein unabhängiger Qualitätsbenchmark. Ergebnisse und Grenzen: [TEST_REPORT.md](TEST_REPORT.md).
 
 Durch die modulare JSON-basierte Architektur lassen sich einzelne Stufen unabhängig testen.
 
