@@ -38,6 +38,8 @@ def _duration(seconds: float | None) -> str:
 
 
 def _show_progress(current: int, total: int, started: float) -> None:
+    from progress_events import update_progress
+    update_progress(completed=current,total=total,unit='rows')
     width = 28
     ratio = (current / total) if total else 1.0
     filled = min(width, int(width * ratio))
@@ -190,4 +192,3 @@ def render_markdown(output: dict) -> str:
             f"{row['confidence']} | {markdown_escape(row['begruendung'])} | {markdown_escape(alternatives)} |\n"
         )
     return "".join(lines)
-

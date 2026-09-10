@@ -49,6 +49,8 @@ def blind_code_units(segments, codebook, prompts, context, llm_params, raw_log_p
     checkpoint = Checkpoint(checkpoint_path, checkpoint_identity(segments, codebook, prompts, context, params))
     writer = RawJsonlWriter(raw_log_path, 'blind_multi_label') if raw_log_path else None
     units, rows = [], []
+    from progress_events import update_progress
+    update_progress(completed=0,total=len(groups),unit='passages')
     for uid, members in groups.items():
         opaque = 'U' + hashlib.sha256(uid.encode('utf-8')).hexdigest()[:20]
         result = checkpoint.get(uid)
@@ -79,6 +81,7 @@ def blind_code_units(segments, codebook, prompts, context, llm_params, raw_log_p
             result = {**result, 'unit_id':uid, 'segment_ids':[s.segment_id for s in members]}
             checkpoint.save(uid, result)
         units.append(result)
+        update_progress(completed=len(units),total=len(groups),unit='passages')
         rows.extend({**result, 'segment_id':s.segment_id} for s in members)
     output = {'analysis_type':'Blind Multi-Label Coding', 'label_mode':'multi_label', 'created_at':datetime.now().isoformat(),
               'segment_count':len(segments), 'unit_count':len(units), 'results':rows, 'unit_results':units,

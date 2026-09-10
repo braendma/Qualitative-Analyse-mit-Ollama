@@ -14,10 +14,10 @@ Nach Coding-Agreement und Evidence-Audit erzeugt der Workflow `review_queue.html
 
 Zunächst sind nur prüfbedürftige Fälle sichtbar. Bestätigte Fälle lassen sich einblenden. Pro Fall kann man menschliche Codes beibehalten, Modellcodes übernehmen, eigene Codes auswählen oder die Entscheidung offenlassen. Abgeschlossene Entscheidungen benötigen eine Begründung und eine prüfende Person.
 
-**Es gibt keine automatische Speicherung:** „Entscheidungen speichern“ lädt eine separate JSON-Datei herunter. Vor dem Schließen sichern; beim nächsten Öffnen über „Entscheidungen laden“ fortsetzen. Der Download verändert weder Originaldaten noch Modelloutput. Für eine validierte Prüfversion im Laufverzeichnis:
+**In der separaten Offline-HTML-Datei gibt es keine automatische Speicherung.** Die lokale Projektansicht besitzt inzwischen automatische Speicherung, Excel-Export, Folgeläufe und Kategorienvorschläge; siehe [Prüfung und Folgelauf](PRUEFUNG_UND_FOLGELAUF.md). Für die Offline-Variante gilt: „Entscheidungen speichern“ lädt eine separate JSON-Datei herunter. Vor dem Schließen sichern; beim nächsten Öffnen über „Entscheidungen laden“ fortsetzen. Der Download verändert weder Originaldaten noch Modelloutput. Für eine validierte Prüfversion im Laufverzeichnis:
 
 ```bash
-python /pfad/zum/programm/review_queue.py --queue-json review_queue.json --import-decisions /pfad/zum/download/review_decisions_draft.json --decisions-out review_decisions_v1.json
+python /pfad/zum/programm/src/review_queue.py --queue-json review_queue.json --import-decisions /pfad/zum/download/review_decisions_draft.json --decisions-out review_decisions_v1.json
 ```
 
 Die Prüfung weist fremde Versionen, doppelte Fälle, unbekannte Codes, widersprüchliche Entscheidungen und fehlende Pflichtangaben ab. Ein vorhandenes Ziel wird nicht überschrieben; für weitere Prüfstände einen neuen Namen wählen. Die Entscheidungen werden nicht automatisch in MAXQDA oder die Eingabe-CSV zurückgeschrieben. Prüflisten und Entscheidungen können echte Interviewtexte enthalten und gehören ausschließlich in die private Ablage.

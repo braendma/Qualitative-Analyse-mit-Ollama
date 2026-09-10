@@ -3,7 +3,7 @@ const $ = id => document.getElementById(id);
 const tokenKey = 'qualitative-session-' + location.port;
 const token = location.hash.slice(1) || sessionStorage.getItem(tokenKey) || '';
 if (location.hash) { sessionStorage.setItem(tokenKey, token); history.replaceState(null, '', '/'); }
-let state, project, jobs = [], viewing = 'project', objectUrl = null, polling = false, projectRequest = 0;
+let state, project, jobs = [], viewing = 'project', objectUrl = null, polling = false, projectRequest = 0, artifactRequest = 0;
 const names = {project:'Projekt & Dateien',check:'Eingaben prüfen',analysis:'Analyse',results:'Ergebnisse',telegram:'Telegram-Updates'};
 const moduleHelp = {
   clusterer:'Gruppiert Textstellen innerhalb eines Codepfads zu inhaltlichen Clustern.',
@@ -34,7 +34,7 @@ const columnLabels = {segment:'Text / Segment *',person:'Person / Dokument *',co
 const bookLabels = {kategorie:'Kategorie *',unterkategorie:'Unterkategorie',auspraegung:'Ausprägung',facette:'Facette',definition:'Definition *',ankerbeispiel:'Ankerbeispiel'};
 const aliases = {segment:['Segment','Text','Segmenttext'],person:['Dokumentname','Dokument','Person','Interview'],code:['Code','Codes','human_code'],segment_id:['segment_id','Segment-ID','ID'],unit_id:['PassageID','Passage-ID','unit_id'],kategorie:['Kategorie','Hauptkategorie'],unterkategorie:['Unterkategorie','Subkategorie'],auspraegung:['Ausprägung','Auspraegung'],facette:['Facette'],definition:['Definition','Beschreibung'],ankerbeispiel:['Ankerbeispiel','Beispiel']};
 function el(tag, text, className) { const n=document.createElement(tag); if(text!==undefined)n.textContent=text; if(className)n.className=className; return n; }
-function message(text, error=false) { $('message').textContent=text; $('message').className=error?'error':''; $('message').hidden=false; if($('sheet-dialog').open)$('sheet-error').textContent=error?text:''; }
+function message(text, error=false) { $('message').textContent=text; $('message').className=error?'error':''; $('message').hidden=false; if($('sheet-dialog').open)$('sheet-error').textContent=error?text:''; for(const dialog of document.querySelectorAll('dialog[open]')){let box=dialog.querySelector('.dialog-error');if(!box){box=el('p',undefined,'dialog-error error');box.setAttribute('role','alert');dialog.append(box);}box.textContent=error?text:'';} }
 async function api(path, data) {
   const response=await fetch('/api/'+path,{method:data===undefined?'GET':'POST',headers:{'X-App-Token':token,...(data===undefined?{}:{'Content-Type':'application/json'})},body:data===undefined?undefined:JSON.stringify(data)});
   const result=await response.json(); if(!response.ok)throw new Error(result.error || 'Anfrage fehlgeschlagen.'); return result;
@@ -94,12 +94,16 @@ function loadFields(){
 }
 async function openProject(id){
   if(!id){$('projects').value=project?.id||'';return;}
+  if(typeof finishReviewSave==='function')await finishReviewSave();
   const request=++projectRequest, loaded=await api('project?project='+id);
+  if(request!==projectRequest)return;
+  if(typeof finishReviewSave==='function')await finishReviewSave();
   if(request!==projectRequest)return;
   project=loaded;closeViewer();jobs=null;$('projects').value=id;$('welcome').hidden=true;
   document.querySelectorAll('.project-content').forEach(n=>n.hidden=false);
   $('project-subtitle').textContent=project.name+(project.demo?' · Künstliche Beispieldaten':' · Lokales Projekt');
-  $('validation-result').hidden=true;loadFields();await refreshJobs();
+  $('validation-result').hidden=true;$('category-result').replaceChildren();$('category-baseline').replaceChildren(new Option('Letzte gültige Version',''));loadFields();
+  $('lineage-note').hidden=!project.review_provenance;$('lineage-note').textContent=project.review_provenance?.note||'';await refreshJobs();
 }
 function settings(){
   const columns={},book_columns={};Object.keys(columnLabels).forEach(k=>columns[k]=$('segment-columns-'+k).value);
@@ -125,6 +129,13 @@ function runCard(job,results=false){
   const completed=job.completed?.length||0,total=job.modules?.length||0,progress=el('progress');progress.max=total||1;progress.value=completed;
   card.append(progress,el('p',`${completed} von ${total} Modulen abgeschlossen`,'hint'));
   if(job.current&&job.status==='running')card.append(el('p','Aktuell: '+(job.modules.find(m=>m.id===job.current)?.name||job.current)));
+  if(job.review_provenance)card.append(el('p',job.review_provenance.note,'selection-summary'));
+  if(job.progress_detail&&job.status==='running'){
+    const d=job.progress_detail,unit={passages:'Passagen',rows:'Codierzeilen',batches:'Prüfblöcke'}[d.unit];
+    if(unit&&Number.isInteger(d.total)){const p=el('progress');p.max=d.total||1;p.value=d.completed||0;card.append(p,el('p',`${d.completed||0} von ${d.total} ${unit} bearbeitet`));}
+    card.append(el('p',`${d.requests||0} Modellantworten empfangen`+(d.request_active?' · Modellanfrage läuft':''),'hint'));
+    if(d.last_response_at)card.append(el('p','Letzte Modellantwort: '+new Date(d.last_response_at*1000).toLocaleTimeString('de-DE'),'hint'));
+  }
   if(job.pause_requested)card.append(el('p','Pause angefordert. Das laufende Modul wird noch abgeschlossen.','hint'));
   if(job.error)card.append(el('p',job.error));
   const actions=el('div',undefined,'actions');
@@ -132,6 +143,7 @@ function runCard(job,results=false){
   if(['failed','paused','interrupted'].includes(job.status)){const b=el('button','Diesen Lauf fortsetzen');action(b,async()=>{await api('start',{project:project.id,resume:job.id});message('Wiederaufnahme mit der ursprünglichen Dateiversion und den ursprünglichen Einstellungen gestartet.');await refreshJobs();});actions.append(b);}
   const log=el('button','Laufprotokoll herunterladen','small secondary');action(log,()=>artifact(job,'console.log',false));actions.append(log);card.append(actions);
   if(results){
+    if(job.files?.includes('review_queue.json')){const b=el('button','Codierungen im Projekt prüfen');action(b,()=>openReview(job));card.append(b);}
     const list=el('div',undefined,'result-list');
     const files=[...(job.files||[])].sort((a,b)=>Number(b==='gesamtbericht.md')-Number(a==='gesamtbericht.md'));
     files.forEach(name=>{const row=el('div',undefined,'result-row');row.append(el('span',name));const view=el('button','Ansehen','small secondary'),download=el('button','Speichern','small secondary');action(view,()=>artifact(job,name,true));action(download,()=>artifact(job,name,false));row.append(view,download);list.append(row);});
@@ -150,17 +162,32 @@ async function refreshJobs(){
   jobs.forEach(j=>{$('run-cards').append(runCard(j));$('result-cards').append(runCard(j,true));});
 }
 async function artifact(job,name,preview){
-  const pid=needProject(),query=new URLSearchParams({project:pid,job:job.id,name});
+  const pid=needProject(),request=preview?++artifactRequest:0,query=new URLSearchParams({project:pid,job:job.id,name});
   const response=await fetch('/api/artifact?'+query,{headers:{'X-App-Token':token}});
   if(!response.ok)throw new Error((await response.json()).error);
   const blob=await response.blob();
-  if(preview&&project?.id!==pid)return;
+  if(preview&&(project?.id!==pid||request!==artifactRequest))return;
   if(!preview){const url=URL.createObjectURL(blob),a=el('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);return;}
+  const isImage=/\.(png|jpg|jpeg|webp)$/i.test(name),rawText=isImage?'':await blob.text();
+  if(typeof finishReviewSave==='function')await finishReviewSave();
+  if(project?.id!==pid||request!==artifactRequest)return;
+  if(typeof closeReview==='function')closeReview();
+  $('formatted-preview').hidden=true;$('formatted-preview').replaceChildren();
   $('viewer').hidden=false;$('viewer-name').textContent=name;$('text-preview').hidden=true;$('html-preview').hidden=true;$('image-preview').hidden=true;
   if(objectUrl)URL.revokeObjectURL(objectUrl);
-  if(name.endsWith('.html')){$('html-preview').srcdoc=await blob.text();$('html-preview').hidden=false;}
+  if(name.endsWith('.html')){$('html-preview').srcdoc=rawText;$('html-preview').hidden=false;}
   else if(/\.(png|jpg|jpeg|webp)$/i.test(name)){objectUrl=URL.createObjectURL(blob);$('image-preview').src=objectUrl;$('image-preview').hidden=false;}
-  else{$('text-preview').textContent=(await blob.text()).slice(0,1000000);$('text-preview').hidden=false;}
+  else{
+    const text=rawText.slice(0,1000000);
+    if(name.endsWith('.md')){markdownReport(text,$('formatted-preview'));$('formatted-preview').hidden=false;}
+    else if(name.endsWith('.json')){
+      let data;try{data=JSON.parse(text);}catch{}
+      const rows=Array.isArray(data)?data:data?.results||data?.cases||data?.proposals||data?.decisions;
+      if(Array.isArray(rows)&&rows.every(r=>r&&typeof r==='object'&&!Array.isArray(r))){searchableRows(rows,$('formatted-preview'));$('formatted-preview').hidden=false;}
+      else{$('text-preview').textContent=text;$('text-preview').hidden=false;}
+    }else{$('text-preview').textContent=text;$('text-preview').hidden=false;}
+    if(rawText.length>1000000){$('formatted-preview').hidden=false;$('formatted-preview').append(el('p','Vorschau auf die ersten 1.000.000 Zeichen begrenzt. Vollständige Datei über Speichern herunterladen.'));}
+  }
   show('results');$('viewer').scrollIntoView({behavior:'smooth'});
 }
 function renderTelegram(t){
@@ -206,16 +233,23 @@ action($('check-ollama'),async()=>{const r=await api('models');$('model-list').r
 action($('clear-modules'),async()=>{document.querySelectorAll('[name=module]').forEach(n=>n.checked=false);updateModuleSelection();});
 action($('all-modules'),async()=>{document.querySelectorAll('[name=module]').forEach(n=>n.checked=true);updateModuleSelection();});
 action($('coding-modules'),async()=>{document.querySelectorAll('[name=module]').forEach(n=>n.checked=['clusterer','code_verification','blind_coding','coding_agreement'].includes(n.value));updateModuleSelection();});
-function closeViewer(){$('viewer').hidden=true;$('html-preview').removeAttribute('srcdoc');$('text-preview').textContent='';$('image-preview').removeAttribute('src');if(objectUrl){URL.revokeObjectURL(objectUrl);objectUrl=null;}}
-$('close-viewer').addEventListener('click',closeViewer);
+function closeViewer(){if(typeof closeReview==='function')closeReview();artifactRequest++;$('formatted-preview').hidden=true;$('formatted-preview').replaceChildren();$('viewer').hidden=true;$('html-preview').removeAttribute('srcdoc');$('text-preview').textContent='';$('image-preview').removeAttribute('src');if(objectUrl){URL.revokeObjectURL(objectUrl);objectUrl=null;}}
+action($('close-viewer'),async()=>{if(typeof finishReviewSave==='function')await finishReviewSave();closeViewer();});
 $('projects').addEventListener('change',async()=>{try{await openProject($('projects').value);show('project');}catch(e){message(e.message,true);}});
 for(const id of ['new-project','welcome-create'])$(id).addEventListener('click',()=>{$('create-dialog').showModal();$('project-name').focus();});
 $('cancel-create').addEventListener('click',()=>$('create-dialog').close());
-$('create-form').addEventListener('submit',async e=>{e.preventDefault();try{const p=await api('create',{name:$('project-name').value});state.projects.unshift(p);project=p;renderProjects();await openProject(p.id);$('create-dialog').close();show('project');message('Projekt angelegt. Wähle jetzt deine beiden Dateien (XLSX oder CSV).');}catch(err){message(err.message,true);$('create-dialog').close();}});
-action($('demo'),async()=>{const p=await api('create',{name:'Demo · Künstliche Interviews',demo:true});state.projects.unshift(p);project=p;renderProjects();await openProject(p.id);message('Demo geladen: 50 künstliche Codierzeilen und 43 Passagen. Du kannst zuerst die Eingaben prüfen.');});
+$('create-form').addEventListener('submit',async e=>{e.preventDefault();try{if(typeof finishReviewSave==='function')await finishReviewSave();const p=await api('create',{name:$('project-name').value});state.projects.unshift(p);project=p;renderProjects();await openProject(p.id);$('create-dialog').close();show('project');message('Projekt angelegt. Wähle jetzt deine beiden Dateien (XLSX oder CSV).');}catch(err){message(err.message,true);$('create-dialog').close();}});
+action($('demo'),async()=>{if(typeof finishReviewSave==='function')await finishReviewSave();const p=await api('create',{name:'Demo · Künstliche Interviews',demo:true});state.projects.unshift(p);project=p;renderProjects();await openProject(p.id);message('Demo geladen: 50 künstliche Codierzeilen und 43 Passagen. Du kannst zuerst die Eingaben prüfen.');});
 async function init(){try{state=await api('state');renderProjects();renderTelegram(state.telegram);if(state.projects.length)await openProject(state.projects[0].id);}catch(e){message(e.message,true);}}
 setInterval(async()=>{if(!project||polling||!['analysis','results'].includes(viewing))return;polling=true;try{await refreshJobs();}catch(e){message('Verbindung zur lokalen Oberfläche unterbrochen. Startfenster prüfen.',true);}finally{polling=false;}},4000);
 function invalidateCheck(event){if(event.target.closest('#view-project, #view-check, #view-analysis'))$('validation-result').hidden=true;}
 document.addEventListener('input',invalidateCheck);
 document.addEventListener('change',invalidateCheck);
+action($('setup-check'),async()=>{const r=await api('setup-check',{model:$('model').value});$('setup-result').replaceChildren();r.checks.forEach(c=>$('setup-result').append(el('p',(c.ok?'✓ ':'✗ ')+c.name+': '+c.detail)));$('setup-result').append(el('p',r.note,'hint'));});
+action($('model-test'),async()=>{$('model-test-dialog').showModal();});
+$('model-test-cancel').onclick=()=>$('model-test-dialog').close();
+action($('model-test-confirm'),async()=>{$('model-test-dialog').close();message('Kurzer lokaler Modelltest läuft …');const r=await api('model-test',{model:$('model').value});message(r.message);});
+action($('category-refresh'),async()=>{const pid=needProject(),r=await api('category-versions?project='+pid);if(project?.id!==pid)return;$('category-baseline').replaceChildren(new Option('Letzte gültige Version',''));r.versions.forEach(v=>$('category-baseline').add(new Option(new Date(v.created*1000).toLocaleString('de-DE')+' · '+v.id.slice(0,8),v.id)));});
+action($('category-compare'),async()=>{const pid=needProject(),r=await api('category-compare',{project:pid,settings:settings(),baseline:$('category-baseline').value||null});if(project?.id!==pid)return;const box=$('category-result');box.replaceChildren(el('p',r.note));if(!r.baseline)return;box.append(el('p',`${r.added.length} neue, ${r.removed.length} entfernte, ${r.changed.length} geänderte Kategorien · ${r.affected_count} betroffene Codierzeilen`));r.added.forEach(c=>box.append(el('p','Neu: '+c.code+' — '+c.definition)));r.removed.forEach(c=>box.append(el('p','Entfernt: '+c.code)));r.changed.forEach(c=>{const d=el('details');d.append(el('summary','Geändert: '+c.code),el('p','Bisher: '+c.before.definition+' · '+c.before.ankerbeispiel),el('p','Jetzt: '+c.after.definition+' · '+c.after.ankerbeispiel));box.append(d);});if(r.affected.length){const d=el('details');d.append(el('summary','Betroffene Codierzeilen (maximal 200)'));r.affected.forEach(c=>d.append(el('p',c.segment_id+' · '+c.code)));box.append(d);}});
+if(typeof initReviews==='function')initReviews();
 init();

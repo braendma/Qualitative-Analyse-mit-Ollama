@@ -38,6 +38,8 @@ def _duration(seconds: float | None) -> str:
 
 
 def _show_progress(current: int, total: int, started: float) -> None:
+    from progress_events import update_progress
+    update_progress(completed=current,total=total,unit='rows')
     width = 28
     ratio = (current / total) if total else 1.0
     filled = min(width, int(width * ratio))
@@ -223,5 +225,4 @@ def render_markdown(output: dict) -> str:
         quote = row['validated_quote'].replace('\n', '\n> ')
         lines.append(f"\n> **{row['segment_id']}** — {quote}\n\n")
     return "".join(lines)
-
 

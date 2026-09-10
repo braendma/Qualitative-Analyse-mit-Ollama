@@ -125,7 +125,10 @@ def run_step(module: dict, command: list[str], cwd: Path):
         path = cwd / output
         if path.is_file():
             previous[output] = (path.stat().st_mtime_ns, file_hash(path))
-    child_env = {**os.environ, "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"}
+    progress_path = cwd / 'progress.json'
+    atomic_json(progress_path, {'module':module['id'],'completed':0,'total':None,'requests':0,'request_active':False})
+    child_env = {**os.environ, "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8",
+                 'WORKFLOW_MODULE':module['id'],'WORKFLOW_PROGRESS_FILE':str(progress_path)}
     result = subprocess.run(command, cwd=str(cwd), text=True, encoding="utf-8", env=child_env)
     if result.returncode != 0:
         raise RuntimeError(
@@ -190,6 +193,12 @@ def build_full_report(output_dir: Path, modules: list[dict], created_at: str) ->
         "Dieser Bericht wurde automatisch aus den in der YAML aktivierten Analysestufen zusammengestellt.\n\n",
         "## Analyseschritte\n\n",
     ]
+
+    snapshot = output_dir / 'config_snapshot.yaml'
+    if snapshot.exists():
+        source = yaml.safe_load(snapshot.read_text(encoding='utf-8')).get('review_provenance')
+        if source:
+            report.insert(2, '**Auswertung nach manueller Prüfung:** '+source.get('note','Keine unabhängige Validierung.')+'\n\n')
 
     for idx, (_, filename, title) in enumerate(report_modules, start=1):
         report.append(f"- {idx}. {title} (`{filename}`)\n")
@@ -258,6 +267,7 @@ def main(argv=None):
                           "modules": len(modules), "model_calls": 0}))
         return
     provenance = {
+        'review_provenance': config.get('review_provenance'),
         "input_sha256": file_hash(csv_path),
         "config_sha256": file_hash(config_path),
         "code": {p.name: file_hash(p) for p in sorted([*script_dir.glob("*.py"), *script_dir.glob("*.html")])},

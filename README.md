@@ -4,9 +4,11 @@ Mit diesem Programm kannst du bereits codierte Interviewstellen auswerten und me
 
 Die Auswertung läuft mit einem lokal installierten Ollama-Modell. Modellvorschläge und Berichte müssen fachlich geprüft werden; sie ersetzen keine eigenständige qualitative Analyse.
 
+**Aktueller Hauptzweig: 0.3.0-dev.** Dieser Entwicklungsstand enthält die neue Prüf- und Rückmeldungsfunktion. Eine neue Beta wurde damit noch nicht veröffentlicht; die bisherige Release-Version bleibt 0.2.0-beta.1.
+
 ## Einstieg
 
-- [Version 0.2.0-beta.1: Änderungen und Hinweise zum Umstieg](docs/RELEASE_NOTES.md)
+- [Entwicklungsstand 0.3.0-dev und bisherige Beta: Änderungen und Hinweise zum Umstieg](docs/RELEASE_NOTES.md)
 - [Geprüfte Installation und Paketversionen](docs/INSTALLATION_TEST.md)
 - [Einrichten und öffnen](#einrichten-und-öffnen)
 - [1. Projekt und Dateien auswählen](#1-projekt-und-dateien-auswählen)
@@ -64,7 +66,11 @@ Eine **Passage-ID** verbindet mehrere Codierungen derselben Textstelle derselben
 
 Darunter die Spalten des Kategoriensystems zuordnen, mindestens **Kategorie** und **Definition**. Dann **„Einstellungen speichern & Eingaben prüfen“** anklicken. Die Prüfung meldet beispielsweise fehlende Pflichtangaben, unpassende IDs oder Codes, die im Kategoriensystem fehlen. Sie zeigt bei Erfolg die Zahl der Codierzeilen, Passagen, Personen und Codepfade. Es wird noch keine inhaltliche Modellanalyse durchgeführt.
 
+Unter **„Kategorienversionen vergleichen“** lässt sich eine neue Datei vor dem Speichern mit einer früheren Version vergleichen: neue bzw. entfernte Codes, geänderte Definitionen und betroffene Codierzeilen. Die Vorschau verändert keine Codierungen.
+
 ## 3. Module auswählen und Analyse starten
+
+Unter **„Analyse“** kannst du zunächst mit **„Systemprüfung ohne Modellaufruf“** Pakete, Schreibrechte, Speicher und die lokale Ollama-Verbindung kontrollieren. Ein gesonderter kurzer Modelltest startet erst nach Bestätigung.
 
 Unter **„Analyse“** stehen die verfügbaren Module mit Häkchen, kurzer Erklärung und benötigten Vorstufen. Mit **„Auswahl leeren“** kannst du eine eigene Zusammenstellung beginnen. **„Alle auswählen“** und **„Codierungen prüfen“** setzen eine Vorauswahl, die du anschließend anpassen kannst.
 
@@ -74,7 +80,7 @@ Unter **„Analyse“** stehen die verfügbaren Module mit Häkchen, kurzer Erkl
 
 Weiter unten ein **lokal installiertes Modell** auswählen. **„Installierte Modelle anzeigen“** fragt nur die Modellliste ab; es lädt kein Modell herunter und startet keine Inferenz. Zusätzliche Einstellungen wie Kontextfenster, Antwortlimit, Temperatur und Thinking liegen unter **„Erweiterte Modelleinstellungen“**.
 
-Mit **„Prüfen & neuen Lauf starten“** werden die Einstellungen gespeichert, die Eingaben erneut geprüft und anschließend die ausgewählten Module samt Vorstufen ausgeführt. Unter dem Startknopf erscheinen Fortschritt und aktuelles Modul.
+Mit **„Prüfen & neuen Lauf starten“** werden die Einstellungen gespeichert, die Eingaben erneut geprüft und anschließend die ausgewählten Module samt Vorstufen ausgeführt. Unter dem Startknopf erscheinen Fortschritt, aktuelles Modul und empfangene Modellantworten. Die Codierprüfungen und Kategorienvorschläge zeigen zusätzlich bearbeitete Zeilen, Passagen oder Prüfblöcke.
 
 **„Nach diesem Modul pausieren“** wartet das laufende Modul ab. **„Diesen Lauf fortsetzen“** setzt einen pausierten oder fehlgeschlagenen Lauf mit seinen ursprünglichen Dateien und Einstellungen fort. Nach Änderungen am Programm kann ein neuer Lauf erforderlich sein; ältere Checkpoints werden nicht automatisch migriert.
 
@@ -82,7 +88,15 @@ Mit **„Prüfen & neuen Lauf starten“** werden die Einstellungen gespeichert,
 
 Unter **„Ergebnisse“** einen Lauf und dann **„Ansehen“** oder **„Speichern“** bei der gewünschten Datei wählen. Je nach ausgeführten Modulen entstehen Gesamtbericht, Einzelberichte, Grafiken und die interaktive Prüfliste. Die Prüfliste erscheint nur, wenn ihr Modul einschließlich der benötigten Vorstufen ausgeführt wurde.
 
-In der Prüfliste die Textstelle und die menschliche bzw. modellbasierte Zuordnung fachlich prüfen. Entscheidungen mit **„Entscheidungen speichern“** als separate JSON-Datei sichern und später mit **„Entscheidungen laden“** wieder öffnen. **Es gibt keine automatische Speicherung der Prüfentscheidungen.** Originaldaten werden dabei nicht überschrieben; ein automatischer Rückimport nach MAXQDA ist nicht enthalten.
+In **„Codierungen im Projekt prüfen“** Originaltext und Zuordnungen vergleichen, eine Entscheidung wählen sowie Begründung und Prüfkürzel eintragen. Die Oberfläche speichert Änderungen automatisch als eigene Prüfversionen. Auf **„Im Projekt gespeichert“** achten. Excel und JSON können zusätzlich exportiert werden.
+
+[![Prüfentscheidungen mit automatischer Speicherung, Suche und Excel-Export](docs/screenshots/05-pruefentscheidungen.jpg)](docs/screenshots/05-pruefentscheidungen.jpg)
+
+Sind alle kritischen Fälle abgeschlossen, kannst du einen **Folgelauf mit geprüften Codierungen vorbereiten** oder optional **Kategorienvorschläge** durch das Modell erstellen lassen. Beide Schritte verlangen einen ausdrücklichen Start. Der Folgelauf erhält neue Eingaben und Ergebnisse; Modellvorschläge ändern das Kategoriensystem nicht automatisch. Beurteilungen trainieren das Modell nicht.
+
+[![Änderungen prüfen und eine eigene Eingabeversion für den Folgelauf vorbereiten](docs/screenshots/06-folgelauf-vorbereiten.jpg)](docs/screenshots/06-folgelauf-vorbereiten.jpg)
+
+Die separate Offline-Datei `review_queue.html` benötigt weiterhin manuelles Speichern und Laden ihrer JSON-Entscheidungen. Ein automatischer Rückimport nach MAXQDA ist nicht enthalten. [Vollständige Anleitung zu Prüfung, Export, Folgelauf und Kategorienvorschlägen](docs/PRUEFUNG_UND_FOLGELAUF.md).
 
 ## Optional: Telegram-Updates
 
@@ -90,7 +104,7 @@ Diesen Bereich überspringen, wenn du keine Benachrichtigungen möchtest. Andern
 
 [![Telegram-Einstellungen mit leerem Tokenfeld, Textdateiimport und auswählbaren Benachrichtigungsereignissen](docs/screenshots/04-telegram-optional.jpg)](docs/screenshots/04-telegram-optional.jpg)
 
-Gewünschte Ereignisse auswählen und **„Telegram-Einstellungen speichern“** anklicken. Ein neuer Token ersetzt den bisherigen; ein leeres Tokenfeld behält einen vorhandenen Token bei. **„Testnachricht senden“** versendet ausdrücklich eine Nachricht an den gespeicherten Ziel-Chat. Automatische Meldungen enthalten nur allgemeinen Status und Modulfortschritt, keine Interviewtexte oder Projektnamen. Vollständige Einrichtung: [Telegram-Anleitung](docs/BEDIENOBERFLAECHE.md#telegram-optional-einrichten).
+Gewünschte Ereignisse auswählen und **„Telegram-Einstellungen speichern“** anklicken. Ein neuer Token ersetzt den bisherigen; ein leeres Tokenfeld behält einen vorhandenen Token bei. **„Testnachricht senden“** versendet ausdrücklich eine Nachricht an den gespeicherten Ziel-Chat. Automatische Meldungen enthalten nur allgemeinen Status und Modulfortschritt sowie höchstens alle zwei Minuten veränderte Zwischenstände, keine Interviewtexte oder Projektnamen. Vollständige Einrichtung: [Telegram-Anleitung](docs/BEDIENOBERFLAECHE.md#telegram-optional-einrichten).
 
 ## Wenn etwas nicht funktioniert
 
@@ -211,7 +225,7 @@ Das Modell sagt einmal pro Passage eine Codemenge vorher. Technische Fehler und 
 
 Das zusätzliche Modul `review_queue` erzeugt nach Coding-Agreement und Evidence-Audit `review_queue.html`, `review_queue.json` und `review_queue.md`. Die HTML-Datei lässt sich direkt im Browser öffnen und zeigt Originalpassagen, menschliche Codes, Modellvorschläge, Begründungen und zugehörige Audit-Gegenbelege.
 
-Prüfentscheidungen werden über **„Entscheidungen speichern“** als separate JSON-Datei heruntergeladen und über **„Entscheidungen laden“** wieder eingelesen. Es gibt keine automatische Speicherung. Original-CSV und Modelloutputs werden nicht verändert. Die Validierung einer gespeicherten Prüfversion ist in [EXTENSIONS.md](docs/EXTENSIONS.md) beschrieben.
+In der separaten Offline-HTML-Prüfliste werden Prüfentscheidungen über **„Entscheidungen speichern“** als separate JSON-Datei heruntergeladen und über **„Entscheidungen laden“** wieder eingelesen. Diese Offline-Variante speichert nicht automatisch. Die Projektansicht besitzt dagegen eine eigene automatische Speicherung; siehe [Prüfung und Folgelauf](docs/PRUEFUNG_UND_FOLGELAUF.md). Original-CSV und Modelloutputs werden nicht verändert. Die Validierung einer gespeicherten Prüfversion ist in [EXTENSIONS.md](docs/EXTENSIONS.md) beschrieben.
 
 ---
 
@@ -979,7 +993,7 @@ Insbesondere gilt:
 
 # 🧪 Testbarkeit
 
-Stand 2026-09-10: **67 Python-Tests und vier Browserlogik-Tests** bestehen. Zusätzlich wurden alle **15 Workflow-Module** mit Gemma in Ollama Cloud auf dem künstlichen Datensatz geprüft, eine Gesamtsynthese über zwei Verdichtungsstufen ausgeführt und das Speichern/Laden von Prüfentscheidungen im Browser getestet. Die Cloud-Entwicklungsläufe enthielten dokumentierte Abbrüche und Wiederaufnahmen; sie sind kein unabhängiger Qualitätsbenchmark. Ergebnisse und Grenzen: [TEST_REPORT.md](docs/TEST_REPORT.md).
+Stand 2026-09-10: **78 Python-Tests und acht Browserlogik-Tests** bestehen. Zusätzlich wurden alle **15 Workflow-Module** mit Gemma in Ollama Cloud auf dem künstlichen Datensatz geprüft, eine Gesamtsynthese über zwei Verdichtungsstufen ausgeführt und das Speichern/Laden von Prüfentscheidungen im Browser getestet. Die Cloud-Entwicklungsläufe enthielten dokumentierte Abbrüche und Wiederaufnahmen; sie sind kein unabhängiger Qualitätsbenchmark. Zwei weitere Cloud-Abläufe prüften Kategorienvorschläge aus drei künstlich beurteilten Passagen und eine Folgeanalyse mit korrigierten Codes. Der Windows-Verschlüsselungstest benötigte Zugriff auf das normale Benutzerprofil. Ergebnisse und Grenzen: [TEST_REPORT.md](docs/TEST_REPORT.md).
 
 Durch die modulare JSON-basierte Architektur lassen sich einzelne Stufen unabhängig testen.
 
@@ -1012,7 +1026,7 @@ python -m unittest discover -s tests -v
 Zusätzliche Tests für verspätete Browserantworten und Projektwechsel (Node.js wird nur für diese Entwicklungstests benötigt):
 
 ```bash
-node --test tests/test_local_app_frontend.cjs
+node --test tests/test_local_app_frontend.cjs tests/test_review_frontend.cjs
 ```
 
 ---

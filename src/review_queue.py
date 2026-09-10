@@ -39,7 +39,7 @@ def build_queue(segments, codebook, agreement, verification, blind, audit):
     return content
 
 
-def validate_decisions(queue, payload):
+def validate_decisions(queue, payload, *, draft=False):
     if not isinstance(payload,dict) or payload.get('schema_version')!=1 or payload.get('source_fingerprint')!=queue['source_fingerprint']:
         raise ValueError('Entscheidungen gehören nicht zu dieser Prüfliste/Version.')
     rows = payload.get('decisions')
@@ -62,7 +62,8 @@ def validate_decisions(queue, payload):
         note = row.get('note','')
         reviewer = row.get('reviewer','')
         if not isinstance(note,str) or not isinstance(reviewer,str): raise ValueError('Notiz und prüfende Person müssen Text sein.')
-        if decision!='unresolved' and (not note.strip() or not reviewer.strip()): raise ValueError('Abgeschlossene Entscheidungen benötigen Begründung und prüfende Person.')
+        if len(note)>12000 or len(reviewer)>200: raise ValueError('Notiz oder Name ist zu lang.')
+        if not draft and decision!='unresolved' and (not note.strip() or not reviewer.strip()): raise ValueError('Abgeschlossene Entscheidungen benötigen Begründung und prüfende Person.')
         validated.append({'case_id':cid,'decision':decision,'final_codes':sorted(final),'note':note,'reviewer':reviewer})
     return {'schema_version':1,'source_fingerprint':queue['source_fingerprint'], 'validated_at':datetime.now().isoformat(),'decisions':validated}
 

@@ -21,7 +21,7 @@ function setup(){
     location:{port:'1234',hash:''},sessionStorage:{getItem:()=>''},history:{},
     Option:function(text,value){this.text=text;this.value=value;},
     setInterval(){},setTimeout(){},URL,URLSearchParams,
-    fetch(url,options){return new Promise(resolve=>requests.push({url,options,reply(data){resolve({ok:true,json:async()=>data});}}));}
+    fetch(url,options){return new Promise(resolve=>requests.push({url,options,reply(data){resolve({ok:true,json:async()=>data,blob:async()=>data});}}));}
   });
   vm.runInContext(fs.readFileSync(path.join(__dirname,'../src/local_app.js'),'utf8'),context);
   vm.runInContext("state={defaults:{llm:{},context:{},columns:{}},modules:[],projects:[]};project={id:'first',settings:{},uploads:{}};",context);
@@ -68,4 +68,14 @@ test('upload completion resets only the mapping for that file kind',()=>{
   app.run("project.settings={columns:{code:'custom'},book_columns:{definition:'Description'}};acceptUpload({},'first','segments');");
   assert.equal(app.run('project.settings.columns'),undefined);
   assert.equal(app.run('project.settings.book_columns.definition'),'Description');
+});
+
+test('a delayed report never replaces a newer preview or reopens a closed viewer',async()=>{
+  const app=setup(),old=app.run("artifact({id:'j'},'old.txt',true)"),newer=app.run("artifact({id:'j'},'new.txt',true)");
+  app.requests.find(r=>r.url.includes('name=new.txt')).reply({size:3,text:async()=>'new'});await newer;
+  app.requests.find(r=>r.url.includes('name=old.txt')).reply({size:3,text:async()=>'old'});await old;
+  assert.equal(app.node('viewer-name').textContent,'new.txt');
+  const late=app.run("artifact({id:'j'},'late.txt',true)");app.run('closeViewer()');
+  app.requests.find(r=>r.url.includes('name=late.txt')).reply({size:4,text:async()=>'late'});await late;
+  assert.equal(app.node('viewer').hidden,true);
 });

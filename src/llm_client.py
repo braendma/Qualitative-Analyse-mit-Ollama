@@ -55,11 +55,16 @@ def request_chat(backend, request, settings):
     started = time.monotonic()
     for attempt in range(attempts):
         try:
+            from progress_events import request_event
+            request_event(start=True)
             response = client.chat(**request)
+            request_event()
             logger.info('LLM request completed: model=%s attempt=%s elapsed=%.2fs',
                         request['model'], attempt + 1, time.monotonic() - started)
             return response
         except Exception as exc:
+            from progress_events import update_progress
+            update_progress(request_active=False)
             status = getattr(exc, 'status_code', None)
             error = str(getattr(exc, 'error', exc)).lower()
             if 'think' in request and any(s in error for s in (

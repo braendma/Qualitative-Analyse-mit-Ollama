@@ -1,3 +1,19 @@
+# Review workflow validation · 0.3.0-dev
+
+Date: 2026-09-10. Published predecessor: `b95a74ad0fbb8a47f6c50bb20dad760d00cb2fb4`.
+
+- 78 Python tests exercised the current source. 77 passed in the restricted sandbox; the Windows DPAPI persistence test could not access the normal user-profile encryption context. The complete 10-test desktop/Telegram file then passed outside that restriction, including DPAPI. No local model inference was performed.
+- Eight Node.js tests pass, including serial autosave, edits during an in-flight save, preservation on revision conflict, and stale report responses after closing a preview.
+- New Python coverage includes draft/history persistence after restart, optimistic concurrency, protected HTTP review/export routes, literal-text XLSX export, explicit exclusion of uncoded cases, source-preserving follow-up inputs, legacy category versions, proposal reference validation and context limits, numeric progress and mocked Telegram messages.
+- Real browser checks with synthetic data confirmed persisted decisions after reload, the follow-up preview and creation of a separate input revision without launching a model, and formatted viewing of the proposal report. Screenshots contain artificial text and fabricated reviewer decisions.
+- Two additional real workflows used **Ollama Cloud / gemma4:31b**, exclusively with three passages from the public synthetic demo and invented human judgments. The proposal workflow completed with one model response and produced one grounded suggestion distinguishing practice from transfer. The follow-up clustering/summary workflow completed with five logged successful responses. No original input or category file was replaced. These six responses are a functional integration check, not a quality benchmark or estimate of local Granite performance.
+- The proposal explicitly warned that its interpretation depends on context not always stated in the short passage. No proposal was automatically applied. Larger reviewed collections are split into bounded blocks; cross-block consolidation remains a human task.
+- The existing Python environment was used for this update. The fresh Python 3.13 installation documented in [INSTALLATION_TEST.md](INSTALLATION_TEST.md) tested the preceding beta and was removed afterward; it was not recreated for this change.
+
+Earlier validation records follow and refer to their stated source versions.
+
+---
+
 # Validation of project isolation, imports and directory layout
 
 Date: 2026-09-10. Baseline: `4c53d6b45d6e7305c49f9d76dd0df4fe475f2fc5`.

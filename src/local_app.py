@@ -25,6 +25,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from project_paths import DEFAULT_CONFIG, DEMO_DIR
 import yaml
 from runtime_support import atomic_json, atomic_text
+from review_workspace import ReviewWorkspace, decisions_xlsx
 from telegram_notifications import Telegram, NoRedirect
 
 ROOT = Path(__file__).resolve().parent
@@ -105,7 +106,7 @@ def pid_alive(pid):
         return False
 
 
-class App:
+class App(ReviewWorkspace):
     def __init__(self, directory, template=None):
         self.directory = Path(directory).resolve()
         if os.name == 'nt' and not str(self.directory).startswith('\\\\?\\'):
@@ -186,7 +187,10 @@ class App:
         settings.pop('columns' if kind == 'segments' else 'book_columns', None)
         atomic_json(directory/'settings.json', settings)
         project = read_json(directory/'project.json')
+        if project.get('revision'): project['last_valid_revision']=project['revision']
         project['revision'] = None
+        # Replacing either input starts a new manual input lineage.
+        project.pop('review_provenance',None)
         atomic_json(directory/'project.json', project)
         return uploads
 
@@ -196,6 +200,8 @@ class App:
         if not all(k in uploads for k in ('segments','codebook')):
             raise ValueError('Bitte Interviewdatei und Kategoriensystem auswählen.')
         cfg = copy.deepcopy(self.template)
+        provenance=read_json(directory/'project.json').get('review_provenance')
+        if provenance: cfg['review_provenance']=provenance
         model = str(settings.get('model', cfg['llm']['model'])).strip()
         if not re.fullmatch(r'[A-Za-z0-9_.:/-]{1,160}',model) or 'cloud' in model.lower():
             raise ValueError('Bitte einen lokalen Ollama-Modellnamen ohne Cloud-Verweis wählen.')
@@ -273,8 +279,10 @@ class App:
             cfg['paths']['category_system_csv'] = str(revision/'codebook.csv')
             atomic_text(revision/'config.yaml',yaml.safe_dump(cfg,allow_unicode=True,sort_keys=False))
             checked = self.validate_config(revision/'config.yaml')
+            atomic_json(revision/'settings.json',settings)
             data = read_json(directory/'project.json')
             data['revision'] = revision.name
+            data['last_valid_revision'] = revision.name
             atomic_json(directory/'settings.json',settings)
             atomic_json(directory/'project.json',data)
             return checked
@@ -326,9 +334,13 @@ class App:
                            current=manifest.get('current_module'),
                            error=stored_error if stored_status == 'failed' else manifest.get('error',''))
                 job['run']=manifests[0].parent.name
+                detail=read_json(manifests[0].parent/'progress.json',{})
+                if detail.get('module')==job.get('current'):
+                    job['progress_detail']=detail
                 if job['status']=='running' and not pid_alive(job.get('pid')):
                     job['status']='interrupted'
                 cfg=yaml.safe_load(Path(job['config']).read_text(encoding='utf-8'))
+                job['review_provenance']=cfg.get('review_provenance')
                 outputs={f for m in cfg['pipeline']['modules'] if m.get('enabled',True) for f in m.get('outputs',[])}
                 outputs.add('gesamtbericht.md')
                 job['files']=[f for f in sorted(outputs) if safe_child(manifests[0].parent,f).is_file() and not f.endswith('.log')]
@@ -343,7 +355,7 @@ class App:
             results.append(job)
         return sorted(results,key=lambda j:j['created'],reverse=True)
 
-    def start(self, pid, resume=None):
+    def start(self, pid, resume=None, prepared_config=None):
         with self.lock:
             # One analysis at a time across all projects, including after browser/server restart.
             if self.active is not None or any(j['status']=='running' for p in self.projects() for j in self.jobs(p['id'])):
@@ -360,8 +372,8 @@ class App:
                 config=Path(job['config'])
             else:
                 project=read_json(directory/'project.json')
-                if not project['revision']: raise ValueError('Einstellungen zuerst speichern und Eingaben prüfen.')
-                config=directory/'revisions'/identifier(project['revision'])/'config.yaml'
+                if not prepared_config and not project['revision']: raise ValueError('Einstellungen zuerst speichern und Eingaben prüfen.')
+                config=prepared_config or directory/'revisions'/identifier(project['revision'])/'config.yaml'
                 jid=uuid.uuid4().hex[:20]
                 folder=directory/'jobs'/jid
                 folder.mkdir(parents=True)
@@ -374,7 +386,7 @@ class App:
             pause.unlink(missing_ok=True)
             command=[sys.executable,str(ROOT/'00_WORKFLOW_RUNNER.py'),'--config',str(config),'--output-dir',str(folder/'runs'),'--pause-file',str(pause)]
             if resume: command.extend(['--resume',str(manifests[0].parent)])
-            env={k:v for k,v in os.environ.items() if k not in ('OLLAMA_API_KEY','OLLAMA_HOST','WORKFLOW_CHECKPOINT_DIR','WORKFLOW_FINGERPRINT','WORKFLOW_RUN_ID')}
+            env={k:v for k,v in os.environ.items() if k not in ('OLLAMA_API_KEY','OLLAMA_HOST','WORKFLOW_CHECKPOINT_DIR','WORKFLOW_FINGERPRINT','WORKFLOW_RUN_ID','WORKFLOW_PROGRESS_FILE','WORKFLOW_MODULE')}
             env.update(PYTHONUTF8='1',PYTHONIOENCODING='utf-8',MPLBACKEND='Agg')
             log=open(folder/'console.log','ab')
             try:
@@ -390,6 +402,8 @@ class App:
 
     def monitor(self, folder, process, total):
         last_count=0
+        last_detail=None
+        last_detail_sent=time.monotonic()
         try:
             self.telegram.send('start')
             while process.poll() is None:
@@ -399,6 +413,11 @@ class App:
                     if count>last_count:
                         self.telegram.send('progress',count,total)
                         last_count=count
+                    detail=read_json(manifests[0].parent/'progress.json',{})
+                    marker=(detail.get('module'),detail.get('completed'),detail.get('requests'))
+                    if marker!=last_detail and time.monotonic()-last_detail_sent>=120:
+                        self.telegram.send('progress',count,total,detail=detail)
+                        last_detail,last_detail_sent=marker,time.monotonic()
                 time.sleep(1)
             manifests=list((folder/'runs').glob('*/workflow_manifest.json'))
             manifest=read_json(manifests[0],{}) if manifests else {}
@@ -457,7 +476,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         parsed=urllib.parse.urlparse(self.path)
-        assets={'/':'local_app.html','/app.js':'local_app.js','/app.css':'local_app.css'}
+        assets={'/':'local_app.html','/app.js':'local_app.js','/app.css':'local_app.css',
+                '/review.js':'review_ui.js','/reports.js':'report_viewer.js'}
         if not self.allowed(auth=parsed.path not in assets): return self.json({'error':'Zugriff abgelehnt. Oberfläche über die Startdatei öffnen.'},403)
         try:
             if parsed.path in assets:
@@ -474,6 +494,15 @@ class Handler(BaseHTTPRequestHandler):
             if parsed.path=='/api/project': return self.json(app.project(get('project')))
             if parsed.path=='/api/jobs': return self.json({'jobs':app.jobs(get('project')),'telegram':app.telegram.public()})
             if parsed.path=='/api/models': return self.json(app.models())
+            if parsed.path=='/api/review':return self.json(app.review(get('project'),get('job')))
+            if parsed.path=='/api/category-versions':return self.json({'versions':app.category_versions(get('project'))})
+            if parsed.path=='/api/review-export':
+                loaded=app.review(get('project'),get('job'))
+                if get('format')=='xlsx':
+                    return self.send_bytes(decisions_xlsx(loaded['queue'],loaded['draft']),
+                        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',attachment='Pruefentscheidungen.xlsx')
+                return self.send_bytes(json.dumps(loaded['draft'],ensure_ascii=False).encode('utf-8'),
+                    'application/json',attachment='review_decisions.json')
             if parsed.path=='/api/artifact':
                 path=app.artifact(get('project'),get('job'),get('name'))
                 if path.stat().st_size>100*1024*1024: raise ValueError('Datei ist für den Browser zu groß. Im lokalen Projektordner öffnen.')
@@ -497,6 +526,21 @@ class Handler(BaseHTTPRequestHandler):
                 elif path=='/api/save': result=app.save(data['project'],data['settings'])
                 elif path=='/api/start': result=app.start(data['project'],data.get('resume'))
                 elif path=='/api/pause': result=app.pause(data['project'],data['job'])
+                elif path=='/api/review-save': result=app.save_review(data['project'],data['job'],data['decision'],data['revision'])
+                elif path=='/api/followup-preview': result=app.followup_preview(data['project'],data['job'])
+                elif path=='/api/followup-prepare': result=app.prepare_followup(data['project'],data['job'],data['revision'],data.get('accept_exclusions',False))
+                elif path=='/api/refinement-start': result=app.start_refinement(data['project'],data['job'],data['revision'])
+                elif path=='/api/category-compare': result=app.compare_categories(data['project'],data['settings'],data.get('baseline'))
+                elif path=='/api/setup-check':
+                    from setup_checks import check_setup
+                    result=check_setup(app,str(data.get('model','')))
+                elif path=='/api/model-test':
+                    from setup_checks import test_local_model
+                    from llm_client import LLMError
+                    if app.active is not None or any(j['status']=='running' for p in app.projects() for j in app.jobs(p['id'])):
+                        raise ValueError('Während einer Analyse keinen zusätzlichen Modelltest starten.')
+                    try:result=test_local_model(app,str(data.get('model','')))
+                    except LLMError as exc:raise ValueError(str(exc)) from None
                 elif path=='/api/telegram': result=app.telegram.save(data)
                 elif path=='/api/telegram-test': result={'sent':app.telegram.send('start',test=True)}
                 else: return self.json({'error':'Nicht gefunden.'},404)
