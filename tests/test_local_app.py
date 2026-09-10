@@ -14,7 +14,7 @@ from unittest.mock import patch
 import yaml
 
 ROOT=Path(__file__).resolve().parents[1]
-sys.path.insert(0,str(ROOT))
+sys.path.insert(0,str(ROOT/'src'))
 from local_app import App, make_server, safe_child, csv_info
 from telegram_notifications import Telegram
 
@@ -27,6 +27,42 @@ def settings(app):
 
 
 class DesktopTests(unittest.TestCase):
+    def test_invalid_save_keeps_last_valid_revision_and_settings(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            app=App(tmp);pid=app.create('Demo',True)['id'];opts=settings(app)
+            app.save(pid,opts)
+            previous=app.project(pid)
+            # Every row gets a different "person" but repeated passage IDs remain.
+            invalid=copy.deepcopy(opts);invalid['columns']['person']='segment_id'
+            with self.assertRaises(ValueError):app.save(pid,invalid)
+            self.assertEqual(app.project(pid)['revision'],previous['revision'])
+            self.assertEqual(app.project(pid)['settings'],previous['settings'])
+
+    def test_upload_invalidates_revision_and_only_its_column_mapping(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            app=App(tmp);pid=app.create('Demo',True)['id'];opts=settings(app)
+            app.save(pid,opts)
+            app.upload(pid,'segments','new.csv',base64.b64encode((ROOT/'demo/maxqda_export.csv').read_bytes()).decode())
+            current=app.project(pid)
+            self.assertIsNone(current['revision'])
+            self.assertNotIn('columns',current['settings'])
+            self.assertEqual(current['settings']['book_columns'],opts['book_columns'])
+            with self.assertRaisesRegex(ValueError,'zuerst speichern'):app.start(pid)
+
+    def test_failed_resume_is_not_reported_as_old_pause(self):
+        from runtime_support import atomic_json
+        with tempfile.TemporaryDirectory() as tmp:
+            app=App(tmp);pid=app.create('Demo',True)['id'];app.save(pid,settings(app))
+            directory=app.project_dir(pid);cfg=directory/'revisions'/app.project(pid)['revision']/'config.yaml'
+            folder=directory/'jobs'/('a'*20);run=folder/'runs'/'old';run.mkdir(parents=True)
+            atomic_json(run/'workflow_manifest.json',{'status':'paused','completed_steps':['clusterer']})
+            job={'id':'a'*20,'created':1,'config':str(cfg),'status':'failed','error':'Resume rejected','pid':123,'modules':[]}
+            atomic_json(folder/'job.json',job)
+            self.assertEqual(app.jobs(pid)[0]['status'],'failed')
+            self.assertEqual(app.jobs(pid)[0]['error'],'Resume rejected')
+            atomic_json(folder/'job.json',{**job,'status':'running','error':''})
+            with patch('local_app.pid_alive',return_value=True):self.assertEqual(app.jobs(pid)[0]['status'],'running')
+
     def test_demo_mapping_validation_and_immutable_revisions(self):
         with tempfile.TemporaryDirectory() as tmp:
             app=App(tmp);project=app.create('Demo',True);pid=project['id'];opts=settings(app)

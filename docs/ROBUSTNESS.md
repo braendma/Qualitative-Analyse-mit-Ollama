@@ -2,12 +2,12 @@
 
 ## Ausführen und fortsetzen
 
-Die öffentliche `config_v2.yaml` verwendet lokale Inferenz über `http://localhost:11434` mit Granite. Das Beispielmaterial ist vollständig synthetisch; siehe [DEMO_DATA.md](DEMO_DATA.md). Private Daten und projektspezifische Konfigurationen gehören in eine separate lokale Arbeitskopie.
+Die öffentliche `config/config_v2.yaml` verwendet lokale Inferenz über `http://localhost:11434` mit Granite. Das Beispielmaterial ist vollständig synthetisch; siehe [DEMO_DATA.md](DEMO_DATA.md). Private Daten und projektspezifische Konfigurationen gehören in eine separate lokale Arbeitskopie.
 
 ```bash
-python 00_WORKFLOW_RUNNER.py --validate-only
-python 00_WORKFLOW_RUNNER.py --config config_v2.yaml
-python 00_WORKFLOW_RUNNER.py --config config_v2.yaml --resume workflow_output/LAUF-ID
+python run_workflow.py --validate-only
+python run_workflow.py --config config_v2.yaml
+python run_workflow.py --config config_v2.yaml --resume workflow_output/LAUF-ID
 ```
 
 Jeder neue Lauf erhält ein eigenes Verzeichnis unter `workflow_output`. Darin stehen der Gesamtbericht, die Konfigurationskopie und das Manifest mit Lauf-ID, SHA-256-Prüfsummen, Modellparametern, Codeversion und Abhängigkeitsversionen. JSON- und Markdown-Ergebnisse werden atomar geschrieben. Ein Modul darf weder unveränderte alte Dateien noch unvollständige Ergebnisse als Erfolg melden.

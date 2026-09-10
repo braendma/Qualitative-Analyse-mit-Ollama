@@ -2,7 +2,7 @@
 import csv
 from pathlib import Path
 
-ROOT=Path(__file__).resolve().parents[1]
+ROOT=Path(__file__).resolve().parents[1]/'demo'
 CASES=[
     (('Lernangebot','Praxis','Übertragung','gelingt'),'Gelerntes wurde in einer konkreten Arbeitssituation erfolgreich angewendet.',[
         'Die Fehlersuche aus dem Kurs konnte ich am nächsten Tag an unserem Übungsgerät wiederholen. Erst danach habe ich den Ablauf verstanden.',

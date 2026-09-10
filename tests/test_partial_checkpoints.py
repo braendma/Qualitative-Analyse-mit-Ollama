@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 ROOT=Path(__file__).resolve().parents[1]
-sys.path.insert(0,str(ROOT))
+sys.path.insert(0,str(ROOT/'src'))
 from runtime_support import PartCheckpoint,atomic_json
 import relation_analysis_core as relation
 import evidence_audit_core as audit

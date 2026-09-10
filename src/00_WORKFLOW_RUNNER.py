@@ -4,9 +4,10 @@
 """Generischer YAML-gesteuerter Workflow-Runner.
 
 Neue Analysemodule werden ausschließlich in config_v2.yaml unter
-`pipeline.modules` deklariert. workflow.py muss dafür nicht angepasst werden.
+`pipeline.modules` deklariert. Der Runner muss dafür nicht angepasst werden.
 """
 
+from project_paths import DEFAULT_CONFIG, DEFAULT_OUTPUT
 import argparse
 import os
 import uuid
@@ -212,9 +213,9 @@ def main(argv=None):
     parser = argparse.ArgumentParser(
         description="Generischer YAML-gesteuerter qualitativer Analyse-Workflow"
     )
-    parser.add_argument("--config", "-c", default="config_v2.yaml")
+    parser.add_argument("--config", "-c", default=str(DEFAULT_CONFIG))
     parser.add_argument("--csv", "-i", default=None)
-    parser.add_argument("--output-dir", "-o", default="workflow_output")
+    parser.add_argument("--output-dir", "-o", default=str(DEFAULT_OUTPUT))
     parser.add_argument("--log-raw", action="store_true")
     parser.add_argument("--resume", default=None, help="Laufverzeichnis eines unterbrochenen Laufs")
     parser.add_argument("--pause-file", default=None, help="Nach dem aktuellen Modul pausieren, sobald diese Datei existiert")
@@ -222,7 +223,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     script_dir = Path(__file__).resolve().parent
-    config_path = resolve_path(script_dir, args.config)
+    config_path = resolve_path(Path.cwd(), args.config)
     if not config_path.is_file():
         raise FileNotFoundError(f"Config nicht gefunden: {config_path}")
 
@@ -288,7 +289,7 @@ def main(argv=None):
                         raise ValueError(f"Wiederaufnahme abgelehnt: Output verändert oder fehlt: {filename}")
     else:
         run_id = datetime.now().strftime("%Y%m%dT%H%M%S") + "-" + uuid.uuid4().hex[:8]
-        output_dir = resolve_path(script_dir, args.output_dir) / run_id
+        output_dir = resolve_path(Path.cwd(), args.output_dir) / run_id
         output_dir.mkdir(parents=True, exist_ok=False)
         completed_steps = []
         manifest = {"run_id": run_id, "started_at": datetime.now().isoformat(),

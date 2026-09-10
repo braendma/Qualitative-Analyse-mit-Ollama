@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+from project_paths import DEFAULT_CONFIG
 import argparse
 import json
 from runtime_support import atomic_json, atomic_text
@@ -38,7 +39,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(
         description="Gesamtsynthese aus frei deklarierbaren analytischen JSON-Quellen"
     )
-    parser.add_argument("--config", "-c", default="config_v2.yaml")
+    parser.add_argument("--config", "-c", default=str(DEFAULT_CONFIG))
     parser.add_argument(
         "--source-json",
         action="append",

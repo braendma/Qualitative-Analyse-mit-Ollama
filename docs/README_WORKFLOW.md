@@ -5,7 +5,7 @@ Mehrfachcodierung, Prüfliste und mehrstufige Gesamtsynthese: [EXTENSIONS.md](EX
 Der YAML-gesteuerte Workflow enthält drei zusätzliche Module. Der generische
 Runner `00_WORKFLOW_RUNNER.py` wurde dafür nicht verändert; Aktivierung,
 Abhängigkeiten, Argumente, Outputs und Berichtseinbindung stehen ausschließlich
-unter `pipeline.modules` in `config_v2.yaml`.
+unter `pipeline.modules` in `config/config_v2.yaml`.
 
 ## Eingaben
 
@@ -87,7 +87,7 @@ keinen Raw-Audit, weil dieses Modul kein LLM aufruft.
 Start des vollständigen Workflows:
 
 ```bash
-python 00_WORKFLOW_RUNNER.py
+python run_workflow.py
 ```
 
 Für Tests liegt unter `tests/` ein synthetischer semikolon-getrennter Datensatz

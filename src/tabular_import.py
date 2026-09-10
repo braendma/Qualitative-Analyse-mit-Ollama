@@ -28,7 +28,9 @@ def xlsx_csv(raw, sheet=None):
     except Exception:
         raise ValueError('Die Datei ist keine lesbare XLSX-Arbeitsmappe. Bitte als .xlsx ohne Kennwort speichern.') from None
     try:
-        sheets = workbook.sheetnames
+        sheets = [ws.title for ws in workbook.worksheets]
+        if not sheets:
+            raise ValueError('Die XLSX-Datei enthält kein Tabellenblatt mit Zellen.')
         if sheet is None and len(sheets) > 1:
             return None, {'requires_sheet': True, 'sheets': sheets}
         selected = sheet if sheet is not None else sheets[0]
@@ -37,6 +39,8 @@ def xlsx_csv(raw, sheet=None):
         ws = workbook[selected]
         if (ws.max_row or 0) > MAX_ROWS or (ws.max_column or 0) > MAX_COLUMNS:
             raise ValueError('XLSX-Blätter dürfen höchstens 100000 Zeilen und 200 Spalten umfassen.')
+        # Some exporters write an incorrect used range; inspect the actual cells.
+        ws.reset_dimensions()
         output = io.StringIO(newline='')
         writer = csv.writer(output, delimiter=';', lineterminator='\n')
         width = None
@@ -76,5 +80,9 @@ def xlsx_csv(raw, sheet=None):
         if len(result) > MAX_BYTES:
             raise ValueError('Die eingelesenen Tabellenwerte sind zu groß (maximal 20 MB als CSV).')
         return result, {'sheet': selected, 'sheets': sheets, 'format': 'xlsx'}
+    except ValueError:
+        raise
+    except Exception:
+        raise ValueError('Das XLSX-Tabellenblatt ist beschädigt oder nicht lesbar. Bitte erneut exportieren.') from None
     finally:
         workbook.close()

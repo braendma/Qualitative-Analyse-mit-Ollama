@@ -24,7 +24,7 @@ class FullPipelineTests(unittest.TestCase):
     def _run_pipeline(self,multi,partial_module=None):
         with tempfile.TemporaryDirectory() as tmp:
             temp=Path(tmp)
-            cfg=yaml.safe_load((ROOT/'config_v2.yaml').read_text(encoding='utf-8'))
+            cfg=yaml.safe_load((ROOT/'config/config_v2.yaml').read_text(encoding='utf-8'))
             cfg['llm']['model']='mock'
             cfg['coding_agreement']['label_mode']='multi_label' if multi else 'unspecified'
             if multi: cfg['llm']['hierarchical_synthesis']={'enabled':True,'force':True,'batch_items':12,'summary_chars':1200}

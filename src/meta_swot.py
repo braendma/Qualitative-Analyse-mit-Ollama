@@ -3,6 +3,7 @@
 
 import yaml
 import logging
+from project_paths import DEFAULT_CONFIG
 import argparse
 import json
 from runtime_support import atomic_json, atomic_text
@@ -42,7 +43,7 @@ def main(argv=None):
     parser.add_argument(
         "--config",
         "-c",
-        default="config_v2.yaml"
+        default=str(DEFAULT_CONFIG)
     )
 
     parser.add_argument(

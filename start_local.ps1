@@ -19,7 +19,7 @@ try {
         } else {
             & $taskLauncher.Source @taskPrefix -c 'import pandas,numpy,matplotlib,yaml,ollama,openpyxl'
             if ($LASTEXITCODE -ne 0) { throw 'Python-Pakete fehlen. Einmal Einrichtung.cmd ausfuehren; dabei werden Pakete aus dem Internet installiert.' }
-            & $taskLauncher.Source @taskPrefix -X utf8 local_app.py
+            & $taskLauncher.Source @taskPrefix -X utf8 src/local_app.py
             exit $LASTEXITCODE
         }
     }
@@ -31,7 +31,7 @@ try {
     } else {
         & $taskPython -c 'import pandas,numpy,matplotlib,yaml,ollama,openpyxl'
         if ($LASTEXITCODE -ne 0) { throw 'Python-Pakete fehlen. Einrichtung.cmd erneut ausfuehren.' }
-        & $taskPython -X utf8 local_app.py
+        & $taskPython -X utf8 src/local_app.py
         if ($LASTEXITCODE -ne 0) { throw 'Die Oberflaeche wurde mit einem Fehler beendet. Siehe Meldung oben.' }
     }
 } catch {

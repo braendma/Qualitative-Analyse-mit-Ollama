@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+from project_paths import DEFAULT_CONFIG
 import argparse
 import json
 from runtime_support import atomic_json, atomic_text
@@ -30,7 +31,7 @@ def configure_logging(log_file: str) -> None:
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Deterministisches Human–LLM Coding Agreement")
-    parser.add_argument("--config", "-c", default="config_v2.yaml")
+    parser.add_argument("--config", "-c", default=str(DEFAULT_CONFIG))
     parser.add_argument("--input-csv", "-i", default=None)
     parser.add_argument("--codebook-csv", default=None)
     parser.add_argument("--verify-json", default="code_verification_v1.json")

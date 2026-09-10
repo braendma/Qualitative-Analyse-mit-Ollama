@@ -9,7 +9,7 @@ from pathlib import Path
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT/'src'))
 
 from blind_coding_core import blind_code_segments
 from code_verification_core import verify_segments
@@ -18,7 +18,7 @@ from coding_validation_common import MockLLM, load_codebook, load_segments
 
 class CodingValidationTests(unittest.TestCase):
     def test_real_config_is_yaml_and_contains_modules(self):
-        config = yaml.safe_load((ROOT / "config_v2.yaml").read_text(encoding="utf-8"))
+        config = yaml.safe_load((ROOT / "config/config_v2.yaml").read_text(encoding="utf-8"))
         modules = {item["id"]: item for item in config["pipeline"]["modules"]}
         self.assertTrue(config["llm"]["model"])
         self.assertTrue(config["paths"]["input_csv"])
@@ -89,7 +89,7 @@ class CodingValidationTests(unittest.TestCase):
     def test_generic_runner_end_to_end_with_mock_llm(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             command = [
-                sys.executable, str(ROOT / "00_WORKFLOW_RUNNER.py"),
+                sys.executable, str(ROOT / "src/00_WORKFLOW_RUNNER.py"),
                 "--config", str(ROOT / "tests" / "config_test.yaml"),
                 "--output-dir", temp_dir,
             ]

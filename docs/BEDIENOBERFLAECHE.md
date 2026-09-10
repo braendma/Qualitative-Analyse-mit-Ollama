@@ -2,7 +2,13 @@
 
 Die Oberfläche führt durch **Projekt → Eingaben prüfen → Analyse → Ergebnisse**. Sie startet den bestehenden Workflow-Runner und speichert unveränderliche Dateiversionen pro Lauf. Python- und YAML-Dateien müssen für die normale Bedienung nicht bearbeitet werden.
 
-Eine bebilderte Schritt-für-Schritt-Anleitung findest du am Anfang der [README](README.md#einstieg). Die folgenden Abschnitte erläutern Details und Sonderfälle.
+Eine bebilderte Schritt-für-Schritt-Anleitung findest du am Anfang der [README](../README.md#einstieg). Die folgenden Abschnitte erläutern Details und Sonderfälle.
+
+## Programmordner und Umstieg
+
+Die Startdateien bleiben im obersten Ordner. Programmcode und Oberfläche liegen unter `src/`, die YAML-Vorlage unter `config/`, künstliche Beispieldaten unter `demo/` und Anleitungen unter `docs/`. Die komplette Ordnerstruktur zusammenlassen.
+
+Ein neues Programmverzeichnis ändert nicht automatisch die private Projektablage unter `%LOCALAPPDATA%\QualitativeOllama`. Bestehende Projekte bleiben dort verfügbar. Nach Änderungen am Programm einen neuen Lauf mit den geprüften Projekteinstellungen starten; frühere Ergebnisse aufbewahren.
 
 ## Einmalig einrichten und starten
 
@@ -11,7 +17,7 @@ Eine bebilderte Schritt-für-Schritt-Anleitung findest du am Anfang der [README]
 3. Ollama starten und ein geeignetes **lokales** Modell installieren. Der Speicherbedarf hängt vom Modell und dem Kontextfenster ab.
 4. `Start_Oberflaeche.cmd` doppelklicken. Im Browser öffnet sich die Oberfläche. Das Startfenster während der Analyse geöffnet lassen.
 
-Falls eine passende Python-Umgebung bereits eingerichtet ist, reicht `python -X utf8 local_app.py`. Auf anderen Betriebssystemen lässt sich die Oberfläche ebenfalls so starten; die Windows-Startdateien und die dauerhafte Windows-Tokenverschlüsselung sind dort nicht verfügbar.
+Falls eine passende Python-Umgebung bereits eingerichtet ist, reicht `python -X utf8 src/local_app.py`. Auf anderen Betriebssystemen lässt sich die Oberfläche ebenfalls so starten; die Windows-Startdateien und die dauerhafte Windows-Tokenverschlüsselung sind dort nicht verfügbar.
 
 Die Oberfläche ist nur an `127.0.0.1` gebunden und wird nicht veröffentlicht. Ein zufälliger Sitzungsschlüssel schützt ihre API. Die angezeigte Startadresse gehört ausschließlich auf diesen PC. Die lokale Ollama-Verbindung ist fest eingestellt; Cloud-Modelle sind in dieser Oberfläche nicht vorgesehen.
 
@@ -97,7 +103,7 @@ Gesendet werden nur feste Meldungstexte wie „Qualitative Analyse: Lauf abgesch
 
 Unter Windows standardmäßig in `%LOCALAPPDATA%\QualitativeOllama`. Darin liegen `projects/` mit Eingabekopien, Einstellungen, Revisionen und Läufen sowie separat `telegram.private.json` mit Einstellungen und gegebenenfalls verschlüsseltem Token. Die Daten gehören außerhalb öffentlicher Repositories. Für eine Sicherung die Oberfläche nach Abschluss eines Laufs schließen und den Projektordner kopieren. Die Telegram-Verschlüsselung ist an das Windows-Benutzerkonto gebunden.
 
-Ein anderer lokaler Speicherort kann mit `python local_app.py --data-dir PFAD` gewählt werden. Eine vertrauenswürdige lokale YAML-Vorlage lässt sich mit `--config PFAD` verwenden. Die Oberfläche erlaubt keine hochgeladenen ausführbaren Pipeline-Konfigurationen. Die Ollama-Modellliste stammt aus dem lokalen [`/api/tags`-Endpunkt](https://docs.ollama.com/api/tags).
+Ein anderer lokaler Speicherort kann mit `python src/local_app.py --data-dir PFAD` gewählt werden. Eine vertrauenswürdige lokale YAML-Vorlage lässt sich mit `--config PFAD` verwenden. Die Oberfläche erlaubt keine hochgeladenen ausführbaren Pipeline-Konfigurationen. Die Ollama-Modellliste stammt aus dem lokalen [`/api/tags`-Endpunkt](https://docs.ollama.com/api/tags).
 
 ## Tests und Grenzen
 

@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 ROOT=Path(__file__).resolve().parents[1]
-sys.path.insert(0,str(ROOT))
+sys.path.insert(0,str(ROOT/'src'))
 from coding_validation_common import Segment,CodebookEntry
 from multi_label_core import blind_code_units,calculate_set_agreement,group_units
 from review_queue import build_queue,validate_decisions,render_queue

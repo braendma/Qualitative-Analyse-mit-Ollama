@@ -1,32 +1,32 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+from project_paths import DEFAULT_CONFIG
 import argparse
 import json
 from runtime_support import atomic_json, atomic_text
 import logging
 import yaml
 
-from contrast_analysis_core import build_contrast_analysis
+from person_comparison_core import build_person_comparison
 
 logging.basicConfig(
     level=logging.DEBUG,
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[
-        logging.FileHandler("contrast_analysis_debug.log", encoding="utf-8"),
+        logging.FileHandler("person_comparison_debug.log", encoding="utf-8"),
         logging.StreamHandler(),
     ],
 )
-logger = logging.getLogger("contrast_analysis")
+logger = logging.getLogger("person_comparison")
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="Qualitative Kontrast- und Negativfallanalyse")
-    parser.add_argument("--config", "-c", default="config_v2.yaml")
-    parser.add_argument("--person-json", "-p", default="person_analysis_v1.json")
-    parser.add_argument("--comparison-json", "-j", default="person_comparison_v1.json")
-    parser.add_argument("--out-md", "-o", default="contrast_analysis_v1.md")
-    parser.add_argument("--out-json", "-x", default="contrast_analysis_v1.json")
+    parser = argparse.ArgumentParser(description="Personenvergleich und qualitative Typenbildung")
+    parser.add_argument("--config", "-c", default=str(DEFAULT_CONFIG))
+    parser.add_argument("--person-json", "-j", default="person_analysis_v1.json")
+    parser.add_argument("--out-md", "-o", default="person_comparison_v1.md")
+    parser.add_argument("--out-json", "-x", default="person_comparison_v1.json")
     args = parser.parse_args(argv)
 
     with open(args.config, "r", encoding="utf-8") as f:
@@ -41,9 +41,8 @@ def main(argv=None):
         "log_thinking": bool(llm_cfg.get("log_thinking", False)),
     }
 
-    md, json_output = build_contrast_analysis(
+    md, json_output = build_person_comparison(
         person_analysis_json_path=args.person_json,
-        person_comparison_json_path=args.comparison_json,
         ollama_params=ollama_params,
         prompts=config.get("prompts", {}),
         context=config.get("context", {}),
@@ -52,8 +51,8 @@ def main(argv=None):
     atomic_text(args.out_md, md)
     atomic_json(args.out_json, json_output)
 
-    logger.info(f"[Kontrastanalyse] Markdown geschrieben: {args.out_md}")
-    logger.info(f"[Kontrastanalyse] JSON geschrieben: {args.out_json}")
+    logger.info(f"[Personenvergleich] Markdown geschrieben: {args.out_md}")
+    logger.info(f"[Personenvergleich] JSON geschrieben: {args.out_json}")
 
 
 if __name__ == "__main__":

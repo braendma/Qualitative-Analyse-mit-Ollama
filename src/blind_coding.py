@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+from project_paths import DEFAULT_CONFIG
 import argparse
 import json
 import logging
@@ -34,7 +35,7 @@ def configure_logging(log_file: str) -> None:
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Segmente blind mit einem externen Kategoriesystem codieren")
-    parser.add_argument("--config", "-c", default="config_v2.yaml")
+    parser.add_argument("--config", "-c", default=str(DEFAULT_CONFIG))
     parser.add_argument("--input-csv", "-i", default=None)
     parser.add_argument("--codebook-csv", default=None)
     parser.add_argument("--idmap-json", default=None)

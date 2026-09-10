@@ -8,7 +8,7 @@ import unittest
 from unittest.mock import patch
 
 ROOT=Path(__file__).resolve().parents[1]
-sys.path.insert(0,str(ROOT))
+sys.path.insert(0,str(ROOT/'src'))
 import clusterer_core as cluster
 from coding_validation_common import Segment, CodebookEntry, load_segments, code_hierarchy
 from code_verification_core import verify_segments
@@ -24,7 +24,7 @@ from llm_client import LLMTransportError, LLMResponseError, ContextBudgetError
 import pandas as pd
 
 def load_runner():
-    spec=importlib.util.spec_from_file_location('workflow',ROOT/'00_WORKFLOW_RUNNER.py')
+    spec=importlib.util.spec_from_file_location('workflow',ROOT/'src/00_WORKFLOW_RUNNER.py')
     module=importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -45,7 +45,7 @@ class SafetyTests(unittest.TestCase):
     def test_response_schema_keys_match_existing_prompts(self):
         import yaml
         from response_schemas import SCHEMAS
-        prompts=yaml.safe_load((ROOT/'config_v2.yaml').read_text(encoding='utf-8'))['prompts']
+        prompts=yaml.safe_load((ROOT/'config/config_v2.yaml').read_text(encoding='utf-8'))['prompts']
         self.assertNotIn('darf ein Audit-Befund fehlen',prompts['evidence_audit']['user'])
         self.assertIn('genau einmal',prompts['evidence_audit']['user'])
         for module,schema in SCHEMAS.items():

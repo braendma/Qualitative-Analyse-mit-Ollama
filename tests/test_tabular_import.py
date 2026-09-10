@@ -10,7 +10,7 @@ from unittest.mock import patch
 from xml.sax.saxutils import escape
 import zipfile
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]/'src'))
 from tabular_import import xlsx_csv
 from local_app import App, csv_info
 from test_local_app import settings
@@ -41,6 +41,32 @@ def fixture(sheets):
 
 
 class SpreadsheetImportTests(unittest.TestCase):
+    def test_incorrect_excel_dimension_does_not_truncate_rows(self):
+        data=fixture([('Export',[['a','b'],['1','2'],['3','4']])])
+        output=io.BytesIO()
+        with zipfile.ZipFile(io.BytesIO(data)) as source,zipfile.ZipFile(output,'w') as target:
+            for name in source.namelist():
+                raw=source.read(name)
+                if name.endswith('sheet1.xml'):
+                    raw=raw.replace(b'<sheetData>',b'<dimension ref="A1:B1"/><sheetData>')
+                target.writestr(name,raw)
+        raw,_=xlsx_csv(output.getvalue())
+        self.assertEqual(csv_info(raw)['count'],2)
+
+    def test_long_csv_field_and_unclosed_quote(self):
+        text='x'*150000
+        self.assertEqual(csv_info(('a;b\n1;'+text+'\n').encode())['count'],1)
+        with self.assertRaises(ValueError):csv_info(b'a;b\n1;"unclosed\n')
+
+    def test_broken_sheet_xml_reports_readable_error(self):
+        data=fixture([('Export',[['a','b'],['1','2']])]);output=io.BytesIO()
+        with zipfile.ZipFile(io.BytesIO(data)) as source,zipfile.ZipFile(output,'w') as target:
+            for name in source.namelist():
+                raw=source.read(name)
+                if name.endswith('sheet1.xml'):raw=raw.replace(b'</sheetData>',b'</broken>')
+                target.writestr(name,raw)
+        with self.assertRaisesRegex(ValueError,'XLSX'):xlsx_csv(output.getvalue())
+
     def test_text_quotes_newlines_ids_and_maxqda_columns(self):
         headers = ['Farbe','Kommentar','Dokumentgruppe','Dokumentname','Code','Anfang','Ende','Gewicht','Segment','Bearbeitet von','Bearbeitet am','Erstellt von','Erstellt am','Fläche','Abdeckungsgrad %']
         row = ['', '', 'Gruppe', 'Person_01', 'Organisation > Unterstützung', '1', '2', '0', '  Ein "Zitat"; mit Umlaut ä\nund zweiter Zeile.  ', '', '', '', '', '0', '0.2']

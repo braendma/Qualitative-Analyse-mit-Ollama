@@ -1,4 +1,16 @@
-# Validation of XLSX and CSV imports
+# Validation of project isolation, imports and directory layout
+
+Date: 2026-09-10. Baseline: `4c53d6b45d6e7305c49f9d76dd0df4fe475f2fc5`.
+
+- 67 Python tests pass: the complete 65-test suite passed after reorganization in 56.0 seconds; two additional entry-point tests passed from both an unrelated working directory with spaces and the repository directory. Four Node.js browser-logic tests also pass.
+- Regressions cover rejected saves retaining the previous valid settings, new uploads invalidating stale revisions, failed resume status, large CSV fields, malformed quoting, incorrect XLSX used-range metadata and broken sheet XML.
+- Browser-logic tests exercise delayed validation, a project switch during Start, out-of-order project responses and independent column mappings. Previous previews are cleared on project switches; editing inputs hides an outdated successful validation result.
+- The real browser was checked with synthetic inputs: valid validation, rejection of inconsistent passage/person mapping, and restoration of the last valid mapping after reload.
+- Code and UI assets now live in `src/`, configuration in `config/`, artificial inputs in `demo/`, tests in `tests/`, and documentation in `docs/`. Root launchers remain available. Markdown file links and PowerShell launcher syntax were checked.
+- A real `gemma4:31b` Cloud smoke test through the reorganized CLI entry point used a GUI-generated isolated configuration with two artificial rows. Cluster analysis and summarization completed successfully with three model requests. No local GPU inference, real interview data or live Telegram message was used.
+- These are development-machine and synthetic workflow checks, not a guarantee of semantic coding accuracy or compatibility with every PC. Existing projects remain available; changed program provenance requires a new run rather than migration of old checkpoints.
+
+## Earlier validation of XLSX and CSV imports
 
 Date: 2026-09-10. Baseline: `4002a0a31c2fe50887f6d2b8e0a4b1999b327eef`.
 

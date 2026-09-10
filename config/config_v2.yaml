@@ -30,8 +30,8 @@ llm:
 # ============================================================
 
 paths:
-  input_csv: "maxqda_export.csv"
-  category_system_csv: "Kategoriesystem.csv"
+  input_csv: "../demo/maxqda_export.csv"
+  category_system_csv: "../demo/Kategoriesystem.csv"
   output_md: "clusterer_output.md"
 
 

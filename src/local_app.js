@@ -3,7 +3,7 @@ const $ = id => document.getElementById(id);
 const tokenKey = 'qualitative-session-' + location.port;
 const token = location.hash.slice(1) || sessionStorage.getItem(tokenKey) || '';
 if (location.hash) { sessionStorage.setItem(tokenKey, token); history.replaceState(null, '', '/'); }
-let state, project, jobs = [], viewing = 'project', objectUrl = null, polling = false;
+let state, project, jobs = [], viewing = 'project', objectUrl = null, polling = false, projectRequest = 0;
 const names = {project:'Projekt & Dateien',check:'Eingaben prüfen',analysis:'Analyse',results:'Ergebnisse',telegram:'Telegram-Updates'};
 const moduleHelp = {
   clusterer:'Gruppiert Textstellen innerhalb eines Codepfads zu inhaltlichen Clustern.',
@@ -93,8 +93,10 @@ function loadFields(){
   renderFiles();
 }
 async function openProject(id){
-  if(!id)return;
-  project=await api('project?project='+id);jobs=null;$('projects').value=id;$('welcome').hidden=true;
+  if(!id){$('projects').value=project?.id||'';return;}
+  const request=++projectRequest, loaded=await api('project?project='+id);
+  if(request!==projectRequest)return;
+  project=loaded;closeViewer();jobs=null;$('projects').value=id;$('welcome').hidden=true;
   document.querySelectorAll('.project-content').forEach(n=>n.hidden=false);
   $('project-subtitle').textContent=project.name+(project.demo?' · Künstliche Beispieldaten':' · Lokales Projekt');
   $('validation-result').hidden=true;loadFields();await refreshJobs();
@@ -108,8 +110,11 @@ function settings(){
     context:{project_description:$('context-project').value,participants:$('context-persons').value,methodology:$('context-method').value},
     modules:[...document.querySelectorAll('[name=module]:checked')].map(n=>n.value)};
 }
-async function saveAndValidate(){
-  const pid=needProject(), s=settings(), result=await api('save',{project:pid,settings:s});project.settings=s;
+async function saveAndValidate(pid=needProject()){
+  $('validation-result').hidden=true;
+  const s=settings(), result=await api('save',{project:pid,settings:s});
+  if(project?.id!==pid)return result;
+  project.settings=s;
   const box=$('validation-result');box.replaceChildren(el('h3','Eingaben sind gültig'));box.hidden=false;
   const stats=el('div',undefined,'stats');[['Codierzeilen',result.segments],['Passagen',result.passages??'—'],['Personen',result.persons],['Codepfade',result.codes]].forEach(([label,n])=>{const part=el('div',undefined,'stat');part.append(el('b',String(n)),el('span',label));stats.append(part);});box.append(stats,el('p','Diese Module werden bei einem Start ausgeführt (einschließlich benötigter Vorstufen): '+result.modules.map(m=>m.name).join(' → '),'hint'));
   return result;
@@ -145,10 +150,11 @@ async function refreshJobs(){
   jobs.forEach(j=>{$('run-cards').append(runCard(j));$('result-cards').append(runCard(j,true));});
 }
 async function artifact(job,name,preview){
-  const query=new URLSearchParams({project:project.id,job:job.id,name});
+  const pid=needProject(),query=new URLSearchParams({project:pid,job:job.id,name});
   const response=await fetch('/api/artifact?'+query,{headers:{'X-App-Token':token}});
   if(!response.ok)throw new Error((await response.json()).error);
   const blob=await response.blob();
+  if(preview&&project?.id!==pid)return;
   if(!preview){const url=URL.createObjectURL(blob),a=el('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);return;}
   $('viewer').hidden=false;$('viewer-name').textContent=name;$('text-preview').hidden=true;$('html-preview').hidden=true;$('image-preview').hidden=true;
   if(objectUrl)URL.revokeObjectURL(objectUrl);
@@ -167,34 +173,41 @@ action($('save-telegram'),async()=>{const result=await api('telegram',telegramVa
 action($('remove-token'),async()=>{const result=await api('telegram',telegramValues(true));$('bot-token').value='';$('token-file').value='';renderTelegram(result);message('Token entfernt und Benachrichtigungen deaktiviert.');});
 action($('test-telegram'),async()=>{if($('bot-token').value)throw new Error('Den neuen Token zuerst speichern.');await api('telegram-test',{});message('Testnachricht an den gespeicherten Telegram-Chat gesendet.');});
 $('token-file').addEventListener('change',async()=>{try{const f=$('token-file').files[0];if(!f)return;if(f.size>4096)throw new Error('Token-Datei ist zu groß. Eine Textdatei nur mit dem Bot-Token verwenden.');$('bot-token').value=(await f.text()).trim();message('Token aus Datei geladen. Zum Übernehmen Einstellungen speichern.');}catch(e){message(e.message,true);}finally{$('token-file').value='';}});
-let pendingUpload=null,pendingUploadKind=null;
-function acceptUpload(uploads, pid){
+let pendingUpload=null, uploading=false;
+function uploadBusy(value){uploading=value;for(const kind of ['segments','codebook'])$(kind+'-file').disabled=value;}
+function acceptUpload(uploads, pid, kind){
   if(project.id!==pid)return;
-  project.uploads=uploads;delete project.settings[pendingUploadKind==='segments'?'columns':'book_columns'];renderFiles();$('validation-result').hidden=true;
+  project.uploads=uploads;delete project.settings[kind==='segments'?'columns':'book_columns'];renderFiles();$('validation-result').hidden=true;
   message('Datei als lokale Projektkopie übernommen. Bitte Spaltenzuordnung prüfen.');
 }
 action($('sheet-import'),async()=>{
   if(!pendingUpload)return;
   const payload={...pendingUpload,sheet:$('sheet-choice').value};
-  const result=await api('upload',payload);acceptUpload(result,payload.project);
+  const result=await api('upload',payload);acceptUpload(result,payload.project,payload.kind);
   pendingUpload=null;$('sheet-dialog').close();
 });
 $('sheet-cancel').addEventListener('click',()=>{$('sheet-dialog').close();});
-$('sheet-dialog').addEventListener('close',()=>{pendingUpload=null;});
+$('sheet-dialog').addEventListener('close',()=>{pendingUpload=null;uploadBusy(false);});
 for(const kind of ['segments','codebook'])$(kind+'-file').addEventListener('change',async()=>{try{
-  pendingUploadKind=kind;const pid=needProject(),file=$(kind+'-file').files[0];if(!file)return;if(file.size>20*1024*1024)throw new Error('Datei überschreitet 20 MB.');
+  const pid=needProject(),file=$(kind+'-file').files[0];if(!file)return;
+  if(uploading)throw new Error('Bitte den laufenden Dateiimport zuerst abschließen.');
+  if(file.size>20*1024*1024)throw new Error('Datei überschreitet 20 MB.');
+  uploadBusy(true);const capturedSettings=settings();
   const bytes=new Uint8Array(await file.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=16384)binary+=String.fromCharCode(...bytes.subarray(i,i+16384));
-  project.settings=settings();const payload={project:pid,kind,name:file.name,data:btoa(binary)}, result=await api('upload',payload);
+  if(project?.id!==pid)return;
+  project.settings=capturedSettings;const payload={project:pid,kind,name:file.name,data:btoa(binary)}, result=await api('upload',payload);
+  if(project?.id!==pid)return;
   if(result.requires_sheet){pendingUpload=payload;$('sheet-error').textContent='';$('sheet-choice').replaceChildren();result.sheets.forEach(s=>$('sheet-choice').add(new Option(s,s)));$('sheet-dialog').showModal();}
-  else acceptUpload(result,pid);
-}catch(e){message(e.message,true);}finally{$(kind+'-file').value='';}});
-action($('validate'),async()=>{const r=await saveAndValidate();message(`Prüfung bestanden: ${r.segments} Codierzeilen, ${r.codes} Codepfade. Kein Modellaufruf.`);});
-action($('start'),async()=>{await saveAndValidate();await api('start',{project:project.id});message('Analyse gestartet. Den Fortschritt findest du unten.');await refreshJobs();});
+  else acceptUpload(result,pid,kind);
+}catch(e){message(e.message,true);}finally{$(kind+'-file').value='';if(!pendingUpload)uploadBusy(false);}});
+action($('validate'),async()=>{const pid=needProject(),r=await saveAndValidate(pid);if(project?.id!==pid)return;message(`Prüfung bestanden: ${r.segments} Codierzeilen, ${r.codes} Codepfade. Kein Modellaufruf.`);});
+action($('start'),async()=>{const pid=needProject();await saveAndValidate(pid);if(project?.id!==pid)throw new Error('Projekt wurde während der Prüfung gewechselt. Bitte im gewünschten Projekt erneut starten.');await api('start',{project:pid});message('Analyse gestartet. Den Fortschritt findest du unten.');await refreshJobs();});
 action($('check-ollama'),async()=>{const r=await api('models');$('model-list').replaceChildren();r.models.forEach(m=>$('model-list').append(new Option(m,m)));$('ollama-status').textContent=r.models.length?`${r.models.length} lokale Modelle gefunden. Im Modellfeld auswählen oder Namen eingeben.`:'Ollama ist erreichbar, aber kein lokales Modell installiert.';});
 action($('clear-modules'),async()=>{document.querySelectorAll('[name=module]').forEach(n=>n.checked=false);updateModuleSelection();});
 action($('all-modules'),async()=>{document.querySelectorAll('[name=module]').forEach(n=>n.checked=true);updateModuleSelection();});
 action($('coding-modules'),async()=>{document.querySelectorAll('[name=module]').forEach(n=>n.checked=['clusterer','code_verification','blind_coding','coding_agreement'].includes(n.value));updateModuleSelection();});
-$('close-viewer').addEventListener('click',()=>{$('viewer').hidden=true;$('html-preview').removeAttribute('srcdoc');if(objectUrl){URL.revokeObjectURL(objectUrl);objectUrl=null;}});
+function closeViewer(){$('viewer').hidden=true;$('html-preview').removeAttribute('srcdoc');$('text-preview').textContent='';$('image-preview').removeAttribute('src');if(objectUrl){URL.revokeObjectURL(objectUrl);objectUrl=null;}}
+$('close-viewer').addEventListener('click',closeViewer);
 $('projects').addEventListener('change',async()=>{try{await openProject($('projects').value);show('project');}catch(e){message(e.message,true);}});
 for(const id of ['new-project','welcome-create'])$(id).addEventListener('click',()=>{$('create-dialog').showModal();$('project-name').focus();});
 $('cancel-create').addEventListener('click',()=>$('create-dialog').close());
@@ -202,4 +215,7 @@ $('create-form').addEventListener('submit',async e=>{e.preventDefault();try{cons
 action($('demo'),async()=>{const p=await api('create',{name:'Demo · Künstliche Interviews',demo:true});state.projects.unshift(p);project=p;renderProjects();await openProject(p.id);message('Demo geladen: 50 künstliche Codierzeilen und 43 Passagen. Du kannst zuerst die Eingaben prüfen.');});
 async function init(){try{state=await api('state');renderProjects();renderTelegram(state.telegram);if(state.projects.length)await openProject(state.projects[0].id);}catch(e){message(e.message,true);}}
 setInterval(async()=>{if(!project||polling||!['analysis','results'].includes(viewing))return;polling=true;try{await refreshJobs();}catch(e){message('Verbindung zur lokalen Oberfläche unterbrochen. Startfenster prüfen.',true);}finally{polling=false;}},4000);
+function invalidateCheck(event){if(event.target.closest('#view-project, #view-check, #view-analysis'))$('validation-result').hidden=true;}
+document.addEventListener('input',invalidateCheck);
+document.addEventListener('change',invalidateCheck);
 init();

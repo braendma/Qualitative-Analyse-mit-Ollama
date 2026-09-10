@@ -12,7 +12,7 @@ Die Auswertung läuft mit einem lokal installierten Ollama-Modell. Modellvorschl
 - [3. Module auswählen und Analyse starten](#3-module-auswählen-und-analyse-starten)
 - [4. Ergebnisse ansehen und Entscheidungen sichern](#4-ergebnisse-ansehen-und-entscheidungen-sichern)
 - [Optional: Telegram-Updates](#optional-telegram-updates)
-- [Ausführliche Bedienungsanleitung und MAXQDA-Exportformat](BEDIENOBERFLAECHE.md)
+- [Ausführliche Bedienungsanleitung und MAXQDA-Exportformat](docs/BEDIENOBERFLAECHE.md)
 
 ## Einrichten und öffnen
 
@@ -23,7 +23,7 @@ Die Auswertung läuft mit einem lokal installierten Ollama-Modell. Modellvorschl
 
 Zum Kennenlernen **„Künstliche Beispieldaten laden“** wählen. Die Demo enthält 50 erfundene Codierzeilen aus 43 Passagen. Das Laden und die Eingabeprüfung benötigen keinen Modellaufruf. Erst **„Prüfen & neuen Lauf starten“** startet die Analyse.
 
-Bei einer bereits eingerichteten Python-Umgebung ist alternativ `python -X utf8 local_app.py` möglich. Die Oberfläche verbindet sich mit lokalem Ollama; die Auswahl von Cloud-Modellen ist dort nicht vorgesehen. Einrichtung, Betrieb auf anderen Systemen und Datenablage: [Bedienungsanleitung](BEDIENOBERFLAECHE.md).
+Bei einer bereits eingerichteten Python-Umgebung ist alternativ `python -X utf8 src/local_app.py` möglich. Die Oberfläche verbindet sich mit lokalem Ollama; die Auswahl von Cloud-Modellen ist dort nicht vorgesehen. Einrichtung, Betrieb auf anderen Systemen und Datenablage: [Bedienungsanleitung](docs/BEDIENOBERFLAECHE.md).
 
 **Zu den Bildern:** Alle Screenshots zeigen die tatsächliche Oberfläche mit künstlichen Beispieldaten. Sie enthalten keine Interviewdaten einer realen Studie und keine Zugangsdaten. Die Bilder lassen sich für eine größere Ansicht anklicken. Einige zeigen einen Ausschnitt einer längeren Seite; zum nächsten Bereich in der Oberfläche nach unten scrollen.
 
@@ -42,7 +42,7 @@ CSV bleibt möglich: **UTF-8 und Semikolon** als Trennzeichen. Jede Datei darf h
 
 [![Projektansicht mit direktem XLSX-Import, separatem CSV-Kategoriensystem und MAXQDA-Hilfe](docs/screenshots/01-projekt-dateien.jpg)](docs/screenshots/01-projekt-dateien.jpg)
 
-Unterhalb der Dateiauswahl Thema und Fragestellung, Teilnehmende und Methodik eintragen. Diese Angaben werden später als Kontext an das Modell übergeben. Details zu Tabellenstruktur, Codepfaden und Mehrfachcodierung: [Textstellen aus MAXQDA vorbereiten](BEDIENOBERFLAECHE.md#textstellen-aus-maxqda-vorbereiten).
+Unterhalb der Dateiauswahl Thema und Fragestellung, Teilnehmende und Methodik eintragen. Diese Angaben werden später als Kontext an das Modell übergeben. Details zu Tabellenstruktur, Codepfaden und Mehrfachcodierung: [Textstellen aus MAXQDA vorbereiten](docs/BEDIENOBERFLAECHE.md#textstellen-aus-maxqda-vorbereiten).
 
 ## 2. Spalten zuordnen und Eingaben prüfen
 
@@ -88,7 +88,7 @@ Diesen Bereich überspringen, wenn du keine Benachrichtigungen möchtest. Andern
 
 [![Telegram-Einstellungen mit leerem Tokenfeld, Textdateiimport und auswählbaren Benachrichtigungsereignissen](docs/screenshots/04-telegram-optional.jpg)](docs/screenshots/04-telegram-optional.jpg)
 
-Gewünschte Ereignisse auswählen und **„Telegram-Einstellungen speichern“** anklicken. Ein neuer Token ersetzt den bisherigen; ein leeres Tokenfeld behält einen vorhandenen Token bei. **„Testnachricht senden“** versendet ausdrücklich eine Nachricht an den gespeicherten Ziel-Chat. Automatische Meldungen enthalten nur allgemeinen Status und Modulfortschritt, keine Interviewtexte oder Projektnamen. Vollständige Einrichtung: [Telegram-Anleitung](BEDIENOBERFLAECHE.md#telegram-optional-einrichten).
+Gewünschte Ereignisse auswählen und **„Telegram-Einstellungen speichern“** anklicken. Ein neuer Token ersetzt den bisherigen; ein leeres Tokenfeld behält einen vorhandenen Token bei. **„Testnachricht senden“** versendet ausdrücklich eine Nachricht an den gespeicherten Ziel-Chat. Automatische Meldungen enthalten nur allgemeinen Status und Modulfortschritt, keine Interviewtexte oder Projektnamen. Vollständige Einrichtung: [Telegram-Anleitung](docs/BEDIENOBERFLAECHE.md#telegram-optional-einrichten).
 
 ## Wenn etwas nicht funktioniert
 
@@ -101,7 +101,7 @@ Gewünschte Ereignisse auswählen und **„Telegram-Einstellungen speichern“**
 | Ollama oder Modell nicht verfügbar | Ollama starten und prüfen, ob der im Modellfeld eingetragene Name lokal installiert ist. |
 | Eine Änderung erscheint nicht | Oberfläche und Startfenster schließen und `Start_Oberflaeche.cmd` neu öffnen. Laufende Analysen zuvor beenden lassen oder pausieren. |
 
-Die Projektdaten liegen unter Windows standardmäßig in `%LOCALAPPDATA%\QualitativeOllama`. Für eine Sicherung die Oberfläche nach Abschluss eines Laufs schließen und den Projektordner kopieren. Die öffentliche Projektversion und die Screenshots enthalten ausschließlich künstliche Daten. Mehr zu [Datenablage und Zugriffsschutz](BEDIENOBERFLAECHE.md#wo-liegen-meine-daten), [Robustheit und Wiederaufnahme](ROBUSTNESS.md) und [Tests samt Grenzen](TEST_REPORT.md).
+Die Projektdaten liegen unter Windows standardmäßig in `%LOCALAPPDATA%\QualitativeOllama`. Für eine Sicherung die Oberfläche nach Abschluss eines Laufs schließen und den Projektordner kopieren. Die öffentliche Projektversion und die Screenshots enthalten ausschließlich künstliche Daten. Mehr zu [Datenablage und Zugriffsschutz](docs/BEDIENOBERFLAECHE.md#wo-liegen-meine-daten), [Robustheit und Wiederaufnahme](docs/ROBUSTNESS.md) und [Tests samt Grenzen](docs/TEST_REPORT.md).
 
 ## Technische Referenz
 
@@ -172,9 +172,9 @@ flowchart TD
 
 # ✅ Coding-Validierung und Human–LLM Agreement
 
-Mehrfachcodierung, die lokale Prüfliste mit getrennten Entscheidungen und die mehrstufige Gesamtsynthese sind in [EXTENSIONS.md](EXTENSIONS.md) beschrieben.
+Mehrfachcodierung, die lokale Prüfliste mit getrennten Entscheidungen und die mehrstufige Gesamtsynthese sind in [EXTENSIONS.md](docs/EXTENSIONS.md) beschrieben.
 
-Die drei Coding-Module werden wie alle anderen Schritte ausschließlich über `config_v2.yaml` eingebunden:
+Die drei Coding-Module werden wie alle anderen Schritte ausschließlich über `config/config_v2.yaml` eingebunden:
 
 1. **`code_verification`** prüft den menschlich vergebenen vollständigen Codepfad gegen Definition und Ankerbeispiel des externen Kategoriesystems. Ergebnisse sind `bestätigt`, `teilweise_passend`, `nicht_passend` oder `unklar`.
 2. **`blind_coding`** erhält Segment und Codebuch, aber nicht den menschlichen Code. Im Multi-Label-Modus erhält jede Passage eine unabhängige Codemenge; Single-Label bleibt ebenfalls verfügbar.
@@ -209,7 +209,7 @@ Das Modell sagt einmal pro Passage eine Codemenge vorher. Technische Fehler und 
 
 Das zusätzliche Modul `review_queue` erzeugt nach Coding-Agreement und Evidence-Audit `review_queue.html`, `review_queue.json` und `review_queue.md`. Die HTML-Datei lässt sich direkt im Browser öffnen und zeigt Originalpassagen, menschliche Codes, Modellvorschläge, Begründungen und zugehörige Audit-Gegenbelege.
 
-Prüfentscheidungen werden über **„Entscheidungen speichern“** als separate JSON-Datei heruntergeladen und über **„Entscheidungen laden“** wieder eingelesen. Es gibt keine automatische Speicherung. Original-CSV und Modelloutputs werden nicht verändert. Die Validierung einer gespeicherten Prüfversion ist in [EXTENSIONS.md](EXTENSIONS.md) beschrieben.
+Prüfentscheidungen werden über **„Entscheidungen speichern“** als separate JSON-Datei heruntergeladen und über **„Entscheidungen laden“** wieder eingelesen. Es gibt keine automatische Speicherung. Original-CSV und Modelloutputs werden nicht verändert. Die Validierung einer gespeicherten Prüfversion ist in [EXTENSIONS.md](docs/EXTENSIONS.md) beschrieben.
 
 ---
 
@@ -460,7 +460,7 @@ Die letzte Analyseebene verbindet aktuell:
 
 Die Gesamtsynthese arbeitet damit auf bereits verdichteten Analysen und erzeugt eine übergreifende Ergebnisdarstellung.
 
-Bei zu großem Kontext werden analytische Teilbefunde in begrenzten Stufen verdichtet. Das Ergebnis-JSON dokumentiert die Eingaben und Herkunftsverweise jeder Stufe unter `hierarchical_reduction`. Die Grenzen stehen in `llm.hierarchical_synthesis`; bereits ein zu großer fester Prompt wird vor Teilanalyse-Aufrufen abgewiesen. Diese Verarbeitung betrifft die Gesamtsynthese. Vorgelagerte Module behalten ihre eigenen Kontextgrenzen, und Herkunftsverweise garantieren keine semantisch vollständige Verdichtung. Details: [EXTENSIONS.md](EXTENSIONS.md).
+Bei zu großem Kontext werden analytische Teilbefunde in begrenzten Stufen verdichtet. Das Ergebnis-JSON dokumentiert die Eingaben und Herkunftsverweise jeder Stufe unter `hierarchical_reduction`. Die Grenzen stehen in `llm.hierarchical_synthesis`; bereits ein zu großer fester Prompt wird vor Teilanalyse-Aufrufen abgewiesen. Diese Verarbeitung betrifft die Gesamtsynthese. Vorgelagerte Module behalten ihre eigenen Kontextgrenzen, und Herkunftsverweise garantieren keine semantisch vollständige Verdichtung. Details: [EXTENSIONS.md](docs/EXTENSIONS.md).
 
 **Outputs:**
 
@@ -525,7 +525,7 @@ Thinking-Modelle sollte auch der Ollama-Python-Client aktuell sein:
 python -m pip install --upgrade ollama
 ```
 
-Die Modellparameter werden zentral in `config_v2.yaml` eingestellt. Es gibt
+Die Modellparameter werden zentral in `config/config_v2.yaml` eingestellt. Es gibt
 keine universell optimale Konfiguration: Insbesondere `temperature`, `think`
 und `max_tokens` können beeinflussen, ob ein Modell nach dem Reasoning
 zuverlässig eine Endantwort liefert. Reasoning und Endantwort teilen sich das
@@ -672,30 +672,30 @@ maxqda_export.csv    # 50 Codierzeilen, 43 Passagen, 6 fiktive Personen
 Kategoriesystem.csv # 12 passende Codepfade mit Definitionen und Ankerbeispielen
 ```
 
-Damit kann der Workflow nach Installation von Ollama und Modell direkt gestartet werden. Für eigene Daten werden beide Dateien ersetzt oder die Pfade in `config_v2.yaml` angepasst.
+Damit kann der Workflow nach Installation von Ollama und Modell direkt gestartet werden. Für eigene Daten werden beide Dateien ersetzt oder die Pfade in `config/config_v2.yaml` angepasst.
 
 Bei eigenen Daten müssen außerdem die Spaltenzuordnung und die Passage-IDs zum gewählten Coding-Modus passen. Eingaben und Workflow lassen sich ohne Modellaufruf vorprüfen:
 
 ```bash
-python 00_WORKFLOW_RUNNER.py --validate-only
+python run_workflow.py --validate-only
 ```
 
 ## 6. Workflow starten
 
 ```bash
-python 00_WORKFLOW_RUNNER.py
+python run_workflow.py
 ```
 
 Mit einer anderen Interview-CSV:
 
 ```bash
-python 00_WORKFLOW_RUNNER.py --csv eigener_export.csv
+python run_workflow.py --csv eigener_export.csv
 ```
 
 Mit eigenem Output-Verzeichnis:
 
 ```bash
-python 00_WORKFLOW_RUNNER.py \
+python run_workflow.py \
   --csv eigener_export.csv \
   --output-dir meine_analyse
 ```
@@ -722,7 +722,7 @@ Interview_01;Hauptthema > Unterthema > Facette A;"Beispielsegment aus einem Inte
 Interview_02;Hauptthema > Unterthema > Facette A;"Weiteres Beispielsegment."
 ```
 
-Die tatsächlichen Spaltennamen können in der Oberfläche zugeordnet oder bei direktem CLI-Aufruf in `config_v2.yaml` angepasst werden.
+Die tatsächlichen Spaltennamen können in der Oberfläche zugeordnet oder bei direktem CLI-Aufruf in `config/config_v2.yaml` angepasst werden.
 
 Bei direkter Nutzung des Runners wird für Code-Verifikation und Blind-Coding zusätzlich eine Kategoriensystem-CSV erwartet. Sie muss diese Spaltenüberschriften enthalten; optionale Inhalte dürfen leer sein. Die Oberfläche ergänzt fehlende optionale Spalten in ihrer Arbeitskopie:
 
@@ -952,7 +952,7 @@ Das gilt besonders für die optionalen Dateien `code_verification_raw.jsonl` und
 
 Auch Prüflisten und exportierte Prüfentscheidungen gehören bei echten Daten in die private Ablage. Die ausgelieferte Standardkonfiguration verwendet lokales Ollama; die dokumentierten Cloud-Tests wurden ausschließlich mit künstlichem Material durchgeführt.
 
-Die mitgelieferte `config_v2.yaml`, `maxqda_export.csv` und `Kategoriesystem.csv` sind neutralisierte bzw. vollständig fiktive öffentliche Beispiele.
+Die mitgelieferte `config/config_v2.yaml`, `maxqda_export.csv` und `Kategoriesystem.csv` sind neutralisierte bzw. vollständig fiktive öffentliche Beispiele.
 
 ---
 
@@ -977,7 +977,7 @@ Insbesondere gilt:
 
 # 🧪 Testbarkeit
 
-Stand 2026-09-10: **59 automatisierte Tests** bestehen. Zusätzlich wurden alle **15 Workflow-Module** mit Gemma in Ollama Cloud auf dem künstlichen Datensatz geprüft, eine Gesamtsynthese über zwei Verdichtungsstufen ausgeführt und das Speichern/Laden von Prüfentscheidungen im Browser getestet. Die Cloud-Entwicklungsläufe enthielten dokumentierte Abbrüche und Wiederaufnahmen; sie sind kein unabhängiger Qualitätsbenchmark. Ergebnisse und Grenzen: [TEST_REPORT.md](TEST_REPORT.md).
+Stand 2026-09-10: **67 Python-Tests und vier Browserlogik-Tests** bestehen. Zusätzlich wurden alle **15 Workflow-Module** mit Gemma in Ollama Cloud auf dem künstlichen Datensatz geprüft, eine Gesamtsynthese über zwei Verdichtungsstufen ausgeführt und das Speichern/Laden von Prüfentscheidungen im Browser getestet. Die Cloud-Entwicklungsläufe enthielten dokumentierte Abbrüche und Wiederaufnahmen; sie sind kein unabhängiger Qualitätsbenchmark. Ergebnisse und Grenzen: [TEST_REPORT.md](docs/TEST_REPORT.md).
 
 Durch die modulare JSON-basierte Architektur lassen sich einzelne Stufen unabhängig testen.
 
@@ -1007,6 +1007,12 @@ geladenes Modell:
 python -m unittest discover -s tests -v
 ```
 
+Zusätzliche Tests für verspätete Browserantworten und Projektwechsel (Node.js wird nur für diese Entwicklungstests benötigt):
+
+```bash
+node --test tests/test_local_app_frontend.cjs
+```
+
 ---
 
 # 🧰 Einzelne Module manuell starten
@@ -1014,77 +1020,51 @@ python -m unittest discover -s tests -v
 Für Entwicklung oder Debugging können die Module weiterhin einzeln ausgeführt werden:
 
 ```bash
-python clusterer.py
-python summarizer.py
-python swot.py
-python meta_swot.py
-python person_analysis.py
-python person_comparison.py
-python contrast_analysis.py
-python relation_analysis.py
-python ambiguity_analysis.py
-python evidence_audit.py
-python code_verification.py
-python blind_coding.py
-python coding_agreement.py
-python review_queue.py
-python overall_synthesis.py
+python src/clusterer.py
+python src/summarizer.py
+python src/swot.py
+python src/meta_swot.py
+python src/person_analysis.py
+python src/person_comparison.py
+python src/contrast_analysis.py
+python src/relation_analysis.py
+python src/ambiguity_analysis.py
+python src/evidence_audit.py
+python src/code_verification.py
+python src/blind_coding.py
+python src/coding_agreement.py
+python src/review_queue.py
+python src/overall_synthesis.py
 ```
 
 Im normalen Betrieb ist jedoch der modulare Runner vorgesehen:
 
 ```bash
-python 00_WORKFLOW_RUNNER.py
+python run_workflow.py
 ```
 
 ---
 
-# 📁 Projektstruktur
+# Projektstruktur
 
 ```text
-00_WORKFLOW_RUNNER.py
-config_v2.yaml
-maxqda_export.csv
-Kategoriesystem.csv
-│
-├── clusterer.py
-├── clusterer_core.py
-├── summarizer.py
-├── summarizer_core.py
-├── swot.py
-├── swot_core.py
-├── meta_swot.py
-├── meta_swot_core.py
-├── person_analysis.py
-├── person_analysis_core.py
-├── person_comparison.py
-├── person_comparison_core.py
-├── contrast_analysis.py
-├── contrast_analysis_core.py
-├── relation_analysis.py
-├── relation_analysis_core.py
-├── ambiguity_analysis.py
-├── ambiguity_analysis_core.py
-├── evidence_audit.py
-├── evidence_audit_core.py
-├── code_verification.py
-├── code_verification_core.py
-├── blind_coding.py
-├── blind_coding_core.py
-├── coding_agreement.py
-├── coding_agreement_core.py
-├── multi_label_core.py
-├── review_queue.py
-├── review_template.html
-├── coding_validation_common.py
-├── overall_synthesis.py
-├── overall_synthesis_core.py
-├── hierarchical_synthesis.py
-├── plot_core.py
-├── utils_prompt.py
-├── utils_csv.py
-└── requirements.txt
+Qualitative-Analyse-mit-Ollama/
+├── README.md                 Einstieg und bebilderte Anleitung
+├── Einrichtung.cmd           Python-Pakete einrichten (Windows)
+├── Start_Oberflaeche.cmd      Oberfläche starten (Windows)
+├── start_local.ps1           Hilfsskript der Windows-Startdateien
+├── run_workflow.py           Direkter CLI-Einstieg
+├── requirements.txt          Python-Abhängigkeiten
+├── src/                      Analyseprogramme, Oberfläche und Vorlagen
+├── config/                   Öffentliche Beispielkonfiguration
+├── demo/                     Ausschließlich künstliche Beispieldaten
+├── tests/                    Automatisierte Tests und Testfixtures
+└── docs/                     Fachliche Dokumentation und Screenshots
 ```
+
+Vom Projektordner aus startet `python run_workflow.py` den CLI-Workflow. Die Standardkonfiguration liegt in `config/config_v2.yaml`; ihre relativen Eingabepfade zeigen auf `demo/`. Explizite `--config`- und `--output-dir`-Pfade des Runners werden relativ zum aktuellen Arbeitsordner aufgelöst. Ohne `--output-dir` liegt die Ausgabe unter `workflow_output/` im Projektordner. Die Oberfläche speichert Projekte weiterhin in ihrer privaten lokalen Datenablage.
+
+**Umstieg von der bisherigen flachen Ablage:** Das vollständige Projekt in einen neuen Ordner entpacken. Benutzerdefinierte YAML-Dateien bei Bedarf übernehmen und ihre Eingabepfade prüfen; relative Eingabepfade beziehen sich auf den Ordner der YAML-Datei. Der bisherige direkte Aufruf von `00_WORKFLOW_RUNNER.py` wird durch `run_workflow.py` ersetzt. Einzelne Module liegen jetzt unter `src/`. Nach diesem Programmwechsel einen neuen Analyselauf starten; vorhandene Projektdateien und Ergebnisse bleiben erhalten, alte Checkpoints werden nicht automatisch migriert.
 
 ---
 

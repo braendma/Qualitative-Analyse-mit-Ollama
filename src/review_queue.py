@@ -1,4 +1,5 @@
 """Offline review queue and validated, separately stored human decisions."""
+from project_paths import DEFAULT_CONFIG
 import argparse
 from datetime import datetime
 import html
@@ -75,7 +76,7 @@ def render_queue(queue):
 
 def main():
     p=argparse.ArgumentParser(description='Lokale Prüfliste; Entscheidungen verändern keine Originalcodierungen.')
-    p.add_argument('--config',default='config_v2.yaml')
+    p.add_argument('--config',default=str(DEFAULT_CONFIG))
     p.add_argument('--input-csv')
     p.add_argument('--agreement-json',default='coding_agreement_v1.json')
     p.add_argument('--verify-json',default='code_verification_v1.json')

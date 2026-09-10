@@ -22,6 +22,7 @@ import uuid
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+from project_paths import DEFAULT_CONFIG, DEMO_DIR
 import yaml
 from runtime_support import atomic_json, atomic_text
 from telegram_notifications import Telegram, NoRedirect
@@ -31,6 +32,7 @@ SPEC = importlib.util.spec_from_file_location('desktop_runner', ROOT / '00_WORKF
 RUNNER = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(RUNNER)
 MAX_UPLOAD = 20 * 1024 * 1024
+csv.field_size_limit(MAX_UPLOAD)
 
 
 def read_json(path, default=None):
@@ -56,7 +58,7 @@ def csv_info(raw):
         raise ValueError('CSV-Dateien dürfen höchstens 20 MB groß sein.')
     try:
         text = raw.decode('utf-8-sig')
-        reader = csv.reader(io.StringIO(text), delimiter=';')
+        reader = csv.reader(io.StringIO(text), delimiter=';', strict=True)
         headers = next(reader)
         if len(headers) < 2 or len(headers) != len(set(headers)) or any(not h.strip() for h in headers):
             raise ValueError('Eindeutige Spaltennamen und Semikolon als Trennzeichen erforderlich.')
@@ -110,7 +112,7 @@ class App:
             self.directory = Path('\\\\?\\'+str(self.directory))
         self.projects_dir = self.directory / 'projects'
         self.projects_dir.mkdir(parents=True, exist_ok=True)
-        self.template = yaml.safe_load((Path(template) if template else ROOT/'config_v2.yaml').read_text(encoding='utf-8'))
+        self.template = yaml.safe_load((Path(template) if template else DEFAULT_CONFIG).read_text(encoding='utf-8'))
         self.telegram = Telegram(self.directory)
         self.lock = threading.RLock()
         self.active = None
@@ -135,7 +137,7 @@ class App:
         if demo:
             # Dedicated demo copies are independent of a private installation's study CSVs.
             for kind, filename in [('segments','maxqda_export.csv'),('codebook','Kategoriesystem.csv')]:
-                path = ROOT/'demo'/filename
+                path = DEMO_DIR/filename
                 if not path.is_file():
                     raise ValueError('Demo-Dateien fehlen in der Installation.')
                 self.upload(pid, kind, filename, base64.b64encode(path.read_bytes()).decode())
@@ -180,6 +182,12 @@ class App:
         uploads = read_json(directory/'uploads.json', {})
         uploads[kind] = {'id':fid, 'name':Path(str(name).replace('\\','/')).name[:150], **info}
         atomic_json(directory/'uploads.json', uploads)
+        settings = read_json(directory/'settings.json', {})
+        settings.pop('columns' if kind == 'segments' else 'book_columns', None)
+        atomic_json(directory/'settings.json', settings)
+        project = read_json(directory/'project.json')
+        project['revision'] = None
+        atomic_json(directory/'project.json', project)
         return uploads
 
     def config(self, pid, settings):
@@ -264,11 +272,12 @@ class App:
             atomic_text(revision/'codebook.csv',book)
             cfg['paths']['category_system_csv'] = str(revision/'codebook.csv')
             atomic_text(revision/'config.yaml',yaml.safe_dump(cfg,allow_unicode=True,sort_keys=False))
+            checked = self.validate_config(revision/'config.yaml')
             data = read_json(directory/'project.json')
             data['revision'] = revision.name
             atomic_json(directory/'settings.json',settings)
             atomic_json(directory/'project.json',data)
-            return self.validate_config(revision/'config.yaml')
+            return checked
 
     def validate_config(self, path):
         from coding_validation_common import load_codebook, load_segments
@@ -304,8 +313,18 @@ class App:
             manifests=list((folder/'runs').glob('*/workflow_manifest.json'))
             if manifests:
                 manifest=read_json(manifests[0])
-                job.update(status=manifest['status'],completed=manifest.get('completed_steps',[]),
-                           current=manifest.get('current_module'),error=manifest.get('error',''))
+                process_alive = pid_alive(job.get('pid'))
+                stored_status, stored_error = job['status'], job.get('error', '')
+                status = manifest['status']
+                if stored_status == 'running' and process_alive:
+                    status = 'running'
+                elif stored_status == 'failed':
+                    status = 'failed'
+                elif stored_status == 'running' and status == 'running':
+                    status = 'interrupted'
+                job.update(status=status,completed=manifest.get('completed_steps',[]),
+                           current=manifest.get('current_module'),
+                           error=stored_error if stored_status == 'failed' else manifest.get('error',''))
                 job['run']=manifests[0].parent.name
                 if job['status']=='running' and not pid_alive(job.get('pid')):
                     job['status']='interrupted'
@@ -386,7 +405,7 @@ class App:
             status=manifest.get('status','failed')
             if process.returncode or status not in ('success','paused'): status='failed'
             job=read_json(folder/'job.json')
-            job.update(status=status,error=manifest.get('error','') if manifests else 'Start fehlgeschlagen. Details im lokalen Laufprotokoll.')
+            job.update(status=status,error=manifest.get('error','') or ('Lauf fehlgeschlagen. Details im lokalen Laufprotokoll.' if status == 'failed' else ''))
             atomic_json(folder/'job.json',job)
             self.telegram.send(status)
         finally:
