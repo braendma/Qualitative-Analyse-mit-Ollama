@@ -13,7 +13,7 @@
 
 Die aktuelle Version prüft Eingaben vor dem Start, erhält vollständige Codepfade, trennt technische Fehler von inhaltlichen Enthaltungen und unterstützt isolierte Läufe mit Wiederaufnahme. Die öffentliche Konfiguration verwendet lokales Ollama. Details und geänderte Aufrufe stehen in [ROBUSTNESS.md](ROBUSTNESS.md).
 
-Die mitgelieferten [Beispieldaten](DEMO_DATA.md) umfassen 50 vollständig erfundene Codierzeilen, sechs fiktive Personen und zwölf Codepfade mit einer bis vier Ebenen. Sie enthalten keine Originalinterviews.
+Die mitgelieferten [Beispieldaten](DEMO_DATA.md) umfassen 50 vollständig erfundene Codierzeilen aus 43 Passagen, sechs fiktive Personen und zwölf Codepfade mit einer bis vier Ebenen. Sie enthalten keine Originalinterviews.
 
 ## 🌟 Kurzbeschreibung
 
@@ -46,11 +46,12 @@ Die Besonderheit der aktuellen Architektur: **`00_WORKFLOW_RUNNER.py` kennt kein
 - 🔗 **Analyse thematischer Beziehungen zwischen Codepfaden**
 - 🧪 **Evidence-Audit für empirische Breite und Gegenbelege**
 - 👥 **Fallbezogene Personenanalyse und vorsichtige Typenbildung**
-- 🧠 **Abschließende Gesamtsynthese über mehrere Analyseebenen**
+- 🧠 **Bei Bedarf mehrstufige Gesamtsynthese mit Herkunftsverweisen**
 - ✅ **Code-Verifikation gegen Definitionen und Ankerbeispiele**
 - 🙈 **Blind-Coding ohne Kenntnis des menschlichen Codes**
-- 📐 **Deterministisches Human–LLM Coding Agreement mit Konfusionsmatrix**
-- ⏱️ **Dynamische Fortschritts- und Restzeitanzeige für lange LLM-Läufe**
+- 📐 **Mengenbasierter Vergleich von Mehrfachcodierungen je Passage; Konfusionsmatrix im Single-Label-Modus**
+- 📝 **Lokale HTML-Prüfliste mit separat gespeicherten Prüfentscheidungen**
+- ⏱️ **Fortschrittsanzeige für Verifikation und zeilenweises Blind-Coding**
 - 🧾 **Separate Modul-Logs und optionaler LLM-Raw-Audit als JSONL**
 
 ---
@@ -132,10 +133,10 @@ Alle LLM-genannten Codepfade und Segment-IDs werden gegen die tatsächlichen Ein
 
 Die Kennzahlen werden ausdrücklich als **Human–LLM Coding Agreement** bezeichnet und nicht als klassische Interrater-Reliabilität zwischen unabhängigen menschlichen Ratern.
 
-Während Verify und Blind-Coding zeigt die Konsole dynamisch:
+Während der Verifikation und des zeilenweisen Single-Label-Blind-Codings zeigt die Konsole dynamisch:
 
 ```text
-[Code-Verifikation] [########------------] 320/844 (37.91%) | Laufzeit 00:42:10 | Restzeit ca. 01:09:04
+[Code-Verifikation] [########------------] 20/50 (40.00%) | Laufzeit 00:02:00 | Restzeit ca. 00:03:00
 ```
 
 Optional können die unveränderten LLM-Antworten als append-only JSONL-Audit gespeichert werden:
@@ -146,6 +147,18 @@ coding_validation:
 ```
 
 Bei `true` entstehen `code_verification_raw.jsonl` und `blind_coding_raw.jsonl`. Diese Dateien können sensible, aus Interviewmaterial abgeleitete Inhalte enthalten und sollten nicht ungeprüft geteilt werden.
+
+## Passage-IDs für Mehrfachcodierungen
+
+Die öffentliche YAML verwendet `coding_agreement.label_mode: multi_label` und `columns.unit_id: PassageID`. Mehrfach codierte Passagen besitzen dieselbe Passage-ID, exakt denselben Text und dieselbe Person; jede Codierzeile behält eine eigene Segment-ID. Fehlende oder widersprüchliche Passage-IDs werden vor Modellaufrufen abgewiesen. Gleiche Texte werden nicht automatisch zusammengelegt.
+
+Das Modell sagt einmal pro Passage eine Codemenge vorher. Technische Fehler und Enthaltungen werden getrennt von einer begründet leeren Zuordnung ausgewiesen. Cohen's Kappa wird im Multi-Label-Modus nicht berechnet.
+
+## Codierungen lokal prüfen
+
+Das zusätzliche Modul `review_queue` erzeugt nach Coding-Agreement und Evidence-Audit `review_queue.html`, `review_queue.json` und `review_queue.md`. Die HTML-Datei lässt sich direkt im Browser öffnen und zeigt Originalpassagen, menschliche Codes, Modellvorschläge, Begründungen und zugehörige Audit-Gegenbelege.
+
+Prüfentscheidungen werden über **„Entscheidungen speichern“** als separate JSON-Datei heruntergeladen und über **„Entscheidungen laden“** wieder eingelesen. Es gibt keine automatische Speicherung. Original-CSV und Modelloutputs werden nicht verändert. Die Validierung einer gespeicherten Prüfversion ist in [EXTENSIONS.md](EXTENSIONS.md) beschrieben.
 
 ---
 
@@ -396,6 +409,8 @@ Die letzte Analyseebene verbindet aktuell:
 
 Die Gesamtsynthese arbeitet damit auf bereits verdichteten Analysen und erzeugt eine übergreifende Ergebnisdarstellung.
 
+Bei zu großem Kontext werden analytische Teilbefunde in begrenzten Stufen verdichtet. Das Ergebnis-JSON dokumentiert die Eingaben und Herkunftsverweise jeder Stufe unter `hierarchical_reduction`. Die Grenzen stehen in `llm.hierarchical_synthesis`; bereits ein zu großer fester Prompt wird vor Teilanalyse-Aufrufen abgewiesen. Diese Verarbeitung betrifft die Gesamtsynthese. Vorgelagerte Module behalten ihre eigenen Kontextgrenzen, und Herkunftsverweise garantieren keine semantisch vollständige Verdichtung. Details: [EXTENSIONS.md](EXTENSIONS.md).
+
 **Outputs:**
 
 ```text
@@ -602,11 +617,17 @@ einen eindeutigen Test ohne Reasoning sollte `think: false` gesetzt werden.
 Das Repository enthält bereits zwei aufeinander abgestimmte fiktive UTF-8-Testdateien mit Semikolon-Trennung:
 
 ```text
-maxqda_export.csv    # 60 synthetische Segmente aus 10 fiktiven Interviews
+maxqda_export.csv    # 50 Codierzeilen, 43 Passagen, 6 fiktive Personen
 Kategoriesystem.csv # 12 passende Codepfade mit Definitionen und Ankerbeispielen
 ```
 
 Damit kann der Workflow nach Installation von Ollama und Modell direkt gestartet werden. Für eigene Daten werden beide Dateien ersetzt oder die Pfade in `config_v2.yaml` angepasst.
+
+Bei eigenen Daten müssen außerdem die Spaltenzuordnung und die Passage-IDs zum gewählten Coding-Modus passen. Eingaben und Workflow lassen sich ohne Modellaufruf vorprüfen:
+
+```bash
+python 00_WORKFLOW_RUNNER.py --validate-only
+```
 
 ## 6. Workflow starten
 
@@ -766,7 +787,7 @@ Das macht die Pipeline zu einem kleinen erweiterbaren Framework für qualitative
 # 📂 Typische Output-Struktur
 
 ```text
-workflow_output/
+workflow_output/<Lauf-ID>/
 │
 ├── clusterer_output.md
 ├── clusters_output.json
@@ -780,7 +801,7 @@ workflow_output/
 ├── blind_coding.log
 ├── coding_agreement_v1.md
 ├── coding_agreement_v1.json
-├── coding_agreement_confusion.png
+├── coding_agreement_confusion.png  # optional, Single-Label
 ├── coding_agreement.log
 │
 ├── summary_v1.md
@@ -810,11 +831,16 @@ workflow_output/
 ├── evidence_audit_v1.md
 ├── evidence_audit_v1.json
 │
+├── review_queue.html
+├── review_queue.json
+├── review_queue.md
+│
 ├── overall_synthesis_v1.md
 ├── overall_synthesis_v1.json
 │
 ├── gesamtbericht.md
 ├── workflow_manifest.json
+├── config_snapshot.yaml
 ├── workflow.log
 │
 └── plots/
@@ -844,7 +870,7 @@ Dazu gehören:
 - Workflow-Manifest und Logs
 - Validierung sämtlicher LLM-genannter Codes gegen `Kategoriesystem.csv`
 - deterministische Rückführung von Originaltexten statt frei erzeugter Zitate
-- kontrolliertes `unklar` statt Übernahme strukturell ungültiger LLM-Antworten
+- technische Fehler bei weiterhin ungültigen Antworten; inhaltliches `unklar` bleibt getrennt
 
 Ein LLM kann dennoch Fehler machen. Die Pipeline reduziert bestimmte Fehlertypen, ersetzt aber keine wissenschaftliche Prüfung.
 
@@ -873,6 +899,8 @@ Vor Veröffentlichung, Weitergabe, Cloud-Uploads oder dem Teilen von Debug-Datei
 
 Das gilt besonders für die optionalen Dateien `code_verification_raw.jsonl` und `blind_coding_raw.jsonl`, da sie unveränderte Modellausgaben enthalten.
 
+Auch Prüflisten und exportierte Prüfentscheidungen gehören bei echten Daten in die private Ablage. Die ausgelieferte Standardkonfiguration verwendet lokales Ollama; die dokumentierten Cloud-Tests wurden ausschließlich mit künstlichem Material durchgeführt.
+
 Die mitgelieferte `config_v2.yaml`, `maxqda_export.csv` und `Kategoriesystem.csv` sind neutralisierte bzw. vollständig fiktive öffentliche Beispiele.
 
 ---
@@ -897,6 +925,8 @@ Insbesondere gilt:
 ---
 
 # 🧪 Testbarkeit
+
+Stand 2026-09-10: **41 automatisierte Tests** bestehen. Zusätzlich wurden alle **15 Workflow-Module** mit Gemma in Ollama Cloud auf dem künstlichen Datensatz geprüft, eine Gesamtsynthese über zwei Verdichtungsstufen ausgeführt und das Speichern/Laden von Prüfentscheidungen im Browser getestet. Die Cloud-Entwicklungsläufe enthielten dokumentierte Abbrüche und Wiederaufnahmen; sie sind kein unabhängiger Qualitätsbenchmark. Ergebnisse und Grenzen: [TEST_REPORT.md](TEST_REPORT.md).
 
 Durch die modulare JSON-basierte Architektur lassen sich einzelne Stufen unabhängig testen.
 
@@ -946,6 +976,7 @@ python evidence_audit.py
 python code_verification.py
 python blind_coding.py
 python coding_agreement.py
+python review_queue.py
 python overall_synthesis.py
 ```
 
@@ -991,9 +1022,13 @@ Kategoriesystem.csv
 ├── blind_coding_core.py
 ├── coding_agreement.py
 ├── coding_agreement_core.py
+├── multi_label_core.py
+├── review_queue.py
+├── review_template.html
 ├── coding_validation_common.py
 ├── overall_synthesis.py
 ├── overall_synthesis_core.py
+├── hierarchical_synthesis.py
 ├── plot_core.py
 ├── utils_prompt.py
 ├── utils_csv.py
@@ -1054,4 +1089,3 @@ python 00_WORKFLOW_RUNNER.py
 ```
 
 **Kodierte Interviewdaten rein → modulare qualitative Analysen → nachvollziehbare Zwischenprodukte → Gesamtsynthese → `gesamtbericht.md`.**
-
