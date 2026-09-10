@@ -63,21 +63,21 @@ columns:
 context:
 
   project_description: |
-    Die Daten stammen aus leitfadengestützten qualitativen Interviews.
-    Die Interviewdaten wurden vorab thematisch bzw. kategorienbasiert kodiert.
-    Die Aussagen repräsentieren subjektive Perspektiven der befragten Personen.
-    Das LLM darf KEINE Inhalte aus theoretischen Modellen oder externem Wissen ergänzen.
+    Vollständig künstliche Demonstrationsdaten über technische Lernangebote.
+    Alle Interviewaussagen und Personen sind erfunden; es handelt sich nicht um
+    eine empirische Studie. Die Textstellen sind bereits kategorienbasiert codiert.
+    Analysiere nur die gelieferten Aussagen und ergänze keine externen Inhalte.
 
   participants: |
-    Befragte Personen eines qualitativen Forschungsprojekts.
-    Angaben zur konkreten Population, Institution, Region und zum Untersuchungskontext
-    wurden für diese öffentliche Beispielkonfiguration bewusst verallgemeinert.
-    Keine Annahmen über Motivation, Hintergründe oder persönliche Eigenschaften.
+    Sechs frei erfundene Personen des öffentlichen Demonstrationsdatensatzes.
+    Keine reale Population, Institution oder Region ist abgebildet.
+    Keine zusätzlichen persönlichen Merkmale oder Hintergründe erfinden.
 
   methodology: |
-    Leitfadengestützte, halbstrukturierte Interviews.
-    Qualitative, kategorienbasierte Inhaltsanalyse.
-    Clusterbildung ausschließlich inhaltsbasiert auf Grundlage der gelieferten Daten.
+    Demonstration einer qualitativen, kategorienbasierten Inhaltsanalyse.
+    Der Datensatz ist für technische Funktionstests erstellt und erlaubt keine
+    empirischen Schlussfolgerungen oder unabhängige Güteaussagen über das Modell.
+    Clusterbildung ausschließlich auf Grundlage der gelieferten Textstellen.
 
 
 # ============================================================

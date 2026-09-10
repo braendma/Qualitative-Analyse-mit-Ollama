@@ -6,6 +6,8 @@ Die Auswertung läuft mit einem lokal installierten Ollama-Modell. Modellvorschl
 
 ## Einstieg
 
+- [Version 0.2.0-beta.1: Änderungen und Hinweise zum Umstieg](docs/RELEASE_NOTES.md)
+- [Geprüfte Installation und Paketversionen](docs/INSTALLATION_TEST.md)
 - [Einrichten und öffnen](#einrichten-und-öffnen)
 - [1. Projekt und Dateien auswählen](#1-projekt-und-dateien-auswählen)
 - [2. Spalten zuordnen und Eingaben prüfen](#2-spalten-zuordnen-und-eingaben-prüfen)
@@ -1089,7 +1091,7 @@ Contributions und neue Analyseideen sind willkommen.
 
 # 🧾 Lizenz
 
-MIT License
+[MIT License](LICENSE)
 
 Frei nutzbar für Forschung, Lehre und Entwicklung entsprechend den Bedingungen der Lizenz.
 
@@ -1112,4 +1114,3 @@ Mitarbeit an wesentlichen Teilen der modularen Architektur, der Analysebausteine
 > **Hinweis zur KI-gestützten Entwicklung:** Teile des Codes und der Dokumentation – einschließlich der Coding-Validierungsmodule – wurden in Zusammenarbeit mit ChatGPT und OpenAI Codex entwickelt. KI-generierter oder KI-überarbeiteter Code sollte vor produktiver oder wissenschaftlicher Nutzung geprüft und validiert werden.
 
 ---
-

@@ -6,8 +6,8 @@ Die öffentliche `config/config_v2.yaml` verwendet lokale Inferenz über `http:/
 
 ```bash
 python run_workflow.py --validate-only
-python run_workflow.py --config config_v2.yaml
-python run_workflow.py --config config_v2.yaml --resume workflow_output/LAUF-ID
+python run_workflow.py --config config/config_v2.yaml
+python run_workflow.py --config config/config_v2.yaml --resume workflow_output/LAUF-ID
 ```
 
 Jeder neue Lauf erhält ein eigenes Verzeichnis unter `workflow_output`. Darin stehen der Gesamtbericht, die Konfigurationskopie und das Manifest mit Lauf-ID, SHA-256-Prüfsummen, Modellparametern, Codeversion und Abhängigkeitsversionen. JSON- und Markdown-Ergebnisse werden atomar geschrieben. Ein Modul darf weder unveränderte alte Dateien noch unvollständige Ergebnisse als Erfolg melden.
