@@ -5,6 +5,31 @@ const token = location.hash.slice(1) || sessionStorage.getItem(tokenKey) || '';
 if (location.hash) { sessionStorage.setItem(tokenKey, token); history.replaceState(null, '', '/'); }
 let state, project, jobs = [], viewing = 'project', objectUrl = null, polling = false;
 const names = {project:'Projekt & Dateien',check:'Eingaben prüfen',analysis:'Analyse',results:'Ergebnisse',telegram:'Telegram-Updates'};
+const moduleHelp = {
+  clusterer:'Gruppiert Textstellen innerhalb eines Codepfads zu inhaltlichen Clustern.',
+  code_verification:'Prüft, wie gut die menschlich vergebenen Codes zu den Textstellen passen.',
+  blind_coding:'Vergibt Codes anhand des Kategoriensystems, ohne die menschlichen Zuordnungen als Vorgabe zu erhalten.',
+  coding_agreement:'Vergleicht menschliche und modellbasierte Zuordnungen und berichtet Übereinstimmungen und Abweichungen.',
+  summarizer:'Fasst die Inhalte der gebildeten Cluster zusammen.',
+  swot:'Ordnet Befunde als Stärken, Schwächen, Chancen oder Risiken ein.',
+  meta_swot:'Verdichtet die SWOT-Einzelbefunde zu übergreifenden Themen.',
+  person_analysis:'Fasst Themen und Perspektiven für jede befragte Person zusammen.',
+  person_comparison:'Vergleicht Personen hinsichtlich gemeinsamer Muster, Unterschiede und möglicher Typen.',
+  contrast_analysis:'Sucht abweichende Fälle, die übergreifende Muster einschränken.',
+  relation_analysis:'Untersucht mögliche Zusammenhänge zwischen Codepfaden anhand von Textbelegen.',
+  ambiguity_analysis:'Untersucht gegenläufige Aussagen und Ambivalenzen innerhalb der einzelnen Personenanalysen.',
+  evidence_audit:'Prüft ausgewählte Befunde auf Gegenbelege aus den vorherigen Analysen.',
+  review_queue:'Erstellt die interaktive Liste zur manuellen Prüfung von Codierungen und Modellvorschlägen.',
+  overall_synthesis:'Führt die vorherigen Analyseergebnisse zu einer Gesamtsynthese zusammen.'
+};
+function updateModuleSelection(){
+  const selected=new Set([...document.querySelectorAll('[name=module]:checked')].map(n=>n.value));
+  const required=new Set(selected);
+  let changed=true;
+  while(changed){changed=false;state.modules.forEach(m=>{if(required.has(m.id))m.depends_on.forEach(id=>{if(!required.has(id)){required.add(id);changed=true;}});});}
+  const added=state.modules.filter(m=>required.has(m.id)&&!selected.has(m.id)).map(m=>m.name);
+  $('module-selection').textContent=selected.size?`${selected.size} ${selected.size===1?"Modul":"Module"} ausgewählt · ${required.size} ${required.size===1?"Modul wird":"Module werden"} ausgeführt.`+(added.length?' Automatisch benötigte Vorstufen: '+added.join(', ')+'.':' Keine zusätzlichen Vorstufen erforderlich.'):'Noch kein Modul ausgewählt. Setze mindestens ein Häkchen.';
+}
 const columnLabels = {segment:'Text / Segment *',person:'Person / Dokument *',code:'Vergebener Code *',segment_id:'Eindeutige Zeilen-ID (optional)',unit_id:'Passage-ID (für Mehrfachcodierung)'};
 const bookLabels = {kategorie:'Kategorie *',unterkategorie:'Unterkategorie',auspraegung:'Ausprägung',facette:'Facette',definition:'Definition *',ankerbeispiel:'Ankerbeispiel'};
 const aliases = {segment:['Segment','Text','Segmenttext'],person:['Dokumentname','Dokument','Person','Interview'],code:['Code','Codes','human_code'],segment_id:['segment_id','Segment-ID','ID'],unit_id:['PassageID','Passage-ID','unit_id'],kategorie:['Kategorie','Hauptkategorie'],unterkategorie:['Unterkategorie','Subkategorie'],auspraegung:['Ausprägung','Auspraegung'],facette:['Facette'],definition:['Definition','Beschreibung'],ankerbeispiel:['Ankerbeispiel','Beispiel']};
@@ -63,7 +88,8 @@ function loadFields(){
   $('context-project').value=context.project_description||'';$('context-persons').value=context.participants||'';$('context-method').value=context.methodology||'';
   $('modules').replaceChildren();
   const selected=s.modules||state.modules.map(m=>m.id);
-  state.modules.forEach(m=>{const label=el('label',undefined,'checkbox'),input=el('input'),text=el('span',m.name);input.type='checkbox';input.value=m.id;input.name='module';input.checked=selected.includes(m.id);if(m.depends_on.length)text.append(el('small','Benötigt: '+m.depends_on.map(id=>state.modules.find(x=>x.id===id)?.name||id).join(', ')));label.append(input,text);$('modules').append(label);});
+  state.modules.forEach(m=>{const label=el('label',undefined,'checkbox'),input=el('input'),text=el('span',m.name);input.type='checkbox';input.value=m.id;input.name='module';input.checked=selected.includes(m.id);input.addEventListener('change',updateModuleSelection);if(moduleHelp[m.id])text.append(el('small',moduleHelp[m.id]));if(m.depends_on.length)text.append(el('small','Benötigt: '+m.depends_on.map(id=>state.modules.find(x=>x.id===id)?.name||id).join(', ')));label.append(input,text);$('modules').append(label);});
+  updateModuleSelection();
   renderFiles();
 }
 async function openProject(id){
@@ -85,7 +111,7 @@ function settings(){
 async function saveAndValidate(){
   const pid=needProject(), s=settings(), result=await api('save',{project:pid,settings:s});project.settings=s;
   const box=$('validation-result');box.replaceChildren(el('h3','Eingaben sind gültig'));box.hidden=false;
-  const stats=el('div',undefined,'stats');[['Codierzeilen',result.segments],['Passagen',result.passages??'—'],['Personen',result.persons],['Codepfade',result.codes]].forEach(([label,n])=>{const part=el('div',undefined,'stat');part.append(el('b',String(n)),el('span',label));stats.append(part);});box.append(stats,el('p','Aktive Schritte inklusive benötigter Vorstufen: '+result.modules.map(m=>m.name).join(' → '),'hint'));
+  const stats=el('div',undefined,'stats');[['Codierzeilen',result.segments],['Passagen',result.passages??'—'],['Personen',result.persons],['Codepfade',result.codes]].forEach(([label,n])=>{const part=el('div',undefined,'stat');part.append(el('b',String(n)),el('span',label));stats.append(part);});box.append(stats,el('p','Diese Module werden bei einem Start ausgeführt (einschließlich benötigter Vorstufen): '+result.modules.map(m=>m.name).join(' → '),'hint'));
   return result;
 }
 function badge(status){const labels={running:'Läuft',success:'Abgeschlossen',failed:'Fehler',paused:'Pausiert',interrupted:'Unterbrochen',starting:'Startet'};return el('span',labels[status]||status,'badge '+status);}
@@ -149,8 +175,9 @@ for(const kind of ['segments','codebook'])$(kind+'-file').addEventListener('chan
 action($('validate'),async()=>{const r=await saveAndValidate();message(`Prüfung bestanden: ${r.segments} Codierzeilen, ${r.codes} Codepfade. Kein Modellaufruf.`);});
 action($('start'),async()=>{await saveAndValidate();await api('start',{project:project.id});message('Analyse gestartet. Den Fortschritt findest du unten.');await refreshJobs();});
 action($('check-ollama'),async()=>{const r=await api('models');$('model-list').replaceChildren();r.models.forEach(m=>$('model-list').append(new Option(m,m)));$('ollama-status').textContent=r.models.length?`${r.models.length} lokale Modelle gefunden. Im Modellfeld auswählen oder Namen eingeben.`:'Ollama ist erreichbar, aber kein lokales Modell installiert.';});
-action($('all-modules'),async()=>document.querySelectorAll('[name=module]').forEach(n=>n.checked=true));
-action($('coding-modules'),async()=>document.querySelectorAll('[name=module]').forEach(n=>n.checked=['clusterer','code_verification','blind_coding','coding_agreement'].includes(n.value)));
+action($('clear-modules'),async()=>{document.querySelectorAll('[name=module]').forEach(n=>n.checked=false);updateModuleSelection();});
+action($('all-modules'),async()=>{document.querySelectorAll('[name=module]').forEach(n=>n.checked=true);updateModuleSelection();});
+action($('coding-modules'),async()=>{document.querySelectorAll('[name=module]').forEach(n=>n.checked=['clusterer','code_verification','blind_coding','coding_agreement'].includes(n.value));updateModuleSelection();});
 $('close-viewer').addEventListener('click',()=>{$('viewer').hidden=true;$('html-preview').removeAttribute('srcdoc');if(objectUrl){URL.revokeObjectURL(objectUrl);objectUrl=null;}});
 $('projects').addEventListener('change',async()=>{try{await openProject($('projects').value);show('project');}catch(e){message(e.message,true);}});
 for(const id of ['new-project','welcome-create'])$(id).addEventListener('click',()=>{$('create-dialog').showModal();$('project-name').focus();});
