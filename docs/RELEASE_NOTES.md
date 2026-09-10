@@ -1,3 +1,15 @@
+# 0.3.1 · SVG-Patch · 10. September 2026
+
+Weiterhin als Vorabversion veröffentlicht. Clusterdiagramme und Konfusionsmatrix werden zusätzlich als echte SVG-Vektorgrafiken gespeichert. HTML-Gesamtberichte bevorzugen SVG, bieten einen Einzeldatei-Download und bleiben offline nutzbar. PNG bleibt als Alternative erhalten. Die Konfusionsmatrix verwendet auch für Zellen und Farbskala Vektorformen.
+
+SVG-Dateien werden auf passive Bildinhalte geprüft; Skripte, eingebettete Rasterbilder und externe Ressourcen werden abgewiesen. Vorhandene Berichte bleiben unverändert. Eine doppelte Dateianzeige durch unterschiedliche Windows-Pfadschreibweisen wurde korrigiert.
+
+Prüfung: 98 Python-Tests sowie acht bestehende JavaScript-Tests; Browsertest mit 13 SVG-Diagrammen, Vektordownload, Offline-Anzeige und PDF-Export. Keine Modellaufrufe für diesen Patch. Die Cloud-Testgrenzen der Beta 3 bleiben bestehen.
+
+Beim Update die Oberfläche schließen und die Programmdateien ersetzen; private Konfigurationen und Projekte erhalten. Nach Codeänderungen neue Analyseläufe beginnen, statt alte Checkpoints unverändert fortzusetzen.
+
+---
+
 # 0.3.0-beta.1 · Beta 3 · 10. September 2026
 
 **Bedienung und Berichte:** Automatische HTML-Gesamtberichte mit dauerhafter Ergebnisverknüpfung, Offline-Grafiken und Suche; einklappbare Einzeldateien; Assistent für fehlende Passage-IDs mit bestätigten Gruppen und unveränderlichen Originalen; vollständiges lokales [Handbuch](HANDBUCH.md); braendma-Signet in der Seitenleiste. Clusterüberschriften zeigen jetzt alle vorhandenen Kategorieebenen ohne leere Facetten. Gleichzeitige Bildabrufe werden zuverlässiger angenommen.

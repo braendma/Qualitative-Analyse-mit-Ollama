@@ -21,9 +21,13 @@ def inline_assets():
             'style': [(ROOT/'html_report.css').read_text(encoding='utf-8')]}
 
 
+# Retain the exact audited Beta 3 renderer/style for already saved reports.
+LEGACY_REPORT_HASHES = {'script': ["'sha256-JdfchCVaDDGNds3x6iSiftJcX+HtnB1TcppPL0oL7t8='"], 'style': ["'sha256-Xdx2Cb2NRtLW5h704CrZI3NPGm+VHYYiEipfuKNeF2k='"]}
+
+
 def csp_hashes():
     return {tag: ["'sha256-"+base64.b64encode(hashlib.sha256(value.encode()).digest()).decode()+"'"
-                  for value in values] for tag,values in inline_assets().items()}
+                  for value in values] + LEGACY_REPORT_HASHES.get(tag, []) for tag,values in inline_assets().items()}
 
 
 def local_file(directory, name):
@@ -40,11 +44,14 @@ def local_file(directory, name):
 def image_data(path):
     if path.stat().st_size > MAX_IMAGE:raise ValueError('Abbildung überschreitet 20 MB.')
     raw = path.read_bytes()
-    if raw.startswith(b'\x89PNG\r\n\x1a\n'):mime='image/png'
+    if path.suffix.lower()=='.svg':
+        from svg_images import passive_svg
+        raw=passive_svg(raw);mime='image/svg+xml'
+    elif raw.startswith(b'\x89PNG\r\n\x1a\n'):mime='image/png'
     elif raw.startswith(b'\xff\xd8\xff'):mime='image/jpeg'
     elif raw[:6] in (b'GIF87a',b'GIF89a'):mime='image/gif'
     elif raw[:4]==b'RIFF' and raw[8:12]==b'WEBP':mime='image/webp'
-    else:raise ValueError('Kein unterstütztes Rasterbild.')
+    else:raise ValueError('Kein unterstütztes Bildformat.')
     return 'data:'+mime+';base64,'+base64.b64encode(raw).decode()
 
 
@@ -68,6 +75,12 @@ def build_html_report(directory, modules, created_at, *, filename='gesamtbericht
             reference=match[2]
             try:
                 target=local_file(directory,str(path.parent.relative_to(directory)/reference.replace('\\','/')))
+                if target.suffix.lower() != '.svg':
+                    vector=local_file(directory,str(target.relative_to(directory).with_suffix('.svg')))
+                    if vector.is_file():
+                        try: image_data(vector);target=vector
+                        except (ValueError,OSError,UnicodeError):
+                            warnings.append('SVG nicht verwendbar; Rasterbild als Ersatz eingebettet.')
                 key=str(target.relative_to(directory))
                 if key not in assets:
                     encoded=image_data(target)

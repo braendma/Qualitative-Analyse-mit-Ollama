@@ -188,6 +188,7 @@ def plot_clusters(cat,
 
     try:
         fig.savefig(filepath, dpi=160, facecolor="white", bbox_inches="tight")
+        fig.savefig(os.path.splitext(filepath)[0]+".svg", format="svg", facecolor="white", bbox_inches="tight")
         plt.close(fig)
         logger.info(f"[Plot] Diagramm gespeichert: {filepath}")
     except Exception as e:

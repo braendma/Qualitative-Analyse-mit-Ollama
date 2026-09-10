@@ -16,7 +16,7 @@
 </ul>
 </div>
 </nav></header><main><h1 id="handbuch-qualitative-analyse-mit-ollama">Handbuch · Qualitative Analyse mit Ollama</h1>
-<p>Dieses Handbuch begleitet dich vom ersten Start bis zum erneuten Analyselauf mit geprüften Codierungen. Alle Personen, Texte und Beurteilungen in den Beispielen sind erfunden. Stand: 0.3.0-beta.1 · Beta 3.</p>
+<p>Dieses Handbuch begleitet dich vom ersten Start bis zum erneuten Analyselauf mit geprüften Codierungen. Alle Personen, Texte und Beurteilungen in den Beispielen sind erfunden. Stand: 0.3.1 · SVG-Patch (Vorabversion).</p>
 <p>Du erreichst die bebilderte Fassung jederzeit über <strong>Handbuch</strong> neben <strong>Telegram-Updates</strong> in der Seitenleiste. Sie öffnet sich in einem eigenen Tab, damit deine aktuelle Arbeit geöffnet bleibt. Ohne laufende Oberfläche kannst du <code>docs/HANDBUCH.html</code> doppelklicken. Den Programmordner einschließlich der Bilder zusammenlassen.</p>
 <h2 id="1-einrichten-und-starten">1. Einrichten und starten</h2>
 <ol>
@@ -218,7 +218,9 @@
 </ul>
 <p>Zum späteren Wiederöffnen die Oberfläche starten, dasselbe Projekt auswählen und <strong>Ergebnisse</strong> öffnen. Es ist kein erneuter Modellaufruf nötig. HTML entsteht nur nach vollständigem erfolgreichem Lauf; bei Fehler oder Pause stehen bereits fertige Einzelergebnisse zur Verfügung. Fehlende oder zu große Grafiken werden im Bericht kenntlich gemacht.</p>
 <p>Alte Läufe vor diesem Patch besitzen noch keinen automatisch erzeugten HTML-Gesamtbericht. Fortgeschrittene können ihn ohne LLM nacherstellen: <code>python src/html_report.py --run-dir "Pfad zum abgeschlossenen Lauf"</code>. Eine bestehende HTML-Datei bleibt erhalten; ein weiterer Export erhält einen neuen Namen. Die reguläre Ergebnisansicht kennt den Standardnamen <code>gesamtbericht.html</code>.</p>
-<h3 id="grafiken-lesen-und-textbelege-offnen">Grafiken lesen und Textbelege öffnen</h3>
+<h3 id="grafiken-lesen-als-svg-speichern-und-textbelege-offnen">Grafiken lesen, als SVG speichern und Textbelege öffnen</h3>
+<p>Ab 0.3.1 werden Clusterdiagramme und Konfusionsmatrix sowohl als PNG als auch als SVG erzeugt. Im neuen HTML-Bericht wird SVG bevorzugt eingebettet: Konturen und Schrift bleiben beim Vergrößern scharf. Unter dem Diagramm öffnet <strong>SVG speichern</strong> den Einzeldatei-Download. In den Einzeldateien des Laufs lassen sich beide Formate ansehen und speichern. Die SVG-Dateien enthalten auch bei der Konfusionsmatrix echte Vektorformen und benötigen keine externen Schriftdateien.</p>
+<p>Vorhandene gespeicherte HTML-Berichte bleiben unverändert. Ohne passende SVG-Datei verwendet der Bericht weiterhin PNG. Das Handbuch enthält zur Erklärung weiterhin Screenshots; diese werden durch SVG nicht zu Vektorgrafiken.</p>
 <p>Clusterdiagramme zeigen <strong>Codierzeilen</strong> als ausgefüllte türkisfarbene Balken und <strong>eindeutige Personen je Cluster</strong> als umrandete Balken. Ganzzahlige Skalen, direkt beschriftete Werte und umgebrochene Namen erleichtern das Lesen. Nicht zuordenbare Personen werden als unbekannt ausgewiesen. Eine Person kann in mehreren Clustern vorkommen; Häufigkeit bedeutet keine inhaltliche Wichtigkeit.</p>
 <p><img alt="Clustergrößen mit künstlichen Daten" src="screenshots/12-clusterdiagramm.jpg" /></p>
 <p>Der HTML-Bericht ergänzt bei vorhandenen Clusterergebnissen <strong>Personen und Kategorien</strong>. Eine Zahl öffnet die zugehörigen Textbelege; das Suchfeld filtert vollständige Codepfade. Liegt eine Prüfliste vor, zeigt <strong>Prüfbedarf im Modellergebnis</strong> die Fallklassen. Dieser gespeicherte Stand zeigt nicht den späteren Fortschritt deiner manuellen Prüfung. Dessen aktueller Stand steht weiterhin bei <strong>Codierungen im Projekt prüfen</strong>.</p>

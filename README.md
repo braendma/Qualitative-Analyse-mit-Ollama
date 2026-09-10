@@ -4,11 +4,13 @@ Mit diesem Programm kannst du bereits codierte Interviewstellen auswerten und me
 
 Die Auswertung läuft standardmäßig mit lokalem Ollama. Für freigegebene Inhalte sind optional Ollama Cloud, OpenAI, Anthropic und Hugging Face verfügbar; die DSGVO-Sperre ist pro Projekt zunächst aktiviert. Modellvorschläge und Berichte müssen fachlich geprüft werden; sie ersetzen keine eigenständige qualitative Analyse.
 
-**Aktuelle Vorabversion: [0.3.0-beta.1 · Beta 3](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/tag/v0.3.0-beta.1).** Mit Prüf- und Rückmeldungsfunktion, interaktiven Berichten und optionalen Cloud-Anbietern. OpenAI, Anthropic und Hugging Face sind technisch mit Mocks geprüft, aber noch nicht live getestet.
+**Aktuelle Vorabversion: [0.3.1 · SVG-Patch](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/tag/v0.3.1).** Mit Prüf- und Rückmeldungsfunktion, interaktiven Berichten und optionalen Cloud-Anbietern. OpenAI, Anthropic und Hugging Face sind technisch mit Mocks geprüft, aber noch nicht live getestet.
 
 Das gefaltete **b** von braendma ist jetzt als lokales Programmsignet eingebunden. Über **Handbuch** neben **Telegram-Updates** öffnet sich die vollständige Anleitung mit Bildern und Beispielen, auch ohne Internet.
 
-Neu: lesbarere Clusterdiagramme und Konfusionsmatrix, anklickbare Personen–Kategorien-Übersicht und Fallklassifikation im HTML-Bericht. Cloud-Schlüssel werden separat gespeichert und können je Anbieter ersetzt oder entfernt werden. [Anbieter, Datenfreigabe und Grenzen](docs/KI_ANBIETER.md).
+Neu in 0.3.1: Clusterdiagramme und Konfusionsmatrix zusätzlich als SVG. Der HTML-Bericht bettet bevorzugt Vektorgrafiken ein und bietet „SVG speichern“; PNG bleibt verfügbar.
+
+Seit Beta 3: lesbarere Clusterdiagramme und Konfusionsmatrix, anklickbare Personen–Kategorien-Übersicht und Fallklassifikation im HTML-Bericht. Cloud-Schlüssel werden separat gespeichert und können je Anbieter ersetzt oder entfernt werden. [Anbieter, Datenfreigabe und Grenzen](docs/KI_ANBIETER.md).
 
 ![Clusterdiagramm mit künstlichen Beispieldaten](docs/screenshots/12-clusterdiagramm.jpg)
 

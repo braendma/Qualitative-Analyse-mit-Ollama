@@ -392,6 +392,26 @@ class App(ReviewWorkspace):
                 job['review_provenance']=cfg.get('review_provenance')
                 outputs={f for m in cfg['pipeline']['modules'] if m.get('enabled',True) for f in m.get('outputs',[])}
                 outputs.update(('gesamtbericht.md','gesamtbericht.html'))
+                if any(m['id']=='clusterer' and m.get('enabled',True) for m in cfg['pipeline']['modules']):
+                    for suffix in ('*.png','*.svg'):
+                        outputs.update(str(p.relative_to(manifests[0].parent)).replace('\\','/') for p in (manifests[0].parent/'plots').glob(suffix))
+                from html_report import IMAGE, local_file
+                for module in cfg['pipeline']['modules']:
+                    if not module.get('enabled',True):continue
+                    report=module.get('report',{}).get('markdown')
+                    if not report:continue
+                    try:
+                        report_path=local_file(manifests[0].parent,report)
+                        if not report_path.is_file():continue
+                        for match in IMAGE.finditer(report_path.read_text(encoding='utf-8-sig')):
+                            try:
+                                image_path=local_file(manifests[0].parent,str(report_path.parent.relative_to(manifests[0].parent)/match[2].replace('\\','/')))
+                                if image_path.suffix.lower() in ('.png','.svg'):
+                                    outputs.add(str(image_path.relative_to(manifests[0].parent)))
+                            except ValueError:continue
+                    except (ValueError,OSError):continue
+                outputs.update(str(Path(name).with_suffix('.svg')) for name in list(outputs) if name.endswith('.png'))
+                outputs={f.replace('\\','/') for f in outputs}
                 job['files']=[f for f in sorted(outputs) if safe_child(manifests[0].parent,f).is_file() and not f.endswith('.log')]
             else:
                 job.setdefault('completed',[])
@@ -613,7 +633,11 @@ class Handler(BaseHTTPRequestHandler):
             if parsed.path=='/api/artifact':
                 path=app.artifact(get('project'),get('job'),get('name'))
                 if path.stat().st_size>100*1024*1024: raise ValueError('Datei ist für den Browser zu groß. Im lokalen Projektordner öffnen.')
-                return self.send_bytes(path.read_bytes(),mimetypes.guess_type(path.name)[0] or 'application/octet-stream',attachment=path.name)
+                raw=path.read_bytes()
+                if path.suffix.lower()=='.svg':
+                    from svg_images import passive_svg
+                    raw=passive_svg(raw)
+                return self.send_bytes(raw,mimetypes.guess_type(path.name)[0] or 'application/octet-stream',attachment=path.name)
             self.json({'error':'Nicht gefunden.'},404)
         except (ValueError,OSError,KeyError) as exc: self.json({'error':str(exc)},400)
 

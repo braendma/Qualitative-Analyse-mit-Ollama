@@ -16,8 +16,9 @@ function markdownReport(text,root,media={}){
     const picture=line.match(/^\s*!\[([^\]]*)\]\(([^)]+)\)\s*$/);
     if(picture){
       const src=media[picture[2]];
-      if(typeof src==='string'&&/^data:image\/(png|jpeg|gif|webp);base64,[A-Za-z0-9+/=]+$/.test(src)){
+      if(typeof src==='string'&&/^data:image\/(png|jpeg|gif|webp|svg\+xml);base64,[A-Za-z0-9+/=]+$/.test(src)){
         const img=el('img');img.src=src;img.alt=picture[1];root.append(img);
+        if(src.startsWith('data:image/svg+xml;')){const link=el('a','SVG speichern');link.href=src;link.download=picture[2].split(/[\\/]/).pop().replace(/\.[^.]+$/,'.svg');link.className='svg-download';root.append(link);}
       }else root.append(el('p','Abbildung nicht eingebettet: '+picture[1],'hint'));
       continue;
     }

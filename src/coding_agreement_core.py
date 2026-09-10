@@ -99,22 +99,26 @@ def save_confusion_png(labels: list[str], matrix: list[list[int]], path: str | P
     ax=fig.add_axes([.10,(legend_height+.6)/(size+legend_height),.78,(size-1.5)/(size+legend_height)])
     cmap=LinearSegmentedColormap.from_list('qualitative',['#f2f7f5','#197b80'])
     maximum=max([v for row in matrix for v in row]+[1])
-    image=ax.imshow(matrix,cmap=cmap,vmin=0,vmax=maximum)
+    image=ax.pcolormesh(matrix,cmap=cmap,vmin=0,vmax=maximum,rasterized=False)
+    ax.set_aspect('equal');ax.set_ylim(count,0)
     numbers=[f'{i+1:02d}' for i in range(count)]
-    ax.set_xticks(range(count),numbers,fontsize=9);ax.set_yticks(range(count),numbers,fontsize=9)
+    ax.set_xticks([i+.5 for i in range(count)],numbers,fontsize=9);ax.set_yticks([i+.5 for i in range(count)],numbers,fontsize=9)
     ax.tick_params(length=0,pad=7)
     ax.set_xlabel('Modellcodierung · Code-Nummer',labelpad=12,color='#627572')
     ax.set_ylabel('Menschliche Codierung · Code-Nummer',labelpad=12,color='#627572')
     ax.set_title('Codierungsvergleich',loc='left',pad=24,fontsize=20,weight='bold',color='#203b3b')
     for r,row in enumerate(matrix):
         for c,value in enumerate(row):
-            if value:ax.text(c,r,str(value),ha='center',va='center',fontsize=8 if count>20 else 10,
+            if value:ax.text(c+.5,r+.5,str(value),ha='center',va='center',fontsize=8 if count>20 else 10,
                              color='white' if value>maximum*.55 else '#203b3b')
     for spine in ax.spines.values():spine.set_visible(False)
     bar=fig.colorbar(image,ax=ax,fraction=.035,pad=.03)
     bar.set_label('Codierzeilen');bar.locator=MaxNLocator(integer=True,nbins=5);bar.update_ticks();bar.outline.set_visible(False)
     fig.text(.10,.16/(size+legend_height),legend,fontsize=9,color='#203b3b',va='bottom',linespacing=1.35)
-    try:fig.savefig(path,dpi=160,bbox_inches='tight',facecolor='white')
+    if bar.solids is not None:bar.solids.set_rasterized(False)
+    try:
+        fig.savefig(path,dpi=160,bbox_inches='tight',facecolor='white')
+        fig.savefig(Path(path).with_suffix('.svg'),format='svg',bbox_inches='tight',facecolor='white')
     finally:plt.close(fig)
     return True
 

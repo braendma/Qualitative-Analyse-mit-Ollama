@@ -172,7 +172,7 @@ async function artifact(job,name,preview){
   const blob=await response.blob();
   if(preview&&(project?.id!==pid||request!==artifactRequest))return;
   if(!preview){const url=URL.createObjectURL(blob),a=el('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);return;}
-  const isImage=/\.(png|jpg|jpeg|webp)$/i.test(name),rawText=isImage?'':await blob.text();
+  const isImage=/\.(png|jpg|jpeg|webp|svg)$/i.test(name),rawText=isImage?'':await blob.text();
   if(typeof finishReviewSave==='function')await finishReviewSave();
   if(project?.id!==pid||request!==artifactRequest)return;
   if(typeof closeReview==='function')closeReview();
@@ -180,7 +180,7 @@ async function artifact(job,name,preview){
   $('viewer').hidden=false;$('viewer-name').textContent=name;$('text-preview').hidden=true;$('html-preview').hidden=true;$('image-preview').hidden=true;
   if(objectUrl)URL.revokeObjectURL(objectUrl);
   if(name.endsWith('.html')){$('html-preview').title=name==='gesamtbericht.html'?'Interaktiver Gesamtbericht':'HTML-Ergebnis';$('html-preview').srcdoc=rawText;$('html-preview').hidden=false;}
-  else if(/\.(png|jpg|jpeg|webp)$/i.test(name)){objectUrl=URL.createObjectURL(blob);$('image-preview').src=objectUrl;$('image-preview').hidden=false;}
+  else if(/\.(png|jpg|jpeg|webp|svg)$/i.test(name)){objectUrl=URL.createObjectURL(blob);$('image-preview').src=objectUrl;$('image-preview').hidden=false;}
   else{
     const text=rawText.slice(0,1000000);
     if(name.endsWith('.md')){markdownReport(text,$('formatted-preview'));$('formatted-preview').hidden=false;}

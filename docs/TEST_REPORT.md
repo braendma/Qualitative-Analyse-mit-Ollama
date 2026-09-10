@@ -1,3 +1,10 @@
+# SVG patch · 0.3.1 · 2026-09-10
+
+- Three added Python tests cover passive SVG validation, rejection of active/external content, real vector output for both plot types, SVG preference/PNG fallback and unique Windows artifact paths. Total: 98 tests.
+- Final full-suite run: all 98 Python tests passed with unchanged source, including both Windows DPAPI tests and workflow pause/resume.
+- Eight existing JavaScript tests pass. Edge verifies 13 SVG images in the app report, individual SVG download containing vector paths, 13 unique SVG artifacts, offline display and PDF export, without JavaScript errors.
+- Synthetic results from an earlier Cloud run were redrawn. No local or cloud model calls and no real interview data were needed.
+
 # Provider and chart patch · 2026-09-10
 
 - 95 Python tests pass, including the complete mocked workflow, provider request/response formats, refusal and truncation handling, bounded retries, secret separation, selected-provider environment, privacy guards on resume, chart deduplication, and Windows DPAPI key rotation/removal. DPAPI tests run under the regular Windows account; they cannot use the restricted sandbox identity.
