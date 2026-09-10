@@ -17,7 +17,7 @@ try {
             & $taskLauncher.Source @taskPrefix -m venv .venv
             if ($LASTEXITCODE -ne 0) { throw 'Die Python-Umgebung konnte nicht angelegt werden.' }
         } else {
-            & $taskLauncher.Source @taskPrefix -c 'import pandas,numpy,matplotlib,yaml,ollama'
+            & $taskLauncher.Source @taskPrefix -c 'import pandas,numpy,matplotlib,yaml,ollama,openpyxl'
             if ($LASTEXITCODE -ne 0) { throw 'Python-Pakete fehlen. Einmal Einrichtung.cmd ausfuehren; dabei werden Pakete aus dem Internet installiert.' }
             & $taskLauncher.Source @taskPrefix -X utf8 local_app.py
             exit $LASTEXITCODE
@@ -29,7 +29,7 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Paketinstallation fehlgeschlagen. Internetverbindung und die Meldungen oben pruefen.' }
         Write-Host 'Einrichtung abgeschlossen. Jetzt Start_Oberflaeche.cmd oeffnen.'
     } else {
-        & $taskPython -c 'import pandas,numpy,matplotlib,yaml,ollama'
+        & $taskPython -c 'import pandas,numpy,matplotlib,yaml,ollama,openpyxl'
         if ($LASTEXITCODE -ne 0) { throw 'Python-Pakete fehlen. Einrichtung.cmd erneut ausfuehren.' }
         & $taskPython -X utf8 local_app.py
         if ($LASTEXITCODE -ne 0) { throw 'Die Oberflaeche wurde mit einem Fehler beendet. Siehe Meldung oben.' }

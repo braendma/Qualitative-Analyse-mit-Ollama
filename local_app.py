@@ -152,19 +152,31 @@ class App:
         data['settings'] = read_json(directory/'settings.json', {})
         return data
 
-    def upload(self, pid, kind, name, encoded):
+    def upload(self, pid, kind, name, encoded, sheet=None):
         if kind not in ('segments', 'codebook'):
             raise ValueError('Unbekannter Dateityp.')
         try:
             raw = base64.b64decode(encoded, validate=True)
         except (ValueError, TypeError):
             raise ValueError('Dateiübertragung ist ungültig.') from None
-        info = csv_info(raw)
+        suffix = Path(str(name)).suffix.lower()
+        metadata = {'format': 'csv'}
+        normalized = raw
+        if suffix == '.xlsx':
+            from tabular_import import xlsx_csv
+            normalized, metadata = xlsx_csv(raw, sheet)
+            if normalized is None:
+                return metadata
+        elif suffix != '.csv':
+            raise ValueError('Bitte eine .xlsx- oder .csv-Datei auswählen. Alte .xls-Dateien zuerst als .xlsx speichern.')
+        info = {**csv_info(normalized), **metadata}
         directory = self.project_dir(pid)
         fid = uuid.uuid4().hex[:20]
         path = directory/'inputs'/(fid+'.csv')
         path.parent.mkdir(exist_ok=True)
-        path.write_bytes(raw)
+        path.write_bytes(normalized)
+        if suffix == '.xlsx':
+            path.with_suffix('.xlsx').write_bytes(raw)
         uploads = read_json(directory/'uploads.json', {})
         uploads[kind] = {'id':fid, 'name':Path(str(name).replace('\\','/')).name[:150], **info}
         atomic_json(directory/'uploads.json', uploads)
@@ -174,7 +186,7 @@ class App:
         directory = self.project_dir(pid)
         uploads = read_json(directory/'uploads.json', {})
         if not all(k in uploads for k in ('segments','codebook')):
-            raise ValueError('Bitte Interview-CSV und Kategoriensystem auswählen.')
+            raise ValueError('Bitte Interviewdatei und Kategoriensystem auswählen.')
         cfg = copy.deepcopy(self.template)
         model = str(settings.get('model', cfg['llm']['model'])).strip()
         if not re.fullmatch(r'[A-Za-z0-9_.:/-]{1,160}',model) or 'cloud' in model.lower():
@@ -198,7 +210,7 @@ class App:
             if key in ('segment','person','code') and not column:
                 raise ValueError('Text, Person und Code müssen einer Spalte zugeordnet sein.')
             if column and column not in uploads['segments']['headers']:
-                raise ValueError(f'Spalte fehlt in Interview-CSV: {column}')
+                raise ValueError(f'Spalte fehlt in Interviewdatei: {column}')
             cfg['columns'][key] = column or None
         mode = settings.get('label_mode','multi_label')
         if mode not in ('multi_label','unspecified'):
@@ -462,7 +474,7 @@ class Handler(BaseHTTPRequestHandler):
             path=urllib.parse.urlparse(self.path).path
             with app.lock:
                 if path=='/api/create': result=app.create(data.get('name',''),data.get('demo',False))
-                elif path=='/api/upload': result=app.upload(data['project'],data['kind'],data['name'],data['data'])
+                elif path=='/api/upload': result=app.upload(data['project'],data['kind'],data['name'],data['data'],data.get('sheet'))
                 elif path=='/api/save': result=app.save(data['project'],data['settings'])
                 elif path=='/api/start': result=app.start(data['project'],data.get('resume'))
                 elif path=='/api/pause': result=app.pause(data['project'],data['job'])

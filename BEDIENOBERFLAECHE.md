@@ -16,13 +16,57 @@ Die Oberfläche ist nur an `127.0.0.1` gebunden und wird nicht veröffentlicht. 
 ## Ein Projekt bearbeiten
 
 - Ein eigenes Projekt anlegen oder die mitgelieferte künstliche Demo laden. Die Demo liegt separat in `demo/` und enthält 50 Codierzeilen, 43 Passagen und 12 Codepfade.
-- Interviewdaten und Kategoriensystem als UTF-8-CSV mit Semikolon auswählen (jeweils maximal 20 MB). Die ersten fünf Datensätze werden als Vorschau angezeigt. Originaldateien werden nicht verändert.
+- Interviewdaten und Kategoriensystem als XLSX oder UTF-8-CSV mit Semikolon auswählen (jeweils maximal 20 MB). Die ersten fünf Datensätze werden als Vorschau angezeigt. Originaldateien werden nicht verändert.
 - Text, Person, Code und gegebenenfalls Zeilen-/Passage-ID zuordnen. Das Kategoriensystem unterstützt vier Ebenen, Definition und Ankerbeispiel. Optionale Spalten können leer bleiben. Vollständige Codepfade müssen zu den menschlichen Codierungen passen.
 - Bei Mehrfachcodierung eine verlässliche Passage-ID verwenden. Dieselbe Passage-ID muss dieselbe Textstelle derselben Person bezeichnen. Ohne solche IDs kann der Zeilenvergleich ohne Kappa verwendet werden. Die Anwendung erfindet keine Passage-IDs aus Textähnlichkeit.
 - Projektbeschreibung, Teilnehmende und Methodik prüfen. Modell, Kontextfenster, Antwortlimit, Temperatur und Thinking sind über Felder einstellbar. **Installierte Modelle anzeigen** fragt lediglich installierte Modelle ab und startet keine Inferenz.
 - Unter **Analyse → 1. Analysemodule auswählen** einzelne Module per Häkchen auswählen. **Auswahl leeren** entfernt alle Häkchen für eine eigene Zusammenstellung. Unter jedem Modul stehen Funktion und Abhängigkeiten. Die Anzeige unter der Liste nennt die Gesamtzahl auszuführender Module sowie automatisch benötigte Vorstufen. Diese Vorstufen werden auch dann ausgeführt, wenn sie selbst kein Häkchen haben. **Einstellungen speichern & Eingaben prüfen** prüft die Daten ohne Modellaufruf und zeigt die aktiven Schritte an.
 
 Mit **Prüfen & neuen Lauf starten** werden die aktuellen Einstellungen gespeichert, die Eingaben nochmals geprüft und die lokale Analyse gestartet. Pro Oberfläche ist jeweils ein Lauf aktiv. Der Fortschritt zeigt abgeschlossene Module und das aktuell laufende Modul; es gibt keine geschätzte Restlaufzeit.
+
+## Textstellen aus MAXQDA vorbereiten
+
+**Das Kopieren einer geeigneten Tabelle aus MAXQDA nach Excel ist möglich.** Ein bestimmter MAXQDA-Exportknopf ist für dieses Programm nicht vorgeschrieben. Die Tabelle muss jedoch codierte Textstellen einschließlich Herkunft und Code enthalten. Eine reine Codeliste mit Codenamen und Häufigkeiten genügt nicht.
+
+Als regulären Weg bietet MAXQDA den Excel-Export der **Liste der codierten Segmente** an, auch über **Reports → Exportieren → Liste der codierten Segmente**. Zuerst die gewünschten Dokumente und Codes für die Segmentsuche auswählen und den Umfang kontrollieren. Die verfügbaren Exportoptionen sind in der [MAXQDA-Anleitung zum Segmentexport](https://www.maxqda.com/de/hilfe/segment-suche/codierte-segmente-ausdrucken-und-exportieren) beschrieben. Menübezeichnungen können je nach Version abweichen. Die resultierende Tabelle anschließend auf die unten beschriebene Struktur prüfen und gegebenenfalls anpassen; nicht jede Exportvariante entspricht ihr automatisch.
+
+### Benötigte Tabellenspalten
+
+| Beispielname | Inhalt | Pflicht |
+|---|---|---|
+| `Dokumentname` | Dokument-/Personenkennung für diese Textstelle, in jeder Zeile ausgefüllt | Ja |
+| `Code` | Genau ein vollständiger Codepfad, mit ` > ` zwischen den Ebenen | Ja |
+| `Segment` | Vollständiger Originaltext der codierten Stelle | Ja |
+| `segment_id` | Eindeutige ID pro Codierzeile | Optional |
+| `PassageID` | Stabile ID pro tatsächlicher Textstelle, bei Mehrfachcodierung in mehreren Zeilen wiederholt | Im Modus Mehrfachcodierung |
+
+Die Spalten dürfen anders heißen; sie werden in der Oberfläche zugeordnet. Ein Codepfad muss exakt zu einem Pfad im separaten Kategoriensystem passen. Für die Herkunft eine eindeutige Dokument-/Personenkennung verwenden, keine bloße Dokumentgruppe. Falls mehrere Personen in einem Dokument vorkommen, muss die Personenkennung entsprechend aufbereitet werden.
+
+### Eine Zeile je Codierung
+
+Künstliches Strukturbeispiel: Dieselbe Passage hat zwei Codes. Beide Zeilen besitzen dieselbe Passage-ID und denselben Text, aber verschiedene Zeilen-IDs.
+
+```csv
+segment_id;PassageID;Dokumentname;Code;Segment
+Z001;P001;Interview_01;Organisation > Unterstützung;Die Betreuung half uns beim Vergleich unserer Messwerte.
+Z002;P001;Interview_01;Zusammenarbeit > Gruppe > Austausch;Die Betreuung half uns beim Vergleich unserer Messwerte.
+```
+
+Mehrere Codes in einer Sammelzelle oder zusätzlichen Codespalten werden nicht automatisch auf mehrere Codierzeilen verteilt. Auch eingerückte oder über mehrere Zeilen verteilte Codehierarchien werden nicht automatisch ergänzt. Trage den vollständigen Pfad sowie Dokumentname und Text für jede Codierung ein.
+
+**Passage-ID und Zeilen-ID erfüllen unterschiedliche Aufgaben.** Gemeinsame Passage-IDs nur vergeben, wenn es nachweislich dieselbe Textstelle derselben Person ist. Die Herkunft mit ausreichend genauen Start-/Endpositionen kann bei der Zuordnung helfen; gleiche Absatznummern oder gleiche Wörter allein beweisen keine identische Textstelle. Überlappende, unterschiedlich lange Segmente nicht allein deshalb zusammenfassen. Ohne verlässliche Passage-IDs den Zeilenvergleich ohne Kappa wählen und das Feld Passage-ID unzugeordnet lassen.
+
+### XLSX direkt verwenden oder CSV speichern
+
+1. Die Tabelle in Excel so aufbereiten, dass die erste Zeile eindeutige Spaltenüberschriften enthält. Vorgeschaltete Titelzeilen entfernen. Keine verbundenen Zellen oder leeren Fortsetzungsfelder für Dokumentnamen und Codes verwenden.
+2. Die **XLSX-Datei direkt auswählen**. Bei mehreren Tabellenblättern fragt die Oberfläche nach dem gewünschten Blatt. CSV bleibt als Alternative möglich. Die Originaldatei wird unverändert lokal kopiert; die Anwendung erstellt intern eine CSV für den bestehenden Runner. Es wird nichts an einen Cloud-Dienst gesendet.
+3. Bei CSV muss **Semikolon** als Feldtrennzeichen verwenden. Die Bezeichnung des Excel-Dateityps allein garantiert das tatsächliche Trennzeichen nicht. Bei Bedarf die Kopfzeile in einem Texteditor prüfen: `Dokumentname;Code;Segment`. Nicht pauschal Kommas oder Semikolons im gesamten Text ersetzen.
+4. Zeilenumbrüche innerhalb einer Passage müssen in einer Excel-Zelle bleiben. Der CSV-Export muss Felder mit Zeilenumbrüchen, Semikolons oder Anführungszeichen korrekt in Anführungszeichen setzen. Keine Quellenangabe nachträglich an den Segmenttext anhängen; Herkunft gehört in eigene Spalten.
+5. Die XLSX oder CSV in der Oberfläche auswählen, die Vorschau kontrollieren, Spalten zuordnen und **Einstellungen speichern & Eingaben prüfen** ausführen. Diese Prüfung startet keine Modellanfrage.
+
+**XLSX-Hinweise:** Die erste Zeile enthält die Überschriften. Vollständig leere Datenzeilen und leere Randspalten werden ausgelassen; einzelne leere Zellen bleiben leer. Formeln und Excel-Fehler werden mit Zelladresse zurückgewiesen: in einer Kopie zuerst durch Werte ersetzen. Text und Zeilenumbrüche bleiben erhalten. IDs möglichst als Text speichern; einfache Zahlenformate wie `0000` erhalten ihre führenden Nullen. Sonstige Zahlen- und Datumsformate werden als Werte, nicht als Excel-Anzeige übernommen. Alte `.xls`-Dateien vorher als `.xlsx` speichern. Maximal 100.000 Zeilen, 200 Spalten, 100 MB entpackte XLSX-Daten und 20 MB interne CSV. Der direkte Kommandozeilen-Runner erwartet weiterhin CSV; der XLSX-Import erfolgt in der Oberfläche.
+
+Das **Kategoriensystem** ist eine zweite Datei mit Kategorien und Definitionen. Die Interviewdatei enthält die bereits vergebenen Codes und die zugehörigen Textstellen; sie ersetzt das Kategoriensystem nicht.
 
 ## Pausieren, fortsetzen und Ergebnisse öffnen
 

@@ -3,3 +3,4 @@ numpy
 matplotlib
 PyYAML
 ollama
+openpyxl>=3.1.5

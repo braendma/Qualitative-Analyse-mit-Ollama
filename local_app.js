@@ -34,7 +34,7 @@ const columnLabels = {segment:'Text / Segment *',person:'Person / Dokument *',co
 const bookLabels = {kategorie:'Kategorie *',unterkategorie:'Unterkategorie',auspraegung:'Ausprägung',facette:'Facette',definition:'Definition *',ankerbeispiel:'Ankerbeispiel'};
 const aliases = {segment:['Segment','Text','Segmenttext'],person:['Dokumentname','Dokument','Person','Interview'],code:['Code','Codes','human_code'],segment_id:['segment_id','Segment-ID','ID'],unit_id:['PassageID','Passage-ID','unit_id'],kategorie:['Kategorie','Hauptkategorie'],unterkategorie:['Unterkategorie','Subkategorie'],auspraegung:['Ausprägung','Auspraegung'],facette:['Facette'],definition:['Definition','Beschreibung'],ankerbeispiel:['Ankerbeispiel','Beispiel']};
 function el(tag, text, className) { const n=document.createElement(tag); if(text!==undefined)n.textContent=text; if(className)n.className=className; return n; }
-function message(text, error=false) { $('message').textContent=text; $('message').className=error?'error':''; $('message').hidden=false; }
+function message(text, error=false) { $('message').textContent=text; $('message').className=error?'error':''; $('message').hidden=false; if($('sheet-dialog').open)$('sheet-error').textContent=error?text:''; }
 async function api(path, data) {
   const response=await fetch('/api/'+path,{method:data===undefined?'GET':'POST',headers:{'X-App-Token':token,...(data===undefined?{}:{'Content-Type':'application/json'})},body:data===undefined?undefined:JSON.stringify(data)});
   const result=await response.json(); if(!response.ok)throw new Error(result.error || 'Anfrage fehlgeschlagen.'); return result;
@@ -73,7 +73,7 @@ function table(info, title) {
 function renderFiles(){
   const uploads=project.uploads||{};$('previews').replaceChildren();
   for(const kind of ['segments','codebook']){
-    const info=uploads[kind];$(kind+'-info').textContent=info?`${info.name} · ${info.count} Codier-/Kategoriezeilen`:'Noch keine Datei ausgewählt';
+    const info=uploads[kind];$(kind+'-info').textContent=info?`${info.name}${info.sheet?' · Blatt '+info.sheet:''} · ${info.count} Codier-/Kategoriezeilen`:'Noch keine Datei ausgewählt';
     if(info)$('previews').append(table(info,kind==='segments'?'Interviewdatei · erste fünf Zeilen':'Kategoriensystem · erste fünf Zeilen'));
   }
   renderMapping('segment-columns',columnLabels,uploads.segments?.headers||[],project.settings.columns||state.defaults.columns);
@@ -167,10 +167,26 @@ action($('save-telegram'),async()=>{const result=await api('telegram',telegramVa
 action($('remove-token'),async()=>{const result=await api('telegram',telegramValues(true));$('bot-token').value='';$('token-file').value='';renderTelegram(result);message('Token entfernt und Benachrichtigungen deaktiviert.');});
 action($('test-telegram'),async()=>{if($('bot-token').value)throw new Error('Den neuen Token zuerst speichern.');await api('telegram-test',{});message('Testnachricht an den gespeicherten Telegram-Chat gesendet.');});
 $('token-file').addEventListener('change',async()=>{try{const f=$('token-file').files[0];if(!f)return;if(f.size>4096)throw new Error('Token-Datei ist zu groß. Eine Textdatei nur mit dem Bot-Token verwenden.');$('bot-token').value=(await f.text()).trim();message('Token aus Datei geladen. Zum Übernehmen Einstellungen speichern.');}catch(e){message(e.message,true);}finally{$('token-file').value='';}});
+let pendingUpload=null,pendingUploadKind=null;
+function acceptUpload(uploads, pid){
+  if(project.id!==pid)return;
+  project.uploads=uploads;delete project.settings[pendingUploadKind==='segments'?'columns':'book_columns'];renderFiles();$('validation-result').hidden=true;
+  message('Datei als lokale Projektkopie übernommen. Bitte Spaltenzuordnung prüfen.');
+}
+action($('sheet-import'),async()=>{
+  if(!pendingUpload)return;
+  const payload={...pendingUpload,sheet:$('sheet-choice').value};
+  const result=await api('upload',payload);acceptUpload(result,payload.project);
+  pendingUpload=null;$('sheet-dialog').close();
+});
+$('sheet-cancel').addEventListener('click',()=>{$('sheet-dialog').close();});
+$('sheet-dialog').addEventListener('close',()=>{pendingUpload=null;});
 for(const kind of ['segments','codebook'])$(kind+'-file').addEventListener('change',async()=>{try{
-  const pid=needProject(),file=$(kind+'-file').files[0];if(!file)return;if(file.size>20*1024*1024)throw new Error('Datei überschreitet 20 MB.');
+  pendingUploadKind=kind;const pid=needProject(),file=$(kind+'-file').files[0];if(!file)return;if(file.size>20*1024*1024)throw new Error('Datei überschreitet 20 MB.');
   const bytes=new Uint8Array(await file.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=16384)binary+=String.fromCharCode(...bytes.subarray(i,i+16384));
-  project.settings=settings();project.uploads=await api('upload',{project:pid,kind,name:file.name,data:btoa(binary)});renderFiles();$('validation-result').hidden=true;message('Datei als lokale Projektkopie übernommen. Bitte Spaltenzuordnung prüfen.');
+  project.settings=settings();const payload={project:pid,kind,name:file.name,data:btoa(binary)}, result=await api('upload',payload);
+  if(result.requires_sheet){pendingUpload=payload;$('sheet-error').textContent='';$('sheet-choice').replaceChildren();result.sheets.forEach(s=>$('sheet-choice').add(new Option(s,s)));$('sheet-dialog').showModal();}
+  else acceptUpload(result,pid);
 }catch(e){message(e.message,true);}finally{$(kind+'-file').value='';}});
 action($('validate'),async()=>{const r=await saveAndValidate();message(`Prüfung bestanden: ${r.segments} Codierzeilen, ${r.codes} Codepfade. Kein Modellaufruf.`);});
 action($('start'),async()=>{await saveAndValidate();await api('start',{project:project.id});message('Analyse gestartet. Den Fortschritt findest du unten.');await refreshJobs();});
@@ -182,7 +198,7 @@ $('close-viewer').addEventListener('click',()=>{$('viewer').hidden=true;$('html-
 $('projects').addEventListener('change',async()=>{try{await openProject($('projects').value);show('project');}catch(e){message(e.message,true);}});
 for(const id of ['new-project','welcome-create'])$(id).addEventListener('click',()=>{$('create-dialog').showModal();$('project-name').focus();});
 $('cancel-create').addEventListener('click',()=>$('create-dialog').close());
-$('create-form').addEventListener('submit',async e=>{e.preventDefault();try{const p=await api('create',{name:$('project-name').value});state.projects.unshift(p);project=p;renderProjects();await openProject(p.id);$('create-dialog').close();show('project');message('Projekt angelegt. Wähle jetzt deine beiden CSV-Dateien.');}catch(err){message(err.message,true);$('create-dialog').close();}});
+$('create-form').addEventListener('submit',async e=>{e.preventDefault();try{const p=await api('create',{name:$('project-name').value});state.projects.unshift(p);project=p;renderProjects();await openProject(p.id);$('create-dialog').close();show('project');message('Projekt angelegt. Wähle jetzt deine beiden Dateien (XLSX oder CSV).');}catch(err){message(err.message,true);$('create-dialog').close();}});
 action($('demo'),async()=>{const p=await api('create',{name:'Demo · Künstliche Interviews',demo:true});state.projects.unshift(p);project=p;renderProjects();await openProject(p.id);message('Demo geladen: 50 künstliche Codierzeilen und 43 Passagen. Du kannst zuerst die Eingaben prüfen.');});
 async function init(){try{state=await api('state');renderProjects();renderTelegram(state.telegram);if(state.projects.length)await openProject(state.projects[0].id);}catch(e){message(e.message,true);}}
 setInterval(async()=>{if(!project||polling||!['analysis','results'].includes(viewing))return;polling=true;try{await refreshJobs();}catch(e){message('Verbindung zur lokalen Oberfläche unterbrochen. Startfenster prüfen.',true);}finally{polling=false;}},4000);

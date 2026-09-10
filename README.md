@@ -13,7 +13,7 @@
 
 Geprüfte Teilanalysen bleiben jetzt auch bei einem Abbruch mitten in einem Modul erhalten. Mit `--resume workflow_output/LAUF-ID` werden sie ohne erneuten Modellaufruf wiederverwendet; Eingaben und Einstellungen müssen unverändert sein. Die Zwischenstände liegen privat im jeweiligen Laufordner.
 
-Die neue **lokale Bedienoberfläche** startet unter Windows über `Start_Oberflaeche.cmd` (einmalige Paketinstallation: `Einrichtung.cmd`). Sie bietet Projekte, CSV-Spaltenzuordnung, Eingabeprüfung, Modell- und Modulauswahl, Fortschritt, Pause/Wiederaufnahme sowie Ergebnisvorschau. Optionale Telegram-Updates unterstützen Tokenimport, Wechsel und geschützte Windows-Speicherung. Einrichtung und Datenablage: [BEDIENOBERFLAECHE.md](BEDIENOBERFLAECHE.md).
+Die neue **lokale Bedienoberfläche** startet unter Windows über `Start_Oberflaeche.cmd` (einmalige Paketinstallation: `Einrichtung.cmd`). Sie bietet Projekte, XLSX-/CSV-Import mit Blattauswahl und Spaltenzuordnung, Eingabeprüfung, Modell- und Modulauswahl, Fortschritt, Pause/Wiederaufnahme sowie Ergebnisvorschau. Optionale Telegram-Updates unterstützen Tokenimport, Wechsel und geschützte Windows-Speicherung. Einrichtung und Datenablage: [BEDIENOBERFLAECHE.md](BEDIENOBERFLAECHE.md).
 
 Die aktuelle Version prüft Eingaben vor dem Start, erhält vollständige Codepfade, trennt technische Fehler von inhaltlichen Enthaltungen und unterstützt isolierte Läufe mit Wiederaufnahme. Die öffentliche Konfiguration verwendet lokales Ollama. Details und geänderte Aufrufe stehen in [ROBUSTNESS.md](ROBUSTNESS.md).
 

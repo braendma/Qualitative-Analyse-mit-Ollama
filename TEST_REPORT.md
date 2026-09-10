@@ -1,4 +1,12 @@
-# Validation of the local desktop interface
+# Validation of XLSX and CSV imports
+
+Date: 2026-09-10. Baseline: `4002a0a31c2fe50887f6d2b8e0a4b1999b327eef`.
+
+- All 59 automated tests pass (64.7 seconds). Six new synthetic import tests cover MAXQDA-style columns, quotes and newlines, explicit sheet selection, invalid headers/formulas, blank cells, bounded input size, unchanged XLSX originals, both input formats and validation with 50 coding rows / 43 passages.
+- The browser import was checked with a synthetic two-sheet XLSX export and a CSV category system, including sheet selection and automatic column mapping.
+- XLSX ingestion runs locally and requires no model call. No additional Cloud or local GPU inference was used for this change. This release adds `openpyxl` to setup requirements; the command-line runner continues to consume CSV.
+
+## Earlier validation of the local desktop interface
 
 Date: 2026-09-10. Baseline: `90e0ff38fe0da214b6259b4c63a7bd93a6ec689a`.
 
