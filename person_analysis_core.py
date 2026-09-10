@@ -1,3 +1,4 @@
+from runtime_support import PartCheckpoint
 from response_schemas import schema_for, require_structure
 # person_analysis_core.py
 
@@ -301,22 +302,26 @@ def build_person_analysis(
             persons=json.dumps(payload, ensure_ascii=False, indent=2),
         )
 
-        raw = llm_person_analysis(system_prompt, user_prompt, ollama_params)
-        parsed = safe_json_loads(raw)
+        def compute_part():
+            raw = llm_person_analysis(system_prompt, user_prompt, ollama_params)
+            parsed = safe_json_loads(raw)
 
-        if parsed is None:
-            logger.warning(f"[Personenanalyse] JSON für {person} ungültig; starte Repair.")
-            repaired = llm_repair_person_analysis(raw, ollama_params)
-            parsed = safe_json_loads(repaired)
+            if parsed is None:
+                logger.warning(f"[Personenanalyse] JSON für {person} ungültig; starte Repair.")
+                repaired = llm_repair_person_analysis(raw, ollama_params)
+                parsed = safe_json_loads(repaired)
 
-        if parsed is None:
-            logger.error(f"[Personenanalyse] Keine verwertbare Antwort für {person}.")
-            raise ValueError(f"Personenanalyse fehlgeschlagen: {person}")
+            if parsed is None:
+                logger.error(f"[Personenanalyse] Keine verwertbare Antwort für {person}.")
+                raise ValueError(f"Personenanalyse fehlgeschlagen: {person}")
 
-        require_structure(parsed, "person_analysis")
-        normalized = normalize_person_analysis(parsed, allowed_ids, id_to_text)
-        if normalized is None:
-            raise ValueError(f"Ungültige Personenanalyse: {person}")
+            require_structure(parsed, "person_analysis")
+            normalized = normalize_person_analysis(parsed, allowed_ids, id_to_text)
+            if normalized is None:
+                raise ValueError(f"Ungültige Personenanalyse: {person}")
+            return normalized
+        normalized = PartCheckpoint('person_analysis', ollama_params).run(
+            person, {'system':system_prompt,'user':user_prompt,'texts':{sid:id_to_text[sid] for sid in sorted(allowed_ids)}}, compute_part)
 
         categories = sorted({
             ctx.get("hauptkategorie")

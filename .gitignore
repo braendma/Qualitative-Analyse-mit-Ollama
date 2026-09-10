@@ -14,3 +14,5 @@ config.private*.yaml
 config.cloud*.yaml
 *_checkpoint.json
 private_delivery/
+.partial_checkpoints/
+_checkpoints/

@@ -1,3 +1,4 @@
+from runtime_support import PartCheckpoint
 from batching import bounded_batches
 from response_schemas import schema_for, require_structure
 # evidence_audit_core.py
@@ -260,13 +261,18 @@ def build_evidence_audit(
                 data=json.dumps({**payload, "audit_befunde": batch}, ensure_ascii=False, indent=2))
         mappings = {}
         for batch, system_prompt, user_prompt in bounded_batches(payload["audit_befunde"], build_batch, ollama_params):
-            raw = _llm(system_prompt, user_prompt, ollama_params)
-            parsed = safe_json_loads(raw)
-            try:
-                part = normalize_mappings(parsed, {x["audit_id"] for x in batch}, counters_by_id)
-            except ValueError:
-                parsed = safe_json_loads(_repair(raw, ollama_params, user_prompt))
-                part = normalize_mappings(parsed, {x["audit_id"] for x in batch}, counters_by_id)
+            def compute_part():
+                raw = _llm(system_prompt, user_prompt, ollama_params)
+                parsed = safe_json_loads(raw)
+                try:
+                    part = normalize_mappings(parsed, {x["audit_id"] for x in batch}, counters_by_id)
+                except ValueError:
+                    parsed = safe_json_loads(_repair(raw, ollama_params, user_prompt))
+                    part = normalize_mappings(parsed, {x["audit_id"] for x in batch}, counters_by_id)
+                return part
+            part = PartCheckpoint('evidence_audit', ollama_params).run(
+                [p['audit_id'] for p in batch], {'system':system_prompt,'user':user_prompt,'counters':counter_candidates}, compute_part)
+
             mappings.update(part)
 
     else:

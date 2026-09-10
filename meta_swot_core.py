@@ -1,3 +1,4 @@
+from runtime_support import PartCheckpoint
 from response_schemas import schema_for, require_structure
 # meta_swot_core.py
 
@@ -239,7 +240,7 @@ def _source_ids_for_finding_ids(finding_ids, findings_by_id):
     )
 
 
-def build_dimension_meta(
+def _build_dimension_meta(
     dimension,
     findings,
     ollama_params,
@@ -464,3 +465,9 @@ def build_meta_swot(
 
     return "".join(md), json_output
 
+
+
+def build_dimension_meta(dimension, findings, ollama_params, prompts, context):
+    return PartCheckpoint("meta_swot", ollama_params).run(
+        dimension, {"findings":findings,"prompts":prompts,"context":context},
+        lambda: _build_dimension_meta(dimension, findings, ollama_params, prompts, context))

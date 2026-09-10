@@ -1,3 +1,4 @@
+from runtime_support import PartCheckpoint
 from response_schemas import schema_for, require_structure
 # clusterer_core.py
 
@@ -730,173 +731,177 @@ def run_clustering(
         # -------------------------------------------------
         # LLM
         # -------------------------------------------------
-        raw_clusters = llm_cluster(
-            system_prompt,
-            user_prompt,
-            ollama_params
-        )
-
-        # -------------------------------------------------
-        # RAW Logging
-        # -------------------------------------------------
-        try:
-
-            preview = (
-                raw_clusters
-                if raw_clusters is not None
-                else ""
-            )
-
-            if len(preview) > 2000:
-
-                preview_short = (
-                    preview[:2000]
-                    + "...(truncated)"
-                )
-
-            else:
-
-                preview_short = preview
-
-            logger.debug(
-                "[LLM RAW PREVIEW] "
-                f"Haupt: {haupt} | "
-                f"Sub: {sub} | "
-                f"Facette: {facette} | "
-                f"Preview: {preview_short}"
-            )
-
-            if log_raw:
-
-                logger.debug(
-                    "[LLM RAW FULL] "
-                    f"Haupt: {haupt} | "
-                    f"Sub: {sub} | "
-                    f"Facette: {facette} | "
-                    "FullOutputStart\n"
-                    f"{raw_clusters}\n"
-                    "FullOutputEnd"
-                )
-
-        except Exception as e:
-
-            logger.exception(
-                "[LLM RAW] Fehler beim "
-                f"Loggen der Rohantwort: {e}"
-            )
-
-        # -------------------------------------------------
-        # JSON parsen
-        # -------------------------------------------------
-        clusters_json = safe_json_loads(
-            raw_clusters
-        )
-
-        # -------------------------------------------------
-        # Self-Repair
-        # -------------------------------------------------
-        if clusters_json is None:
-
-            logger.error(
-                "[Clusterer] "
-                "JSON-Parsing fehlgeschlagen "
-                f"für Facette {facette}, "
-                "starte Self-Repair."
-            )
-
-            repair_system, repair_user = (
-                build_prompt_for_module(
-                    "self_repair",
-                    prompts=prompts,
-                    context=context,
-                    segments=json.dumps(
-                        segments_payload,
-                        ensure_ascii=False
-                    ),
-                    clusters=raw_clusters
-                )
-            )
-
-            repaired = llm_self_repair(
-                repair_system,
-                repair_user,
+        def compute_part():
+            raw_clusters = llm_cluster(
+                system_prompt,
+                user_prompt,
                 ollama_params
             )
 
+            # -------------------------------------------------
+            # RAW Logging
+            # -------------------------------------------------
+            try:
+
+                preview = (
+                    raw_clusters
+                    if raw_clusters is not None
+                    else ""
+                )
+
+                if len(preview) > 2000:
+
+                    preview_short = (
+                        preview[:2000]
+                        + "...(truncated)"
+                    )
+
+                else:
+
+                    preview_short = preview
+
+                logger.debug(
+                    "[LLM RAW PREVIEW] "
+                    f"Haupt: {haupt} | "
+                    f"Sub: {sub} | "
+                    f"Facette: {facette} | "
+                    f"Preview: {preview_short}"
+                )
+
+                if log_raw:
+
+                    logger.debug(
+                        "[LLM RAW FULL] "
+                        f"Haupt: {haupt} | "
+                        f"Sub: {sub} | "
+                        f"Facette: {facette} | "
+                        "FullOutputStart\n"
+                        f"{raw_clusters}\n"
+                        "FullOutputEnd"
+                    )
+
+            except Exception as e:
+
+                logger.exception(
+                    "[LLM RAW] Fehler beim "
+                    f"Loggen der Rohantwort: {e}"
+                )
+
+            # -------------------------------------------------
+            # JSON parsen
+            # -------------------------------------------------
             clusters_json = safe_json_loads(
-                repaired
+                raw_clusters
             )
 
-        # -------------------------------------------------
-        # Kein gültiges JSON
-        # -------------------------------------------------
-        if clusters_json is None:
+            # -------------------------------------------------
+            # Self-Repair
+            # -------------------------------------------------
+            if clusters_json is None:
 
-            logger.error(
-                "[Clusterer] "
-                "Self-Repair lieferte "
-                "ebenfalls kein gültiges "
-                f"JSON für Facette {facette}."
-            )
+                logger.error(
+                    "[Clusterer] "
+                    "JSON-Parsing fehlgeschlagen "
+                    f"für Facette {facette}, "
+                    "starte Self-Repair."
+                )
 
-            raise LLMResponseError(f"Clustering fehlgeschlagen: {code_path}")
+                repair_system, repair_user = (
+                    build_prompt_for_module(
+                        "self_repair",
+                        prompts=prompts,
+                        context=context,
+                        segments=json.dumps(
+                            segments_payload,
+                            ensure_ascii=False
+                        ),
+                        clusters=raw_clusters
+                    )
+                )
 
-        # -------------------------------------------------
-        # JSON-Struktur erkennen
-        # -------------------------------------------------
-        if (
-            isinstance(
+                repaired = llm_self_repair(
+                    repair_system,
+                    repair_user,
+                    ollama_params
+                )
+
+                clusters_json = safe_json_loads(
+                    repaired
+                )
+
+            # -------------------------------------------------
+            # Kein gültiges JSON
+            # -------------------------------------------------
+            if clusters_json is None:
+
+                logger.error(
+                    "[Clusterer] "
+                    "Self-Repair lieferte "
+                    "ebenfalls kein gültiges "
+                    f"JSON für Facette {facette}."
+                )
+
+                raise LLMResponseError(f"Clustering fehlgeschlagen: {code_path}")
+
+            # -------------------------------------------------
+            # JSON-Struktur erkennen
+            # -------------------------------------------------
+            if (
+                isinstance(
+                    clusters_json,
+                    dict
+                )
+                and "clusters" in clusters_json
+            ):
+
+                clusters = (
+                    clusters_json[
+                        "clusters"
+                    ]
+                )
+
+            elif isinstance(
                 clusters_json,
-                dict
-            )
-            and "clusters" in clusters_json
-        ):
+                list
+            ):
 
-            clusters = (
-                clusters_json[
-                    "clusters"
-                ]
-            )
+                clusters = clusters_json
 
-        elif isinstance(
-            clusters_json,
-            list
-        ):
+            else:
 
-            clusters = clusters_json
+                logger.error(
+                    "[Clusterer] "
+                    "Unerwartetes JSON-Format "
+                    f"für Facette {facette}."
+                )
 
-        else:
+                raise LLMResponseError(f"Ungültige Clusterstruktur: {code_path}")
 
-            logger.error(
-                "[Clusterer] "
-                "Unerwartetes JSON-Format "
-                f"für Facette {facette}."
+            # -------------------------------------------------
+            # WICHTIG:
+            # Segmentangaben normalisieren
+            # -------------------------------------------------
+            clusters = normalize_clusters(
+                clusters
             )
 
-            raise LLMResponseError(f"Ungültige Clusterstruktur: {code_path}")
+            # -------------------------------------------------
+            # Nur tatsächlich gelieferte Segment-IDs zulassen
+            # -------------------------------------------------
+            clusters = validate_cluster_segment_ids(
+                clusters,
+                [segment["id"] for segment in segments_payload]
+            )
 
-        # -------------------------------------------------
-        # WICHTIG:
-        # Segmentangaben normalisieren
-        # -------------------------------------------------
-        clusters = normalize_clusters(
-            clusters
-        )
-
-        # -------------------------------------------------
-        # Nur tatsächlich gelieferte Segment-IDs zulassen
-        # -------------------------------------------------
-        clusters = validate_cluster_segment_ids(
-            clusters,
-            [segment["id"] for segment in segments_payload]
-        )
-
-        if not clusters:
-            raise LLMResponseError(f"Keine belegten Cluster für vorhandene Eingabe: {code_path}")
-        assigned = {sid for c in clusters for sid in c["segments"]}
-        expected = {s["id"] for s in segments_payload}
-        if assigned != expected:
-            raise LLMResponseError(f"Clusterantwort unvollständig: {len(expected - assigned)} Segmente fehlen.")
+            if not clusters:
+                raise LLMResponseError(f"Keine belegten Cluster für vorhandene Eingabe: {code_path}")
+            assigned = {sid for c in clusters for sid in c["segments"]}
+            expected = {s["id"] for s in segments_payload}
+            if assigned != expected:
+                raise LLMResponseError(f"Clusterantwort unvollständig: {len(expected - assigned)} Segmente fehlen.")
+            return clusters
+        clusters = PartCheckpoint('clusterer', ollama_params).run(
+            code_path, {'system':system_prompt,'user':user_prompt,'prompts':prompts,'context':context,'segments':segments_payload}, compute_part)
 
         # -------------------------------------------------
         # Plot

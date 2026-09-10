@@ -6,14 +6,23 @@ import runpy
 import subprocess
 import sys
 import types
+import hashlib
 
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
 import clusterer_core
+call_counts={}
 
 def fake_chat(messages, **kwargs):
     module=messages[0]['content']
     text=messages[1]['content']
+    logical_module='hierarchical_reduction' if module.startswith('Verdichte analytische Teilbefunde') else module
+    call_counts[logical_module]=call_counts.get(logical_module,0)+1
+    if os.environ.get('MOCK_TRACE_PATH'):
+        with open(os.environ['MOCK_TRACE_PATH'],'a',encoding='utf-8') as trace:
+            trace.write(json.dumps({'module':logical_module,'prompt_sha256':hashlib.sha256(json.dumps(messages,sort_keys=True).encode()).hexdigest()})+'\n')
+    if os.environ.get('MOCK_FAIL_MODULE')==logical_module and call_counts[logical_module]>int(os.environ.get('MOCK_FAIL_AFTER','0')):
+        raise RuntimeError('Simulated interruption')
     if module.startswith('Codiere die gesamte Passage'):
         data=json.loads(text)
         codes=['A > B > C > '+code for needle,code in [('gut','positiv'),('schlecht','negativ')] if needle in data['segment']]
@@ -35,6 +44,7 @@ def fake_chat(messages, **kwargs):
         ids=[s['id'] for c in data['clusters'] for s in c['segments']]
         result={d:[] for d in ('Stärken','Schwächen','Chancen','Risiken')}
         result['Stärken']=[{'thema':'Testthema','analyse':'Beleg vorhanden','segment_ids':ids}]
+        result['Schwächen']=[{'thema':'Testgrenze','analyse':'Gegenläufiger Beleg','segment_ids':ids}]
     elif module=='meta_swot':
         result={'cluster':[{'thema':'Gemeinsam','verdichtung':'Testmuster','finding_ids':[f['finding_id'] for f in data]}]}
     elif module=='person_analysis':
@@ -60,8 +70,6 @@ def fake_chat(messages, **kwargs):
                 'uebergreifende_muster':[],'spannungen_und_relativierungen':[],'methodische_einordnung':['Test'], 'gesamtsynthese':'Test'}
     else:
         raise AssertionError(f'Unexpected test call: {module}')
-    if os.environ.get('MOCK_FAIL_MODULE')==module:
-        raise RuntimeError('Simulated interruption')
     return json.dumps(result,ensure_ascii=False)
 
 clusterer_core.ollama_chat=fake_chat

@@ -1,3 +1,4 @@
+from runtime_support import PartCheckpoint
 from response_schemas import schema_for, require_structure
 # ambiguity_analysis_core.py
 
@@ -143,19 +144,23 @@ def build_ambiguity_analysis(
             context=context,
             data=json.dumps(payload, ensure_ascii=False, indent=2),
         )
-        raw = _llm(system_prompt, user_prompt, ollama_params)
-        parsed = safe_json_loads(raw)
-        if parsed is None:
-            logger.warning("[Ambivalenzanalyse] Ungültiges JSON für %s; starte Repair.", person)
-            parsed = safe_json_loads(_repair(raw, ollama_params))
-        if parsed is None:
-            logger.error("[Ambivalenzanalyse] Keine verwertbare Antwort für %s.", person)
-            raise ValueError(f"Ambivalenzanalyse fehlgeschlagen: {person}")
+        def compute_part():
+            raw = _llm(system_prompt, user_prompt, ollama_params)
+            parsed = safe_json_loads(raw)
+            if parsed is None:
+                logger.warning("[Ambivalenzanalyse] Ungültiges JSON für %s; starte Repair.", person)
+                parsed = safe_json_loads(_repair(raw, ollama_params))
+            if parsed is None:
+                logger.error("[Ambivalenzanalyse] Keine verwertbare Antwort für %s.", person)
+                raise ValueError(f"Ambivalenzanalyse fehlgeschlagen: {person}")
 
-        require_structure(parsed, "ambiguity_analysis")
-        normalized = normalize_person_ambiguities(parsed, allowed_ids, id_to_text)
-        if normalized is None:
-            raise ValueError(f"Ungültige Ambivalenzanalyse: {person}")
+            require_structure(parsed, "ambiguity_analysis")
+            normalized = normalize_person_ambiguities(parsed, allowed_ids, id_to_text)
+            if normalized is None:
+                raise ValueError(f"Ungültige Ambivalenzanalyse: {person}")
+            return normalized
+        normalized = PartCheckpoint('ambiguity_analysis', ollama_params).run(
+            person, {'system':system_prompt,'user':user_prompt,'texts':{sid:id_to_text[sid] for sid in sorted(allowed_ids)}}, compute_part)
 
         # IDs workflowweit innerhalb dieses Outputs eindeutig machen.
         for item in normalized["ambivalenzen"]:

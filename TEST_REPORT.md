@@ -1,4 +1,13 @@
-# Validation of multi-label coding, offline review and hierarchical synthesis
+# Validation of partial checkpoints
+
+Date: 2026-09-10. Baseline: `6110780a325ad793eaf7b9939b106cf568f1bfdd`.
+
+- All 46 automated tests pass. Seven complete 15-module workflow scenarios interrupt the second request in cluster analysis, summarization, SWOT, meta-SWOT, person analysis, ambiguity analysis or hierarchical reduction. Each resumed workflow finishes and the first successful request is not repeated.
+- Targeted relation and evidence-audit tests interrupt the second batch and verify reuse of the first batch, complete audit IDs and stable global relation IDs. Integrity tests reject changed inputs/model settings, corrupted results and failed partial work; disabled checkpoints do not write or reuse results.
+- A real `gemma4:31b` Cloud probe reduced four artificial findings in two batches. An intentional interruption before the second network request left one validated checkpoint. Resume reused that batch, completed the other and preserved all four source records in the reference graph. This required two successful Cloud requests in total. It tests recovery, not interpretive accuracy.
+- Public and private defaults remain local Ollama. No local GPU inference or real study data was used. Program upgrades still require a new run; this release does not migrate older checkpoints.
+
+## Earlier validation of multi-label coding, offline review and hierarchical synthesis
 
 Date: 2026-09-10. Extension baseline: `f2e939ec0f1a32a12cb23d24998fffb2eccd1a87`.
 

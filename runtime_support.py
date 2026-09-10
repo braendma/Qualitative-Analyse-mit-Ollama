@@ -5,6 +5,8 @@ import hashlib
 import json
 import os
 import tempfile
+import copy
+import logging
 from dataclasses import asdict, is_dataclass
 from pathlib import Path
 
@@ -78,3 +80,40 @@ def person_for_segment(sid, metadata=None):
     if '#SEG' in sid:
         return sid.split('#SEG', 1)[0].strip()
     raise ValueError(f'Personenmetadaten fehlen für Segment-ID {sid!r}.')
+
+
+class PartCheckpoint:
+    """Persist a logical work item only after its compute/validation callback succeeds."""
+    def __init__(self, module, params):
+        directory = params.get('partial_checkpoint_dir') or os.environ.get('WORKFLOW_CHECKPOINT_DIR')
+        self.directory = Path(directory) / module if directory and params.get('partial_checkpoints', True) else None
+        self.hits = 0
+        self.saved = 0
+        self.identity = None
+        if self.directory:
+            root = Path(__file__).parent
+            self.identity = fingerprint({'module':module, 'params':params,
+                'workflow':os.environ.get('WORKFLOW_FINGERPRINT'),
+                'code':{p.name:file_hash(p) for p in sorted(root.glob('*.py'))}})
+
+    def run(self, key, inputs, compute):
+        if self.directory is None:
+            return compute()
+        path = self.directory / (fingerprint(key) + '.json')
+        expected = fingerprint({'identity':self.identity,'key':key,'inputs':inputs})
+        if path.exists():
+            data = json.loads(path.read_text(encoding='utf-8'))
+            if not isinstance(data,dict) or data.get('schema_version') != 1 or data.get('fingerprint') != expected:
+                raise ValueError('Teil-Checkpoint passt nicht zu Eingaben, Prompt, Code, Lauf oder Modellparametern.')
+            if data.get('processing_status') != 'completed' or 'result' not in data or data.get('result_sha256') != fingerprint(data['result']):
+                raise ValueError('Teil-Checkpoint ist unvollständig oder wurde verändert.')
+            self.hits += 1
+            logging.getLogger('checkpoints').info('Validierten Teil-Checkpoint wiederverwendet: %s', self.directory.name)
+            return copy.deepcopy(data['result'])
+        result = compute()
+        if isinstance(result,dict) and result.get('processing_status','completed') != 'completed':
+            raise ValueError('Unvollständige Teilanalyse darf nicht als Checkpoint gespeichert werden.')
+        atomic_json(path, {'schema_version':1,'fingerprint':expected,'processing_status':'completed',
+                           'result_sha256':fingerprint(result),'result':result})
+        self.saved += 1
+        return copy.deepcopy(result)

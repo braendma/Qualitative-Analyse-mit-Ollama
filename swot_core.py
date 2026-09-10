@@ -1,3 +1,4 @@
+from runtime_support import PartCheckpoint
 from response_schemas import schema_for, require_structure
 # swot_core.py
 
@@ -384,29 +385,33 @@ def build_swot(
             clusters=payload_text,
         )
 
-        raw_swot = llm_swot(system_prompt, user_prompt, ollama_params)
-        parsed = safe_json_loads(raw_swot)
+        def compute_part():
+            raw_swot = llm_swot(system_prompt, user_prompt, ollama_params)
+            parsed = safe_json_loads(raw_swot)
 
-        if parsed is None:
-            logger.warning(
-                "[SWOT] JSON-Parsing für '%s' fehlgeschlagen. Starte Repair.",
-                source_id,
+            if parsed is None:
+                logger.warning(
+                    "[SWOT] JSON-Parsing für '%s' fehlgeschlagen. Starte Repair.",
+                    source_id,
+                )
+                repaired = llm_swot_repair(raw_swot, ollama_params)
+                parsed = safe_json_loads(repaired)
+
+            if parsed is None:
+                logger.error("[SWOT] Keine gültige SWOT für '%s'.", source_id)
+                raise ValueError(f"SWOT fehlgeschlagen: {source_id}")
+
+            require_structure(parsed, "swot")
+            normalized = normalize_swot(
+                parsed,
+                allowed_segment_ids=allowed_segment_ids,
+                id_to_text=id_to_text,
             )
-            repaired = llm_swot_repair(raw_swot, ollama_params)
-            parsed = safe_json_loads(repaired)
-
-        if parsed is None:
-            logger.error("[SWOT] Keine gültige SWOT für '%s'.", source_id)
-            raise ValueError(f"SWOT fehlgeschlagen: {source_id}")
-
-        require_structure(parsed, "swot")
-        normalized = normalize_swot(
-            parsed,
-            allowed_segment_ids=allowed_segment_ids,
-            id_to_text=id_to_text,
-        )
-        if normalized is None:
-            raise ValueError(f"Ungültige SWOT-Struktur: {source_id}")
+            if normalized is None:
+                raise ValueError(f"Ungültige SWOT-Struktur: {source_id}")
+            return normalized
+        normalized = PartCheckpoint('swot', ollama_params).run(
+            source_id, {'system':system_prompt,'user':user_prompt,'texts':{sid:id_to_text[sid] for sid in allowed_segment_ids}}, compute_part)
 
         unique_segment_ids = list(dict.fromkeys(allowed_segment_ids))
         swot_results[source_id] = {

@@ -1,3 +1,4 @@
+from runtime_support import PartCheckpoint
 # summarizer_core.py
 
 import json
@@ -194,11 +195,11 @@ def summarize_clusters(
         # -------------------------------------------------
         # LLM
         # -------------------------------------------------
-        summary = llm_summary(
-            system_prompt,
-            user_prompt,
-            ollama_params
-        )
+        summary = PartCheckpoint("summarizer", ollama_params).run(
+            [index, c.get("code_path"), cname], {"system":system_prompt,"user":user_prompt},
+            lambda: llm_summary(
+                system_prompt, user_prompt, ollama_params
+            ))
 
         # -------------------------------------------------
         # Ergebnis speichern
@@ -255,11 +256,11 @@ def summarize_clusters(
     # -------------------------------------------------
     # Gesamtzusammenfassung erzeugen
     # -------------------------------------------------
-    final_summary = llm_summary(
-        system_prompt,
-        user_prompt,
-        ollama_params
-    )
+    final_summary = PartCheckpoint("summarizer", ollama_params).run(
+        'overall', {"system":system_prompt,"user":user_prompt},
+        lambda: llm_summary(
+            system_prompt, user_prompt, ollama_params
+        ))
 
     # -------------------------------------------------
     # JSON-Output
@@ -312,4 +313,3 @@ def summarize_clusters(
     )
 
     return md, json_output
-

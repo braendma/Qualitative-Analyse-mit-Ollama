@@ -295,6 +295,8 @@ def main(argv=None):
                     "completed_steps": [], "output_hashes": {}}
         atomic_text(output_dir / "config_snapshot.yaml", config_path.read_text(encoding="utf-8"))
     os.environ["WORKFLOW_RUN_ID"] = run_id
+    os.environ["WORKFLOW_FINGERPRINT"] = identity
+    os.environ["WORKFLOW_CHECKPOINT_DIR"] = str(output_dir / "_checkpoints")
     for stream in (sys.stdout, sys.stderr):
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(encoding="utf-8")

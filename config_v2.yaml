@@ -1,4 +1,5 @@
 llm:
+  partial_checkpoints: true
   # Local inference remains opt-in; tests use mocks or a separate cloud config.
   hierarchical_synthesis:
     enabled: true

@@ -1,3 +1,4 @@
+from runtime_support import PartCheckpoint
 from batching import bounded_batches
 from response_schemas import schema_for, require_structure
 # relation_analysis_core.py
@@ -305,12 +306,17 @@ def build_relation_analysis(
         normalized = {"beziehungen": [], "gesamteinordnung": ""}
         notes = []
         for batch, system_prompt, user_prompt in bounded_batches(pairs, build_batch, ollama_params):
-            raw = _llm(system_prompt, user_prompt, ollama_params)
-            parsed = safe_json_loads(raw)
-            if parsed is None:
-                parsed = safe_json_loads(_repair(raw, ollama_params))
-            require_structure(parsed, "relation_analysis")
-            part = normalize_relations(parsed, {p["pair_id"]: p for p in batch}, id_to_text)
+            def compute_part():
+                raw = _llm(system_prompt, user_prompt, ollama_params)
+                parsed = safe_json_loads(raw)
+                if parsed is None:
+                    parsed = safe_json_loads(_repair(raw, ollama_params))
+                require_structure(parsed, "relation_analysis")
+                part = normalize_relations(parsed, {p["pair_id"]: p for p in batch}, id_to_text)
+                return part
+            part = PartCheckpoint('relation_analysis', ollama_params).run(
+                [p['pair_id'] for p in batch], {'system':system_prompt,'user':user_prompt,'pairs':batch,'texts':id_to_text}, compute_part)
+
             normalized["beziehungen"].extend(part["beziehungen"])
             notes.append(part["gesamteinordnung"])
         normalized["gesamteinordnung"] = "\n\n".join(notes)

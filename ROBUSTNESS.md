@@ -16,6 +16,16 @@ Eine Wiederaufnahme prüft zuerst Eingaben, Codebuch, Konfiguration, Programmdat
 
 ## Fehler und empirische Rückverweise
 
+### Zwischenstände innerhalb eines Moduls
+
+Mit `llm.partial_checkpoints: true` (Standard) speichert der Runner zusätzlich geprüfte Teilanalysen unter `workflow_output/LAUF-ID/_checkpoints`: je Codepfad bei Clustern und SWOT, je Cluster bei Zusammenfassungen, je Person bei Personen- und Ambiguitätsanalysen, je SWOT-Dimension bei Meta-SWOT sowie je Paket bei Relationsanalyse, Evidence-Audit und hierarchischer Synthese. Die Coding-Module behalten ihre eigenen Segment-/Passagen-Checkpoints.
+
+Nach einem Abbruch genügt derselbe oben gezeigte `--resume`-Befehl. Fertige Teile werden ohne erneuten Modellaufruf geladen; die unterbrochene Teilanalyse wird erneut ausgeführt. Fehlerhafte, unvollständige oder veränderte Zwischenstände werden nicht übernommen. Eingaben, Prompts, Modellparameter und Programmversion müssen weiterhin übereinstimmen. Einzelne globale Modellaufrufe werden erst nach Abschluss ihres Moduls wiederverwendet.
+
+Der gesamte Laufordner einschließlich der Zwischenstände kann Originaltexte und private Analyseergebnisse enthalten und bleibt außerhalb öffentlicher Repositories. Er sollte für die Wiederaufnahme vollständig erhalten bleiben. Direkte Aufrufe der Python-Kernfunktionen benötigen dafür einen ausdrücklich gesetzten Parameter `partial_checkpoint_dir`; beim Runner wird das Verzeichnis automatisch festgelegt. `partial_checkpoints: false` deaktiviert nur diese zusätzlichen Teil-Checkpoints.
+
+Im Herkunftsnachweis der hierarchischen Synthese zählt `reused_batches` die wiederverwendeten Pakete. `model_calls` enthält die zur Erzeugung der erfolgreichen Pakete gespeicherten Aufrufzahlen einschließlich ihrer Reparaturversuche und wiederverwendeter Pakete; es ist kein Zähler ausschließlich neuer Netzwerkanfragen oder aller Anfragen früherer fehlgeschlagener Versuche.
+
 - Transportfehler werden begrenzt wiederholt und danach als Fehler weitergereicht. Leere oder am Ausgabelimit abgeschnittene Antworten sind keine abgeschlossenen Analysen.
 - Coding-Ergebnisse unterscheiden `processing_status: completed`, `failed` und `invalid_input`. Inhaltliches `unklar` bleibt eine getrennte Kategorie. Der Runner stoppt bei einem unvollständigen Coding-Modul; bereits validierte Checkpoints bleiben erhalten.
 - Der Evidence-Audit verlangt jede erwartete Audit-ID genau einmal und ausschließlich bekannte Gegenbeleg-IDs. Nach erfolgloser Reparatur bricht er ab. Es entsteht kein positiver Befund aus einer fehlgeschlagenen Gegenbelegprüfung.

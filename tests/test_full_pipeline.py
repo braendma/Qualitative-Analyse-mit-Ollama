@@ -16,7 +16,12 @@ class FullPipelineTests(unittest.TestCase):
     def test_multi_label_review_and_hierarchical_pipeline(self):
         self._run_pipeline(True)
 
-    def _run_pipeline(self,multi):
+    def test_partial_modules_resume_without_repeating_successful_requests(self):
+        for module in ('cluster_analysis','cluster_summary','swot_analysis','meta_swot','person_analysis','ambiguity_analysis','hierarchical_reduction'):
+            with self.subTest(module=module):
+                self._run_pipeline(module=='hierarchical_reduction',module)
+
+    def _run_pipeline(self,multi,partial_module=None):
         with tempfile.TemporaryDirectory() as tmp:
             temp=Path(tmp)
             cfg=yaml.safe_load((ROOT/'config_v2.yaml').read_text(encoding='utf-8'))
@@ -43,13 +48,19 @@ class FullPipelineTests(unittest.TestCase):
             config=temp/'config.yaml'
             config.write_text(yaml.safe_dump(cfg,allow_unicode=True),encoding='utf-8')
             base=[sys.executable,str(ROOT/'tests/mock_pipeline.py'),'--config',str(config)]
-            env={**os.environ,'PYTHONUTF8':'1','MPLBACKEND':'Agg','MOCK_FAIL_MODULE':'person_comparison'}
+            env={**os.environ,'PYTHONUTF8':'1','MPLBACKEND':'Agg','MOCK_FAIL_MODULE':partial_module or 'person_comparison'}
+            if partial_module:
+                env.update(MOCK_FAIL_AFTER='1',MOCK_TRACE_PATH=str(temp/'requests.jsonl'))
             first=subprocess.run(base+['--output-dir',str(temp/'runs')],capture_output=True,text=True,encoding='utf-8',env=env)
             self.assertNotEqual(first.returncode,0)
             run=next((temp/'runs').iterdir())
             manifest=json.loads((run/'workflow_manifest.json').read_text(encoding='utf-8'))
-            self.assertIn('person_analysis',manifest['completed_steps'],first.stderr[-6000:])
+            if not partial_module:self.assertIn('person_analysis',manifest['completed_steps'],first.stderr[-6000:])
             self.assertEqual(manifest['status'],'failed')
+            if partial_module:
+                trace=[json.loads(line) for line in (temp/'requests.jsonl').read_text().splitlines()]
+                first_success=next(x for x in trace if x['module']==partial_module)
+                self.assertTrue(list((run/'_checkpoints').rglob('*.json')))
             env.pop('MOCK_FAIL_MODULE')
             resumed=subprocess.run(base+['--resume',str(run)],capture_output=True,text=True,encoding='utf-8',env=env)
             self.assertEqual(resumed.returncode,0,resumed.stderr[-6000:])
@@ -58,6 +69,9 @@ class FullPipelineTests(unittest.TestCase):
             self.assertEqual(manifest['status'],'success')
             self.assertNotIn('error',manifest)
             self.assertTrue(manifest['failure_history'])
+            if partial_module:
+                trace=[json.loads(line) for line in (temp/'requests.jsonl').read_text().splitlines()]
+                self.assertEqual(sum(x==first_success for x in trace),1,'Successful part was requested again')
             clusters=json.loads((run/'clusters_output.json').read_text(encoding='utf-8'))
             self.assertEqual({c['code_path'] for c in clusters['clusters']},{'A > B > C > positiv','A > B > C > negativ'})
             audit=json.loads((run/'evidence_audit_v1.json').read_text(encoding='utf-8'))
