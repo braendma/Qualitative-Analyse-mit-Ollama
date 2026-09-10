@@ -4,7 +4,7 @@ Mit diesem Programm kannst du bereits codierte Interviewstellen auswerten und me
 
 Die Auswertung läuft standardmäßig mit lokalem Ollama. Für freigegebene Inhalte sind optional Ollama Cloud, OpenAI, Anthropic und Hugging Face verfügbar; die DSGVO-Sperre ist pro Projekt zunächst aktiviert. Modellvorschläge und Berichte müssen fachlich geprüft werden; sie ersetzen keine eigenständige qualitative Analyse.
 
-**Aktueller Hauptzweig: 0.3.0-dev.** Dieser Entwicklungsstand enthält die neue Prüf- und Rückmeldungsfunktion. Eine neue Beta wurde damit noch nicht veröffentlicht; die bisherige Release-Version bleibt 0.2.0-beta.1.
+**Aktuelle Vorabversion: [0.3.0-beta.1 · Beta 3](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/tag/v0.3.0-beta.1).** Mit Prüf- und Rückmeldungsfunktion, interaktiven Berichten und optionalen Cloud-Anbietern. OpenAI, Anthropic und Hugging Face sind technisch mit Mocks geprüft, aber noch nicht live getestet.
 
 Das gefaltete **b** von braendma ist jetzt als lokales Programmsignet eingebunden. Über **Handbuch** neben **Telegram-Updates** öffnet sich die vollständige Anleitung mit Bildern und Beispielen, auch ohne Internet.
 
@@ -15,7 +15,7 @@ Neu: lesbarere Clusterdiagramme und Konfusionsmatrix, anklickbare Personen–Kat
 ## Einstieg
 
 - [Vollständiges Handbuch mit Bildern und Beispielen](docs/HANDBUCH.md) · offline: `docs/HANDBUCH.html`
-- [Entwicklungsstand 0.3.0-dev und bisherige Beta: Änderungen und Hinweise zum Umstieg](docs/RELEASE_NOTES.md)
+- [Beta 3 und frühere Versionen: Änderungen und Hinweise zum Umstieg](docs/RELEASE_NOTES.md)
 - [Geprüfte Installation und Paketversionen](docs/INSTALLATION_TEST.md)
 - [Einrichten und öffnen](#einrichten-und-öffnen)
 - [1. Projekt und Dateien auswählen](#1-projekt-und-dateien-auswählen)
