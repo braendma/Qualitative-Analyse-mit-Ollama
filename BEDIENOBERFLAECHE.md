@@ -2,6 +2,8 @@
 
 Die Oberfläche führt durch **Projekt → Eingaben prüfen → Analyse → Ergebnisse**. Sie startet den bestehenden Workflow-Runner und speichert unveränderliche Dateiversionen pro Lauf. Python- und YAML-Dateien müssen für die normale Bedienung nicht bearbeitet werden.
 
+Eine bebilderte Schritt-für-Schritt-Anleitung findest du am Anfang der [README](README.md#einstieg). Die folgenden Abschnitte erläutern Details und Sonderfälle.
+
 ## Einmalig einrichten und starten
 
 1. Das gesamte GitHub-Projekt herunterladen und entpacken. Python 3.10 oder neuer und Ollama müssen installiert sein.

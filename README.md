@@ -1,64 +1,111 @@
-# 🧠 Qualitative Analyse-Pipeline mit Ollama
+# Qualitative Analyse mit Ollama
 
-### Modulare, lokale und nachvollziehbare LLM-Pipeline für kodierte Interviewdaten
+Mit diesem Programm kannst du bereits codierte Interviewstellen auswerten und menschliche Codierungen mit Modellvorschlägen vergleichen. Die lokale Bedienoberfläche führt durch Dateiimport, Eingabeprüfung, Modulauswahl und Ergebnisse. Für die normale Bedienung musst du keine Python- oder YAML-Dateien bearbeiten.
 
-![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
-![Ollama](https://img.shields.io/badge/LLM-Ollama-black)
-![License](https://img.shields.io/badge/License-MIT-green)
-![Workflow](https://img.shields.io/badge/Workflow-YAML--modular-orange)
+Die Auswertung läuft mit einem lokal installierten Ollama-Modell. Modellvorschläge und Berichte müssen fachlich geprüft werden; sie ersetzen keine eigenständige qualitative Analyse.
 
----
+## Einstieg
 
-## Reproduzierbarkeit und Beispieldaten
+- [Einrichten und öffnen](#einrichten-und-öffnen)
+- [1. Projekt und Dateien auswählen](#1-projekt-und-dateien-auswählen)
+- [2. Spalten zuordnen und Eingaben prüfen](#2-spalten-zuordnen-und-eingaben-prüfen)
+- [3. Module auswählen und Analyse starten](#3-module-auswählen-und-analyse-starten)
+- [4. Ergebnisse ansehen und Entscheidungen sichern](#4-ergebnisse-ansehen-und-entscheidungen-sichern)
+- [Optional: Telegram-Updates](#optional-telegram-updates)
+- [Ausführliche Bedienungsanleitung und MAXQDA-Exportformat](BEDIENOBERFLAECHE.md)
 
-Geprüfte Teilanalysen bleiben jetzt auch bei einem Abbruch mitten in einem Modul erhalten. Mit `--resume workflow_output/LAUF-ID` werden sie ohne erneuten Modellaufruf wiederverwendet; Eingaben und Einstellungen müssen unverändert sein. Die Zwischenstände liegen privat im jeweiligen Laufordner.
+## Einrichten und öffnen
 
-Die neue **lokale Bedienoberfläche** startet unter Windows über `Start_Oberflaeche.cmd` (einmalige Paketinstallation: `Einrichtung.cmd`). Sie bietet Projekte, XLSX-/CSV-Import mit Blattauswahl und Spaltenzuordnung, Eingabeprüfung, Modell- und Modulauswahl, Fortschritt, Pause/Wiederaufnahme sowie Ergebnisvorschau. Optionale Telegram-Updates unterstützen Tokenimport, Wechsel und geschützte Windows-Speicherung. Einrichtung und Datenablage: [BEDIENOBERFLAECHE.md](BEDIENOBERFLAECHE.md).
+1. Das **gesamte Repository** über GitHub **Code → Download ZIP** herunterladen und entpacken. Dateien und Unterordner zusammenlassen.
+2. Python **3.10 oder neuer** und Ollama installieren, falls sie noch fehlen. Für die spätere Analyse muss ein geeignetes lokales Ollama-Modell vorhanden sein. Der Speicherbedarf hängt vom Modell und Kontextfenster ab.
+3. Unter Windows einmal **`Einrichtung.cmd`** doppelklicken. Dabei werden die benötigten Python-Pakete aus dem Internet installiert. Es wird noch kein Modell ausgeführt.
+4. **`Start_Oberflaeche.cmd`** doppelklicken. Die Oberfläche öffnet sich im Browser. Das zugehörige Startfenster während eines Analyselaufs geöffnet lassen.
 
-Die aktuelle Version prüft Eingaben vor dem Start, erhält vollständige Codepfade, trennt technische Fehler von inhaltlichen Enthaltungen und unterstützt isolierte Läufe mit Wiederaufnahme. Die öffentliche Konfiguration verwendet lokales Ollama. Details und geänderte Aufrufe stehen in [ROBUSTNESS.md](ROBUSTNESS.md).
+Zum Kennenlernen **„Künstliche Beispieldaten laden“** wählen. Die Demo enthält 50 erfundene Codierzeilen aus 43 Passagen. Das Laden und die Eingabeprüfung benötigen keinen Modellaufruf. Erst **„Prüfen & neuen Lauf starten“** startet die Analyse.
 
-Die mitgelieferten [Beispieldaten](DEMO_DATA.md) umfassen 50 vollständig erfundene Codierzeilen aus 43 Passagen, sechs fiktive Personen und zwölf Codepfade mit einer bis vier Ebenen. Sie enthalten keine Originalinterviews.
+Bei einer bereits eingerichteten Python-Umgebung ist alternativ `python -X utf8 local_app.py` möglich. Die Oberfläche verbindet sich mit lokalem Ollama; die Auswahl von Cloud-Modellen ist dort nicht vorgesehen. Einrichtung, Betrieb auf anderen Systemen und Datenablage: [Bedienungsanleitung](BEDIENOBERFLAECHE.md).
 
-## 🌟 Kurzbeschreibung
+**Zu den Bildern:** Alle Screenshots zeigen die tatsächliche Oberfläche mit künstlichen Beispieldaten. Sie enthalten keine Interviewdaten einer realen Studie und keine Zugangsdaten. Die Bilder lassen sich für eine größere Ansicht anklicken. Einige zeigen einen Ausschnitt einer längeren Seite; zum nächsten Bereich in der Oberfläche nach unten scrollen.
 
-Diese Pipeline unterstützt die **mehrstufige qualitative Auswertung bereits kodierter Interviewdaten** – beispielsweise aus einem MAXQDA-CSV-Export – mit einem lokal über **Ollama** ausgeführten Large Language Model.
+## 1. Projekt und Dateien auswählen
 
-Aus den kodierten Segmenten entstehen schrittweise **inhaltliche Cluster, Zusammenfassungen, facettenbezogene SWOT-Analysen, Meta-SWOTs, Personenanalysen, Fallvergleiche, Kontrast- und Negativfallanalysen, Zusammenhangsanalysen, Ambivalenzanalysen, ein Evidence-Audit und eine abschließende Gesamtsynthese**. Drei zusätzliche Module prüfen menschliche Codes gegen ein externes Kategoriesystem, führen ein blindes LLM-Coding durch und berechnen ein deterministisches **Human–LLM Coding Agreement**.
+Über **„＋ Neues Projekt“** ein Projekt anlegen und einen Namen vergeben. Anschließend zwei Dateien auswählen:
 
-Der gesamte Workflow wird mit einem einzigen Kommando gestartet:
+| Datei | Benötigter Inhalt |
+|---|---|
+| Interviewdatei | Pro Codierzeile: Dokument/Person, vollständiger Codepfad und Originaltext der Textstelle |
+| Kategoriensystem | Kategorien und Definitionen; bei Bedarf Unterkategorie, Ausprägung, Facette und Ankerbeispiel |
 
-```bash
-python 00_WORKFLOW_RUNNER.py
-```
+**XLSX und CSV können auch gemischt verwendet werden.** Einen MAXQDA-Excel-Export der **Liste der codierten Segmente** kannst du direkt als `.xlsx` auswählen. Bei mehreren Tabellenblättern erscheint eine Blattauswahl. Die erste Zeile muss eindeutige Überschriften enthalten. Eine reine Liste von Codenamen ohne Textstellen reicht nicht aus.
 
-Die Besonderheit der aktuellen Architektur: **`00_WORKFLOW_RUNNER.py` kennt keine fest einprogrammierte Modulliste mehr.** Reihenfolge, Abhängigkeiten, Argumente, Outputs und Berichtseinbindung werden vollständig über `config_v2.yaml` gesteuert. Neue Analysebausteine können dadurch ergänzt werden, ohne den Orchestrator umzubauen.
+CSV bleibt möglich: **UTF-8 und Semikolon** als Trennzeichen. Jede Datei darf höchstens 20 MB groß sein. Die Anwendung arbeitet mit lokalen Kopien; die Originaldateien bleiben unverändert. Unter **„Dateivorschau“** kannst du die ersten fünf Datenzeilen kontrollieren.
 
----
+[![Projektansicht mit direktem XLSX-Import, separatem CSV-Kategoriensystem und MAXQDA-Hilfe](docs/screenshots/01-projekt-dateien.jpg)](docs/screenshots/01-projekt-dateien.jpg)
 
-## ✨ Highlights
+Unterhalb der Dateiauswahl Thema und Fragestellung, Teilnehmende und Methodik eintragen. Diese Angaben werden später als Kontext an das Modell übergeben. Details zu Tabellenstruktur, Codepfaden und Mehrfachcodierung: [Textstellen aus MAXQDA vorbereiten](BEDIENOBERFLAECHE.md#textstellen-aus-maxqda-vorbereiten).
 
-- 🏠 **Lokale LLM-Verarbeitung mit Ollama**
-- 🧠 **Kompatibel mit Thinking- und klassischen Non-Thinking-Modellen**
-- 🧩 **Modularer YAML-gesteuerter Workflow**
-- 🔗 **Automatische Abhängigkeitsauflösung zwischen Modulen**
-- 🧾 **JSON-Zwischenprodukte für Auditierbarkeit und Weiterverwendung**
-- 🆔 **Global eindeutige Segment-IDs**
-- 💬 **Originalzitate werden über validierte Segment-IDs zurückgeführt**
-- 🛡️ **Retry-, Normalisierungs- und Self-Repair-Mechanismen**
-- 📊 **Clusterplots und automatisch erzeugter Gesamtbericht**
-- 🔎 **Kontrast-, Negativfall- und Ambivalenzanalyse**
-- 🔗 **Analyse thematischer Beziehungen zwischen Codepfaden**
-- 🧪 **Evidence-Audit für empirische Breite und Gegenbelege**
-- 👥 **Fallbezogene Personenanalyse und vorsichtige Typenbildung**
-- 🧠 **Bei Bedarf mehrstufige Gesamtsynthese mit Herkunftsverweisen**
-- ✅ **Code-Verifikation gegen Definitionen und Ankerbeispiele**
-- 🙈 **Blind-Coding ohne Kenntnis des menschlichen Codes**
-- 📐 **Mengenbasierter Vergleich von Mehrfachcodierungen je Passage; Konfusionsmatrix im Single-Label-Modus**
-- 📝 **Lokale HTML-Prüfliste mit separat gespeicherten Prüfentscheidungen**
-- ⏱️ **Fortschrittsanzeige für Verifikation und zeilenweises Blind-Coding**
-- 🧾 **Separate Modul-Logs und optionaler LLM-Raw-Audit als JSONL**
+## 2. Spalten zuordnen und Eingaben prüfen
 
----
+Unter **„Eingaben prüfen“** kontrollieren, ob die automatisch vorgeschlagenen Spalten stimmen. Abweichende Spaltennamen lassen sich über die Auswahllisten zuordnen.
+
+| Feld in der Oberfläche | Typische Spalte im MAXQDA-Export |
+|---|---|
+| Text / Segment | `Segment` |
+| Person / Dokument | `Dokumentname` |
+| Vergebener Code | `Code` |
+| Eindeutige Zeilen-ID | Optional, beispielsweise `segment_id` |
+| Passage-ID | Nur zuordnen, wenn eine verlässliche ID für dieselbe tatsächliche Textstelle vorliegt |
+
+Eine **Passage-ID** verbindet mehrere Codierungen derselben Textstelle derselben Person. Sie ist etwas anderes als eine eindeutige Zeilen-ID. Fehlen verlässliche Passage-IDs, das Feld unzugeordnet lassen und **„Zeilenvergleich: eine Codierung pro Zeile, ohne Kappa“** wählen. Gleiche Wörter oder Absatznummern allein reichen nicht zur Zusammenfassung mehrerer Zeilen.
+
+[![Zuordnung von Segment, Dokumentname, Code und IDs sowie Auswahl des Vergleichsmodus](docs/screenshots/02-spalten-zuordnen.jpg)](docs/screenshots/02-spalten-zuordnen.jpg)
+
+Darunter die Spalten des Kategoriensystems zuordnen, mindestens **Kategorie** und **Definition**. Dann **„Einstellungen speichern & Eingaben prüfen“** anklicken. Die Prüfung meldet beispielsweise fehlende Pflichtangaben, unpassende IDs oder Codes, die im Kategoriensystem fehlen. Sie zeigt bei Erfolg die Zahl der Codierzeilen, Passagen, Personen und Codepfade. Es wird noch keine inhaltliche Modellanalyse durchgeführt.
+
+## 3. Module auswählen und Analyse starten
+
+Unter **„Analyse“** stehen die verfügbaren Module mit Häkchen, kurzer Erklärung und benötigten Vorstufen. Mit **„Auswahl leeren“** kannst du eine eigene Zusammenstellung beginnen. **„Alle auswählen“** und **„Codierungen prüfen“** setzen eine Vorauswahl, die du anschließend anpassen kannst.
+
+**Abhängigkeiten werden zusätzlich ausgeführt.** Wenn du beispielsweise nur **„Cluster-Zusammenfassungen“** ankreuzt, läuft vorher trotzdem die Clusteranalyse. Die Anzeige unter der vollständigen Modulliste nennt die tatsächlich auszuführende Anzahl und automatisch benötigte Vorstufen. Auch eine einzelne Auswahl kann deshalb mehrere Module auslösen.
+
+[![Analysemodule mit einzelnen Häkchen, Funktionsbeschreibungen und benötigten Vorstufen](docs/screenshots/03-module-auswaehlen.jpg)](docs/screenshots/03-module-auswaehlen.jpg)
+
+Weiter unten ein **lokal installiertes Modell** auswählen. **„Installierte Modelle anzeigen“** fragt nur die Modellliste ab; es lädt kein Modell herunter und startet keine Inferenz. Zusätzliche Einstellungen wie Kontextfenster, Antwortlimit, Temperatur und Thinking liegen unter **„Erweiterte Modelleinstellungen“**.
+
+Mit **„Prüfen & neuen Lauf starten“** werden die Einstellungen gespeichert, die Eingaben erneut geprüft und anschließend die ausgewählten Module samt Vorstufen ausgeführt. Unter dem Startknopf erscheinen Fortschritt und aktuelles Modul.
+
+**„Nach diesem Modul pausieren“** wartet das laufende Modul ab. **„Diesen Lauf fortsetzen“** setzt einen pausierten oder fehlgeschlagenen Lauf mit seinen ursprünglichen Dateien und Einstellungen fort. Nach Änderungen am Programm kann ein neuer Lauf erforderlich sein; ältere Checkpoints werden nicht automatisch migriert.
+
+## 4. Ergebnisse ansehen und Entscheidungen sichern
+
+Unter **„Ergebnisse“** einen Lauf und dann **„Ansehen“** oder **„Speichern“** bei der gewünschten Datei wählen. Je nach ausgeführten Modulen entstehen Gesamtbericht, Einzelberichte, Grafiken und die interaktive Prüfliste. Die Prüfliste erscheint nur, wenn ihr Modul einschließlich der benötigten Vorstufen ausgeführt wurde.
+
+In der Prüfliste die Textstelle und die menschliche bzw. modellbasierte Zuordnung fachlich prüfen. Entscheidungen mit **„Entscheidungen speichern“** als separate JSON-Datei sichern und später mit **„Entscheidungen laden“** wieder öffnen. **Es gibt keine automatische Speicherung der Prüfentscheidungen.** Originaldaten werden dabei nicht überschrieben; ein automatischer Rückimport nach MAXQDA ist nicht enthalten.
+
+## Optional: Telegram-Updates
+
+Diesen Bereich überspringen, wenn du keine Benachrichtigungen möchtest. Andernfalls Bot-Token und Ziel-Chat-ID eintragen. Der Token kann aus einer Textdatei geladen, ersetzt oder entfernt werden. Unter Windows lässt er sich für das aktuelle Benutzerkonto verschlüsselt speichern.
+
+[![Telegram-Einstellungen mit leerem Tokenfeld, Textdateiimport und auswählbaren Benachrichtigungsereignissen](docs/screenshots/04-telegram-optional.jpg)](docs/screenshots/04-telegram-optional.jpg)
+
+Gewünschte Ereignisse auswählen und **„Telegram-Einstellungen speichern“** anklicken. Ein neuer Token ersetzt den bisherigen; ein leeres Tokenfeld behält einen vorhandenen Token bei. **„Testnachricht senden“** versendet ausdrücklich eine Nachricht an den gespeicherten Ziel-Chat. Automatische Meldungen enthalten nur allgemeinen Status und Modulfortschritt, keine Interviewtexte oder Projektnamen. Vollständige Einrichtung: [Telegram-Anleitung](BEDIENOBERFLAECHE.md#telegram-optional-einrichten).
+
+## Wenn etwas nicht funktioniert
+
+| Meldung oder Situation | Nächster Schritt |
+|---|---|
+| Python-Paket fehlt, etwa `openpyxl` | `Einrichtung.cmd` erneut ausführen; für die Paketinstallation ist Internet nötig. |
+| XLSX wird abgewiesen | Erste Zeile auf Überschriften prüfen; Formeln in einer Kopie durch Werte ersetzen. Alte `.xls`-Dateien als `.xlsx` speichern. |
+| Passage-ID fehlt | Verlässliche IDs ergänzen oder den Zeilenvergleich ohne Kappa wählen. |
+| Ein Code fehlt im Kategoriensystem | Vollständigen Codepfad mit den Kategorieebenen abgleichen und die Eingaben erneut prüfen. |
+| Ollama oder Modell nicht verfügbar | Ollama starten und prüfen, ob der im Modellfeld eingetragene Name lokal installiert ist. |
+| Eine Änderung erscheint nicht | Oberfläche und Startfenster schließen und `Start_Oberflaeche.cmd` neu öffnen. Laufende Analysen zuvor beenden lassen oder pausieren. |
+
+Die Projektdaten liegen unter Windows standardmäßig in `%LOCALAPPDATA%\QualitativeOllama`. Für eine Sicherung die Oberfläche nach Abschluss eines Laufs schließen und den Projektordner kopieren. Die öffentliche Projektversion und die Screenshots enthalten ausschließlich künstliche Daten. Mehr zu [Datenablage und Zugriffsschutz](BEDIENOBERFLAECHE.md#wo-liegen-meine-daten), [Robustheit und Wiederaufnahme](ROBUSTNESS.md) und [Tests samt Grenzen](TEST_REPORT.md).
+
+## Technische Referenz
+
+Die folgenden Abschnitte beschreiben den Workflow, die YAML-Konfiguration und den direkten Aufruf einzelner Programme. **Der Kommandozeilen-Runner erwartet weiterhin CSV**; die Oberfläche übernimmt den XLSX-Import und erstellt die interne CSV-Arbeitskopie.
 
 # 🧩 Aktueller Analyse-Workflow
 
@@ -675,9 +722,9 @@ Interview_01;Hauptthema > Unterthema > Facette A;"Beispielsegment aus einem Inte
 Interview_02;Hauptthema > Unterthema > Facette A;"Weiteres Beispielsegment."
 ```
 
-Die tatsächlichen Spaltennamen können in `config_v2.yaml` angepasst werden.
+Die tatsächlichen Spaltennamen können in der Oberfläche zugeordnet oder bei direktem CLI-Aufruf in `config_v2.yaml` angepasst werden.
 
-Für Code-Verifikation und Blind-Coding wird zusätzlich `Kategoriesystem.csv` erwartet. Mindestens erforderlich sind:
+Bei direkter Nutzung des Runners wird für Code-Verifikation und Blind-Coding zusätzlich eine Kategoriensystem-CSV erwartet. Sie muss diese Spaltenüberschriften enthalten; optionale Inhalte dürfen leer sein. Die Oberfläche ergänzt fehlende optionale Spalten in ihrer Arbeitskopie:
 
 ```text
 Kategorie
@@ -805,7 +852,7 @@ workflow_output/<Lauf-ID>/
 ├── blind_coding.log
 ├── coding_agreement_v1.md
 ├── coding_agreement_v1.json
-├── coding_agreement_confusion.png  # optional, Single-Label
+├── coding_agreement_confusion.jpg  # optional, Single-Label
 ├── coding_agreement.log
 │
 ├── summary_v1.md
@@ -848,7 +895,7 @@ workflow_output/<Lauf-ID>/
 ├── workflow.log
 │
 └── plots/
-    └── *.png
+    └── *.jpg
 ```
 
 ---
@@ -930,7 +977,7 @@ Insbesondere gilt:
 
 # 🧪 Testbarkeit
 
-Stand 2026-09-10: **53 automatisierte Tests** bestehen. Zusätzlich wurden alle **15 Workflow-Module** mit Gemma in Ollama Cloud auf dem künstlichen Datensatz geprüft, eine Gesamtsynthese über zwei Verdichtungsstufen ausgeführt und das Speichern/Laden von Prüfentscheidungen im Browser getestet. Die Cloud-Entwicklungsläufe enthielten dokumentierte Abbrüche und Wiederaufnahmen; sie sind kein unabhängiger Qualitätsbenchmark. Ergebnisse und Grenzen: [TEST_REPORT.md](TEST_REPORT.md).
+Stand 2026-09-10: **59 automatisierte Tests** bestehen. Zusätzlich wurden alle **15 Workflow-Module** mit Gemma in Ollama Cloud auf dem künstlichen Datensatz geprüft, eine Gesamtsynthese über zwei Verdichtungsstufen ausgeführt und das Speichern/Laden von Prüfentscheidungen im Browser getestet. Die Cloud-Entwicklungsläufe enthielten dokumentierte Abbrüche und Wiederaufnahmen; sie sind kein unabhängiger Qualitätsbenchmark. Ergebnisse und Grenzen: [TEST_REPORT.md](TEST_REPORT.md).
 
 Durch die modulare JSON-basierte Architektur lassen sich einzelne Stufen unabhängig testen.
 
@@ -1086,10 +1133,3 @@ Mitarbeit an wesentlichen Teilen der modularen Architektur, der Analysebausteine
 
 ---
 
-# 🎉 Los geht's
-
-```bash
-python 00_WORKFLOW_RUNNER.py
-```
-
-**Kodierte Interviewdaten rein → modulare qualitative Analysen → nachvollziehbare Zwischenprodukte → Gesamtsynthese → `gesamtbericht.md`.**
