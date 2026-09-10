@@ -1,3 +1,5 @@
+Mehrfachcodierung, Prüfliste und mehrstufige Gesamtsynthese: [EXTENSIONS.md](EXTENSIONS.md). Die folgenden zeilenweisen Kennzahlen beziehen sich auf den Single-Label-Modus.
+
 # Erweiterung: Coding-Validierung
 
 Der YAML-gesteuerte Workflow enthält drei zusätzliche Module. Der generische

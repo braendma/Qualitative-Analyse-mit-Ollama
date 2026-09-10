@@ -14,6 +14,13 @@ import clusterer_core
 def fake_chat(messages, **kwargs):
     module=messages[0]['content']
     text=messages[1]['content']
+    if module.startswith('Codiere die gesamte Passage'):
+        data=json.loads(text)
+        codes=['A > B > C > '+code for needle,code in [('gut','positiv'),('schlecht','negativ')] if needle in data['segment']]
+        return json.dumps({'unit_id':data['unit_id'],'predicted_codes':codes,'assignment_status':'assigned','confidence':'mittel','begruendung':'Beleg vorhanden'})
+    if module.startswith('Verdichte analytische Teilbefunde'):
+        data=json.loads(text)
+        return json.dumps({'summary':'Belegte Teilanalyse einschließlich Gegenbelegen.'})
     if module in ('cluster_summary','category_summary'):
         return 'Belegte synthetische Zusammenfassung.'
     data=json.loads(text)
@@ -49,7 +56,7 @@ def fake_chat(messages, **kwargs):
     elif module=='evidence_audit':
         result={'zuordnungen':[{'audit_id':a['audit_id'],'gegenbeleg_ids':[c['counter_id'] for c in data['moegliche_gegenbelege']], 'einordnung':'Testgegenbeleg'} for a in data['audit_befunde']]}
     elif module=='overall_synthesis':
-        result={'kernergebnisse':[{'thema':'Test','verdichtung':'Belegte Synthese','quellen':['Evidence-Audit']}],
+        result={'kernergebnisse':[{'thema':'Test','verdichtung':'Belegte Synthese','quellen':[data['verfuegbare_analytische_quellen'][0]]}],
                 'uebergreifende_muster':[],'spannungen_und_relativierungen':[],'methodische_einordnung':['Test'], 'gesamtsynthese':'Test'}
     else:
         raise AssertionError(f'Unexpected test call: {module}')

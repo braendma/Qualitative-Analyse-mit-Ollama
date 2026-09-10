@@ -245,6 +245,9 @@ def main(argv=None):
         raise ValueError("paths.category_system_csv fehlt.")
     _, code_index = load_codebook(resolve_path(config_path.parent, codebook_config))
     input_segments = load_segments(csv_path, config.get("columns", {}))
+    if config.get('coding_agreement', {}).get('label_mode') == 'multi_label':
+        from multi_label_core import group_units
+        group_units(input_segments)
     unknown = sum(s.human_code not in code_index for s in input_segments)
     if unknown:
         raise ValueError(f"{unknown} Codierzeilen passen nicht zum Codebuch. Codepfade vor dem Lauf abgleichen.")
@@ -255,7 +258,7 @@ def main(argv=None):
     provenance = {
         "input_sha256": file_hash(csv_path),
         "config_sha256": file_hash(config_path),
-        "code": {p.name: file_hash(p) for p in sorted(script_dir.glob("*.py"))},
+        "code": {p.name: file_hash(p) for p in sorted([*script_dir.glob("*.py"), *script_dir.glob("*.html")])},
         "dependencies": {name: importlib.metadata.version(name) for name in ("pandas", "PyYAML", "ollama", "matplotlib")},
         "llm": config.get("llm", {}),
     }

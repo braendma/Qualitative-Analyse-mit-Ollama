@@ -11,16 +11,27 @@ ROOT=Path(__file__).resolve().parents[1]
 
 class FullPipelineTests(unittest.TestCase):
     def test_all_modules_resume_and_input_mismatch(self):
+        self._run_pipeline(False)
+
+    def test_multi_label_review_and_hierarchical_pipeline(self):
+        self._run_pipeline(True)
+
+    def _run_pipeline(self,multi):
         with tempfile.TemporaryDirectory() as tmp:
             temp=Path(tmp)
             cfg=yaml.safe_load((ROOT/'config_v2.yaml').read_text(encoding='utf-8'))
             cfg['llm']['model']='mock'
+            cfg['coding_agreement']['label_mode']='multi_label' if multi else 'unspecified'
+            if multi: cfg['llm']['hierarchical_synthesis']={'enabled':True,'force':True,'batch_items':12,'summary_chars':1200}
             cfg['context']={}
             cfg['columns']['segment_id']='ID'
             cfg['columns'].pop('unit_id',None)
+            if multi: cfg['columns']['unit_id']='PassageID'
             cfg['paths']['input_csv']=str(temp/'input.csv')
             cfg['paths']['category_system_csv']=str(temp/'book.csv')
             (temp/'input.csv').write_text('ID;Dokumentname;Code;Segment\nx;P1;A > B > C > positiv;gut\ny;P1;A > B > C > negativ;schlecht\nz;P2;A > B > C > positiv;gut\nw;P2;A > B > C > negativ;schlecht\n',encoding='utf-8')
+            if multi:
+                (temp/'input.csv').write_text('ID;PassageID;Dokumentname;Code;Segment\nx;U1;P1;A > B > C > positiv;gut\ny;U2;P1;A > B > C > negativ;schlecht\nz;U3;P2;A > B > C > positiv;gut und schlecht\nw;U3;P2;A > B > C > negativ;gut und schlecht\n',encoding='utf-8')
             (temp/'book.csv').write_text('Kategorie;Unterkategorie;Ausprägung;Facette;Definition;Ankerbeispiel\nA;B;C;positiv;gut;gut\nA;B;C;negativ;schlecht;schlecht\n',encoding='utf-8')
             placeholders={'cluster_analysis':'{segments}','cluster_summary':'{clusters}','category_summary':'{subcats}',
                 'swot_analysis':'{clusters}','meta_swot':'{clusters}','person_analysis':'{persons}',
@@ -57,6 +68,14 @@ class FullPipelineTests(unittest.TestCase):
             people=json.loads((run/'person_analysis_v1.json').read_text(encoding='utf-8'))
             self.assertEqual(set(people['persons']),{'P1','P2'})
             self.assertTrue((run/'gesamtbericht.md').is_file())
+            self.assertTrue((run/'review_queue.html').is_file())
+            if multi:
+                agreement=json.loads((run/'coding_agreement_v1.json').read_text(encoding='utf-8'))
+                self.assertEqual(agreement['n_units'],3)
+                self.assertEqual(agreement['exact_agreement']['rate'],1)
+                synthesis=json.loads((run/'overall_synthesis_v1.json').read_text(encoding='utf-8'))
+                self.assertTrue(synthesis['hierarchical_reduction']['used'])
+                self.assertTrue(synthesis['kernergebnisse'])
             (temp/'input.csv').write_text((temp/'input.csv').read_text(encoding='utf-8')+'\n',encoding='utf-8')
             bad=subprocess.run(base+['--resume',str(run)],capture_output=True,text=True,encoding='utf-8',env=env)
             self.assertNotEqual(bad.returncode,0)

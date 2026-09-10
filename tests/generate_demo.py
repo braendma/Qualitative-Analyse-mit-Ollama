@@ -71,10 +71,27 @@ def generate():
         rows.append([f'SYN-{len(rows)+1:03d}','SYN-PASS-037','SYN-P01',code,
                      'In der offenen Sprechstunde haben wir gemeinsam unsere Messwerte verglichen. Die Kursleitung half uns, den unterschiedlichen Aufbau zu erkennen.',
                      'mehrfachcodierte_passage'])
+    complex_cases = [
+        ('Die Kursunterlagen waren verständlich. Erst als ich die Anleitung an unserer Anlage ausprobierte, merkte ich, dass dort andere Sensoren verbaut sind. Mit dem Verfahren kam ich allein nicht weiter.',
+         ['Lernangebot > Materialien','Lernangebot > Praxis > Übertragung > stockt']),
+        ('Der neue Abendtermin lässt sich mit meinem Dienst vereinbaren. Gleichzeitig bin ich nach der Schicht so erschöpft, dass mir die Konzentration für den Kurs fehlt. Beides trifft für mich zu.',
+         ['Organisation > Zeit > Vereinbarkeit > entlastend','Organisation > Zeit > Vereinbarkeit > belastend']),
+        ('Beim Vergleich unserer Protokolle fanden wir unterschiedliche Messpunkte. Danach bestimmte ein Kollege allein, welches Ergebnis abgegeben wird; mein Einwand wurde übergangen.',
+         ['Zusammenarbeit > Gruppe > Austausch','Zusammenarbeit > Gruppe > Konflikt']),
+        ('Die Simulation startete auch nach dem dritten Versuch nicht. Die Betreuung antwortete schnell und grenzte den Fehler ein. Ich würde mir für solche Fälle zusätzlich eine Anleitung zur Fehlersuche wünschen.',
+         ['Organisation > Zugang > Technik','Organisation > Unterstützung','Verbesserungsvorschlag']),
+        ('Eine Kollegin sagt, das Material sei nutzlos. Das ist nicht meine Erfahrung: Die beschrifteten Skizzen und die gut lesbare Tabelle haben mir beim Nachschlagen geholfen. Über ihren Arbeitsplatz kann ich nichts sagen.',
+         ['Lernangebot > Materialien']),
+        ('Zuerst dachte ich, der Kurs hätte wenig gebracht. Später konnte ich bei einer Störung den Messablauf selbst anwenden und den Fehler finden. Dennoch bleibt mein Gesamturteil gemischt, weil viele andere Teile für mich wenig hilfreich waren.',
+         ['Lernangebot > Praxis > Übertragung > gelingt','Gesamturteil > ambivalent']),
+    ]
+    for index,(text,codes) in enumerate(complex_cases,start=38):
+        for code in codes:
+            rows.append([f'SYN-{len(rows)+1:03d}',f'SYN-PASS-{index:03d}',f'SYN-P{(index-38)%6+1:02d}',code,text,'mehrfachcodierung_grenzfall'])
     with (ROOT/'maxqda_export.csv').open('w',encoding='utf-8',newline='') as f:
         writer=csv.writer(f,delimiter=';')
         writer.writerow(['segment_id','PassageID','Dokumentname','Code','Segment','Testszenario'])
         writer.writerows(rows)
-    print(f'{len(rows)} synthetic coding rows, 37 passages, 6 fictional persons, {len(CASES)} paths.')
+    print(f'{len(rows)} synthetic coding rows, {len({r[1] for r in rows})} passages, 6 fictional persons, {len(CASES)} paths.')
 
 if __name__=='__main__': generate()

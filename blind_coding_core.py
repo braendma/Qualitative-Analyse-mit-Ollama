@@ -106,6 +106,9 @@ def blind_code_segments(
     llm: Callable = default_llm,
     checkpoint_path: str | None = None,
 ) -> tuple[str, dict]:
+    if llm_params.get('label_mode') == 'multi_label':
+        from multi_label_core import blind_code_units
+        return blind_code_units(segments, codebook, prompts, context, llm_params, raw_log_path, llm, checkpoint_path)
     allowed_codes = {entry.code for entry in codebook}
     codebook_payload = json.dumps(
         [entry.as_prompt_dict() for entry in codebook], ensure_ascii=False
@@ -187,5 +190,4 @@ def render_markdown(output: dict) -> str:
             f"{row['confidence']} | {markdown_escape(row['begruendung'])} | {markdown_escape(alternatives)} |\n"
         )
     return "".join(lines)
-
 

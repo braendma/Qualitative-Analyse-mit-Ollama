@@ -118,6 +118,9 @@ def calculate_agreement(
 ) -> tuple[str, dict]:
     settings = settings or {}
     mode = settings.get("label_mode", "unspecified")
+    if mode == "multi_label":
+        from multi_label_core import calculate_set_agreement
+        return calculate_set_agreement(segments, codebook, verification_payload, blind_payload)
     if mode not in {"unspecified", "single_label", "multi_label"}:
         raise ValueError("label_mode muss unspecified, single_label oder multi_label sein.")
     unit_ids = [s.unit_id for s in segments]
@@ -280,5 +283,4 @@ def render_markdown(output: dict) -> str:
             f"{markdown_escape(row['predicted_code'])} | {row['verification']} | {row['case_status']} |\n"
         )
     return "".join(lines)
-
 

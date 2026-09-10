@@ -186,10 +186,13 @@ def build_overall_synthesis(
         raise ValueError("Keine verwertbaren analytischen Quellen geladen.")
 
     source_labels = list(sources.keys())
-    payload = {
-        "verfuegbare_analytische_quellen": source_labels,
-        "analysen": {label: project_synthesis_source(data) for label, data in sources.items()},
-    }
+    from hierarchical_synthesis import reduce_sources
+    from coding_validation_common import default_llm
+    def final_prompt(payload):
+        return build_prompt_for_module("overall_synthesis", prompts=prompts, context=context,
+            data=json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
+    payload, reduction = reduce_sources(
+        {label: project_synthesis_source(data) for label, data in sources.items()}, final_prompt, ollama_params, default_llm)
 
     system_prompt, user_prompt = build_prompt_for_module(
         "overall_synthesis",
@@ -207,11 +210,14 @@ def build_overall_synthesis(
         raise ValueError("Gesamtsynthese konnte nicht als JSON gelesen werden.")
 
     require_structure(parsed, "overall_synthesis")
-    normalized = normalize_overall_synthesis(parsed, source_labels)
+    normalized = normalize_overall_synthesis(parsed, reduction['final_node_ids'] if reduction['used'] else source_labels)
     if normalized is None:
         raise ValueError("Gesamtsynthese besitzt kein verwertbares Format.")
+    if reduction['used'] and not any(normalized[key] for key in ('kernergebnisse','uebergreifende_muster','spannungen_und_relativierungen')):
+        raise ValueError('Hierarchische Gesamtsynthese enthält keine gültigen Rückverweise auf Teilanalysen.')
 
     json_output = {
+        "hierarchical_reduction": reduction,
         "input_projection": "Analytische Befunde, Statusfelder und Referenz-IDs; wiederholte Rohtextbelege und Register ausgelassen.",
         "created_at": datetime.now().isoformat(),
         "source_labels": source_labels,

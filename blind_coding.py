@@ -69,6 +69,7 @@ def main(argv=None):
     llm_cfg = config.get("llm", {})
     params = {
         **llm_cfg,
+        "label_mode": config.get("coding_agreement", {}).get("label_mode", "unspecified"),
         "model": llm_cfg.get("model", "granite4.1:8b"),
         "temperature": float(llm_cfg.get("temperature", 0.0)),
         "max_tokens": int(llm_cfg.get("max_tokens", 4000)),
@@ -102,5 +103,4 @@ if __name__ == "__main__":
     except Exception:
         LOGGER.exception("Blind-Coding fehlgeschlagen")
         raise
-
 

@@ -1,5 +1,11 @@
 llm:
   # Local inference remains opt-in; tests use mocks or a separate cloud config.
+  hierarchical_synthesis:
+    enabled: true
+    max_calls: 64
+    max_levels: 8
+    batch_items: 12
+    summary_chars: 1200
   host: "http://localhost:11434"
   api_key_env: "OLLAMA_API_KEY"
   num_ctx: 65536
@@ -1647,6 +1653,17 @@ pipeline:
         title: Evidence-Audit
         markdown: evidence_audit_v1.md
 
+    - id: review_queue
+      name: Prüfliste der Codierungen
+      script: review_queue.py
+      enabled: true
+      depends_on: [coding_agreement, evidence_audit]
+      args: [--config, "{config}", --input-csv, "{input_csv}"]
+      outputs: [review_queue.json, review_queue.md, review_queue.html]
+      report:
+        title: Prüfliste der Codierungen
+        markdown: review_queue.md
+
     - id: overall_synthesis
       name: Gesamtsynthese
       script: overall_synthesis.py
@@ -1685,7 +1702,7 @@ pipeline:
 
 
 # Kappa requires explicit confirmation AND a configured unique columns.unit_id.
-# Until then, report row-level agreement with coverage only.
+# Multi-Label uses explicit passage IDs and independent set predictions.
 coding_agreement:
   label_mode: multi_label
   independent_units_confirmed: false

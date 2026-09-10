@@ -13,7 +13,7 @@
 
 Die aktuelle Version prüft Eingaben vor dem Start, erhält vollständige Codepfade, trennt technische Fehler von inhaltlichen Enthaltungen und unterstützt isolierte Läufe mit Wiederaufnahme. Die öffentliche Konfiguration verwendet lokales Ollama. Details und geänderte Aufrufe stehen in [ROBUSTNESS.md](ROBUSTNESS.md).
 
-Die mitgelieferten [Beispieldaten](DEMO_DATA.md) umfassen 38 vollständig erfundene Codierzeilen, sechs fiktive Personen und zwölf Codepfade mit einer bis vier Ebenen. Sie enthalten keine Originalinterviews.
+Die mitgelieferten [Beispieldaten](DEMO_DATA.md) umfassen 50 vollständig erfundene Codierzeilen, sechs fiktive Personen und zwölf Codepfade mit einer bis vier Ebenen. Sie enthalten keine Originalinterviews.
 
 ## 🌟 Kurzbeschreibung
 
@@ -72,6 +72,7 @@ flowchart TD
   relation_analysis["Zusammenhangsanalyse"]
   ambiguity_analysis["Ambivalenz- und Widerspruchsanalyse"]
   evidence_audit["Evidence-Audit"]
+  review_queue["Prüfliste der Codierungen"]
   overall_synthesis["Gesamtsynthese"]
   clusterer -. Bericht .-> gesamtbericht["Gesamtbericht"]
   clusterer --> code_verification
@@ -109,6 +110,9 @@ flowchart TD
   relation_analysis --> overall_synthesis
   ambiguity_analysis --> overall_synthesis
   evidence_audit --> overall_synthesis
+  coding_agreement --> review_queue
+  evidence_audit --> review_queue
+  review_queue -. Bericht .-> gesamtbericht
   overall_synthesis -. Bericht .-> gesamtbericht["Gesamtbericht"]
 ```
 
@@ -116,13 +120,15 @@ flowchart TD
 
 # ✅ Coding-Validierung und Human–LLM Agreement
 
-Die drei Qualitätssicherungsmodule werden wie alle anderen Schritte ausschließlich über `config_v2.yaml` eingebunden:
+Mehrfachcodierung, die lokale Prüfliste mit getrennten Entscheidungen und die mehrstufige Gesamtsynthese sind in [EXTENSIONS.md](EXTENSIONS.md) beschrieben.
+
+Die drei Coding-Module werden wie alle anderen Schritte ausschließlich über `config_v2.yaml` eingebunden:
 
 1. **`code_verification`** prüft den menschlich vergebenen vollständigen Codepfad gegen Definition und Ankerbeispiel des externen Kategoriesystems. Ergebnisse sind `bestätigt`, `teilweise_passend`, `nicht_passend` oder `unklar`.
-2. **`blind_coding`** erhält Segment und Codebuch, aber nicht den menschlichen Code. Zulässig sind nur vorhandene vollständige Codepfade sowie `unklar` und `keine_zuordnung`.
-3. **`coding_agreement`** arbeitet rein deterministisch und berechnet exakte sowie hierarchische Übereinstimmung, Verwechslungspaare, Fallstatus, eine Konfusionsmatrix und – nur wenn methodisch sinnvoll – exploratives Cohen's Kappa für single-label nominale exakte Codes.
+2. **`blind_coding`** erhält Segment und Codebuch, aber nicht den menschlichen Code. Im Multi-Label-Modus erhält jede Passage eine unabhängige Codemenge; Single-Label bleibt ebenfalls verfügbar.
+3. **`coding_agreement`** vergleicht im Multi-Label-Modus ganze Codemengen pro Passage: exakte Mengenübereinstimmung, Micro-Präzision, Recall, F1, Jaccard und fehlende/zusätzliche Codes. Im Single-Label-Modus bleiben hierarchische Übereinstimmung, Verwechslungspaare und unter den dokumentierten Voraussetzungen exploratives Kappa verfügbar.
 
-Alle LLM-genannten Codepfade und Segment-IDs werden gegen die tatsächlichen Eingaben validiert. Erfundene Alternativcodes werden verworfen und protokolliert. Strukturell weiterhin ungültige Hauptantworten werden kontrolliert als `unklar` weitergeführt, statt den gesamten Workflow abzubrechen.
+Alle LLM-genannten Codepfade und Segment-IDs werden gegen die tatsächlichen Eingaben validiert. Erfundene Alternativcodes werden verworfen und protokolliert. Nach Reparatur weiterhin ungültige Hauptantworten werden als technische Fehler ausgewiesen; ein unvollständiges Modul stoppt den Workflow. Inhaltliche Unsicherheit bleibt davon getrennt.
 
 Die Kennzahlen werden ausdrücklich als **Human–LLM Coding Agreement** bezeichnet und nicht als klassische Interrater-Reliabilität zwischen unabhängigen menschlichen Ratern.
 
@@ -150,12 +156,12 @@ Bei `true` entstehen `code_verification_raw.jsonl` und `blind_coding_raw.jsonl`.
 Die Pipeline zerlegt den konfigurierten Codepfad in:
 
 ```text
-Hauptkategorie > Subkategorie > Facette
+Hauptkategorie > Unterkategorie > Ausprägung > Facette
 ```
 
 Cluster werden **innerhalb des vollständigen Hierarchiepfades** gebildet. Gleichnamige Facetten unter unterschiedlichen Haupt- oder Subkategorien bleiben dadurch getrennt.
 
-Jedes Segment erhält eine global eindeutige ID:
+Konfigurierte externe Segment-IDs bleiben erhalten. Ohne konfigurierte ID-Spalte werden global eindeutige Ersatzkennungen erzeugt:
 
 ```text
 Dokumentname#SEG00000
@@ -195,7 +201,7 @@ summary_v1.json
 SWOT wird nicht nur auf Hauptkategorie-Ebene durchgeführt, sondern auf Ebene des vollständigen Pfades:
 
 ```text
-Hauptkategorie > Subkategorie > Facette
+Hauptkategorie > Unterkategorie > Ausprägung > Facette
 ```
 
 Analysiert werden:
@@ -1048,5 +1054,4 @@ python 00_WORKFLOW_RUNNER.py
 ```
 
 **Kodierte Interviewdaten rein → modulare qualitative Analysen → nachvollziehbare Zwischenprodukte → Gesamtsynthese → `gesamtbericht.md`.**
-
 

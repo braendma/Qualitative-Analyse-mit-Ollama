@@ -114,8 +114,8 @@ class SafetyTests(unittest.TestCase):
             generator.generate()
             segs=load_segments(Path(tmp)/'maxqda_export.csv',{'unit_id':'PassageID'})
             _,book=load_codebook(Path(tmp)/'Kategoriesystem.csv')
-        self.assertEqual(len(segs),38)
-        self.assertEqual(len({s.unit_id for s in segs}),37)
+        self.assertEqual(len(segs),50)
+        self.assertEqual(len({s.unit_id for s in segs}),43)
         self.assertTrue(all(s.segment_id.startswith('SYN-') and s.human_code in book for s in segs))
         self.assertEqual({len(c.split(' > ')) for c in book},{1,2,3,4})
 
