@@ -6,8 +6,11 @@ Die Auswertung läuft mit einem lokal installierten Ollama-Modell. Modellvorschl
 
 **Aktueller Hauptzweig: 0.3.0-dev.** Dieser Entwicklungsstand enthält die neue Prüf- und Rückmeldungsfunktion. Eine neue Beta wurde damit noch nicht veröffentlicht; die bisherige Release-Version bleibt 0.2.0-beta.1.
 
+Das gefaltete **b** von braendma ist jetzt als lokales Programmsignet eingebunden. Über **Handbuch** neben **Telegram-Updates** öffnet sich die vollständige Anleitung mit Bildern und Beispielen, auch ohne Internet.
+
 ## Einstieg
 
+- [Vollständiges Handbuch mit Bildern und Beispielen](docs/HANDBUCH.md) · offline: `docs/HANDBUCH.html`
 - [Entwicklungsstand 0.3.0-dev und bisherige Beta: Änderungen und Hinweise zum Umstieg](docs/RELEASE_NOTES.md)
 - [Geprüfte Installation und Paketversionen](docs/INSTALLATION_TEST.md)
 - [Einrichten und öffnen](#einrichten-und-öffnen)
@@ -50,6 +53,8 @@ Unterhalb der Dateiauswahl Thema und Fragestellung, Teilnehmende und Methodik ei
 
 ## 2. Spalten zuordnen und Eingaben prüfen
 
+Fehlende Zeilen-IDs erzeugt das Programm automatisch. Für MAXQDA-Exporte ohne Passage-ID gibt es **Passage-IDs vorbereiten**: gleiche Dokumentgruppe, Dokumentkennung, Anfang, Ende und exakter Text ergeben Vorschläge. Bestätigte Gruppen teilen anschließend eine ID; die Anwendung erstellt eine neue Arbeitskopie. Die Originaldatei bleibt erhalten. Details und Grenzen: [IDs im Handbuch](docs/HANDBUCH.md#4-ids-ohne-händisches-nummerieren).
+
 Unter **„Eingaben prüfen“** kontrollieren, ob die automatisch vorgeschlagenen Spalten stimmen. Abweichende Spaltennamen lassen sich über die Auswahllisten zuordnen.
 
 | Feld in der Oberfläche | Typische Spalte im MAXQDA-Export |
@@ -85,6 +90,10 @@ Mit **„Prüfen & neuen Lauf starten“** werden die Einstellungen gespeichert,
 **„Nach diesem Modul pausieren“** wartet das laufende Modul ab. **„Diesen Lauf fortsetzen“** setzt einen pausierten oder fehlgeschlagenen Lauf mit seinen ursprünglichen Dateien und Einstellungen fort. Nach Änderungen am Programm kann ein neuer Lauf erforderlich sein; ältere Checkpoints werden nicht automatisch migriert.
 
 ## 4. Ergebnisse ansehen und Entscheidungen sichern
+
+Nach erfolgreichem Lauf erscheint **Interaktiven Bericht öffnen**. Suche, Inhaltsnavigation und eingebettete Grafiken funktionieren auch in der heruntergeladenen HTML-Datei offline. Der Bericht bleibt beim Lauf gespeichert und lässt sich später unter **Ergebnisse** erneut öffnen. Einzelberichte und Datendateien sind in einer aufklappbaren Liste gesammelt.
+
+[![Interaktiver Gesamtbericht in der Oberfläche](docs/screenshots/08-interaktiver-bericht.jpg)](docs/screenshots/08-interaktiver-bericht.jpg)
 
 Unter **„Ergebnisse“** einen Lauf und dann **„Ansehen“** oder **„Speichern“** bei der gewünschten Datei wählen. Je nach ausgeführten Modulen entstehen Gesamtbericht, Einzelberichte, Grafiken und die interaktive Prüfliste. Die Prüfliste erscheint nur, wenn ihr Modul einschließlich der benötigten Vorstufen ausgeführt wurde.
 

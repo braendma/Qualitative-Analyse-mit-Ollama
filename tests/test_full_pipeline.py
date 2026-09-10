@@ -82,6 +82,8 @@ class FullPipelineTests(unittest.TestCase):
             people=json.loads((run/'person_analysis_v1.json').read_text(encoding='utf-8'))
             self.assertEqual(set(people['persons']),{'P1','P2'})
             self.assertTrue((run/'gesamtbericht.md').is_file())
+            self.assertTrue((run/'gesamtbericht.html').is_file())
+            self.assertIn('gesamtbericht.html',manifest['output_hashes'])
             self.assertTrue((run/'review_queue.html').is_file())
             if multi:
                 agreement=json.loads((run/'coding_agreement_v1.json').read_text(encoding='utf-8'))

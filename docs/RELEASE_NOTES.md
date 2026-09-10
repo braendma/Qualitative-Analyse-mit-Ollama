@@ -1,10 +1,12 @@
 # 0.3.0-dev · noch nicht als Beta veröffentlicht
 
+**Usability-Patch vor der nächsten Beta:** Automatische HTML-Gesamtberichte mit dauerhafter Ergebnisverknüpfung, Offline-Grafiken und Suche; einklappbare Einzeldateien; Assistent für fehlende Passage-IDs mit bestätigten Gruppen und unveränderlichen Originalen; vollständiges lokales [Handbuch](HANDBUCH.md); braendma-Signet in der Seitenleiste. Clusterüberschriften zeigen jetzt alle vorhandenen Kategorieebenen ohne leere Facetten. Gleichzeitige Bildabrufe werden zuverlässiger angenommen.
+
 Dieser Entwicklungsstand ergänzt automatische, versionierte Prüfentscheidungen in der lokalen Oberfläche, Excel-Export, neue Analyseversionen nach manueller Prüfung und optionale LLM-Vorschläge zum Kategoriensystem. Hinzu kommen Kategorienvergleich, Einrichtungskontrolle, formatierte und durchsuchbare Ergebnisse sowie Fortschritt innerhalb einzelner Module im Browser und optional über Telegram.
 
 Ursprüngliche Eingaben und Ergebnisse bleiben erhalten. Folgeläufe und Vorschläge starten nur ausdrücklich; sie trainieren das Modell nicht. Die öffentliche Konfiguration bleibt auf lokales Ollama und vollständig künstliche Beispieldaten eingestellt. [Anleitung mit Screenshots](PRUEFUNG_UND_FOLGELAUF.md).
 
-Geprüft mit 78 Python- und acht Browserlogik-Tests sowie zwei zusätzlichen Ollama-Cloud-Abläufen mit künstlichen Daten. Die Windows-Schlüsselspeicherung wurde außerhalb des eingeschränkten Sandbox-Kontos geprüft. Eine neue vollständige Installation wurde für diesen Stand nicht angelegt; die vorherige Installationsprüfung unten bezieht sich auf 0.2.0-beta.1. [Testbericht](TEST_REPORT.md).
+Geprüft mit 84 Python- und acht Browserlogik-Tests sowie zwei zusätzlichen Ollama-Cloud-Abläufen mit künstlichen Daten. Die Windows-Schlüsselspeicherung wurde außerhalb des eingeschränkten Sandbox-Kontos geprüft. Eine neue vollständige Installation wurde für diesen Stand nicht angelegt; die vorherige Installationsprüfung unten bezieht sich auf 0.2.0-beta.1. [Testbericht](TEST_REPORT.md).
 
 Beim Wechsel die Oberfläche nach Abschluss oder Pause eines Laufs schließen, Programmdateien aktualisieren und neu öffnen. Projekte bleiben erhalten; Prüfentscheidungen können auch für vorhandene Prüflisten erfasst werden. Nach Programmänderungen neue Analyseläufe starten, alte Checkpoints werden nicht migriert. Es wird durch diese Aktualisierung kein GitHub-Release oder Release-Tag angelegt.
 

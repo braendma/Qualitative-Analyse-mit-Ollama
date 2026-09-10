@@ -215,6 +215,8 @@ def build_full_report(output_dir: Path, modules: list[dict], created_at: str) ->
 
     report_path = output_dir / "gesamtbericht.md"
     atomic_text(report_path, "".join(report))
+    from html_report import build_html_report
+    build_html_report(output_dir, modules, created_at)
     return report_path
 
 
@@ -270,7 +272,7 @@ def main(argv=None):
         'review_provenance': config.get('review_provenance'),
         "input_sha256": file_hash(csv_path),
         "config_sha256": file_hash(config_path),
-        "code": {p.name: file_hash(p) for p in sorted([*script_dir.glob("*.py"), *script_dir.glob("*.html")])},
+        "code": {p.name: file_hash(p) for p in sorted([*script_dir.glob("*.py"), *script_dir.glob("*.html"), *script_dir.glob("*.js"), *script_dir.glob("*.css")])},
         "dependencies": {name: importlib.metadata.version(name) for name in ("pandas", "PyYAML", "ollama", "matplotlib")},
         "llm": config.get("llm", {}),
     }
@@ -347,7 +349,9 @@ def main(argv=None):
             atomic_json(output_dir / "workflow_manifest.json", manifest)
         finished_at = datetime.now().isoformat()
         report_path = build_full_report(output_dir, modules, finished_at)
-        manifest.update(status="success", current_module=None, finished_at=finished_at, gesamtbericht=str(report_path))
+        manifest['output_hashes'].update({name:file_hash(output_dir/name) for name in ('gesamtbericht.md','gesamtbericht.html')})
+        manifest.update(status="success", current_module=None, finished_at=finished_at, gesamtbericht=str(report_path),
+                        gesamtbericht_html=str(output_dir/'gesamtbericht.html'))
         atomic_json(output_dir / "workflow_manifest.json", manifest)
         LOGGER.info("Workflow abgeschlossen. Lauf-ID: %s. Bericht: %s", run_id, report_path)
     except Exception as exc:

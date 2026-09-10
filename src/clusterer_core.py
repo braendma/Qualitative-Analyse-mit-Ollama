@@ -657,30 +657,13 @@ def run_clustering(
         # -------------------------------------------------
         # Markdown-Kontext
         # -------------------------------------------------
-        md_lines.append(
-            f"# {haupt} → "
-            f"{sub} → "
-            f"{facette}\n\n"
-        )
-
-        md_lines.append(
-            "### Kontext der Analyse\n"
-        )
-
-        md_lines.append(
-            f"- Hauptkategorie: "
-            f"**{haupt}**\n"
-        )
-
-        md_lines.append(
-            f"- Subkategorie: "
-            f"**{sub}**\n"
-        )
-
-        md_lines.append(
-            f"- Facette: "
-            f"**{facette}**\n\n"
-        )
+        title = " → ".join(value for value in (haupt, sub, auspraegung, facette) if value)
+        md_lines.append(f"# {title}\n\n### Kontext der Analyse\n")
+        for label, value in zip(("Hauptkategorie", "Subkategorie", "Ausprägung", "Facette"),
+                                (haupt, sub, auspraegung, facette)):
+            if value:
+                md_lines.append(f"- {label}: **{value}**\n")
+        md_lines.append("\n")
 
         # -------------------------------------------------
         # Segmente für LLM erzeugen
@@ -931,8 +914,7 @@ def run_clustering(
         # Markdown Cluster
         # -------------------------------------------------
         md_lines.append(
-            f"## Cluster für Facette: "
-            f"{facette}\n\n"
+            f"## Cluster für Codepfad: {title}\n\n"
         )
 
         if plot_path:

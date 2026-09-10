@@ -1,3 +1,17 @@
+# Usability-Patch · 10. September 2026
+
+- 84 Python-Tests: 83 bestanden im eingeschränkten Testkonto; der Windows-DPAPI-Test bestand separat im regulären Benutzerkontext. Nach der Serverkorrektur alle 10 Tests der Desktop-/Telegram-Datei erneut erfolgreich.
+- Acht bestehende JavaScript-Tests bestanden; insbesondere verzögerte Antworten, Projektwechsel, gespeicherte Prüfentscheidungen und Schutz neuerer Entwürfe.
+- Neuer ID-Assistent: exakte Gruppierung, getrennte Dokumentgruppen/Personen/Positionen/Texte, explizite Bestätigung, veraltete Vorschauen, vorhandene IDs und unveränderte Originale geprüft.
+- HTML: eingebettete Bilder, externe und ausbrechende Pfade, sichere Textdarstellung sowie exakte CSP-Freigaben geprüft. Beide kompletten Mock-Pipelines einschließlich Wiederaufnahme erzeugen HTML und dokumentieren dessen Prüfsumme.
+- Tatsächlicher Edge-Browsertest: 14 Berichtsteile und 13 Diagramme aus einem früheren synthetischen Cloud-Lauf; Suche, Navigation, Auf-/Zuklappen und Wiederöffnung erfolgreich. Handbuch mit 12 Kapiteln und acht Bildern lädt ohne Browserfehler. ID-Gruppierung und anschließende Eingabevalidierung zusätzlich in der Browseroberfläche durchgeführt.
+- Für diesen Darstellungs-/Importpatch keine zusätzlichen LLM-Anfragen nötig. Vorhandene Cloud-Ergebnisse wurden ohne inhaltlichen Neulauf in HTML überführt. Keine lokale Ollama-Inferenz und keine echten Interviewdaten im Test.
+- Die zusätzliche HTTP-Verbindungswarteschlange und HTTP/1.1 beseitigten im Browsercheck zuvor beobachtete Verbindungsabbrüche bei parallelen Bildabrufen.
+
+Die fachliche Qualität der LLM-Auswertung ist damit nicht neu bewertet. Die frühere echte Cloud-Prüfung und Installationsprüfung sind unten dokumentiert. Ein Beta-Release wurde nicht erstellt.
+
+---
+
 # Review workflow validation · 0.3.0-dev
 
 Date: 2026-09-10. Published predecessor: `b95a74ad0fbb8a47f6c50bb20dad760d00cb2fb4`.

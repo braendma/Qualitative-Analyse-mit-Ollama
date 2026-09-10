@@ -167,9 +167,12 @@ class SafetyTests(unittest.TestCase):
         def fake(system,user,params):
             return json.dumps({'clusters':[{'cluster_name':'same','definition':'Test','segments':[x['id'] for x in json.loads(user)]}]})
         with tempfile.TemporaryDirectory() as tmp,patch.object(cluster,'llm_cluster',fake),patch.object(cluster,'plot_clusters',return_value=None):
-            _,data=cluster.run_clustering(frame,{'model':'mock','temperature':0,'max_tokens':100},
+            report,data=cluster.run_clustering(frame,{'model':'mock','temperature':0,'max_tokens':100},
                 {'cluster_analysis':{'system':'test','user':'{segments}'},'json_schema':'{}'}, {},
                 plots_dir=tmp,id_to_text_path=str(Path(tmp)/'map.json'))
+            self.assertIn('A → B → C → positiv',report)
+            self.assertIn('Ausprägung: **C**',report)
+            self.assertNotIn('Facette: ****',report)
             self.assertEqual(len(data['clusters']),3)
             self.assertEqual({c['code_path'] for c in data['clusters']},set(frame.Code))
             people=build_person_payloads(data['clusters'],{'x':'yes','y':'no','z':'short'},{},data['segment_metadata'])

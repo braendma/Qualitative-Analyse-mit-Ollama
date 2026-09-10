@@ -73,7 +73,7 @@ function table(info, title) {
 function renderFiles(){
   const uploads=project.uploads||{};$('previews').replaceChildren();
   for(const kind of ['segments','codebook']){
-    const info=uploads[kind];$(kind+'-info').textContent=info?`${info.name}${info.sheet?' · Blatt '+info.sheet:''} · ${info.count} Codier-/Kategoriezeilen`:'Noch keine Datei ausgewählt';
+    const info=uploads[kind];$(kind+'-info').textContent=info?`${info.name}${info.sheet?' · Blatt '+info.sheet:''} · ${info.count} ${kind==='segments'?'Codierzeilen':'Kategoriezeilen'}`:'Noch keine Datei ausgewählt';
     if(info)$('previews').append(table(info,kind==='segments'?'Interviewdatei · erste fünf Zeilen':'Kategoriensystem · erste fünf Zeilen'));
   }
   renderMapping('segment-columns',columnLabels,uploads.segments?.headers||[],project.settings.columns||state.defaults.columns);
@@ -143,11 +143,14 @@ function runCard(job,results=false){
   if(['failed','paused','interrupted'].includes(job.status)){const b=el('button','Diesen Lauf fortsetzen');action(b,async()=>{await api('start',{project:project.id,resume:job.id});message('Wiederaufnahme mit der ursprünglichen Dateiversion und den ursprünglichen Einstellungen gestartet.');await refreshJobs();});actions.append(b);}
   const log=el('button','Laufprotokoll herunterladen','small secondary');action(log,()=>artifact(job,'console.log',false));actions.append(log);card.append(actions);
   if(results){
+    if(job.files?.includes('gesamtbericht.html')){const b=el('button','Interaktiven Bericht öffnen');action(b,()=>artifact(job,'gesamtbericht.html',true));card.append(b);}
     if(job.files?.includes('review_queue.json')){const b=el('button','Codierungen im Projekt prüfen');action(b,()=>openReview(job));card.append(b);}
     const list=el('div',undefined,'result-list');
-    const files=[...(job.files||[])].sort((a,b)=>Number(b==='gesamtbericht.md')-Number(a==='gesamtbericht.md'));
-    files.forEach(name=>{const row=el('div',undefined,'result-row');row.append(el('span',name));const view=el('button','Ansehen','small secondary'),download=el('button','Speichern','small secondary');action(view,()=>artifact(job,name,true));action(download,()=>artifact(job,name,false));row.append(view,download);list.append(row);});
-    card.append(files.length?list:el('p','Ergebnisse erscheinen nach Abschluss der ersten Module.','hint'));
+    const priority=name=>name==='gesamtbericht.html'?2:name==='gesamtbericht.md'?1:0;
+    const files=[...(job.files||[])].sort((a,b)=>priority(b)-priority(a));
+    const titles={'gesamtbericht.html':'Interaktiver Gesamtbericht · HTML','gesamtbericht.md':'Gesamtbericht · Markdown','review_queue.html':'Separate Offline-Prüfliste · HTML','review_queue.json':'Prüffälle · JSON','codebook_proposals.md':'Kategorienvorschläge · Bericht','codebook_proposals.json':'Kategorienvorschläge · Daten'};
+    files.forEach(name=>{const row=el('div',undefined,'result-row'),label=el('span',titles[name]||name);if(titles[name])label.append(el('small',name));row.append(label);const view=el('button','Ansehen','small secondary'),download=el('button','Speichern','small secondary');action(view,()=>artifact(job,name,true));action(download,()=>artifact(job,name,false));row.append(view,download);list.append(row);});
+    if(files.length){const details=el('details');details.append(el('summary',`Einzelberichte und Datendateien (${files.length})`),list);card.append(details);}else card.append(el('p','Ergebnisse erscheinen nach Abschluss der ersten Module.','hint'));
   }
   return card;
 }
@@ -175,7 +178,7 @@ async function artifact(job,name,preview){
   $('formatted-preview').hidden=true;$('formatted-preview').replaceChildren();
   $('viewer').hidden=false;$('viewer-name').textContent=name;$('text-preview').hidden=true;$('html-preview').hidden=true;$('image-preview').hidden=true;
   if(objectUrl)URL.revokeObjectURL(objectUrl);
-  if(name.endsWith('.html')){$('html-preview').srcdoc=rawText;$('html-preview').hidden=false;}
+  if(name.endsWith('.html')){$('html-preview').title=name==='gesamtbericht.html'?'Interaktiver Gesamtbericht':'HTML-Ergebnis';$('html-preview').srcdoc=rawText;$('html-preview').hidden=false;}
   else if(/\.(png|jpg|jpeg|webp)$/i.test(name)){objectUrl=URL.createObjectURL(blob);$('image-preview').src=objectUrl;$('image-preview').hidden=false;}
   else{
     const text=rawText.slice(0,1000000);

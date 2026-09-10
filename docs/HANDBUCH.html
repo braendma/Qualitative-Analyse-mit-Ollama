@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Handbuch · Qualitative Analyse mit Ollama</title><link rel="stylesheet" href="manual.css"></head><body><header><p>Qualitative Analyse mit Ollama · braendma</p><nav aria-label="Inhaltsverzeichnis"><strong>Direkt zum Thema</strong><div class="toc">
+<ul>
+<li><a href="#1-einrichten-und-starten">1. Einrichten und starten</a></li>
+<li><a href="#2-zuerst-die-demo-kennenlernen">2. Zuerst die Demo kennenlernen</a></li>
+<li><a href="#3-eigenes-projekt-und-maxqda-dateien">3. Eigenes Projekt und MAXQDA-Dateien</a></li>
+<li><a href="#4-ids-ohne-handisches-nummerieren">4. IDs ohne händisches Nummerieren</a></li>
+<li><a href="#5-spalten-und-untersuchung-prufen">5. Spalten und Untersuchung prüfen</a></li>
+<li><a href="#6-module-auswahlen">6. Module auswählen</a></li>
+<li><a href="#7-start-fortschritt-und-wiederaufnahme">7. Start, Fortschritt und Wiederaufnahme</a></li>
+<li><a href="#8-berichte-offnen-und-spater-wiederfinden">8. Berichte öffnen und später wiederfinden</a></li>
+<li><a href="#9-codierungen-prufen-und-ruckmeldung-geben">9. Codierungen prüfen und Rückmeldung geben</a></li>
+<li><a href="#10-mit-entscheidungen-weiterarbeiten">10. Mit Entscheidungen weiterarbeiten</a></li>
+<li><a href="#11-telegram-updates-einrichten">11. Telegram-Updates einrichten</a></li>
+<li><a href="#12-aufbewahren-teilen-und-probleme-losen">12. Aufbewahren, teilen und Probleme lösen</a></li>
+</ul>
+</div>
+</nav></header><main><h1 id="handbuch-qualitative-analyse-mit-ollama">Handbuch · Qualitative Analyse mit Ollama</h1>
+<p>Dieses Handbuch begleitet dich vom ersten Start bis zum erneuten Analyselauf mit geprüften Codierungen. Alle Personen, Texte und Beurteilungen in den Beispielen sind erfunden. Stand: 0.3.0-dev, vor der nächsten Beta.</p>
+<p>Du erreichst die bebilderte Fassung jederzeit über <strong>Handbuch</strong> neben <strong>Telegram-Updates</strong> in der Seitenleiste. Sie öffnet sich in einem eigenen Tab, damit deine aktuelle Arbeit geöffnet bleibt. Ohne laufende Oberfläche kannst du <code>docs/HANDBUCH.html</code> doppelklicken. Den Programmordner einschließlich der Bilder zusammenlassen.</p>
+<h2 id="1-einrichten-und-starten">1. Einrichten und starten</h2>
+<ol>
+<li>Das vollständige Programm von GitHub herunterladen und entpacken. Einzelne Python-Dateien reichen nicht aus.</li>
+<li>Python ab Version 3.10 und Ollama installieren. Ein lokales Modell in Ollama bereitstellen; dessen Namen anschließend in der Oberfläche eintragen. Der Speicherbedarf hängt vom Modell und vom Kontextfenster ab.</li>
+<li>Unter Windows einmal <code>Einrichtung.cmd</code> starten. Der Schritt installiert Python-Pakete und benötigt Internet, führt aber keine Interviewanalyse aus.</li>
+<li><code>Start_Oberflaeche.cmd</code> öffnen. Die Bedienung erfolgt im Browser; das Startfenster während eines Laufs geöffnet lassen.</li>
+<li>Unter <strong>Analyse → Systemprüfung ohne Modellaufruf</strong> die Einrichtung prüfen. <strong>Kurzen lokalen Modelltest vorbereiten</strong> ist eine getrennte, optionale Aktion, die tatsächlich ein Modell lädt.</li>
+</ol>
+<p>Die normale Installation verwendet lokales Ollama. Eine separat eingerichtete Cloud-Testumgebung ist daran zu erkennen, dass ihre Oberfläche ausdrücklich auf Cloud-Nutzung hinweist. Dort ausschließlich künstliche Testdaten verwenden. Deine Zugangsdatei gehört weder ins Repository noch in Beispielprojekte.</p>
+<h2 id="2-zuerst-die-demo-kennenlernen">2. Zuerst die Demo kennenlernen</h2>
+<p>Auf der Startseite <strong>Künstliche Beispieldaten laden</strong> wählen. Das erzeugt ein eigenes Projekt mit 50 Codierzeilen, 43 Passagen und sechs erfundenen Personen. Das Laden sowie die Eingabeprüfung benötigen kein LLM. Unter <strong>Eingaben prüfen</strong> die Spalten kontrollieren und <strong>Einstellungen speichern &amp; Eingaben prüfen</strong> anklicken. Bei Erfolg erscheinen die Zahlen für Codierzeilen, Passagen, Personen und Codepfade.</p>
+<p>Für eine überschaubare erste Analyse unter <strong>Analyse → Auswahl leeren</strong> nur <strong>Clusteranalyse</strong> auswählen. Module mit Abhängigkeiten können weitere Vorstufen hinzufügen; die Zusammenfassung unter den Häkchen zeigt die tatsächlich ausgeführten Schritte. Erst <strong>Prüfen &amp; neuen Lauf starten</strong> führt die Modellauswertung aus.</p>
+<h2 id="3-eigenes-projekt-und-maxqda-dateien">3. Eigenes Projekt und MAXQDA-Dateien</h2>
+<p><strong>＋ Neues Projekt</strong> wählen, benennen und zwei Dateien laden: Interviewdatei sowie Kategoriensystem. Du kannst <code>.xlsx</code> und <code>.csv</code> mischen. Jede Datei darf maximal 20 MB groß sein. Das Programm legt Arbeitskopien an und verändert die ausgewählten Originaldateien nicht.</p>
+<p><img alt="Dateiauswahl und MAXQDA-Hilfe" src="screenshots/01-projekt-dateien.jpg" /></p>
+<h3 id="textstellen-direkt-aus-maxqda-exportieren">Textstellen direkt aus MAXQDA exportieren</h3>
+<p>In MAXQDA die Übersicht/Liste der <strong>codierten Segmente</strong> öffnen und als Excel-Tabelle exportieren. Benötigt wird die Tabelle mit den tatsächlichen Textstellen, nicht nur das Codesystem mit Codenamen. Behalte nach Möglichkeit auch <strong>Dokumentgruppe</strong>, <strong>Anfang</strong> und <strong>Ende</strong> im Export. Die Schaltflächen und Menünamen können je nach MAXQDA-Version abweichen.</p>
+<p>Die XLSX-Datei direkt bei <strong>Interviewdatei auswählen</strong> laden. Bei mehreren Tabellenblättern das Datenblatt mit Kopfzeile auswählen; die Blätter werden nicht zusammengeführt. Falls du die Tabelle nach Excel kopiert hast, muss sie dieselbe Struktur haben: eindeutige Spaltenüberschriften in Zeile 1, keine Titelzeilen darüber, keine verbundenen Zellen und keine leeren Fortsetzungszeilen anstelle von Dokumentnamen. Formeln in einer Kopie durch Werte ersetzen.</p>
+<p>CSV geht weiterhin: als <strong>UTF-8 mit Semikolon</strong> speichern. Zeilenumbrüche innerhalb einer Textstelle müssen in derselben Zelle bleiben; Excel setzt beim CSV-Export die nötigen Anführungszeichen.</p>
+<table>
+<thead>
+<tr>
+<th>Feld</th>
+<th>Beispiel</th>
+<th>Zuordnung</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dokumentname</td>
+<td>Interview_01</td>
+<td>Person / Dokument</td>
+</tr>
+<tr>
+<td>Code</td>
+<td>Lernangebot &gt; Praxis &gt; Übung</td>
+<td>Vergebener Code</td>
+</tr>
+<tr>
+<td>Segment</td>
+<td>Die gemeinsame Übung half mir beim Anwenden.</td>
+<td>Text / Segment</td>
+</tr>
+<tr>
+<td>Anfang, Ende</td>
+<td>12, 12</td>
+<td>Automatisch für Passage-Vorschläge erkannt</td>
+</tr>
+<tr>
+<td>Dokumentgruppe</td>
+<td>Gruppe_A</td>
+<td>Automatisch zur Trennung der Vorschläge verwendet</td>
+</tr>
+<tr>
+<td>segment_id</td>
+<td>Z001</td>
+<td>Optional: ohne Spalte automatisch erzeugt</td>
+</tr>
+<tr>
+<td>PassageID</td>
+<td>P001</td>
+<td>Vorhandene ID verwenden oder vorbereiten lassen</td>
+</tr>
+</tbody>
+</table>
+<p>Jede Zeile enthält <strong>eine Codierung</strong>. Bei mehreren Codes für dieselbe Textstelle gibt es mehrere Zeilen. Codepfade verwenden <code>&gt;</code> zwischen den Ebenen. Mehrere Codes in einer Sammelzelle werden nicht automatisch aufgeteilt. Dokument-/Personenkennungen müssen im Projekt eindeutig sein; gleich benannte Dokumente aus unterschiedlichen Gruppen sollten vorher unterscheidbare Namen erhalten.</p>
+<h3 id="kategoriensystem-vorbereiten">Kategoriensystem vorbereiten</h3>
+<p>Die separate Tabelle braucht mindestens <strong>Kategorie</strong> und <strong>Definition</strong>. Optional sind <strong>Unterkategorie</strong>, <strong>Ausprägung</strong>, <strong>Facette</strong>, <strong>Ankerbeispiel</strong>. Jede Zeile beschreibt einen vollständigen Codepfad. Höhere Ebenen je Zeile wiederholen; nicht benötigte tiefere Ebenen bleiben leer.</p>
+<table>
+<thead>
+<tr>
+<th>Kategorie</th>
+<th>Unterkategorie</th>
+<th>Ausprägung</th>
+<th>Definition</th>
+<th>Ankerbeispiel</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Lernangebot</td>
+<td>Praxis</td>
+<td>Übung</td>
+<td>Aussagen über das eigene praktische Erproben.</td>
+<td>Ich konnte das Verfahren selbst ausprobieren.</td>
+</tr>
+<tr>
+<td>Zusammenarbeit</td>
+<td>Gruppe</td>
+<td>Austausch</td>
+<td>Aussagen über gegenseitige fachliche Hilfe.</td>
+<td>Die Erklärung eines anderen Teilnehmers half mir.</td>
+</tr>
+</tbody>
+</table>
+<p>Die Definition legt die inhaltliche Bedeutung fest. Ein Beispiel illustriert sie. Offene redaktionelle Notizen wie „überlegen“ gehören nicht unbeabsichtigt in Codepfade. Das Programm muss jeden Code aus der Interviewdatei im Kategoriensystem wiederfinden.</p>
+<h2 id="4-ids-ohne-handisches-nummerieren">4. IDs ohne händisches Nummerieren</h2>
+<p><strong>Zeilen-IDs entstehen bereits automatisch</strong>, wenn keine ID-Spalte vorhanden ist. Vorhandene eindeutige IDs können zugeordnet bleiben. Sie kennzeichnen einzelne Codierzeilen, auch wenn derselbe Text mehrfach codiert wurde.</p>
+<p>Eine <strong>Passage-ID</strong> verbindet dagegen die Codierzeilen derselben tatsächlichen Textstelle. Für diese Zuordnung gibt es unter <strong>Eingaben prüfen → Passage-IDs vorbereiten</strong> einen Assistenten:</p>
+<ol>
+<li>Person/Dokument, Text und Code zuordnen. Die Passage-ID zunächst nicht zuordnen, wenn sie fehlt.</li>
+<li><strong>Passage-IDs vorbereiten</strong> anklicken. Das Programm vergleicht Dokumentgruppe, Dokumentname, Anfang, Ende und den exakten Segmenttext. Es verwendet kein LLM und keine Ähnlichkeitssuche.</li>
+<li>Die vorgeschlagenen Gruppen prüfen. Nur Gruppen anhaken, die dieselbe tatsächliche Textstelle abbilden. Bei vielen Vorschlägen mit <strong>Weitere Gruppen</strong> weitergehen; gesetzte Häkchen bleiben erhalten.</li>
+<li><strong>IDs mit dieser Gruppierung erstellen</strong> wählen. Alle Zeilen erhalten automatisch IDs in einer neuen Arbeitskopie. Bestätigte Gruppen teilen eine Passage-ID; nicht bestätigte Zeilen bleiben getrennt. Keine Zeile wird gelöscht. Die Oberfläche ordnet die neuen Spalten zu und wählt den Mehrfachvergleich.</li>
+<li>Anschließend <strong>Einstellungen speichern &amp; Eingaben prüfen</strong> anklicken.</li>
+</ol>
+<p><img alt="Assistent zur Vorbereitung von Passage-IDs mit einem künstlichen Export" src="screenshots/07-passage-ids.jpg" /></p>
+<p><strong>Warum kurz prüfen?</strong> Bei Textdokumenten sind Anfang und Ende in MAXQDA Absatznummern. Derselbe kurze Satz kann innerhalb eines Absatzes mehrfach vorkommen. Daher beweisen selbst identische Positionen und Texte keine eindeutige gemeinsame Zeichenposition. Die endgültige Gruppierung wird bewusst bestätigt. Bei Unsicherheit den <strong>Zeilenvergleich</strong> verwenden; dieser benötigt keine Passage-ID. Quelle: <a href="https://www.maxqda.com/help/segment-retrieval/overview-of-coded-segments">MAXQDA: Übersicht codierter Segmente</a>.</p>
+<p>Beispiel: Zwei Zeilen aus Interview_01, Absatz 12, mit genau demselben Text und den Codes „Übung“ und „Austausch“ können eine Passage bilden. Derselbe Wortlaut in Interview_02 oder Absatz 30 wird nicht vorgeschlagen. Überlappende Ausschnitte mit unterschiedlichem Text bleiben ebenfalls getrennt. Bestehende Passage-IDs werden vom Assistenten nicht überschrieben.</p>
+<h2 id="5-spalten-und-untersuchung-prufen">5. Spalten und Untersuchung prüfen</h2>
+<p>Unter <strong>Projekt &amp; Dateien</strong> die Beschreibung der Studie, Teilnehmende und Methodik ausfüllen. Diese Angaben werden später dem Modell mitgegeben. Unter <strong>Eingaben prüfen</strong> alle Spalten kontrollieren; nicht vorhandene optionale Ebenen als <strong>Nicht zugeordnet</strong> belassen.</p>
+<p><img alt="Zuordnung der Spalten" src="screenshots/02-spalten-zuordnen.jpg" /></p>
+<p>Die Eingabeprüfung kontrolliert Pflichtfelder, IDs und Codepfade. Sie bewertet noch nicht die fachliche Qualität einer Codierung. Bei Fehlern steht beispielsweise, welche Spalte oder welcher Code fehlt. Nach jeder Änderung erneut prüfen. Ein früherer grüner Prüfbefund gilt nicht für geänderte Eingaben.</p>
+<p>Mit <strong>Kategorienversionen vergleichen</strong> lassen sich eine vorher gültige und die aktuelle Tabelle gegenüberstellen. Die Ansicht nennt neue, entfernte und geänderte Kategorien sowie betroffene Codierzeilen. Sie codiert nichts automatisch um.</p>
+<h2 id="6-module-auswahlen">6. Module auswählen</h2>
+<p><img alt="Modulauswahl mit Häkchen und benötigten Vorstufen" src="screenshots/03-module-auswaehlen.jpg" /></p>
+<table>
+<thead>
+<tr>
+<th>Modul</th>
+<th>Nutzen</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Clusteranalyse</td>
+<td>Gruppiert Inhalte innerhalb eines Codepfads.</td>
+</tr>
+<tr>
+<td>Code-Verifikation</td>
+<td>Prüft die vorhandene menschliche Zuordnung.</td>
+</tr>
+<tr>
+<td>Blindcodierung</td>
+<td>Codiert anhand des Kategoriensystems ohne Vorgabe des menschlichen Codes.</td>
+</tr>
+<tr>
+<td>Coding Agreement</td>
+<td>Vergleicht Zuordnungen rechnerisch, einschließlich Abweichungen.</td>
+</tr>
+<tr>
+<td>Cluster-Zusammenfassungen</td>
+<td>Fasst Cluster inhaltlich zusammen.</td>
+</tr>
+<tr>
+<td>SWOT und Meta-SWOT</td>
+<td>Ordnet und verdichtet Stärken, Schwächen, Chancen und Risiken.</td>
+</tr>
+<tr>
+<td>Personenanalyse und Personenvergleich</td>
+<td>Untersucht einzelne Personen sowie Gemeinsamkeiten und Unterschiede.</td>
+</tr>
+<tr>
+<td>Kontrast-, Relations- und Ambivalenzanalyse</td>
+<td>Sucht Gegenfälle, Zusammenhänge und gegenläufige Aussagen.</td>
+</tr>
+<tr>
+<td>Evidenz-Audit</td>
+<td>Prüft Befunde auf vorhandene Gegenbelege.</td>
+</tr>
+<tr>
+<td>Prüfliste</td>
+<td>Stellt Fälle für die menschliche Nachprüfung zusammen.</td>
+</tr>
+<tr>
+<td>Gesamtsynthese</td>
+<td>Führt vorgelagerte Befunde zusammen.</td>
+</tr>
+</tbody>
+</table>
+<p>Die Oberfläche zeigt die genaue Bezeichnung und benötigte Vorstufen unter jedem Häkchen. Nicht jeder Schritt passt zu jeder Fragestellung. <strong>Codierungen prüfen</strong> stellt eine Auswahl zur Validierung zusammen; für die Rückmeldungsfunktion zusätzlich <strong>Prüfliste</strong> auswählen. Mehr Module können mehr Modellaufrufe und Laufzeit verursachen.</p>
+<h2 id="7-start-fortschritt-und-wiederaufnahme">7. Start, Fortschritt und Wiederaufnahme</h2>
+<p>Unter <strong>Lokales Modell auswählen</strong> den installierten Namen eintragen. <strong>Installierte Modelle anzeigen</strong> fragt nur die Liste ab. Kontextfenster und Antwortlimit zunächst aus der passenden Konfiguration übernehmen. Das Antwortlimit muss kleiner als das Kontextfenster sein; Thinking muss zum Modell passen.</p>
+<p><strong>Prüfen &amp; neuen Lauf starten</strong> speichert die aktuellen Einstellungen, prüft nochmals und erzeugt einen eigenen Lauf. In der Browseransicht siehst du abgeschlossene Module, das aktuelle Modul und – sofern vom Modul gemeldet – bearbeitete Fälle und Modellantworten. Eine längere Modellantwort kann Zeit beanspruchen, ohne dass die Fallzahl steigt.</p>
+<p><strong>Nach diesem Modul pausieren</strong> beendet zuerst das laufende Modul. <strong>Diesen Lauf fortsetzen</strong> verwendet dessen gespeicherte Eingaben und Einstellungen. Ein neuer Lauf verwendet dagegen den aktuellen Projektstand. Erfolgreiche Teilschritte werden bei zulässiger Wiederaufnahme weiterverwendet; geänderte Eingaben oder Programmstände können eine Wiederaufnahme ausschließen. Dann einen neuen Lauf starten und die vorherigen Ergebnisse behalten.</p>
+<h2 id="8-berichte-offnen-und-spater-wiederfinden">8. Berichte öffnen und später wiederfinden</h2>
+<p>Unter <strong>Ergebnisse</strong> bleiben die Läufe des ausgewählten Projekts gespeichert. Nach einem erfolgreichen Abschluss erscheint <strong>Interaktiven Bericht öffnen</strong>. Der Gesamtbericht enthält die Markdown-Berichtsteile der ausgeführten Module und eingebettete unterstützte Diagramme. Rohdaten, Excel-Exporte und die bearbeitbare Prüfliste werden separat geöffnet.</p>
+<p><img alt="Interaktiver Gesamtbericht mit Navigation und Suche" src="screenshots/08-interaktiver-bericht.jpg" /></p>
+<ul>
+<li><strong>Bericht durchsuchen:</strong> Filtert Berichtsteile nach dem Suchbegriff. Navigation zu einem Abschnitt hebt den Suchfilter auf.</li>
+<li><strong>Alles aufklappen / zuklappen:</strong> Steuert die sichtbaren Abschnitte.</li>
+<li><strong>Speichern:</strong> Lädt die HTML-Datei herunter. Sie funktioniert offline, einschließlich der eingebetteten Grafiken.</li>
+<li><strong>Drucken / PDF:</strong> In der heruntergeladenen HTML-Datei verfügbar. Beim Drucken werden alle Berichtsteile aufgeklappt, auch zuvor ausgefilterte.</li>
+</ul>
+<p>Zum späteren Wiederöffnen die Oberfläche starten, dasselbe Projekt auswählen und <strong>Ergebnisse</strong> öffnen. Es ist kein erneuter Modellaufruf nötig. HTML entsteht nur nach vollständigem erfolgreichem Lauf; bei Fehler oder Pause stehen bereits fertige Einzelergebnisse zur Verfügung. Fehlende oder zu große Grafiken werden im Bericht kenntlich gemacht.</p>
+<p>Alte Läufe vor diesem Patch besitzen noch keinen automatisch erzeugten HTML-Gesamtbericht. Fortgeschrittene können ihn ohne LLM nacherstellen: <code>python src/html_report.py --run-dir "Pfad zum abgeschlossenen Lauf"</code>. Eine bestehende HTML-Datei bleibt erhalten; ein weiterer Export erhält einen neuen Namen. Die reguläre Ergebnisansicht kennt den Standardnamen <code>gesamtbericht.html</code>.</p>
+<h2 id="9-codierungen-prufen-und-ruckmeldung-geben">9. Codierungen prüfen und Rückmeldung geben</h2>
+<p>Wenn das Modul <strong>Prüfliste</strong> ausgeführt wurde, unter <strong>Ergebnisse → Codierungen im Projekt prüfen</strong> öffnen. Die kritischen Fälle sind zunächst gefiltert. Suche und Seitennavigation helfen bei größeren Listen.</p>
+<p><img alt="Prüfentscheidungen in der lokalen Oberfläche" src="screenshots/05-pruefentscheidungen.jpg" /></p>
+<p>Pro Fall die Originalstelle, menschliche Codes und Modellvorschläge lesen. Entscheidung, finale Codes und gegebenenfalls Begründung eintragen. Die Anwendung speichert Entscheidungen lokal als Prüfversionen. Den Speicherstatus beachten; <strong>Jetzt speichern</strong> ist zusätzlich möglich. Bei einem Speicherfehler die Meldung beheben und den Entwurf als JSON sichern. <strong>Prüftabelle als Excel exportieren</strong> bietet eine lesbare Arbeits-/Dokumentationsfassung; sie ist kein automatischer MAXQDA-Rückimport.</p>
+<p>Die herunterladbare HTML-Prüfliste ist eine separate Offline-Variante. Dortige Änderungen sind nicht automatisch mit dem Projekt synchronisiert. Für die integrierten Folgeläufe die Prüfung innerhalb der Oberfläche verwenden.</p>
+<h2 id="10-mit-entscheidungen-weiterarbeiten">10. Mit Entscheidungen weiterarbeiten</h2>
+<p>Nach Abschluss der kritischen Prüfungen bietet die Oberfläche an, <strong>mit geprüften Codierungen einen neuen Lauf vorzubereiten</strong>. Zuerst erscheint eine Vorschau der tatsächlichen Änderungen. Fälle ohne finale Codes müssen gegebenenfalls ausdrücklich aus der neuen codierten Eingabe ausgeschlossen werden.</p>
+<p><img alt="Vorschau eines Folgelaufs" src="screenshots/06-folgelauf-vorbereiten.jpg" /></p>
+<p><strong>Neue Version vorbereiten</strong> erstellt eine neue Eingabeversion und bewahrt Ursprungslauf und Originalcodierungen. Danach die Module prüfen und den neuen Lauf bewusst starten. Deine Entscheidungen ändern die Codierungen der neuen Eingabe; sie trainieren das Modell nicht. Das LLM sieht die korrigierte Grundlage erst bei diesem erneuten Lauf.</p>
+<p><strong>Kategorienvorschläge vorbereiten</strong> ist eine zweite, optionale Funktion. Ein gesonderter Modelllauf verwendet Originalstellen, abgeschlossene Entscheidungen und das bisherige Kategoriensystem. Er schlägt mögliche Definitionsergänzungen, Trennungen oder Zusammenfassungen vor. Nichts davon wird automatisch übernommen. Prüfe die Vorschläge fachlich, bearbeite eine neue Version deiner Kategorientabelle und vergleiche sie anschließend unter <strong>Eingaben prüfen</strong>.</p>
+<h2 id="11-telegram-updates-einrichten">11. Telegram-Updates einrichten</h2>
+<p><img alt="Optionale Telegram-Einstellungen ohne echte Zugangsdaten" src="screenshots/04-telegram-optional.jpg" /></p>
+<p>Telegram ist optional. Der Browser zeigt den Fortschritt auch ohne Bot. Bei <strong>Telegram-Updates</strong> einen Bot-Token eingeben oder aus einer Textdatei laden, die Ziel-Chat-ID eintragen, Ereignisse auswählen und speichern. Der Bot muss zuvor im eigenen Telegram-Chat mit <code>/start</code> angesprochen worden sein. Die Chat-ID ist nicht die Telefonnummer.</p>
+<p>Ein leeres Tokenfeld behält den gespeicherten Token. Eine neue Eingabe ersetzt ihn beim Speichern; <strong>Token entfernen</strong> deaktiviert Benachrichtigungen. Unter Windows kann der Token benutzergebunden verschlüsselt gespeichert werden; sonst gilt er nur für die Sitzung. Die Testnachricht wird erst durch den entsprechenden Knopf versendet. Telegram erhält allgemeine Statusmeldungen, keine Interviewtexte, Codes, Projektnamen oder Dateipfade.</p>
+<h2 id="12-aufbewahren-teilen-und-probleme-losen">12. Aufbewahren, teilen und Probleme lösen</h2>
+<p>Die Oberfläche speichert Projekte normalerweise im Ordner <code>local_app_data</code> beim Programm; ein über <code>--data-dir</code> gewählter Speicherort kann davon abweichen. Für eine Sicherung die Anwendung nach Ende aller Läufe schließen und den vollständigen Datenordner sichern. Einzelne Ergebnisdateien enthalten nicht alle Eingabe- und Prüfversionen. Das Löschen von Programm-/Projektordnern entfernt möglicherweise gespeicherte Arbeit.</p>
+<table>
+<thead>
+<tr>
+<th>Situation</th>
+<th>Nächster Schritt</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Oberfläche nicht erreichbar</td>
+<td>Startdatei erneut öffnen; den frisch geöffneten Link verwenden.</td>
+</tr>
+<tr>
+<td>XLSX abgewiesen</td>
+<td>Datenblatt, Kopfzeile, Dateigröße und Formeln prüfen; alte XLS als XLSX speichern.</td>
+</tr>
+<tr>
+<td>Code unbekannt</td>
+<td>Vollständigen Pfad einschließlich aller Ebenen und Schreibweise mit dem Kategoriensystem vergleichen.</td>
+</tr>
+<tr>
+<td>Passage-IDs fehlen</td>
+<td>Assistent mit MAXQDA-Positionsspalten verwenden oder Zeilenvergleich wählen.</td>
+</tr>
+<tr>
+<td>Gleiche Passage-ID mit abweichendem Text</td>
+<td>Gruppierung im Export korrigieren; überlappende Ausschnitte nicht künstlich gleichsetzen.</td>
+</tr>
+<tr>
+<td>Ollama nicht erreichbar</td>
+<td>Ollama starten, Systemprüfung ausführen und installierten Modellnamen prüfen.</td>
+</tr>
+<tr>
+<td>Lauf fehlgeschlagen</td>
+<td>Laufprotokoll speichern und Fehlermeldung prüfen; nach Behebung fortsetzen oder neuen Lauf starten.</td>
+</tr>
+<tr>
+<td>Gesamtbericht fehlt</td>
+<td>Status prüfen: HTML entsteht nach erfolgreichem Abschluss; ältere Läufe gegebenenfalls nacherstellen.</td>
+</tr>
+<tr>
+<td>Bild fehlt im HTML</td>
+<td>Hinweis im Bericht lesen und einzelne Grafik öffnen; Exportgrenzen bzw. fehlende Datei prüfen.</td>
+</tr>
+</tbody>
+</table>
+<p>Vor dem Teilen HTML, Excel und Berichte auf enthaltene Originaltexte und Beurteilungen prüfen. Die HTML-Datei enthält die eingebetteten Daten selbst. Reale Studienunterlagen, private Konfigurationen und Schlüssel gehören nicht in ein öffentliches GitHub-Repository. Weitere technische Details: <a href="BEDIENOBERFLAECHE.md">Bedienoberfläche</a>, <a href="EXTENSIONS.md">Erweiterungen</a> und <a href="RELEASE_NOTES.md">Versionshinweise</a>.</p></main><footer>Lokales Handbuch · ohne externe Skripte, Schriftarten oder Bildabrufe. Stand 0.3.0-dev.</footer></body></html>

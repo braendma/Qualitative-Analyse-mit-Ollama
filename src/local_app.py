@@ -194,6 +194,40 @@ class App(ReviewWorkspace):
         atomic_json(directory/'project.json', project)
         return uploads
 
+    def passage_preview(self, pid, columns):
+        from passage_ids import prepare
+        project = self.project(pid)
+        upload = project['uploads'].get('segments')
+        if not upload: raise ValueError('Zuerst eine Interviewdatei auswählen.')
+        raw = (self.project_dir(pid)/'inputs'/(upload['id']+'.csv')).read_bytes()
+        return prepare(raw, columns)[0]
+
+    def passage_apply(self, pid, settings, fingerprint, confirmed):
+        from passage_ids import apply
+        with self.lock:
+            project = self.project(pid)
+            upload = project['uploads'].get('segments')
+            if not upload: raise ValueError('Zuerst eine Interviewdatei auswählen.')
+            directory = self.project_dir(pid)
+            raw = (directory/'inputs'/(upload['id']+'.csv')).read_bytes()
+            normalized, mapped, provenance = apply(raw, settings.get('columns',{}), fingerprint, confirmed)
+            info = csv_info(normalized)
+            fid = uuid.uuid4().hex[:20]
+            (directory/'inputs'/(fid+'.csv')).write_bytes(normalized)
+            provenance.update(source_input=upload['id'], created=time.time())
+            atomic_json(directory/'inputs'/(fid+'.ids.json'), provenance)
+            project['uploads']['segments'] = {'id':fid, 'name':Path(upload['name']).stem+' · mit IDs.csv',
+                                              'format':'csv', **info, 'id_preparation':provenance}
+            atomic_json(directory/'uploads.json',project['uploads'])
+            updated = copy.deepcopy(settings)
+            updated.update(columns=mapped, label_mode='multi_label')
+            atomic_json(directory/'settings.json',updated)
+            data = read_json(directory/'project.json')
+            if data.get('revision'): data['last_valid_revision']=data['revision']
+            data['revision']=None
+            atomic_json(directory/'project.json',data)
+            return self.project(pid)
+
     def config(self, pid, settings):
         directory = self.project_dir(pid)
         uploads = read_json(directory/'uploads.json', {})
@@ -230,7 +264,7 @@ class App(ReviewWorkspace):
         if mode not in ('multi_label','unspecified'):
             raise ValueError('Ungültiger Codierungsmodus.')
         if mode == 'multi_label' and not cfg['columns']['unit_id']:
-            raise ValueError('Mehrfachcodierung benötigt eine explizite Passage-ID-Spalte. Keine IDs aus ähnlichen Texten ableiten.')
+            raise ValueError('Mehrfachcodierung benötigt Passage-IDs. Unter Eingaben prüfen „Passage-IDs vorbereiten“ verwenden oder den Zeilenvergleich wählen.')
         cfg['coding_agreement'].update(label_mode=mode, independent_units_confirmed=False)
         for key in ('project_description','participants','methodology'):
             value = str(settings.get('context',{}).get(key,cfg.get('context',{}).get(key,'')))
@@ -342,7 +376,7 @@ class App(ReviewWorkspace):
                 cfg=yaml.safe_load(Path(job['config']).read_text(encoding='utf-8'))
                 job['review_provenance']=cfg.get('review_provenance')
                 outputs={f for m in cfg['pipeline']['modules'] if m.get('enabled',True) for f in m.get('outputs',[])}
-                outputs.add('gesamtbericht.md')
+                outputs.update(('gesamtbericht.md','gesamtbericht.html'))
                 job['files']=[f for f in sorted(outputs) if safe_child(manifests[0].parent,f).is_file() and not f.endswith('.log')]
             else:
                 job.setdefault('completed',[])
@@ -447,6 +481,7 @@ class App(ReviewWorkspace):
 
 
 class Handler(BaseHTTPRequestHandler):
+    protocol_version = 'HTTP/1.1'
     def log_message(self,*args): pass
 
     def send_bytes(self,data,content_type,status=200,attachment=None):
@@ -456,10 +491,12 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header('Cache-Control','no-store')
         self.send_header('X-Content-Type-Options','nosniff')
         self.send_header('Referrer-Policy','no-referrer')
-        # Allow only the exact bundled review script/style in sandboxed blob previews.
+        # Allow only exact bundled review/report code and styles in sandboxed previews.
         template=(ROOT/'review_template.html').read_text(encoding='utf-8')
         hashes={tag:' '.join("'sha256-"+base64.b64encode(hashlib.sha256(part.encode()).digest()).decode()+"'" for part in re.findall('<'+tag+'>(.*?)</'+tag+'>',template,re.S)) for tag in ('script','style')}
-        self.send_header('Content-Security-Policy',f"default-src 'none'; script-src 'self' {hashes['script']}; style-src 'self' {hashes['style']}; connect-src 'self'; img-src 'self' blob:; frame-src blob:; base-uri 'none'; frame-ancestors 'none'; form-action 'none'")
+        from html_report import csp_hashes
+        for tag,values in csp_hashes().items():hashes[tag]+=' '+' '.join(values)
+        self.send_header('Content-Security-Policy',f"default-src 'none'; script-src 'self' {hashes['script']}; style-src 'self' {hashes['style']}; connect-src 'self'; img-src 'self' blob: data:; frame-src blob:; base-uri 'none'; frame-ancestors 'none'; form-action 'none'")
         if attachment: self.send_header('Content-Disposition',"attachment; filename*=UTF-8''"+urllib.parse.quote(attachment))
         self.end_headers()
         self.wfile.write(data)
@@ -477,12 +514,18 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed=urllib.parse.urlparse(self.path)
         assets={'/':'local_app.html','/app.js':'local_app.js','/app.css':'local_app.css',
-                '/review.js':'review_ui.js','/reports.js':'report_viewer.js'}
+                '/review.js':'review_ui.js','/reports.js':'report_viewer.js',
+                '/passage-ids.js':'passage_ids_ui.js','/logo.jpg':'brand.jpg','/favicon.ico':'brand.jpg',
+                '/handbuch':'../docs/HANDBUCH.html','/manual.css':'../docs/manual.css',
+                '/BEDIENOBERFLAECHE.md':'../docs/BEDIENOBERFLAECHE.md',
+                '/EXTENSIONS.md':'../docs/EXTENSIONS.md','/RELEASE_NOTES.md':'../docs/RELEASE_NOTES.md'}
+        for screenshot in (ROOT.parent/'docs/screenshots').glob('*.jpg'):
+            assets['/screenshots/'+screenshot.name]='../docs/screenshots/'+screenshot.name
         if not self.allowed(auth=parsed.path not in assets): return self.json({'error':'Zugriff abgelehnt. Oberfläche über die Startdatei öffnen.'},403)
         try:
             if parsed.path in assets:
                 p=ROOT/assets[parsed.path]
-                return self.send_bytes(p.read_bytes(),{'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8'}[p.suffix])
+                return self.send_bytes(p.read_bytes(),{'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.jpg':'image/jpeg','.md':'text/plain; charset=utf-8'}[p.suffix])
             query=urllib.parse.parse_qs(parsed.query)
             get=lambda key:query.get(key,[''])[0]
             app=self.server.app
@@ -511,6 +554,8 @@ class Handler(BaseHTTPRequestHandler):
         except (ValueError,OSError,KeyError) as exc: self.json({'error':str(exc)},400)
 
     def do_POST(self):
+        # Rejected uploads may leave unread request bytes. Do not reuse that socket.
+        self.close_connection = True
         if not self.allowed(): return self.json({'error':'Zugriff abgelehnt.'},403)
         if self.headers.get('Content-Type')!='application/json': return self.json({'error':'JSON erwartet.'},415)
         try:
@@ -524,6 +569,8 @@ class Handler(BaseHTTPRequestHandler):
                 if path=='/api/create': result=app.create(data.get('name',''),data.get('demo',False))
                 elif path=='/api/upload': result=app.upload(data['project'],data['kind'],data['name'],data['data'],data.get('sheet'))
                 elif path=='/api/save': result=app.save(data['project'],data['settings'])
+                elif path=='/api/passage-preview': result=app.passage_preview(data['project'],data['columns'])
+                elif path=='/api/passage-apply': result=app.passage_apply(data['project'],data['settings'],data['fingerprint'],data['confirmed'])
                 elif path=='/api/start': result=app.start(data['project'],data.get('resume'))
                 elif path=='/api/pause': result=app.pause(data['project'],data['job'])
                 elif path=='/api/review-save': result=app.save_review(data['project'],data['job'],data['decision'],data['revision'])
@@ -550,8 +597,13 @@ class Handler(BaseHTTPRequestHandler):
                        (str(exc) if isinstance(exc,ValueError) else 'Telegram-Einstellung konnte nicht gespeichert werden.')},400)
 
 
+class LocalHTTPServer(ThreadingHTTPServer):
+    # A handbook loads several images in parallel; keep their connections queued.
+    request_queue_size = 64
+
+
 def make_server(app,port=0):
-    server=ThreadingHTTPServer(('127.0.0.1',port),Handler)
+    server=LocalHTTPServer(('127.0.0.1',port),Handler)
     server.app=app
     server.token=secrets.token_urlsafe(32)
     return server

@@ -10,3 +10,5 @@ Die Aufnahmen dokumentieren die Bedienung, keine neuen Analyseergebnisse. Für i
 - `02-spalten-zuordnen.jpg`: Spalten und Vergleichsmodus zuordnen.
 - `03-module-auswaehlen.jpg`: Einzelne Analysemodule auswählen; Abhängigkeiten beachten.
 - `04-telegram-optional.jpg`: Tokenimport und optionale Statusmeldungen.
+
+Neue Aufnahmen des Usability-Patches: `07-passage-ids.jpg` zeigt die bestätigte Gruppierung eines rein künstlichen MAXQDA-Beispiels, `08-interaktiver-bericht.jpg` den regulären HTML-Viewer anhand gespeicherter synthetischer Cloud-Ergebnisse und `09-handbuch.jpg` das lokale Handbuch. Keine Studiendaten oder Zugangsdaten.

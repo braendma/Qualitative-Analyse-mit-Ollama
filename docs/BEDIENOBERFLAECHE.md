@@ -1,3 +1,5 @@
+**Vollständiger Rundgang:** [Handbuch mit Bildern und Beispielen](HANDBUCH.md). In der Oberfläche neben Telegram-Updates direkt als lokale HTML-Anleitung erreichbar.
+
 # Lokale Bedienoberfläche
 
 Die Oberfläche führt durch **Projekt → Eingaben prüfen → Analyse → Ergebnisse**. Sie startet den bestehenden Workflow-Runner und speichert unveränderliche Dateiversionen pro Lauf. Python- und YAML-Dateien müssen für die normale Bedienung nicht bearbeitet werden.
@@ -26,7 +28,7 @@ Die Oberfläche ist nur an `127.0.0.1` gebunden und wird nicht veröffentlicht. 
 - Ein eigenes Projekt anlegen oder die mitgelieferte künstliche Demo laden. Die Demo liegt separat in `demo/` und enthält 50 Codierzeilen, 43 Passagen und 12 Codepfade.
 - Interviewdaten und Kategoriensystem als XLSX oder UTF-8-CSV mit Semikolon auswählen (jeweils maximal 20 MB). Die ersten fünf Datensätze werden als Vorschau angezeigt. Originaldateien werden nicht verändert.
 - Text, Person, Code und gegebenenfalls Zeilen-/Passage-ID zuordnen. Das Kategoriensystem unterstützt vier Ebenen, Definition und Ankerbeispiel. Optionale Spalten können leer bleiben. Vollständige Codepfade müssen zu den menschlichen Codierungen passen.
-- Bei Mehrfachcodierung eine verlässliche Passage-ID verwenden. Dieselbe Passage-ID muss dieselbe Textstelle derselben Person bezeichnen. Ohne solche IDs kann der Zeilenvergleich ohne Kappa verwendet werden. Die Anwendung erfindet keine Passage-IDs aus Textähnlichkeit.
+- Bei Mehrfachcodierung eine verlässliche Passage-ID verwenden. Dieselbe Passage-ID muss dieselbe Textstelle derselben Person bezeichnen. Ohne solche IDs kann der Zeilenvergleich ohne Kappa verwendet werden. Über „Passage-IDs vorbereiten“ lassen sich IDs aus MAXQDA-Positionsspalten und exaktem Text vorbereiten. Mögliche Gruppen werden erst nach Bestätigung zusammengeführt; es gibt keine Ähnlichkeitsheuristik.
 - Projektbeschreibung, Teilnehmende und Methodik prüfen. Modell, Kontextfenster, Antwortlimit, Temperatur und Thinking sind über Felder einstellbar. **Installierte Modelle anzeigen** fragt lediglich installierte Modelle ab und startet keine Inferenz.
 - Unter **Analyse → 1. Analysemodule auswählen** einzelne Module per Häkchen auswählen. **Auswahl leeren** entfernt alle Häkchen für eine eigene Zusammenstellung. Unter jedem Modul stehen Funktion und Abhängigkeiten. Die Anzeige unter der Liste nennt die Gesamtzahl auszuführender Module sowie automatisch benötigte Vorstufen. Diese Vorstufen werden auch dann ausgeführt, wenn sie selbst kein Häkchen haben. **Einstellungen speichern & Eingaben prüfen** prüft die Daten ohne Modellaufruf und zeigt die aktiven Schritte an.
 
@@ -45,7 +47,7 @@ Als regulären Weg bietet MAXQDA den Excel-Export der **Liste der codierten Segm
 | `Dokumentname` | Dokument-/Personenkennung für diese Textstelle, in jeder Zeile ausgefüllt | Ja |
 | `Code` | Genau ein vollständiger Codepfad, mit ` > ` zwischen den Ebenen | Ja |
 | `Segment` | Vollständiger Originaltext der codierten Stelle | Ja |
-| `segment_id` | Eindeutige ID pro Codierzeile | Optional |
+| `segment_id` | Eindeutige ID pro Codierzeile; entsteht ohne zugeordnete ID-Spalte automatisch | Optional |
 | `PassageID` | Stabile ID pro tatsächlicher Textstelle, bei Mehrfachcodierung in mehreren Zeilen wiederholt | Im Modus Mehrfachcodierung |
 
 Die Spalten dürfen anders heißen; sie werden in der Oberfläche zugeordnet. Ein Codepfad muss exakt zu einem Pfad im separaten Kategoriensystem passen. Für die Herkunft eine eindeutige Dokument-/Personenkennung verwenden, keine bloße Dokumentgruppe. Falls mehrere Personen in einem Dokument vorkommen, muss die Personenkennung entsprechend aufbereitet werden.
@@ -82,7 +84,7 @@ Das **Kategoriensystem** ist eine zweite Datei mit Kategorien und Definitionen. 
 
 **Diesen Lauf fortsetzen** verwendet die ursprüngliche Dateiversion und die ursprünglichen Einstellungen dieses Laufs. Spätere Projektänderungen beeinflussen diese Wiederaufnahme nicht. Geänderte Programmdateien, Abhängigkeiten oder Ergebnisdateien führen weiterhin zur Ablehnung; dann ist ein neuer Lauf erforderlich. Erhaltene Teil-Checkpoints vermeiden erneute erfolgreiche Modellaufrufe. Details: [ROBUSTNESS.md](ROBUSTNESS.md).
 
-Unter **Ergebnisse** erscheinen Berichte, JSON-Dateien, Grafiken und die Prüfliste. Markdown wird formatiert dargestellt, geeignete JSON-Ergebnisse sind durchsuchbar. **Codierungen im Projekt prüfen** öffnet die automatisch gespeicherten Entscheidungen mit zusätzlichem Excel- und JSON-Export. Nach Abschluss der kritischen Fälle können ein versionierter Folgelauf oder optionale Kategorienvorschläge vorbereitet werden. Die separate Offline-HTML-Prüfliste benötigt weiterhin manuelles Speichern und Laden; ein automatischer MAXQDA-Rückimport ist nicht enthalten.
+Nach erfolgreichem Lauf wird `gesamtbericht.html` automatisch erzeugt. **Interaktiven Bericht öffnen** bietet Suche, Abschnittsnavigation und eingebettete Diagramme. Die Datei bleibt beim Lauf gespeichert und funktioniert nach dem Herunterladen offline. Einzeldateien lassen sich aufklappen. Unter **Ergebnisse** erscheinen Berichte, JSON-Dateien, Grafiken und die Prüfliste. Markdown wird formatiert dargestellt, geeignete JSON-Ergebnisse sind durchsuchbar. **Codierungen im Projekt prüfen** öffnet die automatisch gespeicherten Entscheidungen mit zusätzlichem Excel- und JSON-Export. Nach Abschluss der kritischen Fälle können ein versionierter Folgelauf oder optionale Kategorienvorschläge vorbereitet werden. Die separate Offline-HTML-Prüfliste benötigt weiterhin manuelles Speichern und Laden; ein automatischer MAXQDA-Rückimport ist nicht enthalten.
 
 Die [bebilderte Anleitung zu Prüfung und Folgelauf](PRUEFUNG_UND_FOLGELAUF.md) erklärt Speicherung, Konflikte, Kategorienvergleich, Einrichtungstest und detaillierten Fortschritt.
 

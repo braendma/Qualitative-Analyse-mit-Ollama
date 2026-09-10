@@ -5,7 +5,7 @@ function reportInline(node,text){
   while((match=pattern.exec(text))){node.append(document.createTextNode(text.slice(end,match.index)));node.append(el(match[2]?'strong':'code',match[2]||match[3]));end=pattern.lastIndex;}
   node.append(document.createTextNode(text.slice(end)));
 }
-function markdownReport(text,root){
+function markdownReport(text,root,media={}){
   root.replaceChildren();const lines=text.split(/\r?\n/);let fenced=false,code=[];
   const cells=line=>line.replace(/^\s*\||\|\s*$/g,'').split(/(?<!\\)\|/).map(x=>x.trim().replace(/\\\|/g,'|'));
   for(let i=0;i<lines.length;i++){
@@ -13,6 +13,14 @@ function markdownReport(text,root){
     if(/^\s*```/.test(line)){if(fenced){root.append(el('pre',code.join('\n')));code=[];}fenced=!fenced;continue;}
     if(fenced){code.push(line);continue;}
     if(!line.trim())continue;
+    const picture=line.match(/^\s*!\[([^\]]*)\]\(([^)]+)\)\s*$/);
+    if(picture){
+      const src=media[picture[2]];
+      if(typeof src==='string'&&/^data:image\/(png|jpeg|gif|webp);base64,[A-Za-z0-9+/=]+$/.test(src)){
+        const img=el('img');img.src=src;img.alt=picture[1];root.append(img);
+      }else root.append(el('p','Abbildung nicht eingebettet: '+picture[1],'hint'));
+      continue;
+    }
     if(line.includes('|')&&i+1<lines.length&&/^\s*\|?\s*:?-{3,}/.test(lines[i+1])){
       const table=el('table'),head=el('tr');cells(line).forEach(x=>{const n=el('th');reportInline(n,x);head.append(n);});table.append(head);i++;
       while(i+1<lines.length&&lines[i+1].includes('|')&&lines[i+1].trim()){const row=el('tr');cells(lines[++i]).forEach(x=>{const n=el('td');reportInline(n,x);row.append(n);});table.append(row);}
