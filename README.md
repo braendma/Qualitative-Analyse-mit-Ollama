@@ -1,10 +1,12 @@
 # Qualitative Analyse mit Ollama
 
+**Neu in 0.3.3:** Automatische Speicherschätzung für parallele Anfragen an lokales Ollama nach Modellwahl und Kontextänderung. Zeigt freien GPU-Speicher und nennt Grenzen, ohne ein Modell zu starten. [Anleitung](docs/HANDBUCH.md#speicher-und-parallele-anfragen).
+
 Mit diesem Programm kannst du bereits codierte Interviewstellen auswerten und menschliche Codierungen mit Modellvorschlägen vergleichen. Die lokale Bedienoberfläche führt durch Dateiimport, Eingabeprüfung, Modulauswahl und Ergebnisse. Für die normale Bedienung musst du keine Python- oder YAML-Dateien bearbeiten.
 
 Die Auswertung läuft standardmäßig mit lokalem Ollama. Für freigegebene Inhalte sind optional Ollama Cloud, OpenAI, Anthropic und Hugging Face verfügbar; die DSGVO-Sperre ist pro Projekt zunächst aktiviert. Modellvorschläge und Berichte müssen fachlich geprüft werden; sie ersetzen keine eigenständige qualitative Analyse.
 
-**Aktuelle Vorabversion: [0.3.2 · Codierregeln und CSV-Vorschau](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/tag/v0.3.2).** Mit Prüf- und Rückmeldungsfunktion, interaktiven Berichten und optionalen Cloud-Anbietern. OpenAI, Anthropic und Hugging Face sind technisch mit Mocks geprüft, aber noch nicht live getestet.
+**Aktuelle Vorabversion: [0.3.3 · Ollama-Speicherschätzung](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/tag/v0.3.3).** Mit Prüf- und Rückmeldungsfunktion, interaktiven Berichten und optionalen Cloud-Anbietern. OpenAI, Anthropic und Hugging Face sind technisch mit Mocks geprüft, aber noch nicht live getestet.
 
 Das gefaltete **b** von braendma ist jetzt als lokales Programmsignet eingebunden. Über **Handbuch** neben **Telegram-Updates** öffnet sich die vollständige Anleitung mit Bildern und Beispielen, auch ohne Internet.
 

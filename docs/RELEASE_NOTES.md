@@ -1,3 +1,7 @@
+# 0.3.3 · Beta · Lokale Ollama-Speicherschätzung
+
+Automatische, rein lesende Kapazitätsschätzung nach Modellwahl oder Kontextänderung; aktueller NVIDIA-VRAM und verfügbarer RAM, konservativer Prüfbereich von 1–8 Anfragen. Unbekannte Architekturen und bereits geladene Modelle werden ausdrücklich als nicht bestimmbar angezeigt. Server-Parallelität wird nicht automatisch verändert. Handbuch mit bebildertem Beispiel ergänzt.
+
 # 0.3.2 · Beta · 11. September 2026
 
 Codierregeln und CSV-Vorschau. Die Vorschau der Originalspalten steht direkt über der manuellen Zuordnung. Alle zwölf Codes des vollständigen Demos enthalten künstliche Ein-/Ausschlussregeln und Abgrenzungen.

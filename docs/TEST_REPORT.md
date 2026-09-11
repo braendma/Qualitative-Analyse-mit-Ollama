@@ -1,3 +1,7 @@
+# Prüfung 0.3.3 · 11. September 2026
+
+110 Python-Tests und neun JavaScript-Tests bestanden. Acht neue Tests prüfen die Kapazitätsschätzung, Kontextbedarf, fremde GPU-Belegung, bereits geladene Modelle, fehlende Metadaten und die Beschränkung auf lesende lokale Metadaten-Endpunkte. Browserprüfung mit echtem lokalem Ollama-Metadatenabruf: automatische Aktualisierung, Ablehnung verspäteter Antworten und Ausblenden bei Cloud-Auswahl. Die Handbuchabbildung verwendet klar gekennzeichnete simulierte Hardwarewerte. Keine lokalen oder Cloud-Inferenzanfragen für dieses Feature; die Parallelitätszahlen sind keine empirisch gemessenen Lastgrenzen.
+
 # Codebook mapping and rules · 2026-09-11
 
 - All 102 Python tests pass, including Windows persistence and full workflow pause/resume. The mock transport identifies its module from the first system-prompt line so appended rule guidance remains testable.

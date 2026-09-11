@@ -607,7 +607,7 @@ class Handler(BaseHTTPRequestHandler):
         parsed=urllib.parse.urlparse(self.path)
         assets={'/':'local_app.html','/app.js':'local_app.js','/app.css':'local_app.css',
                 '/review.js':'review_ui.js','/reports.js':'report_viewer.js',
-                '/providers.js':'providers_ui.js','/passage-ids.js':'passage_ids_ui.js','/logo.jpg':'brand.jpg','/favicon.ico':'brand.jpg',
+                '/capacity.js':'capacity_ui.js','/providers.js':'providers_ui.js','/passage-ids.js':'passage_ids_ui.js','/logo.jpg':'brand.jpg','/favicon.ico':'brand.jpg',
                 '/handbuch':'../docs/HANDBUCH.html','/manual.css':'../docs/manual.css',
                 '/BEDIENOBERFLAECHE.md':'../docs/BEDIENOBERFLAECHE.md',
                 '/KI_ANBIETER.md':'../docs/KI_ANBIETER.md','/EXTENSIONS.md':'../docs/EXTENSIONS.md','/RELEASE_NOTES.md':'../docs/RELEASE_NOTES.md'}
@@ -661,6 +661,9 @@ class Handler(BaseHTTPRequestHandler):
             if not isinstance(data,dict): raise ValueError('JSON-Objekt erwartet.')
             app=self.server.app
             path=urllib.parse.urlparse(self.path).path
+            if path=='/api/ollama-capacity':
+                from ollama_capacity import check
+                return self.json(check(data['selection']))
             with app.lock:
                 if path=='/api/create': result=app.create(data.get('name',''),data.get('demo',False))
                 elif path=='/api/upload': result=app.upload(data['project'],data['kind'],data['name'],data['data'],data.get('sheet'))

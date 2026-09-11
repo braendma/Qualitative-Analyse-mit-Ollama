@@ -11,6 +11,7 @@ function renderProvider(){
   $('provider-key-state').textContent=info?.has_key?'Schlüssel vorhanden · '+(info.persist?'unter Windows geschützt gespeichert.':'nur für diese Sitzung.'):'Noch kein Schlüssel gespeichert.';
   $('persist-provider-key').disabled=!state?.provider_keys?.can_persist;
   $('persist-provider-key').checked=Boolean(info?.persist);
+  if(typeof scheduleCapacity==='function')scheduleCapacity();
 }
 function loadProviderFields(){
   const s=project.settings||{};$('gdpr-relevant').checked=s.gdpr_relevant!==false;

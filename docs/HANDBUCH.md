@@ -1,6 +1,6 @@
 # Handbuch · Qualitative Analyse mit Ollama
 
-Dieses Handbuch begleitet dich vom ersten Start bis zum erneuten Analyselauf mit geprüften Codierungen. Alle Personen, Texte und Beurteilungen in den Beispielen sind erfunden. Stand: 0.3.2 · Codierregeln und CSV-Vorschau (Beta).
+Dieses Handbuch begleitet dich vom ersten Start bis zum erneuten Analyselauf mit geprüften Codierungen. Alle Personen, Texte und Beurteilungen in den Beispielen sind erfunden. Stand: 0.3.3 · Ollama-Speicherschätzung (Beta).
 
 Du erreichst die bebilderte Fassung jederzeit über **Handbuch** neben **Telegram-Updates** in der Seitenleiste. Sie öffnet sich in einem eigenen Tab, damit deine aktuelle Arbeit geöffnet bleibt. Ohne laufende Oberfläche kannst du `docs/HANDBUCH.html` doppelklicken. Den Programmordner einschließlich der Bilder zusammenlassen.
 
@@ -13,6 +13,20 @@ Du erreichst die bebilderte Fassung jederzeit über **Handbuch** neben **Telegra
 5. Unter **Analyse → Systemprüfung ohne Modellaufruf** die Einrichtung prüfen. **Kurzen Modelltest vorbereiten** ist eine getrennte, optionale Aktion, die eine künstliche Anfrage beim gewählten Anbieter ausführt.
 
 Die Standardkonfiguration verwendet lokales Ollama. Optional lassen sich Cloud-Anbieter je Projekt freigeben; die Datenfreigabe wird im folgenden Abschnitt erklärt. Für eine reine Cloud-Nutzung ist kein lokales Modell nötig. Die API-Zugangsdatei gehört weder ins Repository noch in Beispielprojekte.
+
+### Speicher und parallele Anfragen
+
+Unter **Analyse → Speicher und parallele Anfragen** erscheint nach Wahl eines lokalen Ollama-Modells automatisch eine Schätzung. Änderungen am Kontextfenster lösen eine neue Prüfung aus. **Speicherschätzung aktualisieren** liest eine neue Momentaufnahme ein, etwa wenn ein anderes GPU-Programm beendet wurde. Es werden keine Modelle geladen, entladen oder Testtexte gesendet.
+
+Die Anzeige nennt beispielsweise **„Speicherschätzung: bis zu 3 gleichzeitige Anfragen“**, das gewählte Kontextfenster sowie freien VRAM je NVIDIA-GPU und verfügbaren RAM. Das folgende Bild verwendet simulierte Hardware- und Modellwerte, keine Messung eines bestimmten PCs.
+
+![Speicherschätzung mit simulierten Werten](screenshots/15-speicherschaetzung.png)
+
+Die Schätzung prüft 1 bis 8 Anfragen für vollständig auf GPUs geladene Modelle. Sie berücksichtigt Modellgröße, Kontextcache in f16 und Reserven. Mehr Kontext oder andere GPU-Belegung kann die Zahl verringern. CPU-Auslagerung, AMD und Apple werden nicht geschätzt. Bei fehlenden Modelldaten, nicht unterstützten Architekturen oder einem bereits geladenen Modell erscheint eine Erklärung statt einer ungesicherten Zahl. Ein Wert von 0 bedeutet nur, dass mit der aktuellen Belegung und den Reserven keine reine GPU-Ausführung abgeschätzt werden kann.
+
+**Die Zahl aktiviert keine Parallelität.** Ollamas Servereinstellung `OLLAMA_NUM_PARALLEL` und die tatsächliche GPU-Verteilung sind nicht über die verwendete API auslesbar. Die Anwendung muss außerdem unabhängige Anfragen gleichzeitig senden; bisher serielle Module werden durch diese Anzeige nicht beschleunigt. Die Prüfung verändert keine Servereinstellungen und unterbricht keine laufende Analyse. Vor produktiver Nutzung einer höheren Parallelität ist ein separater Test sinnvoll.
+
+Grundlagen: [Ollama: parallele Anfragen und Speicher](https://docs.ollama.com/faq#how-does-ollama-handle-concurrent-requests), [Modellmetadaten](https://docs.ollama.com/api-reference/show-model-details).
 
 ## 2. Zuerst die Demo kennenlernen
 
