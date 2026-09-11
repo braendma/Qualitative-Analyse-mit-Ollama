@@ -4,9 +4,11 @@ Mit diesem Programm kannst du bereits codierte Interviewstellen auswerten und me
 
 Die Auswertung läuft standardmäßig mit lokalem Ollama. Für freigegebene Inhalte sind optional Ollama Cloud, OpenAI, Anthropic und Hugging Face verfügbar; die DSGVO-Sperre ist pro Projekt zunächst aktiviert. Modellvorschläge und Berichte müssen fachlich geprüft werden; sie ersetzen keine eigenständige qualitative Analyse.
 
-**Aktuelle Vorabversion: [0.3.1 · SVG-Patch](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/tag/v0.3.1).** Mit Prüf- und Rückmeldungsfunktion, interaktiven Berichten und optionalen Cloud-Anbietern. OpenAI, Anthropic und Hugging Face sind technisch mit Mocks geprüft, aber noch nicht live getestet.
+**Aktuelle Vorabversion: [0.3.2 · Codierregeln und CSV-Vorschau](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/tag/v0.3.2).** Mit Prüf- und Rückmeldungsfunktion, interaktiven Berichten und optionalen Cloud-Anbietern. OpenAI, Anthropic und Hugging Face sind technisch mit Mocks geprüft, aber noch nicht live getestet.
 
 Das gefaltete **b** von braendma ist jetzt als lokales Programmsignet eingebunden. Über **Handbuch** neben **Telegram-Updates** öffnet sich die vollständige Anleitung mit Bildern und Beispielen, auch ohne Internet.
+
+**Neu in 0.3.2:** Kategoriensystem nach der Dateivorschau manuell zuordnen, einschließlich optionaler Ein- und Ausschlussregeln. Fehlende Pflichtzuordnungen sperren den Start.
 
 Neu in 0.3.1: Clusterdiagramme und Konfusionsmatrix zusätzlich als SVG. Der HTML-Bericht bettet bevorzugt Vektorgrafiken ein und bietet „SVG speichern“; PNG bleibt verfügbar.
 
@@ -47,7 +49,7 @@ Bei einer bereits eingerichteten Python-Umgebung ist alternativ `python -X utf8 
 | Datei | Benötigter Inhalt |
 |---|---|
 | Interviewdatei | Pro Codierzeile: Dokument/Person, vollständiger Codepfad und Originaltext der Textstelle |
-| Kategoriensystem | Kategorien und Definitionen; bei Bedarf Unterkategorie, Ausprägung, Facette und Ankerbeispiel |
+| Kategoriensystem | Codepfad oder Kategorie und Definition; optional Hierarchieebenen, Ein-/Ausschlussregeln, weitere Codierhinweise und Ankerbeispiele |
 
 **XLSX und CSV können auch gemischt verwendet werden.** Einen MAXQDA-Excel-Export der **Liste der codierten Segmente** kannst du direkt als `.xlsx` auswählen. Bei mehreren Tabellenblättern erscheint eine Blattauswahl. Die erste Zeile muss eindeutige Überschriften enthalten. Eine reine Liste von Codenamen ohne Textstellen reicht nicht aus.
 
@@ -61,7 +63,7 @@ Unterhalb der Dateiauswahl Thema und Fragestellung, Teilnehmende und Methodik ei
 
 Fehlende Zeilen-IDs erzeugt das Programm automatisch. Für MAXQDA-Exporte ohne Passage-ID gibt es **Passage-IDs vorbereiten**: gleiche Dokumentgruppe, Dokumentkennung, Anfang, Ende und exakter Text ergeben Vorschläge. Bestätigte Gruppen teilen anschließend eine ID; die Anwendung erstellt eine neue Arbeitskopie. Die Originaldatei bleibt erhalten. Details und Grenzen: [IDs im Handbuch](docs/HANDBUCH.md#4-ids-ohne-händisches-nummerieren).
 
-Unter **„Eingaben prüfen“** kontrollieren, ob die automatisch vorgeschlagenen Spalten stimmen. Abweichende Spaltennamen lassen sich über die Auswahllisten zuordnen.
+Nach dem Einlesen wird die Dateivorschau geöffnet. Unter **„Eingaben prüfen“** ordnest du die Spalten des Kategoriensystems selbst zu. Bei Interviewdaten werden bekannte Spaltennamen vorgeschlagen. Gespeicherte Zuordnungen bleiben erhalten; beim Austausch einer Datei werden nur deren Zuordnungen zurückgesetzt.
 
 | Feld in der Oberfläche | Typische Spalte im MAXQDA-Export |
 |---|---|
@@ -75,9 +77,9 @@ Eine **Passage-ID** verbindet mehrere Codierungen derselben Textstelle derselben
 
 [![Zuordnung von Segment, Dokumentname, Code und IDs sowie Auswahl des Vergleichsmodus](docs/screenshots/02-spalten-zuordnen.jpg)](docs/screenshots/02-spalten-zuordnen.jpg)
 
-Darunter die Spalten des Kategoriensystems zuordnen, mindestens **Kategorie** und **Definition**. Dann **„Einstellungen speichern & Eingaben prüfen“** anklicken. Die Prüfung meldet beispielsweise fehlende Pflichtangaben, unpassende IDs oder Codes, die im Kategoriensystem fehlen. Sie zeigt bei Erfolg die Zahl der Codierzeilen, Passagen, Personen und Codepfade. Es wird noch keine inhaltliche Modellanalyse durchgeführt.
+Darunter die Spalten des Kategoriensystems zuordnen, mindestens **Code / vollständiger Codepfad oder Kategorie** sowie **Definition**. **Einschlussregeln**, **Ausschlussregeln**, **Abgrenzung / weitere Codierhinweise** und **Ankerbeispiele** sind optional und können beliebige Überschriften in der Originaldatei haben. Jede Spalte kann nur einem Feld zugeordnet werden. Ohne Pflichtzuordnung bleibt der Start gesperrt. Dann **„Einstellungen speichern & Eingaben prüfen“** anklicken. Die Prüfung meldet beispielsweise fehlende Pflichtangaben, unpassende IDs oder Codes, die im Kategoriensystem fehlen. Sie zeigt bei Erfolg die Zahl der Codierzeilen, Passagen, Personen und Codepfade. Es wird noch keine inhaltliche Modellanalyse durchgeführt.
 
-Unter **„Kategorienversionen vergleichen“** lässt sich eine neue Datei vor dem Speichern mit einer früheren Version vergleichen: neue bzw. entfernte Codes, geänderte Definitionen und betroffene Codierzeilen. Die Vorschau verändert keine Codierungen.
+Unter **„Kategorienversionen vergleichen“** lässt sich eine neue Datei vor dem Speichern mit einer früheren Version vergleichen: neue bzw. entfernte Codes, geänderte Definitionen, Regeln und Ankerbeispiele sowie betroffene Codierzeilen. Die Vorschau verändert keine Codierungen.
 
 ## 3. Module auswählen und Analyse starten
 
@@ -755,7 +757,7 @@ Interview_02;Hauptthema > Unterthema > Facette A;"Weiteres Beispielsegment."
 
 Die tatsächlichen Spaltennamen können in der Oberfläche zugeordnet oder bei direktem CLI-Aufruf in `config/config_v2.yaml` angepasst werden.
 
-Bei direkter Nutzung des Runners wird für Code-Verifikation und Blind-Coding zusätzlich eine Kategoriensystem-CSV erwartet. Sie muss diese Spaltenüberschriften enthalten; optionale Inhalte dürfen leer sein. Die Oberfläche ergänzt fehlende optionale Spalten in ihrer Arbeitskopie:
+Bei direkter Nutzung des Runners wird für Code-Verifikation und Blind-Coding zusätzlich eine Kategoriensystem-CSV erwartet. Mindestens `Kategorie` (alternativ `Code` mit vollständigem Pfad) und `Definition` sind erforderlich. Die übrigen Spalten sind optional. Bei direktem CLI-Aufruf werden die folgenden Standardnamen erkannt; in der Oberfläche lassen sich beliebige Überschriften zuordnen:
 
 ```text
 Kategorie
@@ -764,6 +766,8 @@ Ausprägung
 Facette
 Definition
 Ankerbeispiel
+Einschlussregeln
+Ausschlussregeln
 ```
 
 Leere Hierarchieebenen sind zulässig. Der vollständige Codepfad wird aus allen nichtleeren Ebenen in der Reihenfolge `Kategorie > Unterkategorie > Ausprägung > Facette` gebildet. Jeder im Interviewexport verwendete Code sollte exakt einem solchen Pfad entsprechen.
@@ -1143,3 +1147,11 @@ Mitarbeit an wesentlichen Teilen der modularen Architektur, der Analysebausteine
 > **Hinweis zur KI-gestützten Entwicklung:** Teile des Codes und der Dokumentation – einschließlich der Coding-Validierungsmodule – wurden in Zusammenarbeit mit ChatGPT und OpenAI Codex entwickelt. KI-generierter oder KI-überarbeiteter Code sollte vor produktiver oder wissenschaftlicher Nutzung geprüft und validiert werden.
 
 ---
+
+### Künstliches Beispiel mit Codierregeln
+
+Das vollständige [Demo-Codebuch](demo/Kategoriesystem.csv) enthält für alle zwölf Codes Ein-/Ausschlussregeln und Abgrenzungen, passend zu den 50 Codierzeilen. **Künstliche Beispieldaten laden** legt ein neues Projekt mit diesen Regeln an.
+
+[Beispiel-CSV mit frei benannten Regelspalten](demo/Kategoriesystem_mit_Regeln.csv): `Bezeichnung` → Code, `Bedeutung` → Definition, `Wann zuordnen` → Einschlussregeln, `Wann nicht zuordnen` → Ausschlussregeln, `Typische Aussage` → Ankerbeispiele, `Abgrenzende Hinweise` → Abgrenzung / weitere Codierhinweise. Die Datei ist ein eigenständiges Formatbeispiel; sie ersetzt nicht das Codebuch des mitgelieferten 50-Zeilen-Demos.
+
+Die Regeln werden bei Blindcodierung und Codeprüfung sowie als Teil des Codebuchs bei Kategorienvorschlägen mitgegeben. Sie gelten für den ausdrücklich angegebenen Code, ohne automatische Vererbung an Untercodes. Widersprüche müssen fachlich geklärt werden. Ein Importtest belegt keine höhere Codierqualität.

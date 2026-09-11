@@ -16,7 +16,7 @@
 </ul>
 </div>
 </nav></header><main><h1 id="handbuch-qualitative-analyse-mit-ollama">Handbuch · Qualitative Analyse mit Ollama</h1>
-<p>Dieses Handbuch begleitet dich vom ersten Start bis zum erneuten Analyselauf mit geprüften Codierungen. Alle Personen, Texte und Beurteilungen in den Beispielen sind erfunden. Stand: 0.3.1 · SVG-Patch (Vorabversion).</p>
+<p>Dieses Handbuch begleitet dich vom ersten Start bis zum erneuten Analyselauf mit geprüften Codierungen. Alle Personen, Texte und Beurteilungen in den Beispielen sind erfunden. Stand: 0.3.2 · Codierregeln und CSV-Vorschau (Beta).</p>
 <p>Du erreichst die bebilderte Fassung jederzeit über <strong>Handbuch</strong> neben <strong>Telegram-Updates</strong> in der Seitenleiste. Sie öffnet sich in einem eigenen Tab, damit deine aktuelle Arbeit geöffnet bleibt. Ohne laufende Oberfläche kannst du <code>docs/HANDBUCH.html</code> doppelklicken. Den Programmordner einschließlich der Bilder zusammenlassen.</p>
 <h2 id="1-einrichten-und-starten">1. Einrichten und starten</h2>
 <ol>
@@ -85,7 +85,7 @@
 </table>
 <p>Jede Zeile enthält <strong>eine Codierung</strong>. Bei mehreren Codes für dieselbe Textstelle gibt es mehrere Zeilen. Codepfade verwenden <code>&gt;</code> zwischen den Ebenen. Mehrere Codes in einer Sammelzelle werden nicht automatisch aufgeteilt. Dokument-/Personenkennungen müssen im Projekt eindeutig sein; gleich benannte Dokumente aus unterschiedlichen Gruppen sollten vorher unterscheidbare Namen erhalten.</p>
 <h3 id="kategoriensystem-vorbereiten">Kategoriensystem vorbereiten</h3>
-<p>Die separate Tabelle braucht mindestens <strong>Kategorie</strong> und <strong>Definition</strong>. Optional sind <strong>Unterkategorie</strong>, <strong>Ausprägung</strong>, <strong>Facette</strong>, <strong>Ankerbeispiel</strong>. Jede Zeile beschreibt einen vollständigen Codepfad. Höhere Ebenen je Zeile wiederholen; nicht benötigte tiefere Ebenen bleiben leer.</p>
+<p>Die separate Tabelle braucht mindestens <strong>Code / vollständiger Codepfad oder Kategorie</strong> sowie <strong>Definition</strong>. Optional sind <strong>Unterkategorie</strong>, <strong>Ausprägung</strong>, <strong>Facette</strong>, <strong>Ankerbeispiele</strong>, <strong>Einschlussregeln</strong>, <strong>Ausschlussregeln</strong> und <strong>Abgrenzung / weitere Codierhinweise</strong>. Jede Zeile beschreibt einen vollständigen Codepfad. Höhere Ebenen je Zeile wiederholen; nicht benötigte tiefere Ebenen bleiben leer.</p>
 <table>
 <thead>
 <tr>
@@ -113,6 +113,59 @@
 </tr>
 </tbody>
 </table>
+<p>Nach dem CSV-Import (UTF-8, Semikolon) öffnet sich die Vorschau der ersten fünf Zeilen. Direkt über der Spaltenzuordnung unter <strong>Eingaben prüfen</strong> wird dieselbe CSV-Vorschau mit Originalüberschriften und den ersten fünf Zeilen angezeigt. Lange Zelltexte werden nur in der Vorschau auf 500 Zeichen begrenzt. Wähle dort selbst aus, welche Quellspalte zu welchem Feld gehört. Die Überschriften müssen nicht den Feldnamen im Programm entsprechen. Nicht vorhandene optionale Felder bleiben <strong>Nicht zugeordnet</strong>. Gespeicherte Zuordnungen werden wiederhergestellt; bei einer neu hochgeladenen Datei beginnt deren Zuordnung erneut.</p>
+<p><img alt="Manuelle Zuordnung von Codes, Definitionen und Codierregeln" src="screenshots/09-kategorienspalten.jpg" /></p>
+<table>
+<thead>
+<tr>
+<th>Feld im Programm</th>
+<th>Beispiel für eine Überschrift in deiner Datei</th>
+<th>Erforderlich</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Code / vollständiger Codepfad</td>
+<td>Bezeichnung</td>
+<td>Codepfad oder Kategorie</td>
+</tr>
+<tr>
+<td>Kategorie</td>
+<td>Hauptkategorie</td>
+<td>Kategorie oder Codepfad</td>
+</tr>
+<tr>
+<td>Definition</td>
+<td>Bedeutung</td>
+<td>Ja</td>
+</tr>
+<tr>
+<td>Einschlussregeln</td>
+<td>Wann zuordnen</td>
+<td>Nein</td>
+</tr>
+<tr>
+<td>Ausschlussregeln</td>
+<td>Wann nicht zuordnen</td>
+<td>Nein</td>
+</tr>
+<tr>
+<td>Ankerbeispiele</td>
+<td>Typische Aussage</td>
+<td>Nein</td>
+</tr>
+<tr>
+<td>Abgrenzung / weitere Codierhinweise</td>
+<td>Abgrenzende Hinweise</td>
+<td>Nein</td>
+</tr>
+</tbody>
+</table>
+<p>Ein vollständiger Codepfad verwendet <code>&gt;</code> zwischen bis zu vier Ebenen, beispielsweise <code>Lernangebot &gt; Begleitung</code>. Alternativ wählst du Kategorie und die benötigten Hierarchiespalten. Wenn du beides zuordnest, müssen die Pfade übereinstimmen. Jede Quellspalte darf nur einmal zugeordnet werden. Zusätzliche, nicht zugeordnete Spalten fließen nicht in die Analyse ein.</p>
+<p>Fehlt Code/Kategorie oder Definition, bleibt <strong>Prüfen &amp; neuen Lauf starten</strong> gesperrt. Die Meldung benennt die fehlende Zuordnung. <strong>Einstellungen speichern &amp; Eingaben prüfen</strong> kontrolliert zusätzlich die vollständige Datei und die Codepfade. Bei Erfolg zeigt die Oberfläche, wie viele Codes Ein-/Ausschlussregeln, weitere Codierhinweise und Ankerbeispiele enthalten. Auch beim Start werden die Eingaben erneut geprüft, bevor Modellanfragen möglich sind.</p>
+<p>Die Regeln werden bei Blindcodierung und Codeprüfung berücksichtigt. Einschlussregeln beschreiben, wann der Code zutrifft; Ausschlussregeln grenzen ihn ab. Leere Felder bedeuten keine zusätzlichen Regeln. Ankerbeispiele illustrieren die Bedeutung. Regeln gelten für den Code ihrer Zeile und werden nicht automatisch an Untercodes vererbt. Benötigte übergeordnete Regeln daher ausdrücklich in den betroffenen Zeilen aufführen. Regeländerungen erscheinen im Kategorienvergleich und bleiben in Folgeläufen erhalten. Alte Ergebnisdateien ändern sich dadurch nicht.</p>
+<p>Das vollständige Demo-Codebuch enthält Ein-/Ausschlussregeln und Abgrenzungen für alle zwölf Codes und passt zu den 50 mitgelieferten Codierzeilen. In einem neu angelegten Demo-Projekt sind diese Standardspalten bereits zugeordnet. Bestehende Projekte behalten ihre bisherigen Eingabekopien.</p>
+<p>Das <a href="../demo/Kategoriesystem_mit_Regeln.csv">künstliche CSV-Formatbeispiel</a> verwendet bewusst andere Überschriften. Es ist ein eigenständiges Beispiel und passt nicht zu allen Codes des allgemeinen Demo-Interviews. CSV-Felder mit Semikolon, Anführungszeichen oder Zeilenumbrüchen müssen korrekt in Anführungszeichen gesetzt sein; Excel übernimmt das beim CSV-Export. Tabellen aus Word mit verbundenen Zellen müssen vorher in eine Zeile je vollständigem Codepfad überführt werden. Regeln oder Differenzierungen, die in Word als Absätze hinter der Tabelle stehen, müssen vor dem CSV-Export in eigene Spalten beim zugehörigen Code übertragen werden. Sie werden nicht aus dem Begleittext erraten. Der Programmimport akzeptiert weiterhin CSV und XLSX, keine DOCX-Dateien.</p>
 <p>Die Definition legt die inhaltliche Bedeutung fest. Ein Beispiel illustriert sie. Offene redaktionelle Notizen wie „überlegen“ gehören nicht unbeabsichtigt in Codepfade. Das Programm muss jeden Code aus der Interviewdatei im Kategoriensystem wiederfinden.</p>
 <h2 id="4-ids-ohne-handisches-nummerieren">4. IDs ohne händisches Nummerieren</h2>
 <p><strong>Zeilen-IDs entstehen bereits automatisch</strong>, wenn keine ID-Spalte vorhanden ist. Vorhandene eindeutige IDs können zugeordnet bleiben. Sie kennzeichnen einzelne Codierzeilen, auch wenn derselbe Text mehrfach codiert wurde.</p>

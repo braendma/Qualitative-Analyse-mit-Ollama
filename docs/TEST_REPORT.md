@@ -1,3 +1,12 @@
+# Codebook mapping and rules · 2026-09-11
+
+- All 102 Python tests pass, including Windows persistence and full workflow pause/resume. The mock transport identifies its module from the first system-prompt line so appended rule guidance remains testable.
+- Nine JavaScript tests pass. Added checks cover manual selection and missing/duplicate mappings.
+- Four Python regression cases cover arbitrary headers, immutable normalized copies, optional fields, explicit code paths, rule propagation into single-label/multi-label coding and verification prompts, rule diffs and follow-up saves.
+- Edge browser checks confirm CSV preview, manual mapping, missing-field and duplicate-field start gates, validation, reload persistence and a 390-pixel viewport.
+- The full 12-code demo now contains inclusion, exclusion and distinction rules. The focused regression tests passed again after expanding this fixture.
+- All published fixtures and screenshots are artificial. No local or cloud model calls; no claim of improved empirical coding quality.
+
 # SVG patch · 0.3.1 · 2026-09-10
 
 - Three added Python tests cover passive SVG validation, rejection of active/external content, real vector output for both plot types, SVG preference/PNG fallback and unique Windows artifact paths. Total: 98 tests.

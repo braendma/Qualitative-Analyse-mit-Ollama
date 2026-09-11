@@ -163,8 +163,14 @@ class ReviewWorkspace:
                     settings['model']=self.template['llm']['model']
             settings['columns']={'segment_id':'segment_id','unit_id':'PassageID','person':'Dokumentname','code':'Code','segment':'Segment'}
             settings['label_mode']='multi_label'
-            settings['book_columns']=dict(zip(('kategorie','unterkategorie','auspraegung','facette','definition','ankerbeispiel'),
-                                             ('Kategorie','Unterkategorie','Ausprägung','Facette','Definition','Ankerbeispiel')))
+            from coding_validation_common import CODEBOOK_ALIASES, resolve_column
+            headers = next(csv.reader(io.StringIO(Path(oldcfg['paths']['category_system_csv']).read_text(encoding='utf-8-sig')), delimiter=';'))
+            settings['book_columns'] = {}
+            for key, aliases in CODEBOOK_ALIASES.items():
+                try:
+                    settings['book_columns'][key] = resolve_column(headers, None, aliases, key)
+                except ValueError:
+                    settings['book_columns'][key] = ''
             source={'kind':'reviewed_followup','parent_job':jid,'review_revision':draft['revision'],
                     'review_fingerprint':fingerprint(draft),'excluded_cases':excluded,'changed_cases':preview['changed'],
                     'note':'Auswertung nach manueller Prüfung; keine unabhängige Validierung und kein Modelltraining.'}

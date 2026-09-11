@@ -14,7 +14,7 @@ import clusterer_core
 call_counts={}
 
 def fake_chat(messages, **kwargs):
-    module=messages[0]['content']
+    module=messages[0]['content'].split('\n',1)[0]
     text=messages[1]['content']
     logical_module='hierarchical_reduction' if module.startswith('Verdichte analytische Teilbefunde') else module
     call_counts[logical_module]=call_counts.get(logical_module,0)+1

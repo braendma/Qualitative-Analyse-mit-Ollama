@@ -79,3 +79,19 @@ test('a delayed report never replaces a newer preview or reopens a closed viewer
   app.requests.find(r=>r.url.includes('name=late.txt')).reply({size:4,text:async()=>'late'});await late;
   assert.equal(app.node('viewer').hidden,true);
 });
+
+test('category columns are manually mapped and missing or duplicate required mappings block start',()=>{
+  const app=setup();
+  app.run("project.uploads={segments:{headers:['Segment','Person','Code'],rows:[]},codebook:{headers:['Code','Definition','Regeln'],rows:[]}};renderFiles();");
+  assert.equal(app.node('book-columns-code').value,'');
+  assert.equal(app.node('book-columns-definition').value,'');
+  assert.equal(app.node('start').disabled,true);
+  app.node('segment-columns-segment').value='Segment';app.node('segment-columns-person').value='Person';app.node('segment-columns-code').value='Code';
+  app.node('book-columns-code').value='Code';app.node('book-columns-definition').value='Definition';
+  app.run('updateStartGate()');assert.equal(app.node('start').disabled,false);
+  app.node('book-columns-einschluss').value='Regeln';app.node('book-columns-ausschluss').value='Regeln';
+  app.run('updateStartGate()');assert.equal(app.node('start').disabled,true);
+  app.node('book-columns-ausschluss').value='';app.run('updateStartGate()');assert.equal(app.node('start').disabled,false);
+  app.node('book-columns-definition').value='';app.run('updateStartGate()');assert.equal(app.node('start').disabled,true);
+  assert.match(app.node('start-requirements').textContent,/Definition/);
+});

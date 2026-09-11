@@ -31,15 +31,16 @@ function updateModuleSelection(){
   $('module-selection').textContent=selected.size?`${selected.size} ${selected.size===1?"Modul":"Module"} ausgewählt · ${required.size} ${required.size===1?"Modul wird":"Module werden"} ausgeführt.`+(added.length?' Automatisch benötigte Vorstufen: '+added.join(', ')+'.':' Keine zusätzlichen Vorstufen erforderlich.'):'Noch kein Modul ausgewählt. Setze mindestens ein Häkchen.';
 }
 const columnLabels = {segment:'Text / Segment *',person:'Person / Dokument *',code:'Vergebener Code *',segment_id:'Eindeutige Zeilen-ID (optional)',unit_id:'Passage-ID (für Mehrfachcodierung)'};
-const bookLabels = {kategorie:'Kategorie *',unterkategorie:'Unterkategorie',auspraegung:'Ausprägung',facette:'Facette',definition:'Definition *',ankerbeispiel:'Ankerbeispiel'};
-const aliases = {segment:['Segment','Text','Segmenttext'],person:['Dokumentname','Dokument','Person','Interview'],code:['Code','Codes','human_code'],segment_id:['segment_id','Segment-ID','ID'],unit_id:['PassageID','Passage-ID','unit_id'],kategorie:['Kategorie','Hauptkategorie'],unterkategorie:['Unterkategorie','Subkategorie'],auspraegung:['Ausprägung','Auspraegung'],facette:['Facette'],definition:['Definition','Beschreibung'],ankerbeispiel:['Ankerbeispiel','Beispiel']};
+function bookDescription(c){return 'Definition: '+c.definition+' · Einschluss: '+(c.einschluss||'—')+' · Ausschluss: '+(c.ausschluss||'—')+' · Abgrenzung: '+(c.abgrenzung||'—')+' · Ankerbeispiele: '+(c.ankerbeispiel||'—');}
+const bookLabels = {code:'Code / vollständiger Codepfad *',kategorie:'Kategorie / erste Hierarchieebene *',unterkategorie:'Unterkategorie',auspraegung:'Ausprägung',facette:'Facette',definition:'Definition *',einschluss:'Einschlussregeln (optional)',ausschluss:'Ausschlussregeln (optional)',abgrenzung:'Abgrenzung / weitere Codierhinweise (optional)',ankerbeispiel:'Ankerbeispiele (optional)'};
+const aliases = {segment:['Segment','Text','Segmenttext'],person:['Dokumentname','Dokument','Person','Interview'],code:['Code','Codes','human_code'],segment_id:['segment_id','Segment-ID','ID'],unit_id:['PassageID','Passage-ID','unit_id'],kategorie:['Kategorie','Hauptkategorie'],unterkategorie:['Unterkategorie','Subkategorie'],auspraegung:['Ausprägung','Auspraegung'],facette:['Facette'],definition:['Definition','Beschreibung'],ankerbeispiel:['Ankerbeispiel','Ankerbeispiele','Beispiel'],einschluss:['Einschlussregeln','Einschlusskriterien'],ausschluss:['Ausschlussregeln','Ausschlusskriterien']};
 function el(tag, text, className) { const n=document.createElement(tag); if(text!==undefined)n.textContent=text; if(className)n.className=className; return n; }
 function message(text, error=false) { $('message').textContent=text; $('message').className=error?'error':''; $('message').hidden=false; if($('sheet-dialog').open)$('sheet-error').textContent=error?text:''; for(const dialog of document.querySelectorAll('dialog[open]')){let box=dialog.querySelector('.dialog-error');if(!box){box=el('p',undefined,'dialog-error error');box.setAttribute('role','alert');dialog.append(box);}box.textContent=error?text:'';} }
 async function api(path, data) {
   const response=await fetch('/api/'+path,{method:data===undefined?'GET':'POST',headers:{'X-App-Token':token,...(data===undefined?{}:{'Content-Type':'application/json'})},body:data===undefined?undefined:JSON.stringify(data)});
   const result=await response.json(); if(!response.ok)throw new Error(result.error || 'Anfrage fehlgeschlagen.'); return result;
 }
-function action(button, fn) { button.addEventListener('click',async e=>{ e.preventDefault();button.disabled=true;try{await fn();}catch(err){message(err.message,true);}finally{button.disabled=false;} }); }
+function action(button, fn) { button.addEventListener('click',async e=>{ e.preventDefault();button.disabled=true;try{await fn();}catch(err){message(err.message,true);}finally{button.disabled=false;if(button.id==='start')updateStartGate();} }); }
 function show(view) {
   viewing=view; document.querySelectorAll('.view').forEach(n=>n.hidden=n.id!=='view-'+view);
   document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.view===view));
@@ -59,7 +60,7 @@ function renderMapping(container, labels, headers, configured={}) {
   Object.entries(labels).forEach(([key,label])=>{
     const wrap=el('div'), select=el('select'), caption=el('label',label);select.id=container+'-'+key;caption.htmlFor=select.id;
     select.add(new Option('— Nicht zugeordnet —',''));headers.forEach(h=>select.add(new Option(h,h)));
-    const candidates=[configured[key],...(aliases[key]||[])];
+    const candidates=container==='book-columns'?[configured[key]]:[configured[key],...(aliases[key]||[])];
     select.value=candidates.find(c=>headers.includes(c))||'';
     if(configured[key]===null || configured[key]==='')select.value='';
     wrap.append(caption,select);$(container).append(wrap);
@@ -77,7 +78,11 @@ function renderFiles(){
     if(info)$('previews').append(table(info,kind==='segments'?'Interviewdatei · erste fünf Zeilen':'Kategoriensystem · erste fünf Zeilen'));
   }
   renderMapping('segment-columns',columnLabels,uploads.segments?.headers||[],project.settings.columns||state.defaults.columns);
+  $('book-preview').replaceChildren();
+  if(uploads.codebook)$('book-preview').append(table(uploads.codebook,'Vorschau deiner Datei · Originalspalten'));
+  else $('book-preview').append(el('p','Wähle unter Projekt & Dateien zuerst die Kategoriensystem-Datei aus.','hint'));
   renderMapping('book-columns',bookLabels,uploads.codebook?.headers||[],project.settings.book_columns||{});
+  updateStartGate();
 }
 function loadFields(){
   const s=project.settings||{}, llm=state.defaults.llm;
@@ -122,6 +127,7 @@ async function saveAndValidate(pid=needProject()){
   project.settings=s;
   const box=$('validation-result');box.replaceChildren(el('h3','Eingaben sind gültig'));box.hidden=false;
   const stats=el('div',undefined,'stats');[['Codierzeilen',result.segments],['Passagen',result.passages??'—'],['Personen',result.persons],['Codepfade',result.codes]].forEach(([label,n])=>{const part=el('div',undefined,'stat');part.append(el('b',String(n)),el('span',label));stats.append(part);});box.append(stats,el('p','Diese Module werden bei einem Start ausgeführt (einschließlich benötigter Vorstufen): '+result.modules.map(m=>m.name).join(' → '),'hint'));
+  if(result.codebook_fields)box.append(el('p',`${result.codebook_fields.einschluss} Codes mit Einschlussregeln · ${result.codebook_fields.ausschluss} mit Ausschlussregeln · ${result.codebook_fields.abgrenzung||0} mit weiteren Codierhinweisen · ${result.codebook_fields.ankerbeispiel} mit Ankerbeispielen. Die zugeordneten Regeln werden bei der Codierung und Codeprüfung berücksichtigt.`));
   return result;
 }
 function badge(status){const labels={running:'Läuft',success:'Abgeschlossen',failed:'Fehler',paused:'Pausiert',interrupted:'Unterbrochen',starting:'Startet'};return el('span',labels[status]||status,'badge '+status);}
@@ -209,7 +215,8 @@ function uploadBusy(value){uploading=value;for(const kind of ['segments','codebo
 function acceptUpload(uploads, pid, kind){
   if(project.id!==pid)return;
   project.uploads=uploads;delete project.settings[kind==='segments'?'columns':'book_columns'];renderFiles();$('validation-result').hidden=true;
-  message('Datei als lokale Projektkopie übernommen. Bitte Spaltenzuordnung prüfen.');
+  $('preview-details').open=true;
+  message('Datei eingelesen. Prüfe die Vorschau und ordne unter Eingaben prüfen die vorhandenen Spalten zu.');
 }
 action($('sheet-import'),async()=>{
   if(!pendingUpload)return;
@@ -246,7 +253,28 @@ $('create-form').addEventListener('submit',async e=>{e.preventDefault();try{if(t
 action($('demo'),async()=>{if(typeof finishReviewSave==='function')await finishReviewSave();const p=await api('create',{name:'Demo · Künstliche Interviews',demo:true});state.projects.unshift(p);project=p;renderProjects();await openProject(p.id);message('Demo geladen: 50 künstliche Codierzeilen und 43 Passagen. Du kannst zuerst die Eingaben prüfen.');});
 async function init(){try{state=await api('state');renderProjects();renderTelegram(state.telegram);if(state.projects.length)await openProject(state.projects[0].id);}catch(e){message(e.message,true);}}
 setInterval(async()=>{if(!project||polling||!['analysis','results'].includes(viewing))return;polling=true;try{await refreshJobs();}catch(e){message('Verbindung zur lokalen Oberfläche unterbrochen. Startfenster prüfen.',true);}finally{polling=false;}},4000);
-function invalidateCheck(event){if(event.target.closest('#view-project, #view-check, #view-analysis'))$('validation-result').hidden=true;}
+function mappingProblems(){
+  if(!project)return ['Projekt auswählen.'];
+  const issues=[],uploads=project.uploads||{};
+  for(const [kind,container,keys] of [['segments','segment-columns',['segment','person','code']],['codebook','book-columns',['definition']]]){
+    const info=uploads[kind];if(!info){issues.push(kind==='segments'?'Interviewdatei auswählen.':'Kategoriensystem auswählen.');continue;}
+    const labels=kind==='segments'?columnLabels:bookLabels;
+    for(const key of keys)if(!info.headers.includes($(container+'-'+key).value))issues.push('Spalte zuordnen: '+labels[key].replace(' *','')+'.');
+    if(kind==='codebook'){
+      if(!['code','kategorie'].some(k=>info.headers.includes($('book-columns-'+k).value)))issues.push('Codepfad oder Kategorie zuordnen.');
+      const used=Object.keys(bookLabels).map(k=>$('book-columns-'+k).value).filter(Boolean);
+      if(new Set(used).size!==used.length)issues.push('Jede Kategoriensystem-Spalte nur einmal zuordnen.');
+      if(used.some(v=>!info.headers.includes(v)))issues.push('Eine zugeordnete Kategoriensystem-Spalte fehlt in der Datei.');
+    }
+  }
+  return issues;
+}
+function updateStartGate(){
+  const issues=mappingProblems();$('start').disabled=issues.length>0;
+  $('start-requirements').textContent=issues.length?'Start gesperrt: '+issues.join(' '):'Spalten zugeordnet. Beim Start werden alle Eingaben erneut geprüft.';
+  $('mapping-requirements').textContent=$('start-requirements').textContent;
+}
+function invalidateCheck(event){if(event.target.closest('#view-project, #view-check, #view-analysis')){$('validation-result').hidden=true;updateStartGate();}}
 document.addEventListener('input',invalidateCheck);
 document.addEventListener('change',invalidateCheck);
 action($('setup-check'),async()=>{const r=await api('setup-check',{project:needProject(),model:$('model').value,selection:providerSelection()});$('setup-result').replaceChildren();r.checks.forEach(c=>$('setup-result').append(el('p',(c.ok?'✓ ':'✗ ')+c.name+': '+c.detail)));$('setup-result').append(el('p',r.note,'hint'));});
@@ -255,6 +283,6 @@ action($('model-test'),async()=>{pendingModelTest={project:needProject(),selecti
 $('model-test-cancel').onclick=()=>$('model-test-dialog').close();
 action($('model-test-confirm'),async()=>{$('model-test-dialog').close();message('Kurzer Modelltest läuft …');const r=await api('model-test',pendingModelTest);message(r.message);});
 action($('category-refresh'),async()=>{const pid=needProject(),r=await api('category-versions?project='+pid);if(project?.id!==pid)return;$('category-baseline').replaceChildren(new Option('Letzte gültige Version',''));r.versions.forEach(v=>$('category-baseline').add(new Option(new Date(v.created*1000).toLocaleString('de-DE')+' · '+v.id.slice(0,8),v.id)));});
-action($('category-compare'),async()=>{const pid=needProject(),r=await api('category-compare',{project:pid,settings:settings(),baseline:$('category-baseline').value||null});if(project?.id!==pid)return;const box=$('category-result');box.replaceChildren(el('p',r.note));if(!r.baseline)return;box.append(el('p',`${r.added.length} neue, ${r.removed.length} entfernte, ${r.changed.length} geänderte Kategorien · ${r.affected_count} betroffene Codierzeilen`));r.added.forEach(c=>box.append(el('p','Neu: '+c.code+' — '+c.definition)));r.removed.forEach(c=>box.append(el('p','Entfernt: '+c.code)));r.changed.forEach(c=>{const d=el('details');d.append(el('summary','Geändert: '+c.code),el('p','Bisher: '+c.before.definition+' · '+c.before.ankerbeispiel),el('p','Jetzt: '+c.after.definition+' · '+c.after.ankerbeispiel));box.append(d);});if(r.affected.length){const d=el('details');d.append(el('summary','Betroffene Codierzeilen (maximal 200)'));r.affected.forEach(c=>d.append(el('p',c.segment_id+' · '+c.code)));box.append(d);}});
+action($('category-compare'),async()=>{const pid=needProject(),r=await api('category-compare',{project:pid,settings:settings(),baseline:$('category-baseline').value||null});if(project?.id!==pid)return;const box=$('category-result');box.replaceChildren(el('p',r.note));if(!r.baseline)return;box.append(el('p',`${r.added.length} neue, ${r.removed.length} entfernte, ${r.changed.length} geänderte Kategorien · ${r.affected_count} betroffene Codierzeilen`));r.added.forEach(c=>box.append(el('p','Neu: '+c.code+' — '+c.definition)));r.removed.forEach(c=>box.append(el('p','Entfernt: '+c.code)));r.changed.forEach(c=>{const d=el('details');d.append(el('summary','Geändert: '+c.code),el('p','Bisher: '+bookDescription(c.before)),el('p','Jetzt: '+bookDescription(c.after)));box.append(d);});if(r.affected.length){const d=el('details');d.append(el('summary','Betroffene Codierzeilen (maximal 200)'));r.affected.forEach(c=>d.append(el('p',c.segment_id+' · '+c.code)));box.append(d);}});
 if(typeof initReviews==='function')initReviews();
 init();

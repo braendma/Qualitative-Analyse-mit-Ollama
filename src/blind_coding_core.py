@@ -22,6 +22,7 @@ from coding_validation_common import (
 )
 from utils_prompt import build_prompt_for_module
 from runtime_support import Checkpoint, checkpoint_identity
+from coding_validation_common import CODEBOOK_RULE_GUIDANCE
 from llm_client import LLMResponseError
 
 CONFIDENCES = {"hoch", "mittel", "niedrig"}
@@ -138,7 +139,7 @@ def blind_code_segments(
         )
         try:
             result = call_json_with_repair(
-                [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
+                [{"role": "system", "content": system_prompt + CODEBOOK_RULE_GUIDANCE}, {"role": "user", "content": user_prompt}],
                 llm_params,
                 lambda value, sid=segment.segment_id: _validate_response(value, sid, allowed_codes),
                 llm=llm,

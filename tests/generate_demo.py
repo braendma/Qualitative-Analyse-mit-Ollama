@@ -54,12 +54,55 @@ CASES=[
         'Ob es sich gelohnt hat? Teilweise schon. Für eine klare Antwort müsste ich erst sehen, was ich später tatsächlich nutze.']),
 ]
 
+# Explicit fictional coding rules, in the same order as CASES.
+RULES = [('Ein konkreter eigener Anwendungsversuch gelingt zumindest teilweise.',
+  'Nur eine Absicht, bloßes Nachmachen im Kurs oder ein gescheiterter Transfer ohne gelungenen Anteil.',
+  'Rückfragen schließen gelungenen Transfer nicht aus. Bei getrennten gelungenen und gescheiterten Versuchen '
+  'können beide Transfercodes zutreffen.'),
+ ('Ein eigener Anwendungsversuch scheitert oder eine ausdrücklich benannte eigene Anwendung bleibt unklar.',
+  'Nur allgemeiner Wunsch nach mehr Übung ohne Aussage zur Anwendung.',
+  'Unklarheit über eine künftige Anwendung von Unsicherheit bei einer konkret benannten Aufgabe unterscheiden.'),
+ ('Möglichkeiten, Umfang oder Bedingungen des Übens werden bewertet.',
+  'Ausschließlich ein späterer Transfer ohne Aussage zu Übungsmöglichkeiten.',
+  'Wenn sowohl das Übungsangebot als auch ein konkreter Transfer bewertet werden, sind beide Codes möglich.'),
+ ('Unterlagen, Skizzen, Tabellen oder andere Lernmaterialien werden inhaltlich bewertet.',
+  'Nur technische Zugangsprobleme oder allgemeine Bewertung des Kurses.',
+  'Inhaltliche Qualität von Materialien und technische Erreichbarkeit getrennt betrachten.'),
+ ('Terminplanung oder Zeitstruktur erleichtert ausdrücklich die Teilnahme.',
+  'Zeitliche Belastung ohne entlastenden Anteil oder reine Terminangabe ohne Bewertung.',
+  'Bei einem zeitlichen Vorher-nachher-Vergleich können entlastende und belastende Aspekte nebeneinander codiert '
+  'werden.'),
+ ('Termine, Verschiebungen oder Zeitaufwand erschweren ausdrücklich die Teilnahme.',
+  'Nur Wunsch nach mehr Übung ohne Zusammenhang mit Teilnahme oder Zeitorganisation.',
+  'Bei Verbesserungsvorschlägen mit benannter zeitlicher Belastung beide Aspekte getrennt codieren.'),
+ ('Gerät, Software oder Verbindung ermöglicht oder behindert den Zugriff auf das Angebot.',
+  'Reines fachliches Verständnisproblem trotz funktionierendem Zugang.',
+  'Eine erreichbare Datei mit unverständlichem Inhalt betrifft Materialien; eine nicht ladende Datei den '
+  'technischen Zugang.'),
+ ('Organisatorische oder fachliche Hilfe durch eine Ansprechperson wird beschrieben.',
+  'Nur wechselseitiger Austausch unter Teilnehmenden ohne erkennbare Hilfefunktion.',
+  'Gemeinsame Besprechung mit Hilfe durch die Kursleitung kann zusätzlich als Gruppenaustausch codiert werden.'),
+ ('Teilnehmende vergleichen Wissen, Ergebnisse oder Vorgehensweisen miteinander.',
+  'Nur einseitige Erklärung der Kursleitung oder bloße Anwesenheit in einer Gruppe.',
+  'Sachliche Meinungsunterschiede sind nicht automatisch Konflikte; Spannungen oder ungleiche Beteiligung '
+  'zusätzlich prüfen.'),
+ ('Spannungen, ungeklärte Meinungsverschiedenheiten oder ungleiche Beteiligung werden beschrieben.',
+  'Reiner sachlicher Vergleich verschiedener Ergebnisse ohne Konfliktanzeichen.',
+  'Eine konstruktive Diskussion und ein fortbestehender Konflikt können in derselben Passage vorkommen.'),
+ ('Eine konkrete veränderbare Maßnahme für das Angebot wird vorgeschlagen.',
+  'Bloße Unzufriedenheit ohne erkennbare Änderungsrichtung.',
+  'Ein Vorschlag kann zugleich einen Mangel benennen; den inhaltlichen Aspekt zusätzlich prüfen.'),
+ ('Eine ausdrücklich gemischte oder eingeschränkte Gesamtbilanz wird formuliert.',
+  'Nur ein einzelner Kritikpunkt oder Lob ohne übergreifende Bilanz.',
+  'Unterschiedlich bewertete Einzelaspekte allein ergeben noch kein ambivalentes Gesamturteil; eine '
+  'Gesamtbewertung muss erkennbar sein.')]
+
 def generate():
     with (ROOT/'Kategoriesystem.csv').open('w',encoding='utf-8',newline='') as f:
         writer=csv.writer(f,delimiter=';')
-        writer.writerow(['Kategorie','Unterkategorie','Ausprägung','Facette','Definition','Ankerbeispiel'])
-        for levels,definition,texts in CASES:
-            writer.writerow([*levels,definition,texts[0]])
+        writer.writerow(['Kategorie','Unterkategorie','Ausprägung','Facette','Definition','Ankerbeispiel','Einschlussregeln','Ausschlussregeln','Abgrenzung'])
+        for (levels,definition,texts),rules in zip(CASES,RULES):
+            writer.writerow([*levels,definition,texts[0],*rules])
     rows=[]
     for ci,(levels,_,texts) in enumerate(CASES):
         for ti,text in enumerate(texts):

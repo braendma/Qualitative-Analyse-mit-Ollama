@@ -6,6 +6,7 @@ from datetime import datetime
 from coding_validation_common import default_llm, parse_json_object, RawJsonlWriter, markdown_escape
 from llm_client import LLMResponseError
 from runtime_support import Checkpoint, checkpoint_identity
+from coding_validation_common import CODEBOOK_RULE_GUIDANCE
 
 
 def group_units(segments):
@@ -62,7 +63,7 @@ def blind_code_units(segments, codebook, prompts, context, llm_params, raw_log_p
                       'assignment_status (assigned, none oder abstained), confidence (hoch, mittel, niedrig) und begruendung zurück. '
                       'none bedeutet begründet keine Zuordnung, abstained bedeutet inhaltliche Unsicherheit; beide benötigen [].')
             payload = {'unit_id':opaque, 'segment':members[0].text, 'codebook':[c.as_prompt_dict() for c in codebook], 'context':context}
-            messages = [{'role':'system','content':system}, {'role':'user','content':json.dumps(payload, ensure_ascii=False)}]
+            messages = [{'role':'system','content':system + CODEBOOK_RULE_GUIDANCE}, {'role':'user','content':json.dumps(payload, ensure_ascii=False)}]
             original = list(messages)
             for attempt in range(2):
                 try:

@@ -1,3 +1,13 @@
+# 0.3.2 · Beta · 11. September 2026
+
+Codierregeln und CSV-Vorschau. Die Vorschau der Originalspalten steht direkt über der manuellen Zuordnung. Alle zwölf Codes des vollständigen Demos enthalten künstliche Ein-/Ausschlussregeln und Abgrenzungen.
+
+Semikolon-CSV zunächst als Vorschau einlesen, dann Kategorienspalten manuell zuordnen. Pflicht: Codepfad oder Kategorie sowie Definition. Ein-/Ausschlussregeln, weitere Codierhinweise und Ankerbeispiele bleiben optional. Fehlende oder doppelte Zuordnungen sperren den Start. Regeln fließen in Codierung, Codeprüfung und Kategorienvorschläge ein; Kategorienvergleich und Folgeläufe erhalten sie. Bisherige Dateien ohne Regelfelder bleiben lesbar. Mit künstlichem CSV-Beispiel und Handbuch-Screenshot.
+
+Prüfung: 102 Python-Tests und neun JavaScript-Tests bestanden. Browserprüfung für Importvorschau, manuelle Zuordnung, Startsperre, erneutes Öffnen und schmale Ansicht. Keine echten Modellaufrufe; ein Qualitätsgewinn ist damit noch nicht empirisch belegt.
+
+---
+
 # 0.3.1 · SVG-Patch · 10. September 2026
 
 Weiterhin als Vorabversion veröffentlicht. Clusterdiagramme und Konfusionsmatrix werden zusätzlich als echte SVG-Vektorgrafiken gespeichert. HTML-Gesamtberichte bevorzugen SVG, bieten einen Einzeldatei-Download und bleiben offline nutzbar. PNG bleibt als Alternative erhalten. Die Konfusionsmatrix verwendet auch für Zellen und Farbskala Vektorformen.

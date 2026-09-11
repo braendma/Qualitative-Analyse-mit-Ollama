@@ -157,7 +157,9 @@ class App(ReviewWorkspace):
                 if not path.is_file():
                     raise ValueError('Demo-Dateien fehlen in der Installation.')
                 self.upload(pid, kind, filename, base64.b64encode(path.read_bytes()).decode())
-            atomic_json(directory/'settings.json', {'context':{
+            from coding_validation_common import CODEBOOK_HEADERS
+            demo_headers = csv_info((DEMO_DIR/'Kategoriesystem.csv').read_bytes())['headers']
+            atomic_json(directory/'settings.json', {'book_columns':{k:v for k,v in CODEBOOK_HEADERS.items() if v in demo_headers}, 'context':{
                 'project_description':'Künstliche Interviews über technische Lernangebote. Alle Aussagen und Personen sind erfunden.',
                 'participants':'Sechs frei erfundene Personen eines Demonstrationsdatensatzes.',
                 'methodology':'Demonstration einer kategorienbasierten qualitativen Analyse; kein empirischer Qualitätsbenchmark.'}})
@@ -300,19 +302,24 @@ class App(ReviewWorkspace):
         RUNNER.topological_order(RUNNER.normalize_modules(cfg))
         cfg['paths']['input_csv'] = str(directory/'inputs'/(uploads['segments']['id']+'.csv'))
         original = directory/'inputs'/(uploads['codebook']['id']+'.csv')
-        from coding_validation_common import CODEBOOK_ALIASES
+        from coding_validation_common import CODEBOOK_HEADERS
         book_columns = settings.get('book_columns',{})
-        names = ['Kategorie','Unterkategorie','Ausprägung','Facette','Definition','Ankerbeispiel']
+        names = list(CODEBOOK_HEADERS.values())
         normalized = io.StringIO(newline='')
         writer = csv.writer(normalized, delimiter=';', lineterminator='\n')
         writer.writerow(names)
         mapping = []
-        for key in CODEBOOK_ALIASES:
+        if not isinstance(book_columns, dict):
+            raise ValueError('Spaltenzuordnung des Kategoriensystems ist ungültig.')
+        if not (book_columns.get('code') or book_columns.get('kategorie')) or not book_columns.get('definition'):
+            raise ValueError('Pflichtspalten zuordnen: Code oder Kategorie sowie Definition im Kategoriensystem.')
+        used = [v for v in book_columns.values() if v]
+        if len(used) != len(set(used)):
+            raise ValueError('Jede Kategoriensystem-Spalte darf nur einem Feld zugeordnet werden.')
+        for key in CODEBOOK_HEADERS:
             column = book_columns.get(key,'')
             if column and column not in uploads['codebook']['headers']:
                 raise ValueError('Unbekannte Kategoriensystem-Spalte.')
-            if key in ('kategorie','definition') and not column:
-                raise ValueError('Kategorie und Definition im Kategoriensystem zuordnen.')
             mapping.append(column)
         for row in csv.DictReader(io.StringIO(original.read_text(encoding='utf-8-sig')),delimiter=';'):
             writer.writerow([row.get(column,'') if column else '' for column in mapping])
@@ -350,6 +357,7 @@ class App(ReviewWorkspace):
         modules = RUNNER.topological_order(RUNNER.normalize_modules(cfg))
         return {'valid':True,'segments':len(segments),'persons':len({s.person for s in segments}),
                 'passages':len({s.unit_id for s in segments}) if cfg['columns'].get('unit_id') else None,
+                'codebook_fields':{key:sum(bool(getattr(c,key)) for c in codes.values()) for key in ('einschluss','ausschluss','abgrenzung','ankerbeispiel')},
                 'codes':len(codes),'modules':[{'id':m['id'],'name':m['name']} for m in modules], 'model_calls':0}
 
     def models(self):
