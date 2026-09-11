@@ -86,6 +86,7 @@ function renderFiles(){
 }
 function loadFields(){
   const s=project.settings||{}, llm=state.defaults.llm;
+  $('parallel-workers').value=String(s.parallel_workers??1);
   $('model').value=s.model??llm.model;$('num-ctx').value=s.num_ctx??llm.num_ctx;$('max-tokens').value=s.max_tokens??llm.max_tokens;
   $('temperature').value=s.temperature??llm.temperature;$('think').value=String(s.think??llm.think);
   $('label-mode').value=s.label_mode||'multi_label';
@@ -115,7 +116,7 @@ function settings(){
   const columns={},book_columns={};Object.keys(columnLabels).forEach(k=>columns[k]=$('segment-columns-'+k).value);
   Object.keys(bookLabels).forEach(k=>book_columns[k]=$('book-columns-'+k).value);
   const think=$('think').value;
-  return {...(typeof providerSelection==='function'?providerSelection():{}),columns,book_columns,model:$('model').value,num_ctx:Number($('num-ctx').value),max_tokens:Number($('max-tokens').value),temperature:Number($('temperature').value),
+  return {...(typeof providerSelection==='function'?providerSelection():{}),columns,book_columns,parallel_workers:$('provider').value==='ollama_local'?Number($('parallel-workers').value):1,model:$('model').value,num_ctx:Number($('num-ctx').value),max_tokens:Number($('max-tokens').value),temperature:Number($('temperature').value),
     think:think==='true'?true:think==='false'?false:think,label_mode:$('label-mode').value,
     context:{project_description:$('context-project').value,participants:$('context-persons').value,methodology:$('context-method').value},
     modules:[...document.querySelectorAll('[name=module]:checked')].map(n=>n.value)};

@@ -264,6 +264,8 @@ def main(argv=None):
     unknown = sum(s.human_code not in code_index for s in input_segments)
     if unknown:
         raise ValueError(f"{unknown} Codierzeilen passen nicht zum Codebuch. Codepfade vor dem Lauf abgleichen.")
+    from managed_ollama import workers, ManagedOllama
+    workers(config.get("llm", {}))
     if args.validate_only:
         print(json.dumps({"status": "valid", "segments": len(input_segments), "code_paths": len(code_index),
                           "modules": len(modules), "model_calls": 0}))
@@ -323,7 +325,10 @@ def main(argv=None):
         manifest.setdefault("failure_history", []).append({"failed_at": manifest.pop("failed_at", None), "error": manifest.pop("error")})
     manifest.pop("finished_at", None)
     atomic_json(output_dir / "workflow_manifest.json", manifest)
+    managed = ManagedOllama(config.get("llm", {}), output_dir)
     try:
+        manifest["ollama_runtime"] = managed.start()
+        atomic_json(output_dir / "workflow_manifest.json", manifest)
         for module in modules:
             if module["id"] in completed_steps:
                 continue
@@ -358,6 +363,8 @@ def main(argv=None):
         manifest.update(status="failed", failed_at=datetime.now().isoformat(), error=str(exc))
         atomic_json(output_dir / "workflow_manifest.json", manifest)
         raise
+    finally:
+        managed.close()
 
 
 if __name__ == "__main__":

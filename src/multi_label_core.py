@@ -52,7 +52,8 @@ def blind_code_units(segments, codebook, prompts, context, llm_params, raw_log_p
     units, rows = [], []
     from progress_events import update_progress
     update_progress(completed=0,total=len(groups),unit='passages')
-    for uid, members in groups.items():
+    def compute(item):
+        uid,members=item
         opaque = 'U' + hashlib.sha256(uid.encode('utf-8')).hexdigest()[:20]
         result = checkpoint.get(uid)
         if not result:
@@ -80,10 +81,16 @@ def blind_code_units(segments, codebook, prompts, context, llm_params, raw_log_p
                     result = {'predicted_codes':[], 'assignment_status':'abstained', 'confidence':'niedrig',
                               'begruendung':'Antwort auch nach Reparatur ungültig.', 'processing_status':'failed'}
             result = {**result, 'unit_id':uid, 'segment_ids':[s.segment_id for s in members]}
-            checkpoint.save(uid, result)
-        units.append(result)
-        update_progress(completed=len(units),total=len(groups),unit='passages')
-        rows.extend({**result, 'segment_id':s.segment_id} for s in members)
+        return result
+    from parallel_items import completed_items
+    items=list(groups.items());units=[None]*len(items);count=0
+    for index,result in completed_items(items,compute,llm_params.get("parallel_workers",1)):
+        uid,members=items[index]
+        checkpoint.save(uid,result)
+        units[index]=result;count+=1
+        update_progress(completed=count,total=len(items),unit="passages")
+    for (uid,members),result in zip(items,units):
+        rows.extend({**result,"segment_id":s.segment_id} for s in members)
     output = {'analysis_type':'Blind Multi-Label Coding', 'label_mode':'multi_label', 'created_at':datetime.now().isoformat(),
               'segment_count':len(segments), 'unit_count':len(units), 'results':rows, 'unit_results':units,
               'processing_status':'completed' if all(r['processing_status']=='completed' for r in units) else 'incomplete'}

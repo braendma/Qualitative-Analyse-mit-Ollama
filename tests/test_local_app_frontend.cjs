@@ -30,6 +30,16 @@ function setup(){
 const checkResult={segments:2,passages:1,persons:1,codes:1,modules:[]};
 const settle=()=>new Promise(resolve=>setImmediate(resolve));
 
+test('parallel selection is restored per project and cloud always saves one request',()=>{
+  const app=setup();
+  app.run('project.settings.parallel_workers=3;loadFields();');
+  assert.equal(app.node('parallel-workers').value,'3');
+  app.node('provider').value='ollama_local';
+  assert.equal(app.run('settings().parallel_workers'),3);
+  app.node('provider').value='openai';
+  assert.equal(app.run('settings().parallel_workers'),1);
+});
+
 test('a delayed validation does not modify or validate another project',async()=>{
   const app=setup(),pending=app.run('saveAndValidate()');
   app.run("project={id:'second',settings:{marker:'unchanged'},uploads:{}};");

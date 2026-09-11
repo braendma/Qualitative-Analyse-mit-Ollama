@@ -125,12 +125,9 @@ def verify_segments(
     started = time.monotonic()
     _show_progress(0, total, started)
 
-    for position, segment in enumerate(segments, start=1):
-        cached = checkpoint.get(segment.segment_id)
-        if cached:
-            results.append(cached)
-            _show_progress(position, total, started)
-            continue
+    def compute(segment):
+        cached=checkpoint.get(segment.segment_id)
+        if cached:return cached
         if segment.human_code not in allowed_codes:
             base = {
                 "segment_id": segment.segment_id,
@@ -181,9 +178,15 @@ def verify_segments(
         base.setdefault("processing_status", "completed")
         base["validated_quote"] = segment.text
         base["original_text_ref"] = f"{idmap_reference}::{segment.segment_id}"
-        checkpoint.save(segment.segment_id, base)
-        results.append(base)
-        _show_progress(position, total, started)
+        return base
+    from parallel_items import completed_items
+    results=[None]*len(segments)
+    count=0
+    for index, value in completed_items(segments,compute,llm_params.get("parallel_workers",1)):
+        checkpoint.save(segments[index].segment_id,value)
+        results[index]=value
+        count+=1
+        _show_progress(count,total,started)
 
     output = {
         "analysis_type": "Code Verification gegen externes Kategoriesystem",

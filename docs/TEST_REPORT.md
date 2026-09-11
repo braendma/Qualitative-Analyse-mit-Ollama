@@ -1,3 +1,11 @@
+# Prüfung 0.3.4 · 11. September 2026
+
+119 Python-Tests und zehn JavaScript-Tests bestanden. Zusätzliche Prüfungen: tatsächlich überlappende Arbeitseinheiten, unveränderte Passage-Gruppen und Ergebnisreihenfolge, geordnete Diagrammerzeugung im Hauptthread, Wiederaufnahme fertiger Einheiten, Abbruch ohne neue Aufträge, frische Speicherprüfung, Cloud-Sperre, eigene Serverkonfiguration und Bereinigung bei Startfehlern, korrekte Zählung laufender und fehlgeschlagener Anfragen. Browserprüfung für gespeicherte Auswahl, simulierte Speicherschätzung, verspätete Antworten und Anbieterwechsel. Handbuchbild mit ausdrücklich simulierten Hardwarewerten.
+
+**Realer lokaler Test:** Granite 4.2:8b, zwei Verarbeitungsplätze, 4.096 Tokens Kontext je Anfrage. Nach einer kurzen Aufwärmanfrage wurden zwei künstliche Anfragen gleichzeitig verarbeitet. Ollamas Laufzeitprotokoll zeigt zwei aktive Slots (0 und 1) mit überlappender Token-Erzeugung. Antworten kamen nach rund 5,5 und 5,2 Sekunden; danach wurde die eigene Instanz beendet. Dieser kurze Funktionstest belegt keine allgemeine Speicherobergrenze, keinen garantierten Geschwindigkeitsgewinn und keine Codierqualität. Keine privaten Forschungsdaten oder Cloud-Anfragen für diesen Test.
+
+---
+
 # Prüfung 0.3.3 · 11. September 2026
 
 110 Python-Tests und neun JavaScript-Tests bestanden. Acht neue Tests prüfen die Kapazitätsschätzung, Kontextbedarf, fremde GPU-Belegung, bereits geladene Modelle, fehlende Metadaten und die Beschränkung auf lesende lokale Metadaten-Endpunkte. Browserprüfung mit echtem lokalem Ollama-Metadatenabruf: automatische Aktualisierung, Ablehnung verspäteter Antworten und Ausblenden bei Cloud-Auswahl. Die Handbuchabbildung verwendet klar gekennzeichnete simulierte Hardwarewerte. Keine lokalen oder Cloud-Inferenzanfragen für dieses Feature; die Parallelitätszahlen sind keine empirisch gemessenen Lastgrenzen.

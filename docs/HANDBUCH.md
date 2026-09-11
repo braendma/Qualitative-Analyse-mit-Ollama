@@ -1,6 +1,6 @@
 # Handbuch · Qualitative Analyse mit Ollama
 
-Dieses Handbuch begleitet dich vom ersten Start bis zum erneuten Analyselauf mit geprüften Codierungen. Alle Personen, Texte und Beurteilungen in den Beispielen sind erfunden. Stand: 0.3.3 · Ollama-Speicherschätzung (Beta).
+Dieses Handbuch begleitet dich vom ersten Start bis zum erneuten Analyselauf mit geprüften Codierungen. Alle Personen, Texte und Beurteilungen in den Beispielen sind erfunden. Stand: 0.3.4 · Parallele Ollama-Anfragen (Beta).
 
 Du erreichst die bebilderte Fassung jederzeit über **Handbuch** neben **Telegram-Updates** in der Seitenleiste. Sie öffnet sich in einem eigenen Tab, damit deine aktuelle Arbeit geöffnet bleibt. Ohne laufende Oberfläche kannst du `docs/HANDBUCH.html` doppelklicken. Den Programmordner einschließlich der Bilder zusammenlassen.
 
@@ -24,7 +24,17 @@ Die Anzeige nennt beispielsweise **„Speicherschätzung: bis zu 3 gleichzeitige
 
 Die Schätzung prüft 1 bis 8 Anfragen für vollständig auf GPUs geladene Modelle. Sie berücksichtigt Modellgröße, Kontextcache in f16 und Reserven. Mehr Kontext oder andere GPU-Belegung kann die Zahl verringern. CPU-Auslagerung, AMD und Apple werden nicht geschätzt. Bei fehlenden Modelldaten, nicht unterstützten Architekturen oder einem bereits geladenen Modell erscheint eine Erklärung statt einer ungesicherten Zahl. Ein Wert von 0 bedeutet nur, dass mit der aktuellen Belegung und den Reserven keine reine GPU-Ausführung abgeschätzt werden kann.
 
-**Die Zahl aktiviert keine Parallelität.** Ollamas Servereinstellung `OLLAMA_NUM_PARALLEL` und die tatsächliche GPU-Verteilung sind nicht über die verwendete API auslesbar. Die Anwendung muss außerdem unabhängige Anfragen gleichzeitig senden; bisher serielle Module werden durch diese Anzeige nicht beschleunigt. Die Prüfung verändert keine Servereinstellungen und unterbricht keine laufende Analyse. Vor produktiver Nutzung einer höheren Parallelität ist ein separater Test sinnvoll.
+Unter **Gleichzeitige Anfragen** wählst du 1 bis 8. **1 ist der Standard** und verwendet deinen bestehenden Ollama-Server. Ab **2** startet der Workflow eine eigene, nur auf diesem PC erreichbare Ollama-Instanz mit `OLLAMA_NUM_PARALLEL` in der gewählten Höhe. Du brauchst dafür keine Servereinstellung von Hand zu ändern. Ollama muss lokal installiert sein; die eigene Instanz verwendet denselben Modellordner (`OLLAMA_MODELS`, falls gesetzt). Es wird kein Modell heruntergeladen.
+
+1. Lokales Modell und Kontext wählen und die Schätzung abwarten.
+2. Beispielsweise **2** wählen, wenn die Schätzung mindestens 2 ergibt.
+3. Einstellungen speichern, Eingaben prüfen und den Lauf starten. Direkt vor dem Start wird der Speicher erneut geprüft. Bei unbekannter oder zu geringer Kapazität wird der Parallelstart mit einer Erklärung abgewiesen; du kannst mit **1** arbeiten oder Modell, Kontext und Belegung anpassen.
+
+**Was parallel läuft:** Die Clusterbildung arbeitet kategorienweise; Code-Verifikation und Blindcodierung arbeiten mit unabhängigen Textstellen bzw. vollständigen Passage-Gruppen. Pro Einheit bleibt die Verarbeitung samt nötiger Antwortreparatur zusammen. Ergebnisse behalten ihre ursprüngliche Reihenfolge. Abhängige Analysestufen und die Erstellung der Grafiken laufen nacheinander; nicht jede Phase kann daher die gewählte Zahl auslasten. Cloud-Anbieter bleiben bei einer Anfrage.
+
+Die eigene Instanz wird nach Abschluss, Fehler oder einer Pause zwischen Modulen beendet. Bestehende Ollama-Server werden nicht umkonfiguriert. Bei einem Programmabbruch beendet ein Wächter die eigene Instanz; bereits geprüfte Zwischenstände bleiben für die Wiederaufnahme erhalten. Im Laufmanifest steht die verwendete Parallelität. Eine geänderte Einstellung gilt für einen neuen Lauf; eine Wiederaufnahme verwendet die eingefrorene Konfiguration.
+
+Die Anzeige bleibt eine **Speicherschätzung**, keine garantierte Höchstleistung. Andere Prozesse können Speicher belegen, und Ollamas GPU-Verteilung kann die nutzbare Parallelität begrenzen. Zwei echte parallele Slots wurden mit Granite 4.2:8b getestet; andere Modelle und höhere Werte sind damit nicht als Belastungsgrenze bestätigt. Für einen ersten Versuch 2 wählen. Nach einem Programmupdate einen neuen Lauf beginnen, da sich die Code-Prüfsumme ändert.
 
 Grundlagen: [Ollama: parallele Anfragen und Speicher](https://docs.ollama.com/faq#how-does-ollama-handle-concurrent-requests), [Modellmetadaten](https://docs.ollama.com/api-reference/show-model-details).
 

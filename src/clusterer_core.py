@@ -644,27 +644,18 @@ def run_clustering(
     # Jede eindeutige Kombination aus Hauptkategorie,
     # Subkategorie und Facette clustern
     # -------------------------------------------------
-    for code_path, df_facet in grouped_facets:
+    def compute_group(item):
+        code_path, df_facet = item
         haupt, sub, auspraegung, facette = levels[code_path]
 
         # Lokalen Index darf man für Iteration zurücksetzen; die globale
         # Segment-ID bleibt als eigene Spalte erhalten.
         df_facet = df_facet.reset_index(drop=True)
 
-        if df_facet.empty:
-            continue
 
         # -------------------------------------------------
         # Markdown-Kontext
         # -------------------------------------------------
-        title = " → ".join(value for value in (haupt, sub, auspraegung, facette) if value)
-        md_lines.append(f"# {title}\n\n### Kontext der Analyse\n")
-        for label, value in zip(("Hauptkategorie", "Subkategorie", "Ausprägung", "Facette"),
-                                (haupt, sub, auspraegung, facette)):
-            if value:
-                md_lines.append(f"- {label}: **{value}**\n")
-        md_lines.append("\n")
-
         # -------------------------------------------------
         # Segmente für LLM erzeugen
         # -------------------------------------------------
@@ -885,6 +876,29 @@ def run_clustering(
             return clusters
         clusters = PartCheckpoint('clusterer', ollama_params).run(
             code_path, {'system':system_prompt,'user':user_prompt,'prompts':prompts,'context':context,'segments':segments_payload}, compute_part)
+
+        return code_path, df_facet, clusters
+
+    from parallel_items import completed_items
+    from progress_events import update_progress
+    groups = list(grouped_facets)
+    ordered = [None] * len(groups)
+    update_progress(completed=0, total=len(groups), unit='Kategorien')
+    count = 0
+    for index, result in completed_items(groups, compute_group, ollama_params.get('parallel_workers', 1)):
+        ordered[index] = result
+        count += 1
+        update_progress(completed=count, total=len(groups), unit='Kategorien')
+    # Matplotlib and shared reports stay on the caller thread in input order.
+    for code_path, df_facet, clusters in ordered:
+        haupt, sub, auspraegung, facette = levels[code_path]
+        title = " → ".join(value for value in (haupt, sub, auspraegung, facette) if value)
+        md_lines.append(f"# {title}\n\n### Kontext der Analyse\n")
+        for label, value in zip(("Hauptkategorie", "Subkategorie", "Ausprägung", "Facette"),
+                                (haupt, sub, auspraegung, facette)):
+            if value:
+                md_lines.append(f"- {label}: **{value}**\n")
+        md_lines.append("\n")
 
         # -------------------------------------------------
         # Plot

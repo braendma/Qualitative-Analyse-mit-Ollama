@@ -8,6 +8,7 @@ function scheduleCapacity(){
   capacityRevision++;clearTimeout(capacityTimer);
   const local=$('provider').value==='ollama_local';
   $('capacity-panel').hidden=!local;
+  $('parallel-workers').disabled=!local;
   $('capacity-result').textContent='Modell und Kontextfenster wählen. Die Prüfung startet kein Modell.';
   if(local && $('model').value.trim())capacityTimer=setTimeout(checkCapacity,650);
 }

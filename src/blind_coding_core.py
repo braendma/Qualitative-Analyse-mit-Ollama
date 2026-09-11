@@ -122,12 +122,9 @@ def blind_code_segments(
     total = len(segments)
     started = time.monotonic()
     _show_progress(0, total, started)
-    for position, segment in enumerate(segments, start=1):
-        cached = checkpoint.get(segment.segment_id)
-        if cached:
-            results.append(cached)
-            _show_progress(position, total, started)
-            continue
+    def compute(segment):
+        cached=checkpoint.get(segment.segment_id)
+        if cached:return cached
         # Absichtlich wird hier weder human_code noch ein daraus abgeleiteter Zielcode übergeben.
         system_prompt, user_prompt = build_prompt_for_module(
             "blind_coding",
@@ -161,9 +158,16 @@ def blind_code_segments(
                 "alternative_codes": [],
             }
         result.setdefault("processing_status", "completed")
-        checkpoint.save(segment.segment_id, result)
-        results.append(result)
-        _show_progress(position, total, started)
+        return result
+    from parallel_items import completed_items
+    results=[None]*len(segments)
+    count=0
+    for index, value in completed_items(segments,compute,llm_params.get("parallel_workers",1)):
+        checkpoint.save(segments[index].segment_id,value)
+        results[index]=value
+        count+=1
+        _show_progress(count,total,started)
+
     output = {
         "analysis_type": "Blind Coding mit externem Kategoriesystem",
         "created_at": datetime.now().isoformat(),

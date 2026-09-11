@@ -1,4 +1,5 @@
 llm:
+  parallel_workers: 1 # Lokal: 1–8; ab 2 eigene Ollama-Instanz mit Speicherprüfung
   provider: ollama_local
   gdpr_relevant: true
   partial_checkpoints: true

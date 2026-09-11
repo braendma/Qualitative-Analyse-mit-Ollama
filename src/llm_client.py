@@ -33,6 +33,12 @@ def request_chat(backend, request, settings, *, api_key=None):
     host = selected['host']
     provider = selected['provider']
     cloud = provider != 'ollama_local'
+    managed_host = os.environ.get('QUALITATIVE_MANAGED_OLLAMA_HOST')
+    if managed_host and not cloud:
+        parsed = urlparse(managed_host)
+        if parsed.scheme != 'http' or parsed.hostname != '127.0.0.1' or not parsed.port or parsed.username or parsed.password or parsed.path or parsed.query or parsed.fragment:
+            raise LLMTransportError('Ungültige lokale Laufzeitadresse.')
+        host = managed_host
     schema = settings.get('response_schema')
     if schema and not cloud and settings.get('structured_outputs', True):
         request['format'] = schema
@@ -70,8 +76,7 @@ def request_chat(backend, request, settings, *, api_key=None):
                         request['model'], attempt + 1, time.monotonic() - started)
             return response
         except Exception as exc:
-            from progress_events import update_progress
-            update_progress(request_active=False)
+            request_event(success=False)
             status = getattr(exc, 'status_code', None)
             error = str(getattr(exc, 'error', exc)).lower()
             if 'think' in request and any(s in error for s in (

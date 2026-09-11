@@ -123,8 +123,8 @@ def estimate(model, context, tag, show, running, machine):
                   free_vram_bytes=free)
     result['notes'] += ['Berechnung mit f16-Kontextcache, 20 % Cache-Zuschlag, 10 % Modell-Zuschlag und GPU-Reserve.',
                         'Mehrere GPUs werden zusammengezählt. Ollamas GPU-Auswahl und Verteilung können die Zahl verringern.',
-                        'OLLAMA_NUM_PARALLEL muss am Ollama-Server passend eingestellt sein; diese Prüfung ändert es nicht.',
-                        'Die Anwendung muss unabhängige Anfragen gleichzeitig senden. Eine serielle Analyse wird dadurch nicht parallel.']
+                        'Ab 2 gewählten Anfragen startet der Workflow eine eigene lokale Ollama-Instanz mit passenden Verarbeitungsplätzen.',
+                        'Clustering und Codierprüfungen senden unabhängige Einheiten parallel; abhängige Stufen laufen nacheinander.']
     if count == 0:
         result['reason'] = 'Aktuell keine reine GPU-Anfrage mit diesen Reserven abschätzbar. Andere Belegung, kleineres Modell oder Kontext prüfen; CPU-Auslagerung ist hier nicht bewertet.'
     else:

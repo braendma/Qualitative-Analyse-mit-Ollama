@@ -1,3 +1,13 @@
+# 0.3.4 · Beta · Parallele lokale Ollama-Anfragen
+
+Die Auswahl „Gleichzeitige Anfragen“ aktiviert nun die Verarbeitung: 1 bleibt Standard; ab 2 startet eine eigene lokale Ollama-Instanz mit der gewählten Zahl an Slots. Frische Speicherprüfung vor dem Start, höchstens 8, keine Cloud-Parallelisierung. Clustering, Code-Verifikation und Blindcodierung verarbeiten unabhängige Einheiten parallel. Ergebnisreihenfolge, Passage-Gruppen und geprüfte Zwischenstände bleiben erhalten. Fortschrittszählung und Rohantwortprotokolle sind gegen gleichzeitige Schreibzugriffe geschützt. Die eigene Instanz endet mit dem Workflow; bestehende Server bleiben erhalten.
+
+Prüfung: 119 Python-Tests, zehn JavaScript-Tests und Browserprüfung. Lokaler Test mit Granite 4.2:8b, zwei gleichzeitig aktiven Ollama-Slots und 4.096 Tokens Kontext je Anfrage. Kein allgemeiner Benchmark und keine Qualitätsmessung. Handbuch und Bildschirmabbildung aktualisiert.
+
+Beim Update Programmdateien ersetzen, private Projekte und Konfigurationen behalten und einen neuen Lauf beginnen. Voreinstellung bleibt eine Anfrage. 0.3.4 folgt dem dreiteiligen Versionsschema.
+
+---
+
 # 0.3.3 · Beta · Lokale Ollama-Speicherschätzung
 
 Automatische, rein lesende Kapazitätsschätzung nach Modellwahl oder Kontextänderung; aktueller NVIDIA-VRAM und verfügbarer RAM, konservativer Prüfbereich von 1–8 Anfragen. Unbekannte Architekturen und bereits geladene Modelle werden ausdrücklich als nicht bestimmbar angezeigt. Server-Parallelität wird nicht automatisch verändert. Handbuch mit bebildertem Beispiel ergänzt.

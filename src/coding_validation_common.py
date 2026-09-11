@@ -416,6 +416,8 @@ class RawJsonlWriter:
     """Append-only Audit-Writer für unveränderte LLM-Antworten."""
 
     def __init__(self, path: str | Path, module: str):
+        import threading
+        self.lock = threading.Lock()
         self.path = Path(path)
         self.module = module
 
@@ -428,7 +430,7 @@ class RawJsonlWriter:
                 "segment_id": segment_id,
                 **event,
             }
-            with self.path.open("a", encoding="utf-8", newline="\n") as handle:
+            with self.lock, self.path.open("a", encoding="utf-8", newline="\n") as handle:
                 handle.write(json.dumps(payload, ensure_ascii=False) + "\n")
         return write_event
 
