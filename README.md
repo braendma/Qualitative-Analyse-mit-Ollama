@@ -33,6 +33,8 @@ Seit Beta 3: lesbarere Clusterdiagramme und Konfusionsmatrix, anklickbare Person
 
 ## Einrichten und öffnen
 
+**macOS:** Ein separates [Mac-ZIP zur Version 0.3.4](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/tag/v0.3.4) steht als zusätzlicher Download bereit. Darin im Unterordner `start/macos/` zuerst `Einrichtung.command`, danach `Start_Oberflaeche.command` öffnen. [Mac-Anleitung, Voraussetzungen und Testumfang](start/macos/README.md). Der gemeinsame Programmcode bleibt zentral; die Windows-Startdateien bleiben unverändert.
+
 1. Das **gesamte Repository** über GitHub **Code → Download ZIP** herunterladen und entpacken. Dateien und Unterordner zusammenlassen.
 2. Python **3.10 oder neuer** und Ollama installieren, falls sie noch fehlen. Für die spätere Analyse muss ein geeignetes lokales Ollama-Modell vorhanden sein. Der Speicherbedarf hängt vom Modell und Kontextfenster ab.
 3. Unter Windows einmal **`Einrichtung.cmd`** doppelklicken. Dabei werden die benötigten Python-Pakete aus dem Internet installiert. Es wird noch kein Modell ausgeführt.

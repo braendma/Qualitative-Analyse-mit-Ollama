@@ -1,0 +1,31 @@
+name: macOS installation and tests
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  macos:
+    runs-on: macos-15
+    timeout-minutes: 20
+    env:
+      MPLBACKEND: Agg
+      PYTHONUTF8: '1'
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - name: Check launch scripts
+        run: for script in start/macos/*.command start/macos/launcher.sh; do bash -n "$script"; done
+      - name: Fresh installation through the user launcher
+        run: bash start/macos/Einrichtung.command
+      - name: Python regression tests (synthetic data, mocked models)
+        run: .venv-macos/bin/python3 -m unittest discover -s tests -p 'test_*.py'
+      - name: JavaScript regression tests
+        run: node --test tests/test_local_app_frontend.cjs tests/test_review_frontend.cjs
+      - name: Start the user launcher and check the local web server
+        run: .venv-macos/bin/python3 tests/smoke_macos.py
