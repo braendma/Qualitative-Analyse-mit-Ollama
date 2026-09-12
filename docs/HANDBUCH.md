@@ -255,3 +255,29 @@ Die Oberfläche speichert Projekte normalerweise im Ordner `local_app_data` beim
 | Bild fehlt im HTML | Hinweis im Bericht lesen und einzelne Grafik öffnen; Exportgrenzen bzw. fehlende Datei prüfen. |
 
 Vor dem Teilen HTML, Excel und Berichte auf enthaltene Originaltexte und Beurteilungen prüfen. Die HTML-Datei enthält die eingebetteten Daten selbst. Reale Studienunterlagen, private Konfigurationen und Schlüssel gehören nicht in ein öffentliches GitHub-Repository. Weitere technische Details: [Bedienoberfläche](BEDIENOBERFLAECHE.md), [Erweiterungen](EXTENSIONS.md) und [Versionshinweise](RELEASE_NOTES.md).
+
+
+## Große Zusammenfassungen und Antwortreparatur (ab 0.3.5)
+
+Bei einer großen Cluster- oder Gesamtzusammenfassung teilt das Programm den Text automatisch passend zum Kontextfenster auf. Es fasst zunächst alle Teile zusammen und verdichtet sie bei Bedarf erneut, bevor die eigentliche Zusammenfassung entsteht. Dafür brauchst du keine zusätzliche Einstellung. Im Laufprotokoll erscheinen Stufe und Anzahl der Teile. Es entstehen zusätzliche Modellanfragen; bei Cloud-Anbietern können diese Kontingent oder Kosten verbrauchen.
+
+Eine Verdichtung ist eine methodische Zwischenstufe: Alle Textstücke gehen in die Verarbeitung ein, aber einzelne Details können in den Zusammenfassungen verloren gehen. Prüfe zentrale Aussagen, Unterschiede und Gegenbeispiele deshalb weiterhin anhand der Originalstellen. SWOT und Personenanalyse werden durch diesen Patch nicht automatisch aufgeteilt.
+
+Abgeschnittene kurze Zwischenantworten werden mit reserviertem Platz für eine längere Antwort wiederholt. Erfolgreiche Teile werden gespeichert; ein fehlgeschlagener Teil kann bei unverändertem Lauf nachgeholt werden. Kann das Programm keine vollständige Antwort erzeugen oder den Text nicht ausreichend verkleinern, meldet es einen Fehler. Ein größeres Kontextfenster benötigt mehr Speicher, besonders bei mehreren gleichzeitigen Anfragen.
+
+Bei ungültigen Codierantworten bekommt der Reparaturversuch auch die ursprüngliche Textstelle, das Codebuch und seine zugeordneten Regeln. Erfundene Codes werden weiterhin zurückgewiesen. Auch diese längere Reparaturanfrage muss ins eingestellte Kontextfenster passen.
+
+**Lokal geprüft:** `granite4.2:30b` in Q4_K_M mit zwei gleichzeitigen Anfragen bei 8.192 Tokens Kontext auf 12 GB + 16 GB GPU-Speicher. Das ist ein technischer Test mit künstlichen Beispielen, keine Garantie für andere Hardware, größere Kontexte oder die fachliche Qualität. Vor dem Start die aktuelle Speicherschätzung prüfen.
+
+Nach einem Programmupdate einen neuen Lauf anlegen. Alte Berichte bleiben nutzbar; ein unter einer älteren Code-Prüfsumme begonnener Lauf kann nicht unverändert mit neuem Code fortgesetzt werden.
+
+
+## Kontext vor dem Start prüfen (0.3.5)
+
+**Einstellungen speichern & Eingaben prüfen** kontrolliert nun auch die Größe der bereits bekannten Anfragen. Geprüft werden vollständige Kategoriengruppen beim Clustering und die Textstellen beziehungsweise Passagen mit dem vollständigen Codebuch und den zugeordneten Regeln bei der Codierprüfung. Antwortlimit und eine Reserve zählen mit. Übersteigt eine Anfrage die konservative Rechengrenze, bleibt der Start gesperrt. Das gilt auch bei einem direkten Start des Python-Runners.
+
+Die Meldung nennt das betroffene Modul und seine größte Rechengrenze. Wähle mehr Kontext und prüfe anschließend den GPU-Speicher erneut. Gegebenenfalls sind weniger parallele Anfragen nötig. Ein kleineres Antwortlimit schafft ebenfalls Platz, kann aber Antworten abschneiden. Kürze keine Textstellen oder fachlichen Codierregeln nur, um eine Fehlermeldung zu umgehen.
+
+Unter dem Prüfergebnis stehen **Kontextprüfung vor dem Start** und Hinweise zur Antwortreparatur sowie zu späteren Modulen. Deren Modellbefunde gibt es vorab noch nicht: Ein bestandener Startcheck garantiert deshalb nicht, dass jede spätere Anfrage passt. Die Laufzeitprüfung bleibt aktiv. Die Rechengrenze basiert auf UTF-8-Bytes, nicht auf einer exakten Tokenisierung; sie kann strenger sein als die tatsächliche Modellgrenze. Es wird kein Modell gestartet und keine Datei an einen Anbieter gesendet.
+
+**Lokaler Kapazitätsversuch:** Mit `granite4.2:30b` (Q4_K_M) auf 12 GB + 16 GB GPU-Speicher gelangen zwei gleichzeitige Anfragen bei je 12.288 Tokens vollständig auf den GPUs. Bei je 16.384 Tokens wurden Teile in RAM ausgelagert. Die kurzen künstlichen Testanfragen benötigten ungefähr 13 beziehungsweise 17 Sekunden; das ist kein allgemeiner Benchmark und kein Test mit vollständig gefüllten Kontextfenstern. Die produktive Speicherschätzung ist weiterhin konservativ und kann weniger Parallelität freigeben als ein einzelner kontrollierter Versuch. Der Test überschreibt diese Sperre nur im Entwicklungsversuch; es gibt keine automatische Freigabe unsicherer Einstellungen.

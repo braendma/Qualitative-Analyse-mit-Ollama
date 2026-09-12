@@ -357,7 +357,11 @@ class App(ReviewWorkspace):
         if unknown:
             raise ValueError('Codes fehlen im Kategoriensystem: '+ '; '.join(f"Zeile {x['row']}: {x['code']}" for x in unknown[:10]))
         modules = RUNNER.topological_order(RUNNER.normalize_modules(cfg))
+        from context_preflight import check_context, require_context
+        context_check=check_context(cfg,segments,codes,modules)
+        require_context(context_check)
         return {'valid':True,'segments':len(segments),'persons':len({s.person for s in segments}),
+                'context_check':context_check,
                 'passages':len({s.unit_id for s in segments}) if cfg['columns'].get('unit_id') else None,
                 'codebook_fields':{key:sum(bool(getattr(c,key)) for c in codes.values()) for key in ('einschluss','ausschluss','abgrenzung','ankerbeispiel')},
                 'codes':len(codes),'modules':[{'id':m['id'],'name':m['name']} for m in modules], 'model_calls':0}

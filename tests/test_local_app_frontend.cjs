@@ -30,6 +30,14 @@ function setup(){
 const checkResult={segments:2,passages:1,persons:1,codes:1,modules:[]};
 const settle=()=>new Promise(resolve=>setImmediate(resolve));
 
+test('context preflight uncertainties are visible after validating inputs',async()=>{
+  const app=setup(),pending=app.run('saveAndValidate()');
+  app.requests.find(r=>r.url==='/api/save').reply({...checkResult,context_check:{context:8192,answer_limit:512,note:'Konservative Grenze',checks:[],warnings:['Spätere Befunde unbekannt']}});
+  await pending;
+  const children=app.node('validation-result').children;
+  assert.ok(children.some(n=>n.textContent==='Hinweis: Spätere Befunde unbekannt'));
+});
+
 test('parallel selection is restored per project and cloud always saves one request',()=>{
   const app=setup();
   app.run('project.settings.parallel_workers=3;loadFields();');

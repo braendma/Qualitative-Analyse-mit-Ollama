@@ -129,6 +129,13 @@ async function saveAndValidate(pid=needProject()){
   const box=$('validation-result');box.replaceChildren(el('h3','Eingaben sind gültig'));box.hidden=false;
   const stats=el('div',undefined,'stats');[['Codierzeilen',result.segments],['Passagen',result.passages??'—'],['Personen',result.persons],['Codepfade',result.codes]].forEach(([label,n])=>{const part=el('div',undefined,'stat');part.append(el('b',String(n)),el('span',label));stats.append(part);});box.append(stats,el('p','Diese Module werden bei einem Start ausgeführt (einschließlich benötigter Vorstufen): '+result.modules.map(m=>m.name).join(' → '),'hint'));
   if(result.codebook_fields)box.append(el('p',`${result.codebook_fields.einschluss} Codes mit Einschlussregeln · ${result.codebook_fields.ausschluss} mit Ausschlussregeln · ${result.codebook_fields.abgrenzung||0} mit weiteren Codierhinweisen · ${result.codebook_fields.ankerbeispiel} mit Ankerbeispielen. Die zugeordneten Regeln werden bei der Codierung und Codeprüfung berücksichtigt.`));
+  if(result.context_check){
+    const check=result.context_check,details=el('details');details.append(el('summary','Kontextprüfung vor dem Start'));
+    details.append(el('p',`${check.context} Tokens Kontext · ${check.answer_limit} Tokens Antwortlimit. ${check.note}`));
+    for(const row of check.checks||[])details.append(el('p',`${row.module}: ${row.requests_checked} Eingaben geprüft, größte Rechengrenze ${row.required_bound}.`));
+    box.append(details);
+    for(const warning of check.warnings||[])box.append(el('p','Hinweis: '+warning,'hint'));
+  }
   return result;
 }
 function badge(status){const labels={running:'Läuft',success:'Abgeschlossen',failed:'Fehler',paused:'Pausiert',interrupted:'Unterbrochen',starting:'Startet'};return el('span',labels[status]||status,'badge '+status);}

@@ -1,3 +1,17 @@
+# 0.3.5 · Beta · Robustere Zusammenfassungen und Antwortreparatur
+
+**Kontextprüfung vor dem Start:** Zu große bereits bekannte Anfragen sperren den Lauf mit konkreten Abhilfen. Hinweise machen knappen Reparaturplatz und die unbekannte Größe späterer Modellbefunde sichtbar. Die Prüfung benötigt keine Modellanfrage.
+
+Zu große Eingaben für die Cluster- und Gesamtzusammenfassung werden in passende Teile zerlegt und stufenweise verdichtet. Jeder Eingabeteil wird verarbeitet; es werden keine überzähligen Textstellen einfach abgeschnitten. Die Verdichtung kann Details verlieren und ersetzt keine Prüfung am Original. Zahl der Teile und Stufen stehen im Laufprotokoll. Diese Änderung betrifft die Zusammenfassung, nicht sämtliche Analysearten.
+
+Abgebrochene kurze Zwischenzusammenfassungen erhalten bis zu drei Versuche mit geprüftem Antwortbudget. Reicht das nicht, wird der betroffene Teil begrenzt weiter aufgeteilt. Vollständige Zwischenstände werden gespeichert und bei unveränderten Eingaben und unverändertem Programmstand wiederverwendet. Leere Antworten, fehlende Verkleinerung oder ein unmögliches Kontextbudget brechen mit einem Fehler ab.
+
+Die Reparatur ungültiger Codierantworten erhält wieder die ursprüngliche Textstelle und das Codebuch einschließlich der zugeordneten Regeln. Die anschließende Prüfung erlaubter Codes und IDs bleibt bestehen. Auch die Reparaturanfrage muss ins Kontextfenster passen; das Programm kürzt dafür keine Belege oder Regeln stillschweigend.
+
+**Umstieg:** Vor dem Update laufende lokale Auswertungen abschließen. Nach dem Update einen neuen Lauf starten; alte Ergebnisse bleiben lesbar. Die strenge Prüfung beim Wiederaufnehmen lässt keine Vermischung unterschiedlicher Programmstände zu. Private Konfigurationen und Dateien beim Aktualisieren behalten.
+
+Windows- und Mac-Starter bleiben im Paket enthalten. Sie verwenden denselben Analysecode. Die Änderungen sind keine neue Qualitätsmessung des Modells; technische Tests und Grenzen stehen in [INSTALLATION_TEST.md](INSTALLATION_TEST.md).
+
 # 0.3.4 · Beta · Parallele lokale Ollama-Anfragen
 
 Die Auswahl „Gleichzeitige Anfragen“ aktiviert nun die Verarbeitung: 1 bleibt Standard; ab 2 startet eine eigene lokale Ollama-Instanz mit der gewählten Zahl an Slots. Frische Speicherprüfung vor dem Start, höchstens 8, keine Cloud-Parallelisierung. Clustering, Code-Verifikation und Blindcodierung verarbeiten unabhängige Einheiten parallel. Ergebnisreihenfolge, Passage-Gruppen und geprüfte Zwischenstände bleiben erhalten. Fortschrittszählung und Rohantwortprotokolle sind gegen gleichzeitige Schreibzugriffe geschützt. Die eigene Instanz endet mit dem Workflow; bestehende Server bleiben erhalten.

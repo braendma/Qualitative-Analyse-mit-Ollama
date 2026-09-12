@@ -7,6 +7,7 @@ from datetime import datetime
 
 from utils_prompt import build_prompt_for_module
 from clusterer_core import ollama_chat
+from llm_client import LLMResponseError
 
 logger = logging.getLogger("summarizer")
 
@@ -14,24 +15,36 @@ logger = logging.getLogger("summarizer")
 def llm_summary(system_prompt: str, user_prompt: str, ollama_params: dict) -> str:
     """LLM-Zusammenfassung mit Debug-Logging und bis zu 3 Versuchen."""
 
+    from summary_reduction import reduce_prompt
+    user_prompt = reduce_prompt(system_prompt, user_prompt, ollama_params, llm_summary)
+
     for attempt in range(3):
         logger.info(f"[Summary-Retry] Versuch {attempt+1}/3")
 
         logger.debug("\n===== SUMMARY SYSTEM PROMPT =====\n%s\n", system_prompt)
         logger.debug("\n===== SUMMARY USER PROMPT =====\n%s\n", user_prompt)
 
-        content = ollama_chat(
-            [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-            model=ollama_params["model"],
-            temperature=ollama_params["temperature"],
-            max_tokens=ollama_params["max_tokens"],
-            think=ollama_params.get("think"),
-            log_thinking=ollama_params.get("log_thinking", False),
-            settings=ollama_params,
-        )
+        base_limit = int(ollama_params["max_tokens"])
+        safe_limit = int(ollama_params.get("num_ctx", 32768)) - len((system_prompt + user_prompt).encode("utf-8")) - 1024
+        answer_limit = min(safe_limit, base_limit * (2 ** attempt)) if base_limit <= 600 else base_limit
+        try:
+            content = ollama_chat(
+                [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                model=ollama_params["model"],
+                temperature=ollama_params["temperature"],
+                max_tokens=answer_limit,
+                think=ollama_params.get("think"),
+                log_thinking=ollama_params.get("log_thinking", False),
+                settings={**ollama_params, "max_tokens": answer_limit},
+            )
+        except LLMResponseError:
+            if attempt == 2:
+                raise
+            logger.warning("Unvollständige Zusammenfassung; erneuter Versuch mit geprüftem Antwortbudget.")
+            continue
 
         logger.info("\n===== RAW SUMMARY OUTPUT =====\n%s\n==============================\n", content)
 
@@ -42,7 +55,7 @@ def llm_summary(system_prompt: str, user_prompt: str, ollama_params: dict) -> st
         return content.strip()
 
     logger.error("[Summary-Fehler] Nach 3 Versuchen keine gültige Antwort.")
-    return ""
+    raise LLMResponseError("Nach drei Versuchen keine vollständige Zusammenfassung.")
 
 
 def summarize_clusters(

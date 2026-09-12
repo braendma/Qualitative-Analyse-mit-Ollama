@@ -366,18 +366,16 @@ def call_json_with_repair(
                 "validation_error": problem,
             })
 
-    repair_messages = [
-        {
-            "role": "system",
-            "content": (
-                "Du reparierst ausschließlich die folgende JSON-Antwort. "
-                "Bewahre die inhaltliche Bedeutung, erfinde keine Codes oder Segment-IDs "
-                "und gib nur ein gültiges JSON-Objekt ohne Markdown zurück."
-            ),
-        },
+    repair_messages = [*messages,
+        {"role": "assistant", "content": raw},
         {
             "role": "user",
-            "content": f"Validierungsfehler: {problem}\n\nFehlerhafte Antwort:\n{raw}",
+            "content": (
+                "Prüfe die Antwort erneut anhand der ursprünglichen Textstelle und des Codebuchs. "
+                "Verwende ausschließlich vorhandene Codepfade oder die erlaubte unklare Zuordnung. "
+                "Erfinde keine Codes oder Segment-IDs. Gib nur ein gültiges JSON-Objekt zurück. "
+                f"Validierungsfehler: {problem}"
+            ),
         },
     ]
     repaired_raw = llm(repair_messages, {**params, "temperature": 0.0})

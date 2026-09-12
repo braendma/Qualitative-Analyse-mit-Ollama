@@ -266,6 +266,11 @@ def main(argv=None):
         raise ValueError(f"{unknown} Codierzeilen passen nicht zum Codebuch. Codepfade vor dem Lauf abgleichen.")
     from managed_ollama import workers, ManagedOllama
     workers(config.get("llm", {}))
+    from context_preflight import check_context, require_context
+    context_check=check_context(config,input_segments,code_index,modules)
+    require_context(context_check)
+    for warning in context_check['warnings']:
+        logging.warning('Kontext-Vorprüfung: %s',warning)
     if args.validate_only:
         print(json.dumps({"status": "valid", "segments": len(input_segments), "code_paths": len(code_index),
                           "modules": len(modules), "model_calls": 0}))

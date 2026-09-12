@@ -1,12 +1,16 @@
 # Qualitative Analyse mit Ollama
 
+**Kontextprüfung vor dem Start:** Zu große bereits bekannte Anfragen sperren den Lauf mit konkreten Abhilfen. Hinweise machen knappen Reparaturplatz und die unbekannte Größe späterer Modellbefunde sichtbar. Die Prüfung benötigt keine Modellanfrage.
+
+**Neu in 0.3.5:** Große Zusammenfassungen werden stufenweise verdichtet; abgebrochene Antworten und ungültige Codierungen werden mit geprüftem Kontext erneut bearbeitet. Erfolgreiche Teilschritte bleiben für die Wiederaufnahme erhalten. [Änderungen und Umstieg](docs/RELEASE_NOTES.md).
+
 **Neu in 0.3.4:** Gleichzeitige lokale Ollama-Anfragen in der Oberfläche wählen. Die Anwendung prüft den freien Speicher und startet bei einer Auswahl ab 2 eine eigene Ollama-Instanz mit passenden Verarbeitungsplätzen. Clustering und Codierprüfungen verarbeiten unabhängige Einheiten parallel. [Anleitung](docs/HANDBUCH.md#speicher-und-parallele-anfragen).
 
 Mit diesem Programm kannst du bereits codierte Interviewstellen auswerten und menschliche Codierungen mit Modellvorschlägen vergleichen. Die lokale Bedienoberfläche führt durch Dateiimport, Eingabeprüfung, Modulauswahl und Ergebnisse. Für die normale Bedienung musst du keine Python- oder YAML-Dateien bearbeiten.
 
 Die Auswertung läuft standardmäßig mit lokalem Ollama. Für freigegebene Inhalte sind optional Ollama Cloud, OpenAI, Anthropic und Hugging Face verfügbar; die DSGVO-Sperre ist pro Projekt zunächst aktiviert. Modellvorschläge und Berichte müssen fachlich geprüft werden; sie ersetzen keine eigenständige qualitative Analyse.
 
-**Aktuelle Vorabversion: [0.3.4 · Parallele Ollama-Anfragen](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/tag/v0.3.4).** Mit Prüf- und Rückmeldungsfunktion, interaktiven Berichten und optionalen Cloud-Anbietern. OpenAI, Anthropic und Hugging Face sind technisch mit Mocks geprüft, aber noch nicht live getestet.
+**Aktuelle Vorabversion: [0.3.5 · Robustere Zusammenfassungen](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/tag/v0.3.5).** Mit Prüf- und Rückmeldungsfunktion, interaktiven Berichten und optionalen Cloud-Anbietern. OpenAI, Anthropic und Hugging Face sind technisch mit Mocks geprüft, aber noch nicht live getestet.
 
 Das gefaltete **b** von braendma ist jetzt als lokales Programmsignet eingebunden. Über **Handbuch** neben **Telegram-Updates** öffnet sich die vollständige Anleitung mit Bildern und Beispielen, auch ohne Internet.
 
@@ -33,7 +37,7 @@ Seit Beta 3: lesbarere Clusterdiagramme und Konfusionsmatrix, anklickbare Person
 
 ## Einrichten und öffnen
 
-**macOS:** Ein separates [Mac-ZIP zur Version 0.3.4](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/tag/v0.3.4) steht als zusätzlicher Download bereit. Darin im Unterordner `start/macos/` zuerst `Einrichtung.command`, danach `Start_Oberflaeche.command` öffnen. [Mac-Anleitung, Voraussetzungen und Testumfang](start/macos/README.md). Der gemeinsame Programmcode bleibt zentral; die Windows-Startdateien bleiben unverändert.
+**macOS:** Ein separates [Mac-ZIP zur Version 0.3.4](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/tag/v0.3.5) steht als zusätzlicher Download bereit. Darin im Unterordner `start/macos/` zuerst `Einrichtung.command`, danach `Start_Oberflaeche.command` öffnen. [Mac-Anleitung, Voraussetzungen und Testumfang](start/macos/README.md). Der gemeinsame Programmcode bleibt zentral; die Windows-Startdateien bleiben unverändert.
 
 1. Das **gesamte Repository** über GitHub **Code → Download ZIP** herunterladen und entpacken. Dateien und Unterordner zusammenlassen.
 2. Python **3.10 oder neuer** und Ollama installieren, falls sie noch fehlen. Für die spätere Analyse muss ein geeignetes lokales Ollama-Modell vorhanden sein. Der Speicherbedarf hängt vom Modell und Kontextfenster ab.
