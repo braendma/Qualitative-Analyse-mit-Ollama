@@ -1,7 +1,12 @@
+from progress_events import begin_phase, update_progress
 """Bounded map/reduce of analytical sources with a complete reference graph."""
 import json
 from llm_client import ContextBudgetError
 from runtime_support import fingerprint, PartCheckpoint
+
+
+class SynthesisCallBudgetError(ContextBudgetError):
+    """The call cap cannot cover the next known reduction round."""
 
 
 def fits(system, user, params):
@@ -74,13 +79,21 @@ def reduce_sources(sources, build_final_prompt, params, llm):
         if batch: batches.append(batch)
         reduced = []
         old_size = len(json.dumps(items,ensure_ascii=False).encode())
-        for batch in batches:
+        begin_phase('reduction_level', len(batches), 'batches', level+1)
+        remaining = max_calls - calls
+        if len(batches) > remaining:
+            raise SynthesisCallBudgetError(
+                f'Synthese-Aufrufbudget reicht vor Verdichtungsebene {level+1} nicht: '
+                f'mindestens {len(batches)} Teilaufgaben, {remaining} Aufrufe übrig '
+                f'(max_calls={max_calls}). Keine weiteren Modellaufrufe in dieser Runde. '
+                'llm.hierarchical_synthesis.max_calls prüfen; nach Änderung neuen Lauf anlegen.')
+        for batch_index, batch in enumerate(batches, 1):
             def compute_part():
                 messages = [{'role':'system','content':system},{'role':'user','content':prompt(batch)[1]}]
                 original_messages = list(messages)
                 for attempt in range(2):
                     if calls + attempt >= max_calls:
-                        raise ContextBudgetError('Hierarchische Synthese erreicht max_calls.')
+                        raise SynthesisCallBudgetError('Hierarchische Synthese erreicht max_calls einschließlich Antwortreparaturen.')
                     raw = llm(messages,{**params,'response_schema':schema})
                     try:
                         from coding_validation_common import parse_json_object
@@ -95,6 +108,7 @@ def reduce_sources(sources, build_final_prompt, params, llm):
             part = checkpoint.run([level,[x['id'] for x in batch]],
                 {'source_fingerprint':source_identity,'batch':batch,'system':system}, compute_part)
             calls += part['model_calls']
+            update_progress(completed=batch_index)
             # Provenance links cover all actual inputs, regardless of cache reuse.
             summaries = [{'text':part['text'],'input_ids':[x['id'] for x in batch]}]
             for summary in summaries:

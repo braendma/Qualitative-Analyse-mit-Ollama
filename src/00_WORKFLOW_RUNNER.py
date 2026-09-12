@@ -129,11 +129,17 @@ def run_step(module: dict, command: list[str], cwd: Path):
     atomic_json(progress_path, {'module':module['id'],'completed':0,'total':None,'requests':0,'request_active':False})
     child_env = {**os.environ, "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8",
                  'WORKFLOW_MODULE':module['id'],'WORKFLOW_PROGRESS_FILE':str(progress_path)}
-    result = subprocess.run(command, cwd=str(cwd), text=True, encoding="utf-8", env=child_env)
+    execution_path = cwd / ('execution_' + module['id'] + '.log')
+    with execution_path.open('ab') as execution_log:
+        result = subprocess.run(command, cwd=str(cwd), env=child_env,
+                                stdout=execution_log, stderr=subprocess.STDOUT)
     if result.returncode != 0:
-        raise RuntimeError(
-            f"Workflow abgebrochen: Modul '{module['id']}' endete mit Exit-Code {result.returncode}."
-        )
+        with execution_path.open('rb') as failed_log:
+            failed_log.seek(0, 2); size=failed_log.tell(); failed_log.seek(max(0,size-16000))
+            tail=failed_log.read().decode('utf-8',errors='replace')
+            LOGGER.error('Letzte Modulausgabe:\n%s', tail)
+        from failure_help import failure_help,ModuleFailure
+        raise ModuleFailure(f"Modul '{module['id']}' endete mit Exit-Code {result.returncode}.", failure_help(tail))
 
     missing = []
     for output in module.get("outputs", []) or []:
@@ -334,8 +340,15 @@ def main(argv=None):
     try:
         manifest["ollama_runtime"] = managed.start()
         atomic_json(output_dir / "workflow_manifest.json", manifest)
+        failures=[]
         for module in modules:
             if module["id"] in completed_steps:
+                continue
+            missing_dependencies=[d for d in module.get('depends_on',[]) if d not in completed_steps]
+            if missing_dependencies:
+                manifest.setdefault('module_status',{})[module['id']]='blocked'
+                manifest.setdefault('blocked_by',{})[module['id']]=missing_dependencies
+                atomic_json(output_dir/'workflow_manifest.json',manifest)
                 continue
             if args.pause_file and Path(args.pause_file).is_file():
                 manifest.update(status="paused", current_module=None)
@@ -343,20 +356,39 @@ def main(argv=None):
                 LOGGER.info("Workflow auf Wunsch zwischen Modulen pausiert.")
                 return
             manifest["current_module"] = module["id"]
+            manifest.setdefault('module_status', {})[module['id']] = 'running'
             atomic_json(output_dir / "workflow_manifest.json", manifest)
-            script_path = resolve_path(script_dir, module["script"])
-            if not script_path.is_file():
-                raise FileNotFoundError(script_path)
-            rendered = [render_arg(value, runtime).strip() for value in module.get("args", [])]
-            command = [sys.executable, str(script_path), *[v for v in rendered if v]]
-            run_step(module, command, output_dir)
+            try:
+                script_path = resolve_path(script_dir, module["script"])
+                if not script_path.is_file():
+                    raise FileNotFoundError(script_path)
+                rendered = [render_arg(value, runtime).strip() for value in module.get("args", [])]
+                command = [sys.executable, str(script_path), *[v for v in rendered if v]]
+                run_step(module, command, output_dir)
+            except Exception as exc:
+                from failure_help import failure_help
+                failures.append((module['id'],exc))
+                manifest['module_status'][module['id']]='failed'
+                manifest.setdefault('module_errors',{})[module['id']]={
+                    **getattr(exc,'diagnostic',failure_help(exc)), 'module_name':module['name']}
+                atomic_json(output_dir/'workflow_manifest.json',manifest)
+                LOGGER.error('Modul %s fehlgeschlagen; unabhängige Module werden weiter bearbeitet.',module['id'])
+                continue
             completed_steps.append(module["id"])
+            manifest['module_status'][module['id']] = 'success'
+            manifest.get('module_errors',{}).pop(module['id'],None)
+            manifest.get('blocked_by',{}).pop(module['id'],None)
             manifest["completed_steps"] = list(completed_steps)
             for filename in module.get("outputs", []):
                 path = output_dir / filename
                 if path.is_file():
                     manifest["output_hashes"][filename] = file_hash(path)
             atomic_json(output_dir / "workflow_manifest.json", manifest)
+        if failures:
+            manifest['current_module']=failures[0][0]
+            raise failures[0][1]
+        if any(m['id'] not in completed_steps for m in modules):
+            raise RuntimeError('Einige Module warten auf fehlende Vorstufen; kein vollständiger Bericht erstellt.')
         finished_at = datetime.now().isoformat()
         report_path = build_full_report(output_dir, modules, finished_at)
         manifest['output_hashes'].update({name:file_hash(output_dir/name) for name in ('gesamtbericht.md','gesamtbericht.html')})
@@ -365,6 +397,8 @@ def main(argv=None):
         atomic_json(output_dir / "workflow_manifest.json", manifest)
         LOGGER.info("Workflow abgeschlossen. Lauf-ID: %s. Bericht: %s", run_id, report_path)
     except Exception as exc:
+        if manifest.get('current_module'):
+            manifest.setdefault('module_status', {})[manifest['current_module']] = 'failed'
         manifest.update(status="failed", failed_at=datetime.now().isoformat(), error=str(exc))
         atomic_json(output_dir / "workflow_manifest.json", manifest)
         raise

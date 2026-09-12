@@ -33,6 +33,9 @@ def configure_logging(log_file: str) -> None:
     logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 
+from progress_events import track_module
+
+@track_module
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Segmente blind mit einem externen Kategoriesystem codieren")
     parser.add_argument("--config", "-c", default=str(DEFAULT_CONFIG))

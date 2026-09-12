@@ -1,3 +1,4 @@
+from progress_events import begin_phase, update_progress
 from runtime_support import PartCheckpoint
 from batching import bounded_batches
 from response_schemas import schema_for, require_structure
@@ -296,16 +297,35 @@ def build_relation_analysis(
     units = build_units(cluster_data.get("clusters", []), id_to_text, summary_data, cluster_data.get("segment_metadata"))
     pairs, total_candidates = build_candidate_pairs(units, max_pairs, max_segments_per_path)
     pair_lookup = {p["pair_id"]: p for p in pairs}
+    context_receipts={}
 
+    context_receipts = {}
+    begin_phase('preparation', len(pairs), 'pairs')
     if not pairs:
         normalized = {"beziehungen": [], "gesamteinordnung": "Keine Codepfad-Paare mit gemeinsamen Fällen gefunden."}
     else:
         def build_batch(batch):
             return build_prompt_for_module("relation_analysis", prompts=prompts, context=context,
                 data=json.dumps({"kandidaten": batch}, ensure_ascii=False, indent=2))
+        from analysis_context import compact_context
+        from summarizer_core import llm_summary
+        context_receipts={}
+        prepared=[]
+        for pair_index, pair in enumerate(pairs, 1):
+            sy,us=build_batch([pair])
+            if len((sy+us).encode('utf-8'))+int(ollama_params.get('max_tokens',6000))+1024>int(ollama_params.get('num_ctx',16384)):
+                value=dict(pair);receipts={}
+                for side in ('a','b'):
+                    value['cluster_'+side],receipts[side]=compact_context(pair['cluster_'+side],ollama_params,llm_summary,800)
+                context_receipts[pair['pair_id']]=receipts
+                prepared.append(value)
+            else:prepared.append(pair)
+            update_progress(completed=pair_index)
         normalized = {"beziehungen": [], "gesamteinordnung": ""}
         notes = []
-        for batch, system_prompt, user_prompt in bounded_batches(pairs, build_batch, ollama_params):
+        batches = list(bounded_batches(prepared, build_batch, ollama_params))
+        begin_phase('analysis', len(batches), 'batches')
+        for batch_index, (batch, system_prompt, user_prompt) in enumerate(batches, 1):
             def compute_part():
                 raw = _llm(system_prompt, user_prompt, ollama_params)
                 parsed = safe_json_loads(raw)
@@ -319,6 +339,7 @@ def build_relation_analysis(
 
             normalized["beziehungen"].extend(part["beziehungen"])
             notes.append(part["gesamteinordnung"])
+            update_progress(completed=batch_index)
         normalized["gesamteinordnung"] = "\n\n".join(notes)
         for index, item in enumerate(normalized["beziehungen"], 1):
             item["relation_id"] = f"REL{index:04d}"
@@ -327,6 +348,7 @@ def build_relation_analysis(
         "created_at": datetime.now().isoformat(),
         "source_cluster_created_at": cluster_data.get("created_at"),
         "source_summary_created_at": summary_data.get("created_at"),
+        "context_reduction": context_receipts,
         "codepfad_count": len(units),
         "candidate_pair_count_total": total_candidates,
         "omitted_pair_count": total_candidates - len(pairs),
@@ -342,6 +364,7 @@ def build_relation_analysis(
         f"Analysierte Codepfade: **{len(units)}** · Kandidatenpaare: **{len(pairs)}** von **{total_candidates}**\n\n",
         "Die Beziehungen sind qualitative, datenbasierte Relationen. Sie sind nicht automatisch als Kausalität zu verstehen.\n\n",
     ]
+    if context_receipts:md.append('Methodischer Hinweis: Umfangreiche Clusterkontexte wurden vollständig verdichtet. Details können verloren gehen; ausgewählte Originalsegmente und ihre Identitäten bleiben unverändert.\n\n')
     if normalized["gesamteinordnung"]:
         md.append(f"## Gesamteinordnung\n\n{normalized['gesamteinordnung']}\n\n")
 

@@ -1,4 +1,4 @@
-name: macOS installation and tests
+name: Desktop installation and tests
 on:
   push:
     branches: [main]
@@ -7,6 +7,28 @@ on:
 permissions:
   contents: read
 jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    env:
+      MPLBACKEND: Agg
+      PYTHONUTF8: '1'
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Fresh installation through the Windows setup script
+        shell: pwsh
+        run: ./start_local.ps1 -Setup
+      - name: Python regression tests (synthetic data, mocked models)
+        shell: pwsh
+        run: ./.venv/Scripts/python.exe -m unittest discover -s tests -p 'test_*.py'
+      - name: JavaScript regression tests
+        run: node --test tests/test_local_app_frontend.cjs tests/test_review_frontend.cjs tests/test_progress_display.cjs tests/test_source_display.cjs
+      - name: Check the installed local web server
+        run: ./.venv/Scripts/python.exe tests/smoke_windows.py
   macos:
     runs-on: macos-15
     timeout-minutes: 20
@@ -26,6 +48,6 @@ jobs:
       - name: Python regression tests (synthetic data, mocked models)
         run: .venv-macos/bin/python3 -m unittest discover -s tests -p 'test_*.py'
       - name: JavaScript regression tests
-        run: node --test tests/test_local_app_frontend.cjs tests/test_review_frontend.cjs
+        run: node --test tests/test_local_app_frontend.cjs tests/test_review_frontend.cjs tests/test_progress_display.cjs tests/test_source_display.cjs
       - name: Start the user launcher and check the local web server
         run: .venv-macos/bin/python3 tests/smoke_macos.py

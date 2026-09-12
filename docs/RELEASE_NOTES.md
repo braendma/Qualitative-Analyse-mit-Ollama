@@ -1,3 +1,24 @@
+# 0.4.0-beta.1 · 13. September 2026
+
+Diese Beta ergänzt nachvollziehbare Personenzuordnung und Hilfe bei größeren Analysen. Ein Quelldokument zählt erst nach ausdrücklicher Zuordnung als Person; mehrere Interviewteile können gemeinsam ausgewertet werden. Oberfläche und Kommandozeile prüfen die Zuordnung vor der Analyse. Veränderte Daten erfordern eine neue Bestätigung.
+
+- Herkunftsdetails der Gesamtsynthese lösen technische Kennungen in verständliche Analyse-Namen auf. Gespeicherte Originaltextstellen sind im HTML aufklappbar; fehlende oder nur mittelbare Belegzuordnungen werden offengelegt. Bestehende Analysedaten werden beim erneuten HTML-Export nicht verändert.
+- Zehn Themenhilfen und Ergebnisbeispiele für alle 15 Module, mit künstlichen Tabellen und Bildern direkt an der Oberfläche.
+- Lesbare Modul-Prompts mit Systemanweisung, Aufgabentext und gemeinsamen Regeln. Bestehende Läufe zeigen ihre gespeicherte Konfiguration. Die Ansicht setzt keine Studiendaten ein und ist kein vollständiges Anfrageprotokoll.
+- Fehlerhilfe für Speicher, Kontext, Antwortvalidierung, Aufrufbudget, Verbindung, Zugang und Kontingent; Knopf zur passenden Einstellung. Erneute Eingabeprüfung speichert gültige Einstellungen, startet aber keinen Lauf.
+- Das Synthese-Aufrufbudget ist im Formular einstellbar. Vor jeder bekannten Verdichtungsrunde wird der Mindestbedarf geprüft. Spätere Runden und Reparaturbedarf lassen sich nicht vollständig vorhersagen.
+- Begrenzte Parallelität für unabhängige SWOT-Kategorien und Personenanalysen. Erfolgreiche Teilergebnisse bleiben auch bei Fehlern anderer Einheiten erhalten; fehlgeschlagene Teile werden nicht als erfolgreich gezählt.
+- Große Personenvergleiche, Meta-SWOT, Kontrast-, Ambivalenz-, Zusammenhangs- und Beleganalysen nutzen bei Bedarf dokumentierte Teilprüfungen bzw. Verdichtungen. Grenzen blockübergreifender Aussagen und mögliche Detailverluste werden ausdrücklich benannt.
+- Gemeinsame Clusterkontexte werden in Personenprompts einmal mit eindeutigen Referenzen übertragen; Originaltexte und Zuordnungen bleiben erhalten.
+- Fortschritt in Oberfläche und Telegram trennt Modulabschluss und aktuelle Arbeitseinheiten. Verdichtungsebenen, letzte Anfrage/Antwort und wiederverwendete Teile werden eingeordnet. Unbekannte Gesamtzahlen werden nicht geschätzt. Lange unveränderte Anfragen können nach zehn Minuten erneut gemeldet werden.
+
+**Umstieg:** Laufende lokale Analysen zunächst abschließen. Nach dem Update einen neuen Lauf erstellen und Personenzuordnung prüfen. Die strenge Wiederaufnahmeprüfung verhindert, dass alte Ergebnisse mit einer neuen Programmversion vermischt werden. Private Eingaben und Konfigurationen beim Aktualisieren erhalten.
+
+**Prüfung und Grenzen:** 203 Python- und 21 JavaScript-Tests mit künstlichen Daten bestanden unter Windows. Zusätzlich Browserprüfungen für 27 Beispielknöpfe, alle Modul-Prompts, acht Fehlerziele, Tastaturbedienung und mobile Darstellung. Frische Installation und HTTP-Start werden für Windows und macOS durch GitHub Actions geprüft; maßgeblich ist der erfolgreiche Prüflauf am Release-Commit. Das ist kein Nachweis gleicher Modellleistung auf jeder Hardware. Die automatische Parallelitätsschätzung benötigt NVIDIA; auf macOS zunächst eine Anfrage verwenden. API-Schlüssel werden unter macOS nur für die Sitzung gespeichert. Keine neue Live-Prüfung von OpenAI, Anthropic oder Hugging Face und kein empirischer Nachweis einer allgemeinen Qualitätssteigerung.
+
+
+Zwei ergänzende lokale Funktionstests mit granite4.2:30b (Thinking low, 12.288 Kontexttokens) verglichen wiederholte Clusterkontexte mit der Referenztabelle an vier erfundenen Textstellen. Beide Antworten enthielten dieselben vier gültigen Beleg-IDs sowie Unterrichtsfreude, Einkommen, Arbeitsbelastung und soziale Motivation. Die neue Anfrage war in diesem Beispiel kleiner (4.626 statt 5.222 UTF-8-Bytes). Das ist kein Qualitätsbenchmark: Beide Antworten verschärften eine Motivabwägung stellenweise zu einem Gegensatz mit „ausschließlich sozialer Motivation“, den der Ausgangstext nicht trägt. Eine fachliche Prüfung bleibt erforderlich; die Referenztabelle allein verhindert solche Deutungen nicht.
+
 # 0.3.5 · Beta · Robustere Zusammenfassungen und Antwortreparatur
 
 **Kontextprüfung vor dem Start:** Zu große bereits bekannte Anfragen sperren den Lauf mit konkreten Abhilfen. Hinweise machen knappen Reparaturplatz und die unbekannte Größe späterer Modellbefunde sichtbar. Die Prüfung benötigt keine Modellanfrage.
@@ -93,3 +114,15 @@ Nach diesem Programmwechsel einen neuen Analyselauf starten. Vorhandene Projektd
 ## Prüfstand und Grenzen
 
 Die [frische Installation unter Windows/Python 3.13](INSTALLATION_TEST.md) bestand 67 Python-Tests und vier Oberflächentests. Start, Demo und Eingabeprüfung wurden zusätzlich im Browser geprüft. Lokale Modellinferenz wurde dabei nicht getestet. Die künstlichen Beispiele prüfen technische Abläufe und sind kein unabhängiger wissenschaftlicher Gütebenchmark.
+
+
+Die Belegprüfung beschränkt das angeforderte JSON-Antwortformat auf die IDs des jeweiligen Prüfblocks. Auch danach werden alle Zuordnungen validiert. Scheitert die Reparatur einer ungültigen Antwort, folgt höchstens eine neue Anfrage mit der vollständigen ursprünglichen Eingabe. Bleiben IDs ungültig, stoppt das Modul mit Fehler; Gegenbelege werden nicht still entfernt. Anbieter müssen das Antwortschema tatsächlich unterstützen; die nachträgliche Prüfung gilt unabhängig davon.
+
+
+## Fortschrittsanzeige
+
+Der obere Balken zählt vollständig abgeschlossene Module. Da die Module unterschiedlich lange dauern, ist er keine Schätzung der verbleibenden Laufzeit. Darunter zeigt das aktive Modul seine abgeschlossenen Arbeitsschritte und einen Prozentwert, wenn eine Gesamtzahl bekannt ist. Ohne Gesamtzahl erscheint eine Aktivitätsanzeige mit dem ausdrücklichen Hinweis, dass kein Prozentwert verfügbar ist. Antwortzähler und Zeitstempel helfen dabei, laufende Verarbeitung von einer unveränderten Anzeige zu unterscheiden. Eine länger dauernde Anfrage ist allein kein Fehlernachweis.
+
+Die Zusammenfassung meldet in neuen Läufen jede abgeschlossene Clusterzusammenfassung und anschließend die Gesamtzusammenfassung als eigenen Schritt. Wiederverwendete geprüfte Ergebnisse zählen als erledigt; eine fehlgeschlagene Gesamtzusammenfassung zählt nicht als abgeschlossen.
+
+Fortschritt aller Module geprüft: separate Vorbereitung, Analyse und Abschlussphasen; untergeordnete Prüfblöcke überschreiben keine Personen-/Dimensionszähler. Übersicht: FORTSCHRITT.md. Vorhandene eingefrorene Läufe behalten ihre bisherigen Daten; fehlende Prozentwerte werden ausdrücklich als unbekannt angezeigt.

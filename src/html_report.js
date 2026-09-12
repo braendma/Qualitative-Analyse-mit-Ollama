@@ -9,7 +9,7 @@ for(const section of reportData.sections){
   const box=el('details',undefined,'report-section');box.id=section.id;box.open=true;
   const summary=el('summary',section.title),content=el('div',undefined,'report-content');
   const media={};for(const [reference,key] of Object.entries(section.images))media[reference]=reportData.images[key];
-  markdownReport(section.markdown,content,media);box.append(summary,content);document.getElementById('report-sections').append(box);
+  markdownReport(section.markdown,content,media,section.source_refs||{},reportData.charts?.evidence||{});box.append(summary,content);document.getElementById('report-sections').append(box);
   const button=el('button',section.title,'nav-link');button.onclick=()=>{reportSearch.value='';filterReport();box.open=true;box.scrollIntoView({behavior:'smooth',block:'start'});summary.focus();};
   document.getElementById('report-nav').append(button);
   reportSections.push({box,text:(section.title+' '+section.markdown).toLocaleLowerCase('de-DE')});

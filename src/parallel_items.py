@@ -2,10 +2,15 @@
 from concurrent.futures import ThreadPoolExecutor,wait,FIRST_COMPLETED
 
 
-def completed_items(items,compute,workers=1):
+def completed_items(items,compute,workers=1,*,on_error=None):
     if type(workers) is not int or not 1 <= workers <= 8:raise ValueError('Ein bis acht parallele Arbeitseinheiten erlaubt.')
     if workers==1:
-        for index,item in enumerate(items):yield index,compute(item)
+        for index,item in enumerate(items):
+            try: result=compute(item)
+            except Exception as exc:
+                if on_error: on_error(index,exc)
+                raise
+            yield index,result
         return
     iterator=iter(enumerate(items));running={};failure=None;exhausted=False
     with ThreadPoolExecutor(max_workers=workers) as pool:
@@ -20,6 +25,7 @@ def completed_items(items,compute,workers=1):
                 index=running.pop(future)
                 try:result=future.result()
                 except Exception as exc:
+                    if on_error: on_error(index,exc)
                     if failure is None:failure=exc
                     exhausted=True
                 else:yield index,result

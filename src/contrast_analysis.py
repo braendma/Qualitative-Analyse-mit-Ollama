@@ -21,6 +21,9 @@ logging.basicConfig(
 logger = logging.getLogger("contrast_analysis")
 
 
+from progress_events import track_module
+
+@track_module
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Qualitative Kontrast- und Negativfallanalyse")
     parser.add_argument("--config", "-c", default=str(DEFAULT_CONFIG))

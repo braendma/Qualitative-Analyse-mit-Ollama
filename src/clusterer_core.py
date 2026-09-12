@@ -883,12 +883,12 @@ def run_clustering(
     from progress_events import update_progress
     groups = list(grouped_facets)
     ordered = [None] * len(groups)
-    update_progress(completed=0, total=len(groups), unit='Kategorien')
+    update_progress(completed=0, total=len(groups), unit='categories')
     count = 0
     for index, result in completed_items(groups, compute_group, ollama_params.get('parallel_workers', 1)):
         ordered[index] = result
         count += 1
-        update_progress(completed=count, total=len(groups), unit='Kategorien')
+        update_progress(completed=count, total=len(groups), unit='categories')
     # Matplotlib and shared reports stay on the caller thread in input order.
     for code_path, df_facet, clusters in ordered:
         haupt, sub, auspraegung, facette = levels[code_path]

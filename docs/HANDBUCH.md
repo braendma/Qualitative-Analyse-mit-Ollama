@@ -1,6 +1,6 @@
 # Handbuch · Qualitative Analyse mit Ollama
 
-Dieses Handbuch begleitet dich vom ersten Start bis zum erneuten Analyselauf mit geprüften Codierungen. Alle Personen, Texte und Beurteilungen in den Beispielen sind erfunden. Stand: 0.3.4 · Parallele Ollama-Anfragen (Beta).
+Dieses Handbuch begleitet dich vom ersten Start bis zum erneuten Analyselauf mit geprüften Codierungen. Alle Personen, Texte und Beurteilungen in den Beispielen sind erfunden. Stand: 0.4.0-beta.1 · Personenzuordnung und Analysehilfen.
 
 Du erreichst die bebilderte Fassung jederzeit über **Handbuch** neben **Telegram-Updates** in der Seitenleiste. Sie öffnet sich in einem eigenen Tab, damit deine aktuelle Arbeit geöffnet bleibt. Ohne laufende Oberfläche kannst du `docs/HANDBUCH.html` doppelklicken. Den Programmordner einschließlich der Bilder zusammenlassen.
 
@@ -232,6 +232,22 @@ Nach Abschluss der kritischen Prüfungen bietet die Oberfläche an, **mit geprü
 
 ## 11. Telegram-Updates einrichten
 
+Die Fortschrittsmeldung enthält einen Balken für das aktuelle Modul mit Prozent und bearbeiteten Einheiten. Darunter stehen Modellantworten, gleichzeitig aktive Anfragen, das Alter der letzten Antwort und wiederverwendete Zwischenergebnisse, sofern verfügbar. Phasenwechsel und untergeordnete Prüfblöcke werden getrennt angezeigt; auch Fortschritt innerhalb eines Teilabschnitts kann eine neue Meldung auslösen. Ohne belastbare Gesamtzahl wird kein Prozentwert erfunden. Der Balken gilt für das Modul, nicht für die gesamte Laufzeit. Zwischenstände kommen bei Änderungen höchstens alle zwei Minuten; Modulabschlüsse werden zusätzlich zeitnah gemeldet.
+
+Beispiel mit künstlichen Zählern:
+
+```text
+📊 Qualitative Analyse · 14:30
+Module abgeschlossen: 2/15
+
+Personenanalyse
+▰▰▰▰▰▱▱▱▱▱ 50 %
+4 von 8 Personen
+Davon 2 aus geprüften Zwischenergebnissen wiederverwendet.
+Modellantworten: 6
+Modellanfragen gleichzeitig aktiv: 2
+```
+
 ![Optionale Telegram-Einstellungen ohne echte Zugangsdaten](screenshots/04-telegram-optional.jpg)
 
 Telegram ist optional. Der Browser zeigt den Fortschritt auch ohne Bot. Bei **Telegram-Updates** einen Bot-Token eingeben oder aus einer Textdatei laden, die Ziel-Chat-ID eintragen, Ereignisse auswählen und speichern. Der Bot muss zuvor im eigenen Telegram-Chat mit `/start` angesprochen worden sein. Die Chat-ID ist nicht die Telefonnummer.
@@ -281,3 +297,165 @@ Die Meldung nennt das betroffene Modul und seine größte Rechengrenze. Wähle m
 Unter dem Prüfergebnis stehen **Kontextprüfung vor dem Start** und Hinweise zur Antwortreparatur sowie zu späteren Modulen. Deren Modellbefunde gibt es vorab noch nicht: Ein bestandener Startcheck garantiert deshalb nicht, dass jede spätere Anfrage passt. Die Laufzeitprüfung bleibt aktiv. Die Rechengrenze basiert auf UTF-8-Bytes, nicht auf einer exakten Tokenisierung; sie kann strenger sein als die tatsächliche Modellgrenze. Es wird kein Modell gestartet und keine Datei an einen Anbieter gesendet.
 
 **Lokaler Kapazitätsversuch:** Mit `granite4.2:30b` (Q4_K_M) auf 12 GB + 16 GB GPU-Speicher gelangen zwei gleichzeitige Anfragen bei je 12.288 Tokens vollständig auf den GPUs. Bei je 16.384 Tokens wurden Teile in RAM ausgelagert. Die kurzen künstlichen Testanfragen benötigten ungefähr 13 beziehungsweise 17 Sekunden; das ist kein allgemeiner Benchmark und kein Test mit vollständig gefüllten Kontextfenstern. Die produktive Speicherschätzung ist weiterhin konservativ und kann weniger Parallelität freigeben als ein einzelner kontrollierter Versuch. Der Test überschreibt diese Sperre nur im Entwicklungsversuch; es gibt keine automatische Freigabe unsicherer Einstellungen.
+
+
+## Fortschritt und Teilfehler (vorbereiteter Patch nach 0.3.5)
+
+Die unter **Speicher und parallele Anfragen** gewählte Anzahl gilt künftig auch für unabhängige SWOT-Kategorien und Personenanalysen. Beispiel: Bei zwei Anfragen werden bis zu zwei Kategorien oder zwei Personen gleichzeitig bearbeitet. Die Gesamtzahl der Verarbeitungsplätze wird dadurch nicht vervielfacht. Abhängige Module warten weiterhin auf ihre benötigten Ergebnisse. Cloud-Anbieter bleiben bei einer Anfrage.
+
+Unter dem Modulfortschritt erscheint beispielsweise **3 von 8 Kategorien bearbeitet**. Darunter steht, wie viele fertige Einheiten aus geprüften Zwischenergebnissen wiederverwendet wurden. Diese zählen als abgeschlossen, erzeugen aber keine neue Modellantwort. Der Balken zeigt Arbeitseinheiten, keine genaue Restzeit: Eine umfangreiche Kategorie kann länger dauern als mehrere kleine.
+
+Bei einem Teilfehler erscheint sofort ein Hinweis. Bereits laufende Anfragen werden noch abgeschlossen und erfolgreiche Teilergebnisse gespeichert. Weitere Teilaufgaben starten nicht. Daher können ein Fehlerhinweis und laufende Modellanfragen gleichzeitig sichtbar sein. Der Gesamtbericht wird erst nach erfolgreichem Abschluss aller gewählten Module erstellt. Ist bei Telegram **Fehler** aktiviert, meldet der vorbereitete Patch auch diesen Teilfehler mit einer allgemeinen Nachricht ohne Studieninhalte.
+
+Nach einem vorübergehenden Fehler kannst du den unveränderten Lauf fortsetzen. Das Programm prüft Eingaben, Code, Modellparameter und gespeicherte Ergebnisse. Veränderte oder beschädigte Zwischenergebnisse werden nicht ungeprüft übernommen. Wenn du Einstellungen oder das Programm geändert hast, lege einen neuen Lauf an.
+
+## Entstandene Eingaben und gemeinsame Clusterkontexte
+
+Vor den SWOT- und Personenanfragen prüft das Programm sämtliche fertig aufgebauten Prompts des jeweiligen Moduls. Die zentrale Anfrageprüfung prüft außerdem jede tatsächliche Anfrage einschließlich ihrer jeweiligen Antwortreserve, auch in späteren Modulen und Reparaturversuchen. Reicht das Kontextfenster nicht, erscheinen die konservative Rechengrenze und der eingestellte Kontext in der Oberfläche; die Rechengrenzen werden auch im Laufprotokoll dokumentiert. Es handelt sich nicht um gemessene Tokenzahlen.
+
+Bei einer Kontextmeldung prüfe das gewählte Modell, das Kontextfenster und den freien Speicher erneut. Ein größeres Fenster kann weniger parallele Anfragen erlauben. Neue Einstellungen benötigen einen neuen Lauf. Das Programm erhöht das reservierte Fenster nicht stillschweigend und kürzt keine Originaltexte, um die Anfrage passend zu machen. Eine automatische Vergrößerung mit nachgewiesener Modell- und Speicherfreigabe ist in diesem Kandidaten noch nicht enthalten.
+
+In Personenprompts steht ein identischer Clusterkontext künftig einmal in einer gemeinsamen Tabelle. Jedes Segment verweist eindeutig auf seine zugehörigen Kontexte. Alle Segment-IDs, Originaltexte und Zuordnungen bleiben erhalten; gleich benannte, aber inhaltlich unterschiedliche Kontexte bleiben getrennt. Dies verkleinert vor allem Prompts mit vielen wiederholten Clusterinformationen. Es garantiert keine bessere fachliche Modellantwort: Die technische Rückführbarkeit auf dieselben Inhalte ist getestet, die Modellqualität ist vor Veröffentlichung noch anhand künstlicher Vergleichsfälle zu prüfen.
+
+
+## Große Personenvergleiche: zusätzliche Verdichtungsstufe
+
+Ausführliche Personenanalysen können zusammen zu groß für einen einzigen Vergleich werden. Der vorbereitete Patch verdichtet dann jede vollständige Personenanalyse getrennt in mehreren Schritten, bevor das Modell die Personen miteinander vergleicht. Alle Personen bleiben mit ihren ursprünglichen Kennungen vertreten; keine Person wird zur Größenbegrenzung entfernt. Die vollständigen Analysen und ihre Textbelege bleiben gespeichert.
+
+Der Vergleichsbericht weist die Verdichtung ausdrücklich aus. Sie ist ein zusätzlicher methodischer Schritt und kann Details verlieren. Prüfe wesentliche Gemeinsamkeiten, Unterschiede und Typenzuordnungen deshalb an den vollständigen Personenanalysen. Die JSON-Datei dokumentiert die verwendeten Personenverdichtungen und die Prüfsummen ihrer Quellen.
+
+Das eingestellte Kontextfenster und das Antwortlimit für den abschließenden Vergleich bleiben erhalten. Reicht der Platz nicht einmal für getrennte kompakte Einträge aller Personen, meldet das Programm dies. Ein größeres Fenster muss mit Modell und Speicherschätzung geprüft werden; der lokale Patch erhöht es nicht automatisch.
+
+Fehlermeldungen jedes Moduls werden zusätzlich in einer eigenen lokalen Protokolldatei erhalten. Bei einem Abbruch erscheint der letzte Teil dieser Ausgabe auch im herunterladbaren Laufprotokoll. Protokolle können Forschungsinhalte enthalten und gehören nicht ungeprüft in öffentliche Fehlermeldungen.
+
+
+## Große Meta-SWOT-Auswertungen und stockende Verdichtung
+
+Bei vielen SWOT-Befunden vergleicht das Programm kleinere Blöcke, in denen Befunde aus verschiedenen Quellen abwechselnd angeordnet werden. Jeder ursprüngliche Befund bleibt mit seiner Kennung und seinen Belegen erhalten. Passt ein einzelner Befund nicht in das eingestellte Kontextfenster, wird seine vollständige Eingabe vor dem Vergleich schrittweise verdichtet. Die JSON-Ausgabe dokumentiert Blöcke und gegebenenfalls verdichtete Quellen.
+
+Zwischen verschiedenen Blöcken findet keine zusätzliche globale Zusammenführung statt. Ähnliche Befunde können deshalb getrennt bleiben. Der Bericht weist diese Einschränkung aus; prüfe übergreifende Muster anhand der ursprünglichen Befunde. Verdichtung kann Einzelheiten verlieren und ersetzt keine menschliche Prüfung.
+
+Wenn eine für den Personenvergleich benötigte Verdichtung zunächst nicht kürzer wird, versucht das Programm bis zu drei gezielte Kürzungsanfragen mit der vollständigen Eingabe. Es schneidet keine Textenden ab. Einzelne Personen dürfen ihre Zielgröße überschreiten, wenn alle Personen zusammen einschließlich Antwortbudget und Reserve ins Kontextfenster passen. Das Programm verwendet dabei die kürzeste vollständig verarbeitete Darstellung und dokumentiert die tatsächlichen Größen. Ist die Gesamteingabe weiterhin zu groß, stoppt das Modul mit einer Fehlermeldung; bereits gültige Zwischenergebnisse bleiben gespeichert.
+
+
+## Wenn ein Modul fehlschlägt
+
+Die Laufkarte nennt das betroffene Modul, eine Einordnung der Ursache und den nächsten sinnvollen Schritt. Die Einordnung typischer Fehlermeldungen ist eine Hilfestellung; bei unbekannten Fehlern ist das Modulprotokoll maßgeblich. Unter „Module warten auf Vorstufen“ siehst du, welche Folgeschritte blockiert sind und welche Ergebnisse ihnen fehlen. Erfolgreiche Ergebnisse bleiben gespeichert. Unabhängige Module werden weiter bearbeitet; ein Lauf mit fehlerhaften oder blockierten Modulen wird nicht als vollständig abgeschlossen ausgegeben.
+
+| Meldung | Vorgehen |
+| --- | --- |
+| Kontext reicht nicht | Kontext- und Speicherprüfung erneut ausführen. Ein größeres Fenster nur verwenden, wenn Modell und Speicher es unterstützen. Mit geänderten Einstellungen einen neuen Lauf starten. |
+| Speicher reicht nicht | Andere GPU-Anwendungen schließen. Falls nötig Parallelität reduzieren oder ein kleineres Modell wählen. |
+| Verbindung oder Zeitüberschreitung | Ollama beziehungsweise Anbieter und Verbindung prüfen; anschließend den Lauf fortsetzen. Bei Wiederholung auch Speicher und Parallelität prüfen. |
+| Anmeldung oder Kontingent | Schlüssel/Berechtigungen beziehungsweise verfügbares Kontingent beim gewählten Anbieter prüfen. Schlüssel nur im dafür vorgesehenen Feld ändern. |
+| Ungültige Antwort oder stockende Verdichtung | Antwortlimit und Kontext zusammen prüfen. Bei wiederholtem Fehler das Modulprotokoll auswerten; nicht unverändert endlos neu starten. |
+
+**Diesen Lauf fortsetzen** nutzt seine ursprünglichen Eingaben und Einstellungen sowie passende geprüfte Zwischenergebnisse. Wenn du Daten, Kategoriensystem, Modell oder Einstellungen änderst, lege einen neuen Lauf an. Ein neuer Lauf überschreibt den vorherigen nicht. Bei einem Programmupdate kann die Herkunftsprüfung eine Wiederaufnahme ablehnen; diese Prüfung nicht umgehen.
+
+**Laufprotokoll herunterladen** liefert technische Details für die Fehlersuche. Es kann Forschungsinhalte, Pfade und Modellantworten enthalten. Vor einer öffentlichen Fehlermeldung diese Angaben und mögliche Zugangsdaten entfernen. Für einen reproduzierbaren Fehler möglichst künstliche Beispieldaten verwenden und Programmversion, Betriebssystem, Modul, Modell und Fehlermeldung nennen.
+
+Unabhängige Meta-SWOT-Blöcke werden innerhalb der eingestellten Parallelität verarbeitet. Ihre Reihenfolge im Ergebnis bleibt stabil und erfolgreiche Blöcke werden einzeln gesichert. Dies erhöht nicht automatisch die Anzahl der vom Modell unterstützten gleichzeitigen Anfragen.
+
+
+## Umfangreiche Kontrast-, Ambivalenz- und Zusammenhangsanalysen
+
+Wenn vollständige Hintergrundanalysen zu groß werden, kann das Programm sie schrittweise verdichten. Die Originalanalysen bleiben gespeichert; die JSON-Ergebnisse dokumentieren betroffene Quellen und Verdichtungen. Das Modell kann dabei Details verlieren. Die zusätzlichen Hinweise im Bericht gehören zur Interpretation der Ergebnisse.
+
+- **Kontrastanalyse:** Verwendet bei großen Eingaben getrennte Personengruppen und verdichteten Vergleichskontext. Bereits gespeicherte Personenverdichtungen werden nur bei passenden Quellenprüfsummen verwendet. Die Ergebnisse sind eine Zusammenstellung validierter Teilprüfungen; es findet keine zusätzliche globale Synthese statt.
+- **Ambivalenzanalyse:** Behält die Originalsegmente bei, teilt sie bei Bedarf aber in getrennte Blöcke je Person. Belege werden nur gegen den jeweiligen Block geprüft. Widersprüche zwischen verschiedenen Blöcken können unerkannt bleiben; die Zahl gefundener Ambivalenzen ist deshalb kein Vollständigkeitsnachweis.
+- **Zusammenhangsanalyse:** Verdichtet bei Bedarf umfangreiche Clusterbeschreibungen. Die gemäß der dokumentierten Auswahlregel ausgewählten Originalsegmente, Codepfade und Personenbezüge bleiben unverändert. Der Bericht kennzeichnet diese Kontextverdichtung.
+
+Passt eine einzelne Originalbelegeinheit weiterhin nicht ins konfigurierte Kontextfenster, wird sie nicht abgeschnitten. Das Modul stoppt mit einem Hinweis zur Kontextprüfung. Ein größeres Fenster muss für Modell und Speicher geprüft werden; die lokale Version erhöht es nicht automatisch.
+
+
+## Belegprüfung mit vielen Gegenbelegen
+
+Die Belegprüfung teilt bei Bedarf sowohl Befunde als auch mögliche Gegenbelege in passende Blöcke. Jedes Befund-Gegenbeleg-Paar wird geprüft; keine Eingabe wird abgeschnitten. Unabhängige Teilprüfungen können im Rahmen der eingestellten Parallelität gleichzeitig laufen. Gültige Teilprüfungen werden zwischengespeichert und bei identischen Eingaben wiederverwendet.
+
+Der Bericht vereinigt die validierten Gegenbeleg-Zuordnungen und kennzeichnet getrennte Teilbegründungen. Er enthält keine zusätzliche globale Synthese dieser Begründungen. Wechselwirkungen zwischen Gegenbelegen aus verschiedenen Blöcken werden nicht gemeinsam beurteilt. Auch eine vollständig abgearbeitete Paarliste belegt deshalb keine fehlerfreie oder vollständige Interpretation; die fachliche Prüfung bleibt erforderlich.
+
+Ist bereits ein einzelnes Befund-Gegenbeleg-Paar zu groß, stoppt das Modul mit einem Kontexthinweis. Das Kontextfenster wird lokal nicht automatisch erhöht.
+
+
+Die Belegprüfung beschränkt das angeforderte JSON-Antwortformat auf die IDs des jeweiligen Prüfblocks. Auch danach werden alle Zuordnungen validiert. Scheitert die Reparatur einer ungültigen Antwort, folgt höchstens eine neue Anfrage mit der vollständigen ursprünglichen Eingabe. Bleiben IDs ungültig, stoppt das Modul mit Fehler; Gegenbelege werden nicht still entfernt. Anbieter müssen das Antwortschema tatsächlich unterstützen; die nachträgliche Prüfung gilt unabhängig davon.
+
+
+# Dokumente und Personen zuordnen
+
+Eine Person kann in mehreren exportierten Dokumenten vorkommen, etwa wenn ein Interview in Teilen aufgenommen oder transkribiert wurde. Dokumentnamen sind deshalb nicht automatisch Personenkennungen.
+
+1. Die CSV- oder XLSX-Datei hochladen und die Spalten für Text, Code und Dokumentkennung auswählen.
+2. Im Bereich **Dokumente zu Personen zusammenfassen · Pflichtprüfung** die Vorschau öffnen. Sie listet die Dokumentkennungen und ihre Codierzeilen auf.
+3. Zusammengehörigen Dokumenten dieselbe Personenkennung geben. Verschiedene Personen benötigen verschiedene Kennungen.
+4. Die angezeigte Zahl der Personen prüfen und die Zuordnung ausdrücklich bestätigen. Erst danach können Eingaben gespeichert und der Lauf gestartet werden.
+
+| Dokumentkennung aus dem Export | Personenkennung |
+| --- | --- |
+| Interview_A_Teil1 | P01 |
+| Interview_A_Teil2 | P01 |
+| Interview_B | P02 |
+
+In diesem künstlichen Beispiel ergeben drei Dokumente zwei Personen. Sind bereits verlässliche Personen-IDs im Export enthalten, können diese unverändert bestätigt werden. Bei anderen Materialien steht die Kennung für den zu vergleichenden Fall, etwa einen Bildungsplan.
+
+Die Anwendung speichert die bestätigte Zuordnung und zählt Personen danach. Originalspalten und Segment-IDs bleiben erhalten; für die Analyse werden eigene Personenspalten ergänzt. Eine neue Datei oder geänderte Spaltenzuordnung erfordert eine erneute Prüfung. Die Software errät keine Personenidentitäten aus Namen oder Ähnlichkeiten.
+
+Ein bereits berechneter Bericht wird dadurch nicht nachträglich korrigiert. Bei falscher Personenzuordnung einen neuen vollständigen Lauf erstellen. Nach einer manuellen Codierprüfung können Folgeläufe die verifizierten Personenkennungen des Ursprungslaufs übernehmen, da dort nur Codes geändert werden.
+
+
+## Fortschrittsanzeige
+
+Der obere Balken zählt vollständig abgeschlossene Module. Da die Module unterschiedlich lange dauern, ist er keine Schätzung der verbleibenden Laufzeit. Darunter zeigt das aktive Modul seine abgeschlossenen Arbeitsschritte und einen Prozentwert, wenn eine Gesamtzahl bekannt ist. Ohne Gesamtzahl erscheint eine Aktivitätsanzeige mit dem ausdrücklichen Hinweis, dass kein Prozentwert verfügbar ist. Antwortzähler und Zeitstempel helfen dabei, laufende Verarbeitung von einer unveränderten Anzeige zu unterscheiden. Eine länger dauernde Anfrage ist allein kein Fehlernachweis.
+
+Die Zusammenfassung meldet in neuen Läufen jede abgeschlossene Clusterzusammenfassung und anschließend die Gesamtzusammenfassung als eigenen Schritt. Wiederverwendete geprüfte Ergebnisse zählen als erledigt; eine fehlgeschlagene Gesamtzusammenfassung zählt nicht als abgeschlossen.
+
+
+Fortschritt bei SWOT: Die reguläre SWOT zählt abgeschlossene Kategorien, Meta-SWOT die vier Dimensionen Stärken, Schwächen, Chancen und Risiken. Eine Kategorie oder Dimension kann mehrere Modellanfragen benötigen. Die Prozentzahl beschreibt erledigte Einheiten, nicht den Zeitanteil. Für eingefrorene ältere Läufe ohne Gesamtzahl bleibt es bei einer ausdrücklich gekennzeichneten Aktivitätsanzeige.
+
+## Beispiele direkt an den Eingabefeldern
+
+„Beispiel ansehen“ öffnet eine Hilfe mit künstlichen Tabellen und Ablaufgrafiken. Die Hilfe verändert keine Eingaben und benötigt keinen Modellaufruf. Sie lässt sich mit „Schließen“ oder Escape schließen; danach liegt der Tastaturfokus wieder auf dem auslösenden Knopf. Auch jedes Analysemodul hat ein eigenes Ergebnisbeispiel. [Alle Beispiele ansehen](BEISPIELE.html).
+
+![Anklickbares Beispiel zur Personenzuordnung mit drei Dokumenten und zwei Personen](screenshots/16-personen-beispiel.jpg)
+
+
+### Telegram bei langen Synthesen
+
+Die Telegram-Meldung zeigt immer eine Modulübersicht, auch wenn für den aktuellen Abschnitt noch keine Gesamtzahl bekannt ist. Der Modulbalken zählt abgeschlossene Module und schätzt keine Restzeit. Teilbalken beziehen sich auf den jeweiligen Abschnitt; bei hierarchischer Verdichtung wird die Ebene genannt, deren Zähler neu beginnen kann. Antwortzahl, letzter Anfragestart und letzte Antwort zeigen Aktivität, keine Zahl gültiger Codierungen. Bei unverändert laufenden Anfragen wird spätestens nach zehn Minuten eine frische Statusmeldung geschickt; Änderungen bleiben auf höchstens eine Meldung je zwei Minuten begrenzt (Modulwechsel in v5 können sofort gemeldet werden). Voraussetzung: Fortschrittsmeldungen sind aktiviert und der Versand funktioniert. Bei älteren laufenden Analysen ohne Phasenzähler wird kein Prozentwert erfunden.
+
+
+### Aufrufbudget vor Verdichtungsrunden prüfen
+
+Vor jeder hierarchischen Verdichtungsrunde zählt die Gesamtsynthese die bereits bestimmbaren Teilaufgaben und vergleicht sie mit dem verbleibenden Aufrufbudget. Reicht es nicht, beginnt diese Runde keine weiteren Modellaufrufe. Die Fehlermeldung nennt den Mindestbedarf und das verbleibende Budget. Die Anzahl späterer Runden hängt von den Modellantworten ab und wird jeweils neu geprüft. Antwortreparaturen können zusätzliche Aufrufe benötigen; der Mindestbedarf ist daher keine Zusicherung, dass das Budget für den gesamten Lauf genügt. Das Aufrufbudget ist vom Kontextfenster und Antwortlimit zu unterscheiden.
+
+In der verwendeten YAML-Datei steuert llm.hierarchical_synthesis.max_calls die Grenze. Beispiel: max_calls: 256 erlaubt mehr Aufrufe als max_calls: 64; 256 ist keine allgemeine Empfehlung. Bei Cloud-Anbietern können dadurch zusätzliche Kosten entstehen. Nach einer Konfigurationsänderung in der regulären Oberfläche einen neuen Lauf anlegen: Fortsetzen verwendet die ursprünglichen Einstellungen. Vorhandene Auswertungen bleiben erhalten. Bereits wiederverwendete Teilanalysen behalten ihre Herkunft und zählen mit ihren ursprünglichen Aufrufen im Synthesebudget.
+
+
+## Direkte Fehlerhilfe
+
+Bei einer erkannten Fehlerart erscheint auf der Laufkarte „Passende Einstellung öffnen“. Der Knopf öffnet den Bereich Analyse, klappt gegebenenfalls die erweiterten Einstellungen auf und markiert das passende Feld. Der Hinweis erklärt Ursache, mögliche Abhilfe und Grenzen. Unbekannte Fehler behalten den Zugang zum Laufprotokoll.
+
+Die Hilfe ändert keine Werte. Passe eine Einstellung bewusst an und wähle „Eingaben erneut prüfen“. Die Prüfung speichert gültige Einstellungen, startet aber keinen Lauf. „Verbindung / System prüfen“ prüft die Einrichtung ohne Modellanfrage. Für einen geänderten API-Schlüssel zuerst „Schlüssel speichern“ verwenden. Die Cloud-Freigabe wird durch die Hilfe nicht aktiviert.
+
+Nach geänderten Einstellungen „Prüfen & neuen Lauf starten“ wählen. „Diesen Lauf fortsetzen“ verwendet weiterhin die ursprüngliche Konfiguration. Vorhandene Ergebnisse werden nicht überschrieben.
+
+Das „Aufrufbudget der Gesamtsynthese“ steht unter den erweiterten Modelleinstellungen. Es zählt Verdichtungsaufrufe einschließlich Antwortreparaturen; die abschließende Syntheseantwort kommt hinzu. Beispiel: Meldet die Prüfung mindestens 80 Teilaufgaben bei 64 verbleibenden Aufrufen, reichen 64 nicht. Ein höheres Budget muss auch spätere Runden berücksichtigen; es garantiert keinen erfolgreichen Abschluss. Das Feld ersetzt die Bearbeitung von llm.hierarchical_synthesis.max_calls in der YAML-Datei. Kontextfenster und Antwortlimit sind eigene Grenzen.
+
+![Fehlerhilfe zum Aufrufbudget anhand eines künstlichen Testfalls.](screenshots/17-fehlerhilfe.jpg)
+
+
+## Modul-Prompts ansehen
+
+Unter Analyse hat jedes Modul den Knopf „Prompts ansehen“. Der Dialog zeigt Systemanweisung, Aufgabentext, Platzhalter und eingebundene gemeinsame Regeln. Über die Modulauswahl wechselst du direkt zu einer anderen Vorlage. Schließen ist mit dem Knopf oder Escape möglich; der Tastaturfokus kehrt zurück.
+
+Die Herkunft steht oben: Bei einem neuen Projekt wird die Programmvorlage angezeigt, später die zuletzt gültig gespeicherte Projektkonfiguration. Ungespeicherte Formularänderungen sind nicht enthalten. Bei einer bestehenden Laufkarte öffnet „Prompt-Vorlagen dieses Laufs“ dessen ursprüngliche gespeicherte Konfiguration, auch wenn du die Projekteinstellungen inzwischen geändert hast.
+
+Beispiel: {segments} steht für die später eingefügten Textstellen, {context} für die Projektbeschreibung und {strict_rules_segments} für gemeinsame Regeln. In dieser Ansicht bleiben die Platzhalter erhalten; es werden keine Interviewdaten automatisch eingesetzt. Die Vorlagen sind schreibgeschützt. Das Öffnen ruft kein Modell auf.
+
+Die Ansicht ist kein vollständiges Protokoll einer tatsächlich versendeten Anfrage: dynamisch eingesetzte Daten, Antwortschemata und zusätzliche Verdichtungs- oder Reparaturanweisungen aus dem Programmcode können hinzukommen. Selbst bearbeitete Promptvorlagen können bereits sensible Angaben enthalten; vor dem Teilen prüfen. Codierübereinstimmung und Prüfliste verarbeiten vorhandene Ergebnisse ohne eigenen LLM-Aufruf und werden entsprechend gekennzeichnet.
+
+![Schreibgeschützte Clustering-Vorlagen mit sichtbaren Platzhaltern.](screenshots/18-modulprompts.jpg)
+
+
+## Quellen und Originalzitate in der Gesamtsynthese
+
+Die Gesamtsynthese nennt unter „Grundlage aus vorherigen Analysen“ verständliche Modulnamen. „Herkunftsdetails“ klappt im HTML die gespeicherte Zwischenzusammenfassung und die zugehörigen Originaltextstellen auf, soweit deren Segment-IDs in der Herkunftskette gespeichert und im Export verfügbar sind. Diese Textstellen gehören zum Eingabematerial der Verdichtung; sie sind keine automatisch bestätigten Belege für jede einzelne Syntheseaussage. Fehlt eine direkte Zuordnung, zeigt der Bericht das ausdrücklich. Eine Quellengruppe kann Material mehrerer Analysen und Personen enthalten. Die fachliche Prüfung erfolgt an den Originalzitaten und den jeweiligen Modulberichten. Technische N-/L-Kennungen bleiben nur in den Details zur Nachvollziehbarkeit erhalten. Neue HTML-Exporte können diese Hilfe auch für alte Läufe aus deren gespeichertem Quellenregister erzeugen; dafür ist kein erneuter Modelllauf nötig.

@@ -1,3 +1,4 @@
+from progress_events import begin_phase, update_progress
 from runtime_support import PartCheckpoint
 from response_schemas import schema_for, require_structure
 # ambiguity_analysis_core.py
@@ -120,7 +121,9 @@ def build_ambiguity_analysis(
     results = {}
     global_counter = 0
 
-    for person in sorted(persons):
+    begin_phase('analysis', len(persons), 'persons')
+    for person_index, person in enumerate(sorted(persons), 1):
+        update_progress(detail_completed=None, detail_total=None)
         analysis = persons[person]
         allowed_ids = {
             str(sid).strip()
@@ -132,35 +135,41 @@ def build_ambiguity_analysis(
             for sid in sorted(allowed_ids)
         ]
 
-        payload = {
-            "person": person,
-            "personenanalyse": analysis,
-            "originalsegmente": segments,
-        }
-
-        system_prompt, user_prompt = build_prompt_for_module(
-            "ambiguity_analysis",
-            prompts=prompts,
-            context=context,
-            data=json.dumps(payload, ensure_ascii=False, indent=2),
-        )
-        def compute_part():
-            raw = _llm(system_prompt, user_prompt, ollama_params)
-            parsed = safe_json_loads(raw)
-            if parsed is None:
-                logger.warning("[Ambivalenzanalyse] Ungültiges JSON für %s; starte Repair.", person)
-                parsed = safe_json_loads(_repair(raw, ollama_params))
-            if parsed is None:
-                logger.error("[Ambivalenzanalyse] Keine verwertbare Antwort für %s.", person)
-                raise ValueError(f"Ambivalenzanalyse fehlgeschlagen: {person}")
-
-            require_structure(parsed, "ambiguity_analysis")
-            normalized = normalize_person_ambiguities(parsed, allowed_ids, id_to_text)
-            if normalized is None:
-                raise ValueError(f"Ungültige Ambivalenzanalyse: {person}")
-            return normalized
-        normalized = PartCheckpoint('ambiguity_analysis', ollama_params).run(
-            person, {'system':system_prompt,'user':user_prompt,'texts':{sid:id_to_text[sid] for sid in sorted(allowed_ids)}}, compute_part)
+        from analysis_context import compact_context
+        from summarizer_core import llm_summary
+        from batching import bounded_batches
+        from parallel_items import completed_items
+        def prompt(value,batch):
+            return build_prompt_for_module('ambiguity_analysis',prompts=prompts,context=context,
+                data=json.dumps({'person':person,'personenanalyse':value,'originalsegmente':batch},ensure_ascii=False,indent=2))
+        sy,us=prompt(analysis,segments)
+        fits=len((sy+us).encode('utf-8'))+int(ollama_params.get('max_tokens',6000))+1024<=int(ollama_params.get('num_ctx',16384))
+        if fits:
+            receipt={'used':False};batches=[(segments,sy,us)]
+        else:
+            reduced,receipt=compact_context(analysis,ollama_params,llm_summary,1000)
+            batches=list(bounded_batches(segments,lambda batch:prompt(reduced,batch),ollama_params))
+        update_progress(detail_completed=0,detail_total=len(batches))
+        def compute(item):
+            index,(batch,system_prompt,user_prompt)=item
+            ids={x['id'] for x in batch}
+            def call():
+                raw=_llm(system_prompt,user_prompt,ollama_params)
+                parsed=safe_json_loads(raw)
+                if parsed is None:parsed=safe_json_loads(_repair(raw,ollama_params))
+                require_structure(parsed,'ambiguity_analysis')
+                result=normalize_person_ambiguities(parsed,ids,id_to_text)
+                if result is None:raise ValueError('Ungültige Ambivalenzanalyse.')
+                return result
+            return PartCheckpoint('ambiguity_blocks',ollama_params).run([person,index],
+                {'system':system_prompt,'user':user_prompt,'texts':{sid:id_to_text[sid] for sid in sorted(ids)}},call)
+        parts=[None]*len(batches)
+        for done,(index,value) in enumerate(completed_items(list(enumerate(batches)),compute,min(2,ollama_params.get('parallel_workers',1))),1):
+            parts[index]=value;update_progress(detail_completed=done)
+        normalized={'ambivalenzen':[item for part in parts for item in part['ambivalenzen']],
+            'gesamteinordnung':'\n\n'.join(part['gesamteinordnung'] for part in parts),
+            'input_reduction':{'context':receipt,'parts':len(batches),
+                'segment_ids':sorted(allowed_ids),'note':'Alle Originalsegmente in getrennten Blöcken; blockübergreifende Widersprüche können unerkannt bleiben. Keine zusätzliche globale Synthese.'}}
 
         # IDs workflowweit innerhalb dieses Outputs eindeutig machen.
         for item in normalized["ambivalenzen"]:
@@ -172,6 +181,8 @@ def build_ambiguity_analysis(
             "segment_count": len(allowed_ids),
             **normalized,
         }
+
+        update_progress(completed=person_index)
 
     json_output = {
         "created_at": datetime.now().isoformat(),
@@ -187,6 +198,9 @@ def build_ambiguity_analysis(
         f"Erstellt am: {json_output['created_at']}\n\n",
         "Analysiert werden ausschließlich **intrapersonelle** Spannungen: unterschiedliche, empirisch belegte Positionen innerhalb desselben Falls.\n\n",
     ]
+
+    if any(v.get('input_reduction',{}).get('parts',0)>1 or v.get('input_reduction',{}).get('context',{}).get('used') for v in results.values()):
+        md.append('Methodischer Hinweis: Verdichteter Personenkontext und getrennte Originalsegment-Blöcke. Details und blockübergreifende Widersprüche können verloren gehen; Originalbelege bleiben erhalten.\n\n')
 
     for person, result in results.items():
         md.append(f"## {person}\n\n")

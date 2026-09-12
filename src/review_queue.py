@@ -75,6 +75,9 @@ def render_queue(queue):
     return template.replace('__QUEUE_JSON__',data)
 
 
+from progress_events import track_module
+
+@track_module
 def main():
     p=argparse.ArgumentParser(description='Lokale Prüfliste; Entscheidungen verändern keine Originalcodierungen.')
     p.add_argument('--config',default=str(DEFAULT_CONFIG))
