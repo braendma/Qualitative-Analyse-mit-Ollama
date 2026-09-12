@@ -35,6 +35,9 @@ def _parse_source_arg(value: str) -> tuple[str, str]:
     return label, path
 
 
+from progress_events import track_module
+
+@track_module
 def main(argv=None):
     parser = argparse.ArgumentParser(
         description="Gesamtsynthese aus frei deklarierbaren analytischen JSON-Quellen"

@@ -20,7 +20,10 @@ from telegram_notifications import Telegram
 
 
 def settings(app):
-    return {'columns':copy.deepcopy(app.template['columns']),
+    columns=copy.deepcopy(app.template['columns'])
+    info=app.person_preview(app.projects()[0]['id'],columns)
+    return {'columns':columns,'person_identity':{'confirmed':True,'fingerprint':info['fingerprint'],
+            'mapping':{d['document']:d['document'] for d in info['documents']}},
             'book_columns':dict(zip(('kategorie','unterkategorie','auspraegung','facette','definition','ankerbeispiel'),
                                    ('Kategorie','Unterkategorie','Ausprägung','Facette','Definition','Ankerbeispiel'))),
             'modules':['summarizer'],'model':'mock','label_mode':'multi_label','context':{}}
@@ -152,6 +155,27 @@ class DesktopTests(unittest.TestCase):
 
 class TelegramTests(unittest.TestCase):
     TOKEN='123456:'+('A'*30)
+    def test_partial_failure_obeys_error_preference_and_progress_contains_only_counts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            bot=Telegram(tmp)
+            opts={'token':self.TOKEN,'chat_id':'123','enabled':True,'events':['success'],'persist':False}
+            bot.save(opts)
+            with patch('telegram_notifications.urllib.request.build_opener') as factory:
+                opener=factory.return_value
+                opener.open.return_value.__enter__.return_value.read.return_value=b'{"ok":true}'
+                self.assertFalse(bot.send('partial_failed'));opener.open.assert_not_called()
+                bot.save({**opts,'events':['failed','progress']})
+                self.assertTrue(bot.send('partial_failed'))
+                text=json.loads(opener.open.call_args.args[0].data)['text']
+                self.assertIn('Teilaufgabe',text)
+                self.assertNotIn('Lauf unterbrochen',text)
+                bot.send('progress',1,15,detail={'unit':'persons','completed':4,'total':7,
+                    'reused':2,'module':'PRIVATE_STUDY','error':'PRIVATE_QUOTE'})
+                text=json.loads(opener.open.call_args.args[0].data)['text']
+                self.assertIn('4 von 7 Personen',text)
+                self.assertIn('Davon 2',text)
+                self.assertNotIn('PRIVATE',text)
+
     def test_session_token_replace_remove_and_restart(self):
         with tempfile.TemporaryDirectory() as tmp:
             bot=Telegram(tmp)

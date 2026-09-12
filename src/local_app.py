@@ -211,6 +211,36 @@ class App(ReviewWorkspace):
         atomic_json(directory/'project.json', project)
         return uploads
 
+    def prompt_templates(self, pid, jid=None):
+        from prompt_catalog import catalog
+        directory=self.project_dir(pid)
+        project=self.project(pid)
+        if jid:
+            folder=safe_child(directory/'jobs',identifier(jid))
+            job=read_json(folder/'job.json')
+            if not job:raise ValueError('Lauf wurde nicht gefunden.')
+            path=Path(job['config']).resolve()
+            if not path.is_relative_to(directory.resolve()):raise ValueError('Konfiguration gehört nicht zu diesem Projekt.')
+            config=yaml.safe_load(path.read_text(encoding='utf-8'))
+            source='Gespeicherte Konfiguration dieses Laufs. Spätere Projekteinstellungen werden hier nicht verwendet.'
+        else:
+            revision=project.get('revision') or project.get('last_valid_revision')
+            if revision:
+                path=safe_child(directory/'revisions',revision)/'config.yaml'
+                config=yaml.safe_load(path.read_text(encoding='utf-8'))
+                source='Zuletzt gültig gespeicherte Projektkonfiguration. Ungespeicherte Formularänderungen sind nicht enthalten.'
+            else:
+                config=self.template
+                source='Programmvorlage: Für dieses Projekt ist noch keine gültige Konfiguration gespeichert.'
+        return {**catalog(config,RUNNER.normalize_modules(config)),'source':source}
+
+    def person_preview(self, pid, columns):
+        from person_identity import preview
+        upload=self.project(pid)['uploads'].get('segments')
+        if not upload: raise ValueError('Zuerst eine Interviewdatei auswählen.')
+        raw=(self.project_dir(pid)/'inputs'/(upload['id']+'.csv')).read_bytes()
+        return preview(raw,columns)
+
     def passage_preview(self, pid, columns):
         from passage_ids import prepare
         project = self.project(pid)
@@ -263,6 +293,10 @@ class App(ReviewWorkspace):
             cfg['llm'][key] = int(settings.get(key,cfg['llm'][key]))
             if not lower <= cfg['llm'][key] <= upper:
                 raise ValueError(f'{key} muss zwischen {lower} und {upper} liegen.')
+        synthesis_calls=settings.get('synthesis_max_calls',cfg['llm'].get('hierarchical_synthesis',{}).get('max_calls',64))
+        if type(synthesis_calls) is not int or not 1 <= synthesis_calls <= 10000:
+            raise ValueError('Das Aufrufbudget der Gesamtsynthese muss eine ganze Zahl zwischen 1 und 10000 sein.')
+        cfg['llm'].setdefault('hierarchical_synthesis',{})['max_calls']=synthesis_calls
         if cfg['llm']['max_tokens'] >= cfg['llm']['num_ctx']:
             raise ValueError('Das Antwortlimit muss kleiner als das Kontextfenster sein.')
         thinking = settings.get('think', cfg['llm'].get('think',False))
@@ -333,6 +367,13 @@ class App(ReviewWorkspace):
             directory = self.project_dir(pid)
             revision = directory/'revisions'/uuid.uuid4().hex[:20]
             revision.mkdir(parents=True)
+            from person_identity import apply
+            raw=Path(cfg['paths']['input_csv']).read_bytes()
+            normalized,columns,identity=apply(raw,cfg['columns'],settings.get('person_identity'))
+            (revision/'segments.csv').write_bytes(normalized)
+            cfg['paths']['input_csv']=str(revision/'segments.csv')
+            cfg['columns']=columns
+            cfg['person_identity']=identity
             atomic_text(revision/'codebook.csv',book)
             cfg['paths']['category_system_csv'] = str(revision/'codebook.csv')
             atomic_text(revision/'config.yaml',yaml.safe_dump(cfg,allow_unicode=True,sort_keys=False))
@@ -350,6 +391,8 @@ class App(ReviewWorkspace):
         from multi_label_core import group_units
         cfg = yaml.safe_load(path.read_text(encoding='utf-8'))
         _, codes = load_codebook(cfg['paths']['category_system_csv'])
+        from person_identity import verify
+        verify(Path(cfg['paths']['input_csv']).read_bytes(),cfg['columns'],cfg.get('person_identity'))
         segments = load_segments(cfg['paths']['input_csv'],cfg['columns'])
         if cfg['coding_agreement']['label_mode'] == 'multi_label':
             group_units(segments)
@@ -397,6 +440,9 @@ class App(ReviewWorkspace):
                            current=manifest.get('current_module'),
                            error=stored_error if stored_status == 'failed' else manifest.get('error',''))
                 job['run']=manifests[0].parent.name
+                job['module_status']=manifest.get('module_status',{})
+                job['module_errors']=manifest.get('module_errors',{})
+                job['blocked_by']=manifest.get('blocked_by',{})
                 detail=read_json(manifests[0].parent/'progress.json',{})
                 if detail.get('module')==job.get('current'):
                     job['progress_detail']=detail
@@ -537,21 +583,31 @@ class App(ReviewWorkspace):
     def monitor(self, folder, process, total):
         last_count=0
         last_detail=None
+        last_failure=None
         last_detail_sent=time.monotonic()
         try:
             self.telegram.send('start')
             while process.poll() is None:
                 manifests=list((folder/'runs').glob('*/workflow_manifest.json'))
                 if manifests:
-                    count=len(read_json(manifests[0]).get('completed_steps',[]))
-                    if count>last_count:
-                        self.telegram.send('progress',count,total)
-                        last_count=count
+                    manifest=read_json(manifests[0])
+                    count=len(manifest.get('completed_steps',[]))
                     detail=read_json(manifests[0].parent/'progress.json',{})
-                    marker=(detail.get('module'),detail.get('completed'),detail.get('requests'))
-                    if marker!=last_detail and time.monotonic()-last_detail_sent>=120:
+                    if detail.get('module')!=manifest.get('current_module'):
+                        detail={'module':manifest.get('current_module')}
+                    failure=(detail.get('module'),detail.get('failed'),bool(detail.get('context_blocked')))
+                    if (detail.get('failed') or detail.get('context_blocked')) and failure!=last_failure:
+                        self.telegram.send('partial_failed')
+                        last_failure=failure
+                    marker=tuple(detail.get(k) for k in ('module','completed','total','unit','phase','phase_level',
+                        'detail_completed','detail_total','requests','active_requests','request_active',
+                        'request_started_at','last_response_at','reused','failed','context_blocked'))
+                    tick=time.monotonic()
+                    age=tick-last_detail_sent
+                    if count>last_count or (marker!=last_detail and age>=120) or (detail.get('module') and age>=600):
                         self.telegram.send('progress',count,total,detail=detail)
-                        last_detail,last_detail_sent=marker,time.monotonic()
+                        last_detail,last_detail_sent=marker,tick
+                        last_count=count
                 time.sleep(1)
             manifests=list((folder/'runs').glob('*/workflow_manifest.json'))
             manifest=read_json(manifests[0],{}) if manifests else {}
@@ -615,8 +671,10 @@ class Handler(BaseHTTPRequestHandler):
         parsed=urllib.parse.urlparse(self.path)
         assets={'/':'local_app.html','/app.js':'local_app.js','/app.css':'local_app.css',
                 '/review.js':'review_ui.js','/reports.js':'report_viewer.js',
-                '/capacity.js':'capacity_ui.js','/providers.js':'providers_ui.js','/passage-ids.js':'passage_ids_ui.js','/logo.jpg':'brand.jpg','/favicon.ico':'brand.jpg',
-                '/handbuch':'../docs/HANDBUCH.html','/manual.css':'../docs/manual.css',
+                '/prompt-view.js':'prompt_view.js','/failure-guide.js':'failure_guide.js','/context-help.js':'context_help.js','/context-help.css':'context_help.css',
+                '/BEISPIELE.html':'../docs/BEISPIELE.html',
+                '/capacity.js':'capacity_ui.js','/providers.js':'providers_ui.js','/passage-ids.js':'passage_ids_ui.js','/person-identity.js':'person_identity_ui.js','/logo.jpg':'brand.jpg','/favicon.ico':'brand.jpg',
+                '/handbuch':'../docs/HANDBUCH.html','/HANDBUCH.html':'../docs/HANDBUCH.html','/manual.css':'../docs/manual.css',
                 '/BEDIENOBERFLAECHE.md':'../docs/BEDIENOBERFLAECHE.md',
                 '/KI_ANBIETER.md':'../docs/KI_ANBIETER.md','/EXTENSIONS.md':'../docs/EXTENSIONS.md','/RELEASE_NOTES.md':'../docs/RELEASE_NOTES.md'}
         for screenshot in (ROOT.parent/'docs/screenshots').glob('*.jpg'):
@@ -632,9 +690,10 @@ class Handler(BaseHTTPRequestHandler):
             if parsed.path=='/api/state':
                 cfg=app.template
                 return self.json({'projects':app.projects(),'telegram':app.telegram.public(),'providers':PROVIDERS,'provider_keys':app.provider_keys.public(),
-                    'defaults':{'llm':{k:cfg['llm'].get(k) for k in ('model','num_ctx','max_tokens','temperature','think')},'context':cfg['context'],'columns':cfg['columns']},
+                    'defaults':{'llm':{**{k:cfg['llm'].get(k) for k in ('model','num_ctx','max_tokens','temperature','think')},'synthesis_max_calls':cfg['llm'].get('hierarchical_synthesis',{}).get('max_calls',64)},'context':cfg['context'],'columns':cfg['columns']},
                     'modules':[{'id':m['id'],'name':m['name'],'depends_on':m['depends_on']} for m in RUNNER.normalize_modules(cfg)]})
             if parsed.path=='/api/project': return self.json(app.project(get('project')))
+            if parsed.path=='/api/prompts': return self.json(app.prompt_templates(get('project'),get('job') or None))
             if parsed.path=='/api/jobs': return self.json({'jobs':app.jobs(get('project')),'telegram':app.telegram.public()})
             if parsed.path=='/api/models': return self.json(app.models())
             if parsed.path=='/api/review':return self.json(app.review(get('project'),get('job')))
@@ -678,6 +737,7 @@ class Handler(BaseHTTPRequestHandler):
                 elif path=='/api/privacy': result=app.privacy(data['project'],data['gdpr_relevant'])
                 elif path=='/api/provider-key': result=app.save_provider_key(data['project'],data)
                 elif path=='/api/save': result=app.save(data['project'],data['settings'])
+                elif path=='/api/person-preview': result=app.person_preview(data['project'],data['columns'])
                 elif path=='/api/passage-preview': result=app.passage_preview(data['project'],data['columns'])
                 elif path=='/api/passage-apply': result=app.passage_apply(data['project'],data['settings'],data['fingerprint'],data['confirmed'])
                 elif path=='/api/start': result=app.start(data['project'],data.get('resume'))

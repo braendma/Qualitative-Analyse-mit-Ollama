@@ -164,39 +164,67 @@ def build_contrast_analysis(
         if isinstance(t, dict) and str(t.get("typ_name", "")).strip()
     ]
 
-    payload = {
-        "personenanalyse": person_data,
-        "personenvergleich_und_typenbildung": comparison_data,
-    }
-
-    system_prompt, user_prompt = build_prompt_for_module(
-        "contrast_analysis",
-        prompts=prompts,
-        context=context,
-        data=json.dumps(payload, ensure_ascii=False, indent=2),
-    )
-
-    raw = llm_contrast_analysis(system_prompt, user_prompt, ollama_params)
-    parsed = safe_json_loads(raw)
-    if parsed is None:
-        logger.warning("[Kontrastanalyse] Ungültiges JSON; starte Repair.")
-        parsed = safe_json_loads(llm_repair_contrast(raw, ollama_params))
-    if parsed is None:
-        raise ValueError("Kontrastanalyse konnte nicht als JSON gelesen werden.")
-
-    require_structure(parsed, "contrast_analysis")
-    result = normalize_contrast(parsed, source_people, type_names)
-    if result is None:
-        raise ValueError("Kontrastanalyse besitzt kein verwertbares Format.")
+    from batching import bounded_batches
+    from analysis_context import compact_context
+    from summarizer_core import llm_summary
+    from runtime_support import PartCheckpoint,fingerprint
+    from parallel_items import completed_items
+    from progress_events import update_progress
+    def prompt(payload):
+        return build_prompt_for_module("contrast_analysis",prompts=prompts,context=context,
+            data=json.dumps(payload,ensure_ascii=False,indent=2))
+    payload={"personenanalyse":person_data,"personenvergleich_und_typenbildung":comparison_data}
+    original=prompt(payload)
+    fits=sum(len(x.encode('utf-8')) for x in original)+int(ollama_params.get('max_tokens',6000))+1024<=int(ollama_params.get('num_ctx',16384))
+    reduction={'used':False}
+    if fits:
+        batches=[(source_people,*original)]
+    else:
+        comparison_values={k:v for k,v in comparison_data.items() if k not in ('input_reduction','created_at','source_person_analysis_created_at')}
+        comparison_context,comparison_receipt=compact_context(comparison_values,ollama_params,llm_summary,1600)
+        receipts={};entries=[]
+        prior=comparison_data.get('input_reduction',{}).get('sources',{})
+        for name in source_people:
+            saved=prior.get(name,{})
+            if saved.get('source_sha256')==fingerprint(persons[name]) and isinstance(saved.get('summary'),str) and saved['summary'].strip():
+                value={'verdichteter_kontext':saved['summary']}
+                receipt={'used':True,'source_sha256':fingerprint(persons[name]),'summary':saved['summary'],'reused_comparison_summary':True}
+            else:value,receipt=compact_context(persons[name],ollama_params,llm_summary,1200)
+            receipts[name]=receipt;entries.append({'person':name,'personenanalyse':value})
+        def batch_prompt(batch):
+            return prompt({'personen':batch,'personenvergleich_und_typenbildung':comparison_context,'bekannte_typnamen':type_names})
+        batches=[([x['person'] for x in batch],sy,us) for batch,sy,us in bounded_batches(entries,batch_prompt,ollama_params)]
+        reduction={'used':True,'parts':len(batches),'persons':receipts,'comparison':comparison_receipt,
+                   'note':'Union getrennter Kontrastprüfungen mit verdichtetem Gesamtkontext; keine zusätzliche globale Synthese. Details können verloren gehen.'}
+    update_progress(completed=0,total=len(batches),unit='batches')
+    def compute(item):
+        index,(names,system_prompt,user_prompt)=item
+        def call():
+            raw=llm_contrast_analysis(system_prompt,user_prompt,ollama_params)
+            parsed=safe_json_loads(raw)
+            if parsed is None:parsed=safe_json_loads(llm_repair_contrast(raw,ollama_params))
+            require_structure(parsed,'contrast_analysis')
+            result=normalize_contrast(parsed,names,type_names)
+            if result is None:raise ValueError('Ungültige Kontrastanalyse.')
+            return result
+        return PartCheckpoint('contrast_batches',ollama_params).run([source_people,index],
+            {'system':system_prompt,'user':user_prompt},call)
+    parts=[None]*len(batches)
+    for done,(index,value) in enumerate(completed_items(list(enumerate(batches)),compute,min(2,ollama_params.get('parallel_workers',1))),1):
+        parts[index]=value;update_progress(completed=done)
+    result={k:[entry for part in parts for entry in part[k]] for k in ('dominante_muster','negativfaelle','spannungen_zwischen_typen','relativierungen')}
+    result['gesamteinordnung']='\n\n'.join(part['gesamteinordnung'] for part in parts)
 
     json_output = {
         "created_at": datetime.now().isoformat(),
         "source_person_analysis_created_at": person_data.get("created_at"),
         "source_person_comparison_created_at": comparison_data.get("created_at"),
+        "input_reduction": reduction,
         **result,
     }
 
     md = ["# Kontrast- und Negativfallanalyse\n", f"Erstellt am: {json_output['created_at']}\n\n"]
+    if reduction['used']:md.append(reduction['note']+'\n\n')
     if result["gesamteinordnung"]:
         md.append(f"## Gesamteinordnung\n\n{result['gesamteinordnung']}\n\n")
 

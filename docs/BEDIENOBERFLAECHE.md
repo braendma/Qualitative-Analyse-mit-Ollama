@@ -101,7 +101,9 @@ Telegram wird ausschließlich bei Aktivierung und für die ausgewählten Ereigni
 
 Ohne dauerhafte Speicherung bleibt der Token nur für die aktuelle Serversitzung im Speicher. Unter Windows kann er mit DPAPI für das aktuelle Benutzerkonto verschlüsselt gespeichert werden. Es gibt keinen Rückfall auf unverschlüsselte Tokenspeicherung. Der Token wird nicht in Projekt-YAMLs, Berichte, Browser-Speicher oder API-Antworten geschrieben. Ein Import übernimmt ihn zunächst nur in das verdeckte Eingabefeld; erst Speichern aktualisiert die Einstellung.
 
-Gesendet werden nur feste Meldungstexte wie „Qualitative Analyse: Lauf abgeschlossen“ und beim Fortschritt die Zahl abgeschlossener Module. Veränderte Zwischenstände innerhalb eines Moduls werden zusätzlich höchstens alle zwei Minuten als allgemeine Zähler versendet. Projektnamen, Texte, Kategorien, Pfade und technische Fehlerdetails werden nicht gesendet. Fehler beim Benachrichtigen werden getrennt angezeigt und stoppen die Analyse nicht. Meldungen werden nicht dauerhaft gepuffert oder wiederholt; dadurch werden bei unsicheren Netzwerkantworten keine automatischen Mehrfachsendungen ausgelöst. Die Umsetzung verwendet Telegram [`sendMessage`](https://core.telegram.org/bots/api#sendmessage).
+Fortschrittsmeldungen enthalten einen Balken mit Prozent und Einheiten für das aktuelle Modul sowie getrennt die Zahl abgeschlossener Module. Modellantworten, gleichzeitig aktive Anfragen und geprüfte wiederverwendete Zwischenergebnisse erscheinen, soweit diese Zähler vorliegen. Fehlt eine belastbare Gesamtzahl, steht dort „Fortschritt noch nicht beziffert“. Der Balken beschreibt das einzelne Modul, nicht die Gesamtlaufzeit.
+
+Veränderte Zwischenstände innerhalb eines Moduls werden höchstens alle zwei Minuten gesendet; neue Modulabschlüsse zusätzlich zeitnah. Beim Modulwechsel entstehen keine doppelten Fortschrittsmeldungen und keine falsch zugeordneten Zähler des vorherigen Moduls. Verwendet werden ausschließlich fest vorgegebene Modulbezeichnungen und allgemeine Zähler. Projektnamen, Texte, Kategorien des Kategoriensystems, Pfade und technische Fehlerdetails werden nicht gesendet. Fehler beim Benachrichtigen werden getrennt angezeigt und stoppen die Analyse nicht. Meldungen werden nicht dauerhaft gepuffert oder wiederholt; dadurch werden bei unsicheren Netzwerkantworten keine automatischen Mehrfachsendungen ausgelöst. Die Umsetzung verwendet Telegram [`sendMessage`](https://core.telegram.org/bots/api#sendmessage).
 
 ## Wo liegen meine Daten?
 
@@ -114,3 +116,21 @@ Ein anderer lokaler Speicherort kann mit `python src/local_app.py --data-dir PFA
 Die Tests prüfen Projektrevisionen, Spaltenzuordnung, Zugriffsgrenzen, Tokenwechsel und Entfernung, DPAPI unter Windows, generische Benachrichtigungen sowie Start/Pause/Wiederaufnahme des echten Runners mit ersetztem Modelltransport. DPAPI benötigt Zugriff auf das Windows-Benutzerprofil und kann in eingeschränkten Sandbox-Konten scheitern. Dann Sitzungsspeicherung verwenden oder die Anwendung unter dem normalen Benutzerkonto ausführen. Testergebnisse stehen in [TEST_REPORT.md](TEST_REPORT.md).
 
 Dies ist eine erste lokale Oberfläche mit Windows-Startdateien. Python, Ollama und Modelle sind noch nicht in einem eigenständigen Installer gebündelt. Die Prüfung ersetzt weder die methodische Entscheidung über Kategorien und Codierungen noch die fachliche Prüfung der erzeugten Befunde.
+
+
+## Personen und Interviewteile vor dem Start zuordnen
+
+Ein Dokument ist nicht automatisch eine Person. Unter „Eingaben prüfen“ zuerst die Text-, Code- und Dokumentspalte wählen. Danach „Dokumentzuordnung anzeigen / prüfen“ öffnen. Zusammengehörige Interviewteile bekommen dieselbe Personenkennung; verschiedene Personen brauchen verschiedene Kennungen. Beispiel: Interview_A_Teil1 und Interview_A_Teil2 erhalten P01, Interview_B erhält P02. Drei Dokumente ergeben so zwei Personen.
+
+Die angezeigte Personenzahl und alle Zuordnungen ausdrücklich bestätigen. Ohne diese Bestätigung startet die Oberfläche keine Analyse. Originalspalten und Segment-IDs bleiben erhalten. Nach Datei- oder Spaltenwechsel ist die Bestätigung erneut erforderlich. Alte Berichte mit falscher Personenabgrenzung benötigen einen neuen vollständigen Lauf. Folgeläufe nach manueller Codeprüfung übernehmen die nachweislich bestätigten Personen des Ursprungslaufs.
+
+
+
+## Fortschrittsanzeige
+
+Der obere Balken zählt vollständig abgeschlossene Module. Da die Module unterschiedlich lange dauern, ist er keine Schätzung der verbleibenden Laufzeit. Darunter zeigt das aktive Modul seine abgeschlossenen Arbeitsschritte und einen Prozentwert, wenn eine Gesamtzahl bekannt ist. Ohne Gesamtzahl erscheint eine Aktivitätsanzeige mit dem ausdrücklichen Hinweis, dass kein Prozentwert verfügbar ist. Antwortzähler und Zeitstempel helfen dabei, laufende Verarbeitung von einer unveränderten Anzeige zu unterscheiden. Eine länger dauernde Anfrage ist allein kein Fehlernachweis.
+
+Die Zusammenfassung meldet in neuen Läufen jede abgeschlossene Clusterzusammenfassung und anschließend die Gesamtzusammenfassung als eigenen Schritt. Wiederverwendete geprüfte Ergebnisse zählen als erledigt; eine fehlgeschlagene Gesamtzusammenfassung zählt nicht als abgeschlossen.
+
+
+Fortschritt bei SWOT: Die reguläre SWOT zählt abgeschlossene Kategorien, Meta-SWOT die vier Dimensionen Stärken, Schwächen, Chancen und Risiken. Eine Kategorie oder Dimension kann mehrere Modellanfragen benötigen. Die Prozentzahl beschreibt erledigte Einheiten, nicht den Zeitanteil. Für eingefrorene ältere Läufe ohne Gesamtzahl bleibt es bei einer ausdrücklich gekennzeichneten Aktivitätsanzeige.

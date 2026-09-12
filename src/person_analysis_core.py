@@ -1,4 +1,4 @@
-from runtime_support import PartCheckpoint
+from analysis_work import analyze_items
 from response_schemas import schema_for, require_structure
 # person_analysis_core.py
 
@@ -134,6 +134,7 @@ def build_person_payloads(clusters: list, id_to_text: dict, summary_data: dict, 
         cluster_context = {
             "hauptkategorie": cluster.get("hauptkategorie"),
             "subkategorie": cluster.get("subkategorie"),
+            "auspraegung": cluster.get("auspraegung"),
             "facette": cluster.get("facette"),
             "cluster_name": cluster.get("cluster_name", "Unbenannt"),
             "definition": cluster.get("definition", ""),
@@ -173,6 +174,33 @@ def build_person_payloads(clusters: list, id_to_text: dict, summary_data: dict, 
             "segments": list(pdata["segments"].values()),
         }
     return result
+
+
+def compact_person_payload(payload):
+    """Lossless context table; segment texts, order and memberships stay intact."""
+    contexts = {}
+    identities = {}
+    segments = []
+    for segment in payload['segments']:
+        references = []
+        for context in segment.get('cluster_contexts', []):
+            identity = json.dumps(context, sort_keys=True, ensure_ascii=False)
+            if identity not in identities:
+                key = f'C{len(identities)+1}'
+                identities[identity] = key
+                contexts[key] = context
+            references.append(identities[identity])
+        segments.append({**{k:v for k,v in segment.items() if k != 'cluster_contexts'},
+                         'cluster_context_ids': references})
+    return {**payload, 'segments': segments, 'cluster_contexts': contexts}
+
+CONTEXT_REFERENCES = (
+    '\nDie Eingabe enthält eine gemeinsame Tabelle cluster_contexts. '
+    'cluster_context_ids jedes Segments verweist auf die dort vollständig aufgeführten Kontexte. '
+    'Ordne jedem Segment alle referenzierten Kontexte zu. C-Referenzen sind keine Segment-IDs; '
+    'verwende für Belege ausschließlich die id der Originalsegmente. '
+    'Originaltexte sind die empirischen Belege; Clusterzusammenfassungen sind abgeleitete Einordnungen.'
+)
 
 
 def _clean_ids(value, allowed_ids):
@@ -285,7 +313,7 @@ def build_person_analysis(
         cluster_data.get("segment_metadata"),
     )
 
-    results = {}
+    work_items = []
 
     for person in sorted(person_payloads):
         payload = person_payloads[person]
@@ -299,30 +327,41 @@ def build_person_analysis(
             "person_analysis",
             prompts=prompts,
             context=context,
-            persons=json.dumps(payload, ensure_ascii=False, indent=2),
+            persons=json.dumps(compact_person_payload(payload), ensure_ascii=False, indent=2),
         )
 
-        def compute_part():
-            raw = llm_person_analysis(system_prompt, user_prompt, ollama_params)
-            parsed = safe_json_loads(raw)
+        system_prompt += CONTEXT_REFERENCES
+        work_items.append({'key': person, 'system': system_prompt, 'user': user_prompt,
+                           'texts': {sid:id_to_text[sid] for sid in sorted(allowed_ids)}})
 
-            if parsed is None:
-                logger.warning(f"[Personenanalyse] JSON für {person} ungültig; starte Repair.")
-                repaired = llm_repair_person_analysis(raw, ollama_params)
-                parsed = safe_json_loads(repaired)
+    def compute_item(item):
+        person = item['key']
+        system_prompt, user_prompt = item['system'], item['user']
+        allowed_ids = set(item['texts'])
+        raw = llm_person_analysis(system_prompt, user_prompt, ollama_params)
+        parsed = safe_json_loads(raw)
 
-            if parsed is None:
-                logger.error(f"[Personenanalyse] Keine verwertbare Antwort für {person}.")
-                raise ValueError(f"Personenanalyse fehlgeschlagen: {person}")
+        if parsed is None:
+            logger.warning(f"[Personenanalyse] JSON für {person} ungültig; starte Repair.")
+            repaired = llm_repair_person_analysis(raw, ollama_params)
+            parsed = safe_json_loads(repaired)
 
-            require_structure(parsed, "person_analysis")
-            normalized = normalize_person_analysis(parsed, allowed_ids, id_to_text)
-            if normalized is None:
-                raise ValueError(f"Ungültige Personenanalyse: {person}")
-            return normalized
-        normalized = PartCheckpoint('person_analysis', ollama_params).run(
-            person, {'system':system_prompt,'user':user_prompt,'texts':{sid:id_to_text[sid] for sid in sorted(allowed_ids)}}, compute_part)
+        if parsed is None:
+            logger.error(f"[Personenanalyse] Keine verwertbare Antwort für {person}.")
+            raise ValueError(f"Personenanalyse fehlgeschlagen: {person}")
 
+        require_structure(parsed, "person_analysis")
+        normalized = normalize_person_analysis(parsed, allowed_ids, id_to_text)
+        if normalized is None:
+            raise ValueError(f"Ungültige Personenanalyse: {person}")
+        return normalized
+
+    analyses = analyze_items(work_items, compute_item, ollama_params, 'person_analysis', 'persons')
+    results = {}
+    for item, normalized in zip(work_items, analyses):
+        person = item['key']
+        payload = person_payloads[person]
+        allowed_ids = set(item['texts'])
         categories = sorted({
             ctx.get("hauptkategorie")
             for seg in payload["segments"]

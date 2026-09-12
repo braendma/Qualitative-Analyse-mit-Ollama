@@ -12,7 +12,7 @@ function setup(){
     addEventListener(type,fn){this.listeners[type]=fn;},
     append(...children){this.children.push(...children);},
     replaceChildren(...children){this.children=children;},add(child){this.children.push(child);},
-    removeAttribute(){},classList:{toggle(){}},scrollIntoView(){},
+    removeAttribute(){},setAttribute(){},classList:{toggle(){}},scrollIntoView(){},
     async click(){await this.listeners.click({preventDefault(){}});}
   };}
   function node(id){if(!nodes.has(id))nodes.set(id,element());return nodes.get(id);}
@@ -25,10 +25,56 @@ function setup(){
   });
   vm.runInContext(fs.readFileSync(path.join(__dirname,'../src/local_app.js'),'utf8'),context);
   vm.runInContext("state={defaults:{llm:{},context:{},columns:{}},modules:[],projects:[]};project={id:'first',settings:{},uploads:{}};",context);
-  return {node,requests,run:code=>vm.runInContext(code,context)};
+  return {node,requests,run:code=>vm.runInContext(code,context),loadIdentity:()=>vm.runInContext(fs.readFileSync(path.join(__dirname,'../src/person_identity_ui.js'),'utf8'),context)};
 }
 const checkResult={segments:2,passages:1,persons:1,codes:1,modules:[]};
 const settle=()=>new Promise(resolve=>setImmediate(resolve));
+
+test('person grouping requires confirmation, counts unique IDs and clears approval after editing',async()=>{
+  const app=setup();app.loadIdentity();
+  assert.equal(app.run('personIdentityReady()'),false);
+  const pending=app.node('person-preview').click();
+  app.requests.find(r=>r.url==='/api/person-preview').reply({fingerprint:'first',documents:[{document:'Part A',rows:1},{document:'Part B',rows:2}]});
+  await pending;
+  const table=app.node('person-rows').children[0];
+  for(const row of table.children.slice(1)){const input=row.children[2].children[0];input.value='P01';input.listeners.input();}
+  assert.match(app.node('person-count').textContent,/2 Dokumentkennungen → 1 Personen/);
+  assert.equal(app.run('personIdentityReady()'),false);
+  app.node('person-confirmed').checked=true;
+  assert.equal(app.run('personIdentitySettings().mapping["Part B"]'),'P01');
+  table.children[1].children[2].children[0].listeners.input();
+  assert.equal(app.run('personIdentityReady()'),false);
+  app.run('resetPersonIdentity()');assert.equal(app.run('personIdentitySettings()'),null);
+});
+
+test('person preview response is ignored after a project switch',async()=>{
+  const app=setup();app.loadIdentity();const pending=app.node('person-preview').click();
+  app.run("project={id:'second',settings:{},uploads:{}};");
+  app.requests.find(r=>r.url==='/api/person-preview').reply({fingerprint:'old',documents:[{document:'Old',rows:1}]});
+  await pending;assert.equal(app.run('personIdentityReady()'),false);assert.equal(app.node('person-rows').children.length,0);
+});
+
+test('partial failure is visible during draining and after failure with reused work',()=>{
+  const app=setup();
+  for(const status of ['running','failed']){
+    const card=app.run(`runCard({created:0,status:'${status}',modules:[{id:'swot',name:'SWOT'}],current:'swot',
+      progress_detail:{unit:'categories',completed:3,total:8,reused:2,failed:1,requests:4}})`);
+    const text=card.children.map(n=>n.textContent||'').join(' ');
+    assert.match(text,/3 von 8 Kategorien/);
+    assert.match(text,/2 davon aus geprüften Zwischenergebnissen/);
+    assert.match(text,/1 Teilaufgabe\(n\) fehlgeschlagen/);
+    assert.match(text,status==='running'?/Neue Teilaufgaben starten nicht/:/Wiederaufnahme/);
+  }
+});
+
+test('runtime context block explains new inputs and a new configuration',()=>{
+  const app=setup();
+  const card=app.run(`runCard({created:0,status:'failed',modules:[],progress_detail:{
+    context_blocked:true,context_required:33000,context_limit:16000}})`);
+  const text=card.children.map(n=>n.textContent||'').join(' ');
+  assert.match(text,/33000, eingestellt 16000/);
+  assert.match(text,/neuen Lauf starten/);
+});
 
 test('context preflight uncertainties are visible after validating inputs',async()=>{
   const app=setup(),pending=app.run('saveAndValidate()');

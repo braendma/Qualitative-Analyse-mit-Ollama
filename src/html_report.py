@@ -23,6 +23,9 @@ def inline_assets():
 
 # Retain the exact audited Beta 3 renderer/style for already saved reports.
 LEGACY_REPORT_HASHES = {'script': ["'sha256-JdfchCVaDDGNds3x6iSiftJcX+HtnB1TcppPL0oL7t8='"], 'style': ["'sha256-Xdx2Cb2NRtLW5h704CrZI3NPGm+VHYYiEipfuKNeF2k='"]}
+# Exact renderer hashes of the preceding export remain valid for saved reports.
+LEGACY_REPORT_HASHES['script'] += ["'sha256-QhZRvxCAVmoP7DLRZaIUmMuxRwrxbQlVK3w6hjGBGUo='",
+                                  "'sha256-Mm42f8rjjBHIcY0pfLbPLAo1snQs+paoL+fLgCG9mQo='"]
 
 
 def csp_hashes():
@@ -81,7 +84,7 @@ def build_html_report(directory, modules, created_at, *, filename='gesamtbericht
                         try: image_data(vector);target=vector
                         except (ValueError,OSError,UnicodeError):
                             warnings.append('SVG nicht verwendbar; Rasterbild als Ersatz eingebettet.')
-                key=str(target.relative_to(directory))
+                key=target.relative_to(directory).as_posix()
                 if key not in assets:
                     encoded=image_data(target)
                     if image_bytes+len(encoded)>MAX_EXPORT//2:raise ValueError('Bildbudget überschritten.')
@@ -89,8 +92,22 @@ def build_html_report(directory, modules, created_at, *, filename='gesamtbericht
                 section_assets[reference]=key
             except (OSError,ValueError):
                 warnings.append('Eine Abbildung in „'+str(report.get('title',module['name']))+'“ wurde nicht eingebettet (fehlend, zu groß oder nicht unterstützter Pfad/Bildtyp).')
+        source_refs = {}
+        if module.get('id') == 'overall_synthesis':
+            from synthesis_sources import source_details, clarify_source_lines
+            # Follow the configured JSON output, including custom output names.
+            args = module.get('args', [])
+            try:
+                json_name = args[args.index('--out-json') + 1] if '--out-json' in args else str(Path(name).with_suffix('.json'))
+                provenance = local_file(directory, json_name)
+                if provenance.stat().st_size > 20 * 1024 * 1024:
+                    raise ValueError('Quellenregister zu groß')
+                source_refs = source_details(json.loads(provenance.read_text(encoding='utf-8-sig')))
+            except (OSError, ValueError, TypeError, KeyError, IndexError, AttributeError):
+                warnings.append('Herkunftsdetails der Gesamtsynthese fehlen oder sind nicht lesbar. Kennungen sind keine Interviewzitate.')
+            text = clarify_source_lines(text, source_refs)
         sections.append({'id':'section-'+str(len(sections)+1),'title':str(report.get('title',module['name'])),
-                         'markdown':text,'images':section_assets})
+                         'markdown':text,'images':section_assets,'source_refs':source_refs})
     source=config.get('review_provenance') or {}
     data={'schema_version':1,'created_at':str(created_at),'run_id':directory.name,
           'model':str(config.get('llm',{}).get('model','Nicht dokumentiert')),

@@ -23,6 +23,7 @@ class HtmlReportTests(unittest.TestCase):
             payload=json.loads(re.search(r'id="report-data">(.*?)</script>',html,re.S)[1])
             self.assertEqual(payload['sections'][0]['markdown'],text)
             self.assertEqual(len(payload['images']),1)
+            self.assertTrue(all('\\' not in key for key in payload['images']))
             self.assertTrue(payload['warnings'])
             self.assertNotIn('SECRET',html);self.assertNotIn('PRIVATE-PATH',html)
             self.assertNotIn('</script><script>alert(1)',html)

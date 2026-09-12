@@ -1,16 +1,21 @@
 # Qualitative Analyse mit Ollama
 
-**Kontextprüfung vor dem Start:** Zu große bereits bekannte Anfragen sperren den Lauf mit konkreten Abhilfen. Hinweise machen knappen Reparaturplatz und die unbekannte Größe späterer Modellbefunde sichtbar. Die Prüfung benötigt keine Modellanfrage.
+## Neu in 0.4.0-beta.1
 
-**Neu in 0.3.5:** Große Zusammenfassungen werden stufenweise verdichtet; abgebrochene Antworten und ungültige Codierungen werden mit geprüftem Kontext erneut bearbeitet. Erfolgreiche Teilschritte bleiben für die Wiederaufnahme erhalten. [Änderungen und Umstieg](docs/RELEASE_NOTES.md).
+- **Personen ausdrücklich zuordnen:** Mehrere Dokumente können zu einer Person gehören. Vorschau und Bestätigung sind vor dem Start erforderlich. [Anleitung](docs/Personenzuordnung.md).
+- **Eingaben und Ergebnisse verstehen:** Beispiele an den Feldern und für alle 15 Module erklären Import, Regeln, Belege und Rückmeldungen. [Beispielkatalog](docs/BEISPIELE.html).
+- **Fehler gezielt beheben:** Die Laufkarte nennt Ursache und Abhilfe und führt zur passenden Einstellung. Erneute Eingabeprüfung startet keinen Lauf. [Fehlerhilfe](docs/HANDBUCH.md#direkte-fehlerhilfe).
+- **Prompts nachvollziehen:** Schreibgeschützte System- und Aufgabenvorlagen je Modul, einschließlich ursprünglicher Konfiguration bestehender Läufe. Platzhalter bleiben erhalten; kein vollständiges Anfrageprotokoll. [Prompt-Ansicht](docs/HANDBUCH.md#modul-prompts-ansehen).
+- **Große Analysen kontrolliert bearbeiten:** Begrenzte Teilprüfungen und Verdichtungen mit Herkunftsnachweisen, erneuter Kontextprüfung und einstellbarem Synthese-Aufrufbudget. Originalbelege bleiben erhalten; methodische Grenzen stehen im Bericht.
+- **Fortschritt richtig einordnen:** Modulabschluss, aktuelle Phase, gültige und wiederverwendete Teile sowie Modellaktivität getrennt in Oberfläche und Telegram. Unbekannte Gesamtzahlen erhalten keinen erfundenen Prozentwert.
 
-**Neu in 0.3.4:** Gleichzeitige lokale Ollama-Anfragen in der Oberfläche wählen. Die Anwendung prüft den freien Speicher und startet bei einer Auswahl ab 2 eine eigene Ollama-Instanz mit passenden Verarbeitungsplätzen. Clustering und Codierprüfungen verarbeiten unabhängige Einheiten parallel. [Anleitung](docs/HANDBUCH.md#speicher-und-parallele-anfragen).
+Nach einem Programmupdate einen neuen Lauf starten. Alte Ergebnisse bleiben lesbar; das Fortsetzen eines Laufs erfordert unveränderte Eingaben, Konfiguration und Programmversion. [Änderungen und Umstieg](docs/RELEASE_NOTES.md).
 
 Mit diesem Programm kannst du bereits codierte Interviewstellen auswerten und menschliche Codierungen mit Modellvorschlägen vergleichen. Die lokale Bedienoberfläche führt durch Dateiimport, Eingabeprüfung, Modulauswahl und Ergebnisse. Für die normale Bedienung musst du keine Python- oder YAML-Dateien bearbeiten.
 
 Die Auswertung läuft standardmäßig mit lokalem Ollama. Für freigegebene Inhalte sind optional Ollama Cloud, OpenAI, Anthropic und Hugging Face verfügbar; die DSGVO-Sperre ist pro Projekt zunächst aktiviert. Modellvorschläge und Berichte müssen fachlich geprüft werden; sie ersetzen keine eigenständige qualitative Analyse.
 
-**Aktuelle Vorabversion: [0.3.5 · Robustere Zusammenfassungen](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/tag/v0.3.5).** Mit Prüf- und Rückmeldungsfunktion, interaktiven Berichten und optionalen Cloud-Anbietern. OpenAI, Anthropic und Hugging Face sind technisch mit Mocks geprüft, aber noch nicht live getestet.
+**Vorabversion: [0.4.0-beta.1](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/tag/v0.4.0-beta.1).** Windows und macOS verwenden denselben Analysecode. OpenAI, Anthropic und Hugging Face sind mit simulierten Antworten geprüft; Live-Tests dieser Anbieter stehen aus.
 
 Das gefaltete **b** von braendma ist jetzt als lokales Programmsignet eingebunden. Über **Handbuch** neben **Telegram-Updates** öffnet sich die vollständige Anleitung mit Bildern und Beispielen, auch ohne Internet.
 
@@ -124,6 +129,8 @@ Sind alle kritischen Fälle abgeschlossen, kannst du einen **Folgelauf mit gepr�
 Die separate Offline-Datei `review_queue.html` benötigt weiterhin manuelles Speichern und Laden ihrer JSON-Entscheidungen. Ein automatischer Rückimport nach MAXQDA ist nicht enthalten. [Vollständige Anleitung zu Prüfung, Export, Folgelauf und Kategorienvorschlägen](docs/PRUEFUNG_UND_FOLGELAUF.md).
 
 ## Optional: Telegram-Updates
+
+Fortschrittsmeldungen zeigen einen Balken für das aktuelle Modul, Prozent und bearbeitete Einheiten. Modellantworten, gleichzeitig aktive Anfragen und wiederverwendete Zwischenergebnisse stehen getrennt darunter, soweit diese Zähler verfügbar sind. Der Modulbalken ist keine Schätzung der Gesamtlaufzeit.
 
 Diesen Bereich überspringen, wenn du keine Benachrichtigungen möchtest. Andernfalls Bot-Token und Ziel-Chat-ID eintragen. Der Token kann aus einer Textdatei geladen, ersetzt oder entfernt werden. Unter Windows lässt er sich für das aktuelle Benutzerkonto verschlüsselt speichern.
 
@@ -1163,3 +1170,11 @@ Das vollständige [Demo-Codebuch](demo/Kategoriesystem.csv) enthält für alle z
 [Beispiel-CSV mit frei benannten Regelspalten](demo/Kategoriesystem_mit_Regeln.csv): `Bezeichnung` → Code, `Bedeutung` → Definition, `Wann zuordnen` → Einschlussregeln, `Wann nicht zuordnen` → Ausschlussregeln, `Typische Aussage` → Ankerbeispiele, `Abgrenzende Hinweise` → Abgrenzung / weitere Codierhinweise. Die Datei ist ein eigenständiges Formatbeispiel; sie ersetzt nicht das Codebuch des mitgelieferten 50-Zeilen-Demos.
 
 Die Regeln werden bei Blindcodierung und Codeprüfung sowie als Teil des Codebuchs bei Kategorienvorschlägen mitgegeben. Sie gelten für den ausdrücklich angegebenen Code, ohne automatische Vererbung an Untercodes. Widersprüche müssen fachlich geklärt werden. Ein Importtest belegt keine höhere Codierqualität.
+
+
+Die Belegprüfung beschränkt das angeforderte JSON-Antwortformat auf die IDs des jeweiligen Prüfblocks. Auch danach werden alle Zuordnungen validiert. Scheitert die Reparatur einer ungültigen Antwort, folgt höchstens eine neue Anfrage mit der vollständigen ursprünglichen Eingabe. Bleiben IDs ungültig, stoppt das Modul mit Fehler; Gegenbelege werden nicht still entfernt. Anbieter müssen das Antwortschema tatsächlich unterstützen; die nachträgliche Prüfung gilt unabhängig davon.
+
+
+Fortschritt bei SWOT: Die reguläre SWOT zählt abgeschlossene Kategorien, Meta-SWOT die vier Dimensionen Stärken, Schwächen, Chancen und Risiken. Eine Kategorie oder Dimension kann mehrere Modellanfragen benötigen. Die Prozentzahl beschreibt erledigte Einheiten, nicht den Zeitanteil. Für eingefrorene ältere Läufe ohne Gesamtzahl bleibt es bei einer ausdrücklich gekennzeichneten Aktivitätsanzeige.
+
+Die Gesamtsynthese zeigt [verständliche Herkunftsdetails und Originaltextstellen](docs/HANDBUCH.md#quellen-und-originalzitate-in-der-gesamtsynthese), soweit eine Zuordnung gespeichert ist.

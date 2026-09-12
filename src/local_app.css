@@ -5,3 +5,17 @@
 .report {line-height:1.7; overflow-wrap:anywhere}.report h2,.report h3 {margin-top:1.4em}.report pre,#review-cases pre {white-space:pre-wrap;max-height:24rem;overflow:auto}#review-cases blockquote,.report blockquote {border-left:3px solid #2e8993;padding:12px 18px;margin:12px 0;white-space:pre-wrap}#review-cases label {display:block;margin-top:14px}#review-cases textarea{min-height:80px}#review-panel #review-status{position:sticky;top:0;background:var(--panel,#fff);padding:10px;z-index:2}dialog{max-height:85vh;overflow:auto}#followup-changes{max-height:35vh;overflow:auto}.report td{white-space:pre-wrap;min-width:120px;max-width:640px}
 
 .brand-icon{width:48px;height:48px;object-fit:cover;flex-shrink:0;border-radius:12px}.brand small{font-size:.7rem}.nav{text-decoration:none}.nav:focus-visible{outline:3px solid #d09b47;outline-offset:3px}.result-row small{display:block;color:var(--muted);font-size:.75rem}#passage-dialog{max-width:900px;max-height:90vh;overflow:auto}#passage-candidates blockquote{white-space:pre-wrap;line-height:1.6;margin:12px 0;padding-left:16px;border-left:3px solid var(--line)}
+
+/* Activity has no numeric meaning when the module has no total yet. */
+.module-activity{height:12px;width:100%;overflow:hidden;background:#e4ebe6;border-radius:6px;position:relative}
+.module-activity::after{content:"";position:absolute;width:25%;height:100%;background:var(--green);border-radius:6px;animation:module-activity 2s ease-in-out infinite}
+@keyframes module-activity{0%{left:-25%}100%{left:100%}}
+@media(prefers-reduced-motion:reduce){.module-activity::after{animation:none;left:37.5%}}
+
+/* Guided error repair keeps the real setting editable and never starts a run. */
+.failure-guide{background:#f0f6f2;border:1px solid #92b8a3;border-left:4px solid #23634d;border-radius:8px;padding:18px;margin:14px 0 22px;flex-basis:100%;width:100%;min-width:0}
+.failure-guide p{font-size:.9rem;line-height:1.6}.failure-guide .actions{margin-top:12px}.failure-guide .actions button{font-size:.83rem;padding:8px 12px}
+.failure-setting-target{outline:3px solid #ad771b!important;outline-offset:3px}.mapping>.failure-setting-wide{grid-column:1/-1}
+#failure-guide-result{overflow-wrap:anywhere;margin-top:12px}
+
+#prompt-dialog{max-width:1000px;width:calc(100% - 28px)}#prompt-dialog .section-heading{position:sticky;top:-28px;background:white;padding:14px 0;z-index:2}#prompt-dialog pre{max-height:25rem;font-size:.9rem;line-height:1.6;background:#f5f7f5;padding:14px}.module-example .example-trigger+.example-trigger{margin-left:8px}

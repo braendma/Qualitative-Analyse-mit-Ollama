@@ -93,7 +93,8 @@ class Telegram:
     def send(self, event, completed=0, total=0, test=False, detail=None):
         with self.lock:
             token, settings = self.token, dict(self.settings)
-        if not test and (not settings['enabled'] or event not in settings['events']):
+        preference = 'failed' if event == 'partial_failed' else event
+        if not test and (not settings['enabled'] or preference not in settings['events']):
             return False
         if not token or not settings['chat_id']:
             if test:
@@ -103,16 +104,12 @@ class Telegram:
                     'progress': f'Qualitative Analyse: {int(completed)} von {int(total)} Modulen abgeschlossen.',
                     'success': 'Qualitative Analyse: Lauf abgeschlossen. Ergebnisse lokal öffnen.',
                     'failed': 'Qualitative Analyse: Lauf unterbrochen. Bitte die lokale Oberfläche prüfen.',
+                    'partial_failed': 'Qualitative Analyse: Eine Teilaufgabe ist fehlgeschlagen. Bereits laufende Anfragen können noch abgeschlossen werden. Bitte die lokale Oberfläche prüfen.',
                     'paused': 'Qualitative Analyse: Lauf pausiert. Fortsetzen ist lokal möglich.'}
         message = 'Qualitative Analyse: Telegram-Test erfolgreich.' if test else messages[event]
-        if event=='progress' and not test and isinstance(detail,dict):
-            # Only bounded numeric counters and fixed labels can reach Telegram.
-            unit={'passages':'Passagen','rows':'Codierzeilen','batches':'Prüfblöcken'}.get(detail.get('unit'))
-            done,amount=detail.get('completed'),detail.get('total')
-            if unit and type(done) is int and type(amount) is int and 0<=done<=amount<=10000000:
-                message+=f' Im aktuellen Modul: {done} von {amount} {unit} bearbeitet.'
-            elif type(detail.get('requests')) is int and 0<=detail['requests']<=10000000:
-                message+=f" Im aktuellen Modul: {detail['requests']} Modellantworten empfangen."
+        if event=='progress' and not test:
+            from telegram_progress import format_progress
+            message=format_progress(completed,total,detail)
         body = json.dumps({'chat_id': settings['chat_id'], 'text': message}).encode()
         request = urllib.request.Request('https://api.telegram.org/bot' + token + '/sendMessage',
                                          data=body, headers={'Content-Type': 'application/json'})

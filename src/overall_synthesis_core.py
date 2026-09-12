@@ -1,3 +1,4 @@
+from progress_events import begin_phase, update_progress
 from response_schemas import schema_for, require_structure
 # overall_synthesis_core.py
 
@@ -191,6 +192,7 @@ def build_overall_synthesis(
     def final_prompt(payload):
         return build_prompt_for_module("overall_synthesis", prompts=prompts, context=context,
             data=json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
+    begin_phase('preparation')
     payload, reduction = reduce_sources(
         {label: project_synthesis_source(data) for label, data in sources.items()}, final_prompt, ollama_params, default_llm)
 
@@ -201,6 +203,7 @@ def build_overall_synthesis(
         data=json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
     )
 
+    begin_phase('synthesis', 1)
     raw = llm_overall_synthesis(system_prompt, user_prompt, ollama_params)
     parsed = safe_json_loads(raw)
     if parsed is None:
@@ -216,6 +219,7 @@ def build_overall_synthesis(
     if reduction['used'] and not any(normalized[key] for key in ('kernergebnisse','uebergreifende_muster','spannungen_und_relativierungen')):
         raise ValueError('Hierarchische Gesamtsynthese enthält keine gültigen Rückverweise auf Teilanalysen.')
 
+    update_progress(completed=1)
     json_output = {
         "hierarchical_reduction": reduction,
         "input_projection": "Analytische Befunde, Statusfelder und Referenz-IDs; wiederholte Rohtextbelege und Register ausgelassen.",
@@ -225,10 +229,13 @@ def build_overall_synthesis(
         **normalized,
     }
 
+    from synthesis_sources import source_details, readable_source_line, SOURCE_NOTE
+    details = source_details(json_output)
     md = [
         "# Gesamtsynthese\n",
         f"Erstellt am: {json_output['created_at']}\n\n",
         f"Einbezogene analytische Ebenen: **{', '.join(source_labels)}**\n\n",
+        f"> {SOURCE_NOTE}\n\n",
     ]
 
     if normalized["gesamtsynthese"]:
@@ -245,7 +252,7 @@ def build_overall_synthesis(
         for entry in entries:
             md.append(f"### {entry['thema']}\n\n{entry['verdichtung']}\n\n")
             if entry["quellen"]:
-                md.append(f"**Analytische Quellen:** {', '.join(entry['quellen'])}\n\n")
+                md.append(readable_source_line(entry['quellen'], details))
 
     md.append("## Spannungen und Relativierungen\n\n")
     if not normalized["spannungen_und_relativierungen"]:
@@ -253,7 +260,7 @@ def build_overall_synthesis(
     for entry in normalized["spannungen_und_relativierungen"]:
         md.append(f"### {entry['aussage'] or 'Relativierung'}\n\n{entry['einordnung']}\n\n")
         if entry["quellen"]:
-            md.append(f"**Analytische Quellen:** {', '.join(entry['quellen'])}\n\n")
+            md.append(readable_source_line(entry['quellen'], details))
 
     md.append("## Methodische Einordnung\n\n")
     if normalized["methodische_einordnung"]:

@@ -34,6 +34,9 @@ logger = logging.getLogger(
 # -----------------------------------------------------
 # Main
 # -----------------------------------------------------
+from progress_events import track_module
+
+@track_module
 def main(argv=None):
 
     parser = argparse.ArgumentParser(

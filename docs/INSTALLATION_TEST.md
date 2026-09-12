@@ -1,3 +1,12 @@
+# Prüfung für 0.4.0-beta.1 (13. September 2026)
+
+203 Python- und 21 JavaScript-Tests bestanden unter Windows mit Python 3.12. Die Tests verwenden künstliche Daten und simulierte Modellantworten, einschließlich kompletter Pipeline und Wiederaufnahme. Der Windows-DPAPI-Test lief im Benutzerkontext. Ein isolierter HTTP-Start mit Leerzeichen im Datenpfad und dem neuen Prompt-Dialog wurde ebenfalls geprüft.
+
+Die GitHub-Prüfung installiert für Windows und macOS jeweils eine frische Python-Umgebung über die mitgelieferten Einrichtungsskripte. Anschließend laufen Regressionen und ein HTTP-Starttest. Den tatsächlichen Status des Release-Commits unter GitHub Actions prüfen; ein vorbereiteter Workflow ist noch kein bestandener Lauf. Physische Mac-GPU-Leistung und macOS-Schlüsselbundintegration sind damit nicht nachgewiesen.
+
+
+Zwei ergänzende lokale Funktionstests mit granite4.2:30b (Thinking low, 12.288 Kontexttokens) verglichen wiederholte Clusterkontexte mit der Referenztabelle an vier erfundenen Textstellen. Beide Antworten enthielten dieselben vier gültigen Beleg-IDs sowie Unterrichtsfreude, Einkommen, Arbeitsbelastung und soziale Motivation. Die neue Anfrage war in diesem Beispiel kleiner (4.626 statt 5.222 UTF-8-Bytes). Das ist kein Qualitätsbenchmark: Beide Antworten verschärften eine Motivabwägung stellenweise zu einem Gegensatz mit „ausschließlich sozialer Motivation“, den der Ausgangstext nicht trägt. Eine fachliche Prüfung bleibt erforderlich; die Referenztabelle allein verhindert solche Deutungen nicht.
+
 # Ergänzende Prüfung für 0.3.5 (12. September 2026)
 
 - Windows: Python-Regressionen einschließlich vollständiger synthetischer Pipeline, Wiederaufnahme, Codebuchregeln, Kontext-Startsperre und Windows-Schlüsselverschlüsselung; JavaScript-Tests einschließlich sichtbarer Kontexthinweise. Die endgültige Testanzahl steht in den GitHub-Versionshinweisen.
