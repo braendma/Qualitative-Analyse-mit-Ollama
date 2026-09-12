@@ -12,3 +12,7 @@ Die Aufnahmen dokumentieren die Bedienung, keine neuen Analyseergebnisse. Für i
 - `04-telegram-optional.jpg`: Tokenimport und optionale Statusmeldungen.
 
 Neue Aufnahmen des Usability-Patches: `07-passage-ids.jpg` zeigt die bestätigte Gruppierung eines rein künstlichen MAXQDA-Beispiels, `08-interaktiver-bericht.jpg` den regulären HTML-Viewer anhand gespeicherter synthetischer Cloud-Ergebnisse und `09-handbuch.jpg` das lokale Handbuch. Keine Studiendaten oder Zugangsdaten.
+
+`16-personen-beispiel.jpg`: Dialog der neuen Kontexthilfe aus dem vorbereiteten v5-Patch, aufgenommen am 12.09.2026. Drei künstliche Dokumente und zwei Personen. Keine Modellanfrage.
+
+`17-fehlerhilfe.jpg` und `18-modulprompts.jpg`: neue direkte Fehlerhilfe und schreibgeschützte Prompt-Ansicht, 13.09.2026. Nur künstliche Testfälle und öffentliche Programmvorlagen. Keine Modellanfrage.

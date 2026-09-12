@@ -44,12 +44,8 @@ def request_chat(backend, request, settings, *, api_key=None):
         request['format'] = schema
     num_ctx = int(settings.get('num_ctx', 32768))
     reserve = int(request['options']['num_predict'])
-    # UTF-8 byte count is a conservative upper bound for supported byte-level tokenizers.
-    size = sum(len(m['content'].encode('utf-8')) + 32 for m in request['messages'])
-    if size + reserve + 256 > num_ctx:
-        raise ContextBudgetError(
-            f'Eingabe überschreitet das konservative Kontextbudget ({size} Bytes + '
-            f'{reserve} Ausgabetokens; num_ctx={num_ctx}). Eingabe aufteilen oder Kontext erhöhen.')
+    from runtime_context import require_messages
+    require_messages(request['messages'], settings, answer=reserve)
     if not cloud:
         request['options']['num_ctx'] = num_ctx
     headers = {}

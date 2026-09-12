@@ -21,6 +21,9 @@ logging.basicConfig(
 logger = logging.getLogger("person_comparison")
 
 
+from progress_events import track_module
+
+@track_module
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Personenvergleich und qualitative Typenbildung")
     parser.add_argument("--config", "-c", default=str(DEFAULT_CONFIG))

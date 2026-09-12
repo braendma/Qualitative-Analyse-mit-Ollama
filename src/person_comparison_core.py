@@ -1,3 +1,4 @@
+from progress_events import begin_phase, update_progress
 from response_schemas import schema_for, require_structure
 # person_comparison_core.py
 
@@ -174,17 +175,17 @@ def build_person_comparison(
         raise ValueError("Keine Personenanalysen gefunden.")
 
     source_people = sorted(persons.keys())
-    payload = {
-        "personen": [persons[name] for name in source_people]
-    }
+    from comparison_reduction import prepare_people
+    from summarizer_core import llm_summary
+    def prompt(payload):
+        system,user=build_prompt_for_module('person_comparison',prompts=prompts,context=context,
+            persons=json.dumps(payload,ensure_ascii=False,indent=2))
+        return system,user
+    begin_phase('preparation')
+    payload,reduction=prepare_people(persons,prompt,ollama_params,llm_summary)
+    system_prompt,user_prompt=prompt(payload)
 
-    system_prompt, user_prompt = build_prompt_for_module(
-        "person_comparison",
-        prompts=prompts,
-        context=context,
-        persons=json.dumps(payload, ensure_ascii=False, indent=2),
-    )
-
+    begin_phase('comparison', 1)
     raw = llm_person_comparison(system_prompt, user_prompt, ollama_params)
     parsed = safe_json_loads(raw)
     if parsed is None:
@@ -198,14 +199,18 @@ def build_person_comparison(
     if comparison is None:
         raise ValueError("Personenvergleich besitzt kein verwertbares Format.")
 
+    update_progress(completed=1)
     json_output = {
         "created_at": datetime.now().isoformat(),
         "source_person_analysis_created_at": person_data.get("created_at"),
         "source_persons": source_people,
+        "input_reduction": reduction,
         **comparison,
     }
 
     md = ["# Personenvergleich und Typenbildung\n", f"Erstellt am: {json_output['created_at']}\n\n"]
+    if reduction['used']:
+        md.append('**Methodischer Hinweis:** Der Vergleich beruht auf getrennten hierarchischen Verdichtungen aller Personenanalysen. Einzelheiten können dabei verloren gehen. Die vollständigen Originalanalysen und ihre Belege bleiben erhalten.\n\n')
     if comparison["gesamtvergleich"]:
         md.append(f"## Gesamtvergleich\n\n{comparison['gesamtvergleich']}\n\n")
 

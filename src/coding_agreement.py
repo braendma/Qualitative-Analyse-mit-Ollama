@@ -29,6 +29,9 @@ def configure_logging(log_file: str) -> None:
     )
 
 
+from progress_events import track_module
+
+@track_module
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Deterministisches Human–LLM Coding Agreement")
     parser.add_argument("--config", "-c", default=str(DEFAULT_CONFIG))

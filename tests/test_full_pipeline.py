@@ -57,6 +57,12 @@ class FullPipelineTests(unittest.TestCase):
             manifest=json.loads((run/'workflow_manifest.json').read_text(encoding='utf-8'))
             if not partial_module:self.assertIn('person_analysis',manifest['completed_steps'],first.stderr[-6000:])
             self.assertEqual(manifest['status'],'failed')
+            self.assertEqual(manifest['module_status'][manifest['current_module']], 'failed')
+            if not partial_module:
+                self.assertIn('relation_analysis',manifest['completed_steps'])
+                self.assertIn('ambiguity_analysis',manifest['completed_steps'])
+                self.assertEqual(manifest['module_status']['contrast_analysis'],'blocked')
+                self.assertTrue(manifest['module_errors']['person_comparison']['action'])
             if partial_module:
                 trace=[json.loads(line) for line in (temp/'requests.jsonl').read_text().splitlines()]
                 first_success=next(x for x in trace if x['module']==partial_module)
@@ -67,6 +73,7 @@ class FullPipelineTests(unittest.TestCase):
             manifest=json.loads((run/'workflow_manifest.json').read_text(encoding='utf-8'))
             self.assertEqual(set(manifest['completed_steps']),{m['id'] for m in cfg['pipeline']['modules'] if m.get('enabled',True)})
             self.assertEqual(manifest['status'],'success')
+            self.assertTrue(all(value=='success' for value in manifest['module_status'].values()))
             self.assertNotIn('error',manifest)
             self.assertTrue(manifest['failure_history'])
             if partial_module:

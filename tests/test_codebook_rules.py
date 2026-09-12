@@ -39,6 +39,8 @@ class CodebookRuleTests(unittest.TestCase):
                          {**opts['book_columns'],'ausschluss':'Wann zuordnen'}):
                 with self.assertRaises(ValueError):app.save(pid,{**opts,'book_columns':book})
                 with self.assertRaises(ValueError):app.start(pid)
+            identity=app.person_preview(pid,opts['columns'])
+            opts['person_identity']={'confirmed':True,'fingerprint':identity['fingerprint'],'mapping':{'P1':'P1'}}
             result=app.save(pid,opts)
             self.assertEqual(result['codebook_fields']['einschluss'],3)
             self.assertEqual(result['model_calls'],0)

@@ -1,4 +1,5 @@
 from runtime_support import PartCheckpoint
+from progress_events import update_progress
 # summarizer_core.py
 
 import json
@@ -134,6 +135,8 @@ def summarize_clusters(
     # -------------------------------------------------
     # Einzelsummaries
     # -------------------------------------------------
+    total_steps = len(clusters) + 1  # Include the final synthesis, which can take longer.
+    update_progress(completed=0, total=total_steps, unit='summaries', phase='cluster_summaries')
     for index, c in enumerate(clusters, start=1):
 
         cname = c.get(
@@ -234,6 +237,7 @@ def summarize_clusters(
             "segments": seg_ids,
             "summary": summary
         })
+        update_progress(completed=index)
 
     # -------------------------------------------------
     # Gesamtsummary vorbereiten
@@ -269,6 +273,7 @@ def summarize_clusters(
     # -------------------------------------------------
     # Gesamtzusammenfassung erzeugen
     # -------------------------------------------------
+    update_progress(phase='overall_summary')
     final_summary = PartCheckpoint("summarizer", ollama_params).run(
         'overall', {"system":system_prompt,"user":user_prompt},
         lambda: llm_summary(
@@ -278,6 +283,7 @@ def summarize_clusters(
     # -------------------------------------------------
     # JSON-Output
     # -------------------------------------------------
+    update_progress(completed=total_steps)
     json_output = {
         "created_at": datetime.now().isoformat(),
         "cluster_summaries": cluster_summaries,

@@ -1,4 +1,5 @@
 from runtime_support import PartCheckpoint
+from progress_events import update_progress
 from response_schemas import schema_for, require_structure
 # meta_swot_core.py
 
@@ -261,34 +262,20 @@ def _build_dimension_meta(
     findings_by_id = {f["finding_id"]: f for f in findings}
     source_ids = list(dict.fromkeys(f["source_id"] for f in findings))
 
-    system_prompt, user_prompt = build_prompt_for_module(
-        "meta_swot",
-        prompts=prompts,
-        context=context,
-        category=dimension,
-        clusters=json.dumps(findings, ensure_ascii=False, indent=2),
-    )
-
-    raw = llm_meta_swot(system_prompt, user_prompt, ollama_params)
-    parsed = safe_json_loads(raw)
-
-    if parsed is None:
-        logger.warning(
-            "[Meta-SWOT] JSON-Parsing für %s fehlgeschlagen. Starte Repair.",
-            dimension,
-        )
-        repaired = llm_meta_swot_repair(raw, ollama_params)
-        parsed = safe_json_loads(repaired)
-
-    if parsed is None:
-        logger.error(
-            "[Meta-SWOT] Keine gültige Clusterantwort für %s. Alle Befunde bleiben Einzelbefunde.",
-            dimension,
-        )
-        raise ValueError(f"Meta-SWOT fehlgeschlagen: {dimension}")
-
-    require_structure(parsed, "meta_swot")
-    clusters = normalize_cluster_response(parsed, findings_by_id)
+    from meta_batches import compare_blocks
+    from summarizer_core import llm_summary
+    def prompt(block):
+        return build_prompt_for_module('meta_swot',prompts=prompts,context=context,
+            category=dimension,clusters=json.dumps(block,ensure_ascii=False,indent=2))
+    def compare(system,user,block):
+        raw=llm_meta_swot(system,user,ollama_params)
+        parsed=safe_json_loads(raw)
+        if parsed is None:
+            parsed=safe_json_loads(llm_meta_swot_repair(raw,ollama_params))
+        if parsed is None:raise ValueError('Meta-SWOT-Teilantwort konnte nicht gelesen werden.')
+        require_structure(parsed,'meta_swot')
+        return normalize_cluster_response(parsed,{f['finding_id']:f for f in block})
+    clusters,batching=compare_blocks(findings,prompt,ollama_params,compare,llm_summary)
 
     cross_patterns = []
     assigned_to_cross = set()
@@ -350,6 +337,7 @@ def _build_dimension_meta(
         already_added_single_ids.add(finding_id)
 
     return {
+        "input_batching": batching,
         "uebergreifende_muster": cross_patterns,
         "einzelbefunde": single_findings,
         "statistik": {
@@ -382,7 +370,9 @@ def build_meta_swot(
     total_findings = 0
     total_cross = 0
 
-    for dimension in DIMENSIONS:
+    update_progress(completed=0, total=len(DIMENSIONS), unit='dimensions')
+    for index, dimension in enumerate(DIMENSIONS, start=1):
+        update_progress(detail_completed=None, detail_total=None)
         findings = findings_by_dimension[dimension]
         logger.info(
             "[Meta-SWOT] Verdichte %s Befunde in Dimension %s.",
@@ -399,6 +389,7 @@ def build_meta_swot(
         meta_swot[dimension] = result
         total_findings += result["statistik"]["befunde"]
         total_cross += result["statistik"]["in_mehrquellenmustern"]
+        update_progress(completed=index)
 
     finding_registry = {
         finding["finding_id"]: finding
@@ -426,6 +417,9 @@ def build_meta_swot(
         "SWOT-Quellbereiche gestützt werden. Alle übrigen Befunde bleiben als "
         "Einzelbefunde sichtbar.\n\n",
     ]
+
+    if any(part.get('input_batching',{}).get('parts',0)>1 for part in meta_swot.values()):
+        md.append('**Methodischer Hinweis:** Die Meta-SWOT nutzt quellenweise durchmischte Teilvergleiche. Muster werden innerhalb dieser Blöcke ermittelt und zusammengeführt; eine zusätzliche globale Zusammenführung über Blockgrenzen findet nicht statt. Ähnliche Befunde können daher unverbunden bleiben. Alle Originalbefunde und Beleg-IDs bleiben im Befundregister erhalten.\n\n')
 
     for dimension in DIMENSIONS:
         section = meta_swot[dimension]

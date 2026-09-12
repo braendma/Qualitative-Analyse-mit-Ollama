@@ -22,6 +22,9 @@ logging.basicConfig(
 logger = logging.getLogger("evidence_audit")
 
 
+from progress_events import track_module
+
+@track_module
 def main(argv=None):
     parser = argparse.ArgumentParser(
         description="Audit der empirischen Breite zentraler Meta-SWOT-Befunde"

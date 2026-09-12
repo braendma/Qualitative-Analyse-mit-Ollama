@@ -127,6 +127,8 @@ class ReviewWorkspace:
             loaded=self.review(pid,jid);queue=loaded['queue'];draft=loaded['draft']
             directory=self.project_dir(pid);job=read(directory/'jobs'/jid/'job.json')
             oldcfg=yaml.safe_load(Path(job['config']).read_text(encoding='utf-8'))
+            from person_identity import verify, preview as identity_preview, apply as identity_apply
+            verify(Path(oldcfg['paths']['input_csv']).read_bytes(),oldcfg['columns'],oldcfg.get('person_identity'))
             segments=load_segments(oldcfg['paths']['input_csv'],oldcfg['columns'])
             known={s.segment_id:s for s in segments}
             ids=[sid for c in queue['cases'] for sid in c['segment_ids']]
@@ -176,12 +178,19 @@ class ReviewWorkspace:
                     'note':'Auswertung nach manueller Prüfung; keine unabhängige Validierung und kein Modelltraining.'}
             # Stage in a new directory first. Publish project pointers only after full validation.
             rev=directory/'revisions'/uuid.uuid4().hex[:20];rev.mkdir(parents=True)
-            atomic_text(rev/'segments.csv',out.getvalue())
+            followup_raw=out.getvalue().encode('utf-8')
+            identity_info=identity_preview(followup_raw,settings['columns'])
+            # Codes change, but each person is copied from the verified source run.
+            settings['person_identity']={'confirmed':True,'fingerprint':identity_info['fingerprint'],
+                'mapping':{d['document']:d['document'] for d in identity_info['documents']}}
+            normalized,identity_columns,identity_receipt=identity_apply(followup_raw,settings['columns'],settings['person_identity'])
+            (rev/'segments.csv').write_bytes(normalized)
             atomic_text(rev/'codebook.csv',Path(oldcfg['paths']['category_system_csv']).read_text(encoding='utf-8-sig'))
             cfg=copy.deepcopy(oldcfg);cfg['paths'].update(input_csv=str(rev/'segments.csv'),category_system_csv=str(rev/'codebook.csv'))
             from llm_providers import selection
             cfg['llm'].update(selection(settings))
-            cfg['columns']=settings['columns'];cfg['coding_agreement'].update(label_mode='multi_label',independent_units_confirmed=False)
+            cfg['columns']=identity_columns;cfg['person_identity']=identity_receipt
+            cfg['coding_agreement'].update(label_mode='multi_label',independent_units_confirmed=False)
             cfg['review_provenance']=source
             atomic_text(rev/'config.yaml',yaml.safe_dump(cfg,allow_unicode=True,sort_keys=False))
             self.validate_config(rev/'config.yaml')
@@ -189,7 +198,7 @@ class ReviewWorkspace:
             from local_app import csv_info
             uploads={}
             for kind,name in [('segments','segments.csv'),('codebook','codebook.csv')]:
-                raw=(rev/name).read_bytes();fid=uuid.uuid4().hex[:20]
+                raw=followup_raw if kind=='segments' else (rev/name).read_bytes();fid=uuid.uuid4().hex[:20]
                 path=directory/'inputs'/(fid+'.csv');path.parent.mkdir(exist_ok=True);path.write_bytes(raw)
                 uploads[kind]={'id':fid,'name':'Geprüfte Codierungen.csv' if kind=='segments' else 'Kategoriensystem des Ursprungslaufs.csv','format':'csv',**csv_info(raw)}
             data=read(directory/'project.json');data.update(revision=rev.name,last_valid_revision=rev.name,review_provenance=source)

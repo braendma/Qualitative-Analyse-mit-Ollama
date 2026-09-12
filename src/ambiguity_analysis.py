@@ -22,6 +22,9 @@ logging.basicConfig(
 logger = logging.getLogger("ambiguity_analysis")
 
 
+from progress_events import track_module
+
+@track_module
 def main(argv=None):
     parser = argparse.ArgumentParser(
         description="Qualitative Analyse intrapersoneller Ambivalenzen und Spannungen"

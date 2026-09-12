@@ -5,14 +5,90 @@ from response_schemas import schema_for, require_structure
 
 import json
 import logging
+from copy import deepcopy
 from datetime import datetime
 
 from clusterer_core import ollama_chat, safe_json_loads
 from runtime_support import person_for_segment
 from meta_swot_core import DIMENSIONS, flatten_findings
 from utils_prompt import build_prompt_for_module
+from llm_client import ContextBudgetError
+from parallel_items import completed_items
+from progress_events import update_progress
 
 logger = logging.getLogger("evidence_audit")
+
+
+def audit_response_schema(audit_ids, counter_ids):
+    """Constrain generated references to this block; retain independent validation."""
+    schema = deepcopy(schema_for('evidence_audit'))
+    rows = schema['properties']['zuordnungen']
+    rows['minItems'] = rows['maxItems'] = len(audit_ids)
+    fields = rows['items']['properties']
+    fields['audit_id'] = {'type': 'string', 'enum': sorted(audit_ids)}
+    fields['gegenbeleg_ids']['items'] = {'type': 'string', 'enum': sorted(counter_ids)}
+    return schema
+
+
+def audit_blocks(audits, counters, build_prompt, params):
+    """Cover every audit/counter pair, splitting either axis without truncation."""
+    system, user = build_prompt(audits, counters)
+    fits = len((system + user).encode('utf-8')) + 320 + int(params.get('max_tokens', 4000)) <= int(params.get('num_ctx', 32768))
+    maximum = int(params.get('batch_items', 8))
+    if maximum < 1:
+        raise ValueError('batch_items muss positiv sein.')
+    if fits and len(audits) <= maximum:
+        yield audits, counters, system, user
+        return
+    if len(audits) <= 1 and len(counters) <= 1:
+        raise ContextBudgetError('Ein Befund/Gegenbeleg-Paar überschreitet das Kontextbudget; keine Inhalte abgeschnitten. Kontext erhöhen.')
+    size = lambda values: len(json.dumps(values, ensure_ascii=False).encode('utf-8'))
+    split_audits = len(audits) > 1 and (len(audits) > maximum or len(counters) <= 1 or size(audits) >= size(counters))
+    values = audits if split_audits else counters
+    middle = len(values) // 2
+    for half in (values[:middle], values[middle:]):
+        yield from audit_blocks(half if split_audits else audits, counters if split_audits else half, build_prompt, params)
+
+
+def map_audit_blocks(audits, counters, build_prompt, params):
+    blocks = list(audit_blocks(audits, counters, build_prompt, params))
+    results = [None] * len(blocks)
+    update_progress(completed=0, total=len(blocks), unit='batches')
+    def compute(block):
+        batch, candidates, system, user = block
+        allowed = {item['counter_id']: item for item in candidates}
+        audit_ids = {item['audit_id'] for item in batch}
+        def run():
+            constrained = {**params, 'evidence_response_schema': audit_response_schema(audit_ids, allowed)}
+            raw = _llm(system, user, constrained)
+            for attempt in range(3):
+                try:
+                    return normalize_mappings(safe_json_loads(raw), audit_ids, allowed)
+                except ValueError:
+                    if attempt == 2:
+                        raise
+                    if attempt == 0:
+                        raw = _repair(raw, constrained, user)
+                    else:
+                        # Fresh full-input retry avoids repeatedly copying invalid prior IDs.
+                        raw = _llm(system, user, constrained)
+        return PartCheckpoint('evidence_audit', params).run(
+            {'audits': sorted(audit_ids), 'counters': sorted(allowed)}, {'system': system, 'user': user}, run)
+    for done, (index, value) in enumerate(completed_items(blocks, compute, min(4, int(params.get('parallel_workers', 1)))), 1):
+        results[index] = value
+        update_progress(completed=done, total=len(blocks), unit='batches')
+    mappings = {item['audit_id']: {'gegenbeleg_ids': [], 'einordnung': ''} for item in audits}
+    notes = {aid: [] for aid in mappings}
+    for index, result in enumerate(results):
+        for aid, part in result.items():
+            mappings[aid]['gegenbeleg_ids'].extend(part['gegenbeleg_ids'])
+            if part['einordnung']:
+                label = f'Teilprüfung {index + 1}: ' if len(blocks) > 1 else ''
+                notes[aid].append(label + part['einordnung'])
+    for aid, mapping in mappings.items():
+        mapping['gegenbeleg_ids'] = list(dict.fromkeys(mapping['gegenbeleg_ids']))
+        mapping['einordnung'] = '\n\n'.join(notes[aid])
+    return mappings, len(blocks)
 
 
 def _person_from_sid(sid: str) -> str:
@@ -138,7 +214,7 @@ def _llm(system_prompt, user_prompt, ollama_params):
             max_tokens=ollama_params["max_tokens"],
             think=ollama_params.get("think"),
             log_thinking=ollama_params.get("log_thinking", False),
-            settings={**ollama_params, "response_schema": schema_for("evidence_audit")},
+            settings={**ollama_params, "response_schema": ollama_params.get('evidence_response_schema') or schema_for("evidence_audit")},
         )
         logger.info("\n===== RAW EVIDENCE AUDIT OUTPUT =====\n%s\n=====================================\n", content)
         if content:
@@ -170,7 +246,7 @@ Keine neuen Inhalte. Kein Markdown. Kein Text außerhalb des JSON.
         max_tokens=ollama_params["max_tokens"],
         think=ollama_params.get("think"),
         log_thinking=ollama_params.get("log_thinking", False),
-        settings={**ollama_params, "response_schema": schema_for("evidence_audit")},
+        settings={**ollama_params, "response_schema": ollama_params.get('evidence_response_schema') or schema_for("evidence_audit")},
     ) or ""
 
 
@@ -242,6 +318,7 @@ def build_evidence_audit(
     audit_items = build_audit_items(meta_data, finding_lookup, swot_data.get("segment_metadata"))
     counter_candidates = build_counter_candidates(contrast_data, ambiguity_data)
     counters_by_id = {x["counter_id"]: x for x in counter_candidates}
+    audit_part_count = 0
 
     if audit_items and counter_candidates:
         payload = {
@@ -256,24 +333,10 @@ def build_evidence_audit(
             ],
             "moegliche_gegenbelege": counter_candidates,
         }
-        def build_batch(batch):
+        def build_batch(batch, candidates):
             return build_prompt_for_module("evidence_audit", prompts=prompts, context=context,
-                data=json.dumps({**payload, "audit_befunde": batch}, ensure_ascii=False, indent=2))
-        mappings = {}
-        for batch, system_prompt, user_prompt in bounded_batches(payload["audit_befunde"], build_batch, ollama_params):
-            def compute_part():
-                raw = _llm(system_prompt, user_prompt, ollama_params)
-                parsed = safe_json_loads(raw)
-                try:
-                    part = normalize_mappings(parsed, {x["audit_id"] for x in batch}, counters_by_id)
-                except ValueError:
-                    parsed = safe_json_loads(_repair(raw, ollama_params, user_prompt))
-                    part = normalize_mappings(parsed, {x["audit_id"] for x in batch}, counters_by_id)
-                return part
-            part = PartCheckpoint('evidence_audit', ollama_params).run(
-                [p['audit_id'] for p in batch], {'system':system_prompt,'user':user_prompt,'counters':counter_candidates}, compute_part)
-
-            mappings.update(part)
+                data=json.dumps({"audit_befunde": batch, "moegliche_gegenbelege": candidates}, ensure_ascii=False, indent=2))
+        mappings, audit_part_count = map_audit_blocks(payload['audit_befunde'], counter_candidates, build_batch, ollama_params)
 
     else:
         mappings = {x["audit_id"]: {"gegenbeleg_ids": [], "einordnung": ""} for x in audit_items}
@@ -319,9 +382,14 @@ def build_evidence_audit(
         "source_ambiguity_created_at": ambiguity_data.get("created_at"),
         "audited_finding_count": len(audited),
         "processing_status": "completed",
+        "audit_part_count": audit_part_count,
         "methodischer_hinweis": (
             "Evidenzbreite beschreibt ausschließlich die Verteilung innerhalb des vorliegenden qualitativen Materials; "
-            "sie ist weder statistische Signifikanz noch ein quantitatives Gütemaß."
+            "sie ist weder statistische Signifikanz noch ein quantitatives Gütemaß. "
+            "Bei großen Eingaben werden Befunde und Gegenbelege in vollständigen Teilprüfungen verglichen: "
+            "Jedes Befund/Gegenbeleg-Paar wird berücksichtigt; validierte Zuordnungen werden vereinigt. "
+            "Teilbegründungen bleiben getrennt. Wechselwirkungen zwischen Gegenbelegen verschiedener Blöcke "
+            "werden nicht gemeinsam beurteilt; es erfolgt keine zusätzliche globale Synthese."
         ),
         "befunde": audited,
     }

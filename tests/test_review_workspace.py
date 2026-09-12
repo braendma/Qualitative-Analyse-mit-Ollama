@@ -33,6 +33,8 @@ def fixture(directory):
     settings={'model':'mock','columns':{'segment_id':'segment_id','unit_id':'PassageID','person':'Dokumentname','code':'Code','segment':'Segment'},
               'book_columns':dict(zip(('kategorie','unterkategorie','auspraegung','facette','definition','ankerbeispiel'),('Kategorie','Unterkategorie','Ausprägung','Facette','Definition','Ankerbeispiel'))),
               'modules':['review_queue'],'label_mode':'multi_label'}
+    info=app.person_preview(pid,settings['columns'])
+    settings['person_identity']={'confirmed':True,'fingerprint':info['fingerprint'],'mapping':{d['document']:d['document'] for d in info['documents']}}
     checked=app.save(pid,settings);cfg=app.project_dir(pid)/'revisions'/app.project(pid)['revision']/'config.yaml'
     _,blind=blind_code_units(SEGS,BOOK,{}, {},PARAMS,llm=fake_blind)
     _,agreement=calculate_set_agreement(SEGS,BOOK,VERIFY,blind)

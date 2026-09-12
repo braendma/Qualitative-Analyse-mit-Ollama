@@ -1,4 +1,4 @@
-from runtime_support import PartCheckpoint
+from analysis_work import analyze_items
 from response_schemas import schema_for, require_structure
 # swot_core.py
 
@@ -321,7 +321,7 @@ def build_swot(
         len(path_groups),
     )
 
-    swot_results = OrderedDict()
+    work_items = []
 
     for (haupt, sub, auspraegung, facette), path_clusters in path_groups.items():
         source_id = " > ".join(x for x in (haupt, sub, auspraegung, facette) if x)
@@ -385,34 +385,45 @@ def build_swot(
             clusters=payload_text,
         )
 
-        def compute_part():
-            raw_swot = llm_swot(system_prompt, user_prompt, ollama_params)
-            parsed = safe_json_loads(raw_swot)
+        work_items.append({'key': source_id, 'system': system_prompt, 'user': user_prompt,
+            'texts': {sid: id_to_text[sid] for sid in allowed_segment_ids},
+            'path': (haupt, sub, auspraegung, facette), 'cluster_count': len(path_clusters)})
 
-            if parsed is None:
-                logger.warning(
-                    "[SWOT] JSON-Parsing für '%s' fehlgeschlagen. Starte Repair.",
-                    source_id,
-                )
-                repaired = llm_swot_repair(raw_swot, ollama_params)
-                parsed = safe_json_loads(repaired)
+    def compute_item(item):
+        source_id = item['key']
+        system_prompt, user_prompt = item['system'], item['user']
+        allowed_segment_ids = list(item['texts'])
+        raw_swot = llm_swot(system_prompt, user_prompt, ollama_params)
+        parsed = safe_json_loads(raw_swot)
 
-            if parsed is None:
-                logger.error("[SWOT] Keine gültige SWOT für '%s'.", source_id)
-                raise ValueError(f"SWOT fehlgeschlagen: {source_id}")
-
-            require_structure(parsed, "swot")
-            normalized = normalize_swot(
-                parsed,
-                allowed_segment_ids=allowed_segment_ids,
-                id_to_text=id_to_text,
+        if parsed is None:
+            logger.warning(
+                "[SWOT] JSON-Parsing für '%s' fehlgeschlagen. Starte Repair.",
+                source_id,
             )
-            if normalized is None:
-                raise ValueError(f"Ungültige SWOT-Struktur: {source_id}")
-            return normalized
-        normalized = PartCheckpoint('swot', ollama_params).run(
-            source_id, {'system':system_prompt,'user':user_prompt,'texts':{sid:id_to_text[sid] for sid in allowed_segment_ids}}, compute_part)
+            repaired = llm_swot_repair(raw_swot, ollama_params)
+            parsed = safe_json_loads(repaired)
 
+        if parsed is None:
+            logger.error("[SWOT] Keine gültige SWOT für '%s'.", source_id)
+            raise ValueError(f"SWOT fehlgeschlagen: {source_id}")
+
+        require_structure(parsed, "swot")
+        normalized = normalize_swot(
+            parsed,
+            allowed_segment_ids=allowed_segment_ids,
+            id_to_text=id_to_text,
+        )
+        if normalized is None:
+            raise ValueError(f"Ungültige SWOT-Struktur: {source_id}")
+        return normalized
+
+    analyses = analyze_items(work_items, compute_item, ollama_params, 'swot', 'categories')
+    swot_results = OrderedDict()
+    for item, normalized in zip(work_items, analyses):
+        source_id = item['key']
+        haupt, sub, auspraegung, facette = item['path']
+        allowed_segment_ids = list(item['texts'])
         unique_segment_ids = list(dict.fromkeys(allowed_segment_ids))
         swot_results[source_id] = {
             "hauptkategorie": haupt,
@@ -420,7 +431,7 @@ def build_swot(
             "facette": facette,
                 "auspraegung": auspraegung,
                 "code_path": source_id,
-            "cluster_count": len(path_clusters),
+            "cluster_count": item["cluster_count"],
             "segment_count": len(unique_segment_ids),
             **normalized,
         }

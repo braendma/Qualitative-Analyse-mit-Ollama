@@ -30,7 +30,7 @@ function updateModuleSelection(){
   const added=state.modules.filter(m=>required.has(m.id)&&!selected.has(m.id)).map(m=>m.name);
   $('module-selection').textContent=selected.size?`${selected.size} ${selected.size===1?"Modul":"Module"} ausgewählt · ${required.size} ${required.size===1?"Modul wird":"Module werden"} ausgeführt.`+(added.length?' Automatisch benötigte Vorstufen: '+added.join(', ')+'.':' Keine zusätzlichen Vorstufen erforderlich.'):'Noch kein Modul ausgewählt. Setze mindestens ein Häkchen.';
 }
-const columnLabels = {segment:'Text / Segment *',person:'Person / Dokument *',code:'Vergebener Code *',segment_id:'Eindeutige Zeilen-ID (optional)',unit_id:'Passage-ID (für Mehrfachcodierung)'};
+const columnLabels = {segment:'Text / Segment *',person:'Dokumentkennung / vorhandene Personen-ID *',code:'Vergebener Code *',segment_id:'Eindeutige Zeilen-ID (optional)',unit_id:'Passage-ID (für Mehrfachcodierung)'};
 function bookDescription(c){return 'Definition: '+c.definition+' · Einschluss: '+(c.einschluss||'—')+' · Ausschluss: '+(c.ausschluss||'—')+' · Abgrenzung: '+(c.abgrenzung||'—')+' · Ankerbeispiele: '+(c.ankerbeispiel||'—');}
 const bookLabels = {code:'Code / vollständiger Codepfad *',kategorie:'Kategorie / erste Hierarchieebene *',unterkategorie:'Unterkategorie',auspraegung:'Ausprägung',facette:'Facette',definition:'Definition *',einschluss:'Einschlussregeln (optional)',ausschluss:'Ausschlussregeln (optional)',abgrenzung:'Abgrenzung / weitere Codierhinweise (optional)',ankerbeispiel:'Ankerbeispiele (optional)'};
 const aliases = {segment:['Segment','Text','Segmenttext'],person:['Dokumentname','Dokument','Person','Interview'],code:['Code','Codes','human_code'],segment_id:['segment_id','Segment-ID','ID'],unit_id:['PassageID','Passage-ID','unit_id'],kategorie:['Kategorie','Hauptkategorie'],unterkategorie:['Unterkategorie','Subkategorie'],auspraegung:['Ausprägung','Auspraegung'],facette:['Facette'],definition:['Definition','Beschreibung'],ankerbeispiel:['Ankerbeispiel','Ankerbeispiele','Beispiel'],einschluss:['Einschlussregeln','Einschlusskriterien'],ausschluss:['Ausschlussregeln','Ausschlusskriterien']};
@@ -72,6 +72,7 @@ function table(info, title) {
   const body=el('tbody');info.rows.forEach(values=>{const tr=el('tr');values.forEach(v=>tr.append(el('td',v)));body.append(tr);});table.append(body);wrap.append(table);part.append(heading,wrap);return part;
 }
 function renderFiles(){
+  if(typeof resetPersonIdentity==='function')resetPersonIdentity();
   const uploads=project.uploads||{};$('previews').replaceChildren();
   for(const kind of ['segments','codebook']){
     const info=uploads[kind];$(kind+'-info').textContent=info?`${info.name}${info.sheet?' · Blatt '+info.sheet:''} · ${info.count} ${kind==='segments'?'Codierzeilen':'Kategoriezeilen'}`:'Noch keine Datei ausgewählt';
@@ -88,13 +89,14 @@ function loadFields(){
   const s=project.settings||{}, llm=state.defaults.llm;
   $('parallel-workers').value=String(s.parallel_workers??1);
   $('model').value=s.model??llm.model;$('num-ctx').value=s.num_ctx??llm.num_ctx;$('max-tokens').value=s.max_tokens??llm.max_tokens;
+  $('synthesis-max-calls').value=s.synthesis_max_calls??llm.synthesis_max_calls??64;
   $('temperature').value=s.temperature??llm.temperature;$('think').value=String(s.think??llm.think);
   $('label-mode').value=s.label_mode||'multi_label';
   const context=s.context||state.defaults.context;
   $('context-project').value=context.project_description||'';$('context-persons').value=context.participants||'';$('context-method').value=context.methodology||'';
   $('modules').replaceChildren();
   const selected=s.modules||state.modules.map(m=>m.id);
-  state.modules.forEach(m=>{const label=el('label',undefined,'checkbox'),input=el('input'),text=el('span',m.name);input.type='checkbox';input.value=m.id;input.name='module';input.checked=selected.includes(m.id);input.addEventListener('change',updateModuleSelection);if(moduleHelp[m.id])text.append(el('small',moduleHelp[m.id]));if(m.depends_on.length)text.append(el('small','Benötigt: '+m.depends_on.map(id=>state.modules.find(x=>x.id===id)?.name||id).join(', ')));label.append(input,text);$('modules').append(label);});
+  state.modules.forEach(m=>{const label=el('label',undefined,'checkbox'),input=el('input'),text=el('span',m.name);input.type='checkbox';input.value=m.id;input.name='module';input.checked=selected.includes(m.id);input.addEventListener('change',updateModuleSelection);if(moduleHelp[m.id])text.append(el('small',moduleHelp[m.id]));if(m.depends_on.length)text.append(el('small','Benötigt: '+m.depends_on.map(id=>state.modules.find(x=>x.id===id)?.name||id).join(', ')));label.append(input,text);const item=el('div',undefined,'module-example'),example=el('button','Ergebnisbeispiel ansehen','example-trigger');example.type='button';example.setAttribute('data-example','module-'+m.id);example.setAttribute('aria-haspopup','dialog');example.setAttribute('aria-controls','example-dialog');example.setAttribute('aria-label',m.name+' – Ergebnisbeispiel ansehen');item.append(label,example);const prompts=el('button','Prompts ansehen','example-trigger');prompts.type='button';prompts.setAttribute('aria-haspopup','dialog');prompts.setAttribute('aria-controls','prompt-dialog');prompts.setAttribute('aria-label',m.name+' – Prompts ansehen');prompts.addEventListener('click',()=>showModulePrompts(m.id));item.append(prompts);$('modules').append(item);});
   updateModuleSelection();
   renderFiles();
   if(typeof loadProviderFields==='function')loadProviderFields();
@@ -106,6 +108,8 @@ async function openProject(id){
   if(request!==projectRequest)return;
   if(typeof finishReviewSave==='function')await finishReviewSave();
   if(request!==projectRequest)return;
+  if(typeof closeFailureGuide==='function')closeFailureGuide();
+  if(typeof closePromptView==='function')closePromptView();
   project=loaded;closeViewer();jobs=null;$('projects').value=id;$('welcome').hidden=true;
   document.querySelectorAll('.project-content').forEach(n=>n.hidden=false);
   $('project-subtitle').textContent=project.name+(project.demo?' · Künstliche Beispieldaten':' · Lokales Projekt');
@@ -116,7 +120,7 @@ function settings(){
   const columns={},book_columns={};Object.keys(columnLabels).forEach(k=>columns[k]=$('segment-columns-'+k).value);
   Object.keys(bookLabels).forEach(k=>book_columns[k]=$('book-columns-'+k).value);
   const think=$('think').value;
-  return {...(typeof providerSelection==='function'?providerSelection():{}),columns,book_columns,parallel_workers:$('provider').value==='ollama_local'?Number($('parallel-workers').value):1,model:$('model').value,num_ctx:Number($('num-ctx').value),max_tokens:Number($('max-tokens').value),temperature:Number($('temperature').value),
+  return {...(typeof providerSelection==='function'?providerSelection():{}),columns,book_columns,person_identity:typeof personIdentitySettings==='function'?personIdentitySettings():null,parallel_workers:$('provider').value==='ollama_local'?Number($('parallel-workers').value):1,model:$('model').value,num_ctx:Number($('num-ctx').value),max_tokens:Number($('max-tokens').value),synthesis_max_calls:Number($('synthesis-max-calls').value),temperature:Number($('temperature').value),
     think:think==='true'?true:think==='false'?false:think,label_mode:$('label-mode').value,
     context:{project_description:$('context-project').value,participants:$('context-persons').value,methodology:$('context-method').value},
     modules:[...document.querySelectorAll('[name=module]:checked')].map(n=>n.value)};
@@ -138,24 +142,54 @@ async function saveAndValidate(pid=needProject()){
   }
   return result;
 }
+function renderProgressDetails(card,d,status,label='Modulfortschritt'){
+  const count=v=>Number.isFinite(v)&&v>=0?Math.floor(v):0;
+  const unit={passages:'Passagen',rows:'Codierzeilen',batches:'Prüfblöcke',categories:'Kategorien',persons:'Personen',summaries:'Zusammenfassungen',dimensions:'SWOT-Dimensionen',pairs:'Codepfad-Paare',steps:'Arbeitsschritte'}[d.unit]||'Arbeitsschritte';
+  const known=Number.isInteger(d.total)&&d.total>=0,done=known?Math.min(count(d.completed),d.total):count(d.completed);
+  if(known&&d.total===0)card.append(el('p','Keine Arbeitseinheiten in dieser Phase.','hint'));
+  else if(known){const p=el('progress');p.max=d.total;p.value=done;p.setAttribute('aria-label',label);card.append(p,el('p',`${done} von ${d.total} ${unit} bearbeitet · ${Math.floor(done/d.total*100)} %`));}
+  else{
+    if(status==='running'){const activity=el('div',undefined,'module-activity');activity.setAttribute('role','img');activity.setAttribute('aria-label','Aktivität ohne Prozentangabe');card.append(activity);}
+    card.append(el('p','Für dieses Modul ist noch keine Gesamtzahl der Arbeitsschritte verfügbar. Daher wird kein Prozentwert angezeigt.','hint'));
+  }
+  const phase={preparation:'Vorbereitung',analysis:'Analyse',person_reduction:'Vorbereitung: Personenanalysen verdichten',comparison:'Abschließender Personenvergleich',synthesis:'Abschließende Gesamtsynthese',reduction_level:'Hierarchische Verdichtung',finished:'Verarbeitung abgeschlossen',cluster_summaries:'Einzelne Cluster zusammenfassen',overall_summary:'Gesamtzusammenfassung erstellen'}[d.phase];
+  if(phase)card.append(el('p','Phase: '+phase+(d.phase==='reduction_level'&&Number.isInteger(d.phase_level)?' · Ebene '+d.phase_level:''),'hint'));
+  if(Number.isInteger(d.detail_total)&&d.detail_total>0)card.append(el('p',`${Math.min(count(d.detail_completed),d.detail_total)} von ${d.detail_total} Prüfblöcken der aktuellen Einheit abgeschlossen`,'hint'));
+  if(known)card.append(el('p','Der Prozentwert bezieht sich auf die angezeigten Arbeitseinheiten dieser Phase, nicht auf die benötigte Zeit.','hint'));
+  if(d.reused)card.append(el('p',`${count(d.reused)} davon aus geprüften Zwischenergebnissen wiederverwendet`,'hint'));
+  if(d.failed)card.append(el('p',`${count(d.failed)} Teilaufgabe(n) fehlgeschlagen. ${status==='running'?'Bereits laufende Anfragen werden noch abgeschlossen und erfolgreiche Ergebnisse gespeichert. Neue Teilaufgaben starten nicht.':'Erfolgreiche Zwischenergebnisse bleiben für die Wiederaufnahme erhalten.'}`,'error'));
+  if(d.context_blocked)card.append(el('p',`Kontext reicht für die entstandenen Eingaben nicht: konservative Rechengrenze ${d.context_required}, eingestellt ${d.context_limit}. Kontext und Speicherbedarf erneut prüfen und mit geänderten Einstellungen einen neuen Lauf starten.`,'error'));
+  const active=Number.isInteger(d.active_requests)?count(d.active_requests):(d.request_active?1:0);
+  card.append(el('p',`${count(d.requests)} Modellantworten empfangen`+(status==='running'?(active?(Number.isInteger(d.active_requests)?` · ${active} Modellanfrage(n) aktiv`:' · Modellanfrage läuft'):' · nächste Arbeitsschritte werden vorbereitet'):''),'hint'));
+  if(d.last_response_at)card.append(el('p','Letzte Modellantwort: '+new Date(d.last_response_at*1000).toLocaleTimeString('de-DE'),'hint'));
+  if(d.updated_at)card.append(el('p','Fortschrittsmeldung: '+new Date(d.updated_at*1000).toLocaleTimeString('de-DE')+(status==='running'&&Date.now()/1000-d.updated_at>180?' · seit über drei Minuten unverändert; eine Anfrage kann länger dauern.':''),'hint'));
+}
 function badge(status){const labels={running:'Läuft',success:'Abgeschlossen',failed:'Fehler',paused:'Pausiert',interrupted:'Unterbrochen',starting:'Startet'};return el('span',labels[status]||status,'badge '+status);}
 function runCard(job,results=false){
   const card=el('article',undefined,'card run-card'),head=el('div',undefined,'section-heading'),date=new Date(job.created*1000).toLocaleString('de-DE');head.append(el('h3','Lauf vom '+date),badge(job.status));card.append(head);
   const completed=job.completed?.length||0,total=job.modules?.length||0,progress=el('progress');progress.max=total||1;progress.value=completed;
-  card.append(progress,el('p',`${completed} von ${total} Modulen abgeschlossen`,'hint'));
+  progress.setAttribute('aria-label','Abgeschlossene Module');
+  card.append(el('h4','Abgeschlossene Module'),progress,el('p',`${completed} von ${total} Modulen abgeschlossen`,'hint'));
+  if(job.status==='running')card.append(el('p','Dieser Balken steigt nach jedem vollständig abgeschlossenen Modul. Die Module dauern unterschiedlich lange; der Balken zeigt keinen Anteil der Gesamtlaufzeit.','hint'));
   if(job.current&&job.status==='running')card.append(el('p','Aktuell: '+(job.modules.find(m=>m.id===job.current)?.name||job.current)));
   if(job.review_provenance)card.append(el('p',job.review_provenance.note,'selection-summary'));
-  if(job.progress_detail&&job.status==='running'){
-    const d=job.progress_detail,unit={passages:'Passagen',rows:'Codierzeilen',batches:'Prüfblöcke'}[d.unit];
-    if(unit&&Number.isInteger(d.total)){const p=el('progress');p.max=d.total||1;p.value=d.completed||0;card.append(p,el('p',`${d.completed||0} von ${d.total} ${unit} bearbeitet`));}
-    card.append(el('p',`${d.requests||0} Modellantworten empfangen`+(d.request_active?' · Modellanfrage läuft':''),'hint'));
-    if(d.last_response_at)card.append(el('p','Letzte Modellantwort: '+new Date(d.last_response_at*1000).toLocaleTimeString('de-DE'),'hint'));
-  }
+  if(job.progress_detail&&['running','failed','interrupted'].includes(job.status))renderProgressDetails(card,job.progress_detail,job.status);
   if(job.pause_requested)card.append(el('p','Pause angefordert. Das laufende Modul wird noch abgeschlossen.','hint'));
   if(job.error)card.append(el('p',job.error));
+  for(const [id,help] of Object.entries(job.module_errors||{})){
+    const box=el('div',undefined,'error');
+    box.append(el('h4',(help.module_name||id)+' – fehlgeschlagen'),el('p',help.cause),el('p','Nächster Schritt: '+help.action),el('p',help.resume_note,'hint'));
+    if(typeof addFailureAction==='function')addFailureAction(box,help,job);
+    card.append(box);
+  }
+  const blocked=Object.entries(job.blocked_by||{}).filter(([id])=>job.module_status?.[id]==='blocked');
+  if(blocked.length){const box=el('details');box.append(el('summary',`${blocked.length} Module warten auf Vorstufen`));
+    const title=id=>job.modules?.find(m=>m.id===id)?.name||id;
+    blocked.forEach(([id,deps])=>box.append(el('p',title(id)+': benötigt '+deps.map(title).join(', '))));card.append(box);}
   const actions=el('div',undefined,'actions');
   if(job.status==='running'&&!job.pause_requested){const b=el('button','Nach diesem Modul pausieren','secondary');action(b,async()=>{const r=await api('pause',{project:project.id,job:job.id});message(r.message);await refreshJobs();});actions.append(b);}
   if(['failed','paused','interrupted'].includes(job.status)){const b=el('button','Diesen Lauf fortsetzen');action(b,async()=>{await api('start',{project:project.id,resume:job.id});message('Wiederaufnahme mit der ursprünglichen Dateiversion und den ursprünglichen Einstellungen gestartet.');await refreshJobs();});actions.append(b);}
+  const prompts=el('button','Prompt-Vorlagen dieses Laufs','small secondary');prompts.type='button';prompts.addEventListener('click',()=>showModulePrompts(job.current||job.modules?.[0]?.id,job.id));actions.append(prompts);
   const log=el('button','Laufprotokoll herunterladen','small secondary');action(log,()=>artifact(job,'console.log',false));actions.append(log);card.append(actions);
   if(results){
     if(job.files?.includes('gesamtbericht.html')){const b=el('button','Interaktiven Bericht öffnen');action(b,()=>artifact(job,'gesamtbericht.html',true));card.append(b);}
@@ -275,6 +309,7 @@ function mappingProblems(){
       if(used.some(v=>!info.headers.includes(v)))issues.push('Eine zugeordnete Kategoriensystem-Spalte fehlt in der Datei.');
     }
   }
+  if(typeof personIdentityReady==='function'&&!personIdentityReady())issues.push('Dokumente Personen zuordnen und Personenzahl bestätigen.');
   return issues;
 }
 function updateStartGate(){
