@@ -1,7 +1,7 @@
 """Internal sequential dispatch to the existing runner, with isolated run directories.
 
 No additional module runner or checkpoint format: child manifests remain authoritative.
-UI integration, runtime parameter evidence and managed-server handoff follow separately.
+Runtime receipts and supervised managed-server handoff are implemented; UI follows.
 """
 import importlib
 import json

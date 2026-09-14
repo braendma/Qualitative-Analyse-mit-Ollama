@@ -180,6 +180,8 @@ def analyze_coding_repetitions(segments, codebook, module_id, samples, *, label_
         if failed:
             result['processing_status'] = 'incomplete'
         result['units'].append({'unit_id': uid, 'segment_ids': [s.segment_id for s in groups[uid]],
+            'person': groups[uid][0].person, 'text_preview': groups[uid][0].text[:1200],
+            'text_characters': len(groups[uid][0].text), 'text_preview_truncated': len(groups[uid][0].text) > 1200,
             'observations': observations, 'technical_failure_samples': failed})
     for left, right in combinations(valid, 2):
         usable = [uid for uid in groups if all(valid[sid][uid]['processing_status'] == 'completed' for sid in (left, right))]

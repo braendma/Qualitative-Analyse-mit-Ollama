@@ -537,5 +537,51 @@ Bedeutung sind durch diese Projektion nicht vollständig abgedeckt. Ein hoher
 Projektionswert darf deshalb weder als identischer Gesamtbericht noch als Wahrheit
 oder Validitätsnachweis bezeichnet werden. Die fachliche Prüfung bleibt erforderlich.
 
-Serienloader, CLI, Aufwandshinweise, Oberfläche und lesbarer Diagnosebericht folgen
-innerhalb S06. Stabilitätsbefunde sind noch nicht in die Codebook-Diagnostik integriert.
+### Geprüfte Serien einlesen und darstellen
+
+`stability_series.load_stability_series(directory)` liest eine bereits angelegte
+S05-Serie. Diese Funktion startet keine Anfragen, setzt keine unterbrochenen Läufe
+fort und verändert keine Manifeste. Sie hält dieselbe Seriensperre wie die
+Ausführung; eine laufende Serie kann deshalb nicht gleichzeitig bewertet werden.
+Die Funktion prüft den eingefrorenen Plan, Eingabe-/Codebuch-/Konfigurationshashes,
+Quellcode und Abhängigkeiten, die eindeutigen Kindläufe, deren Abschlussnachweise
+der Prozessaufsicht, Manifeste, deklarierte Artefakte und Anfragequittungen. Am Ende
+werden die Grundlagen erneut geprüft. Geänderte oder widersprüchliche Nachweise
+führen zum Fehler. Für historische Serien nach Code-/Abhängigkeitsänderungen ist
+dieser strenge Leser nicht als beliebiger Fremdbericht-Importer vorgesehen.
+
+Die bequem lesbare `repetition_index.json` ist keine Autorität: Der Leser verwendet
+nur die im Plan benannten Wiederholungsordner. Fehlgeschlagene und noch nicht
+gestartete Wiederholungen bleiben ausgeschlossen. Auch ein erfolgreiches Einzelmodul
+eines insgesamt fehlgeschlagenen Laufs wird nicht als erfolgreiche Wiederholung
+übernommen. Ein erfolgreiches Manifest bei fehlendem oder fehlerhaftem Prozessende
+genügt nicht. Eine bestätigte, aber noch als `running` gespeicherte Wiederholung
+wird beim Lesen als unterbrochen dargestellt, ohne das Original zu ändern.
+
+Pro Lauf und Modul zeigt der Leser akzeptierte, fehlgeschlagene und noch offene
+Anfragen aus dem im Manifest gebundenen Inventar sowie unterschiedliche tatsächlich
+übertragene Parameterprofile. Bei unterbrochenen Läufen können zusätzliche, noch
+nicht im Manifest gebundene Quittungen fehlen; die Anzeige benennt diese Grenze. Die
+Anzahl der Anfragen wird von der Profilgleichheit getrennt; Reparaturversuche können
+beispielsweise ein anderes Antwortlimit verwenden. Optionale Beobachtungen des
+geladenen Kontextfensters stehen daneben. Nur technische, ausdrücklich erlaubte
+Felder werden weitergegeben, keine Prompts, Antworten, Schlüssel oder beliebigen
+Zusatzfelder aus Quittungen. Anbieter und angefordertes Modell müssen dem Plan
+entsprechen. Verschiedene beobachtete lokale Modelldigests verhindern eine gemeinsame
+Bewertung. Fehlt ein akzeptierter Anfragenachweis, ist die Profilgleichheit `null`,
+nicht `true`. Dann bleibt nur der beschreibende Vergleich unter gleichen
+konfigurierten Bedingungen. Auch mit Quittungen sind serverinterne Durchsetzung und
+Cloud-Modellgewichte nicht unabhängig bestätigt.
+
+`stability_report.render_stability(result)` erzeugt daraus Markdown mit verständlichen
+Modulnamen, Zählern/Nennern, Ausschlussgründen, Parameterprofilen, wechselnden
+Text-/Referenzkombinationen und auffälligen Codierentscheidungen. Bei Codierungen
+stehen Person und Originaltextauszug neben den Entscheidungen. Technische
+Befundfingerprints werden nicht als Erklärung ausgegeben. Pro Modul erscheinen
+höchstens 50 wechselnde Kombinationen und 50 auffällige Codierungen; weitere Fälle
+und die explizite Restzahl verweisen auf das vollständige JSON-Ergebnis.
+HTML-/Markdown-Zeichen aus Eingaben werden als Daten maskiert.
+
+CLI, Aufwandshinweise, Oberfläche und Integration in den Gesamtbericht folgen
+innerhalb S06. Personen-/Kategorieverteilungen und die spätere Anbindung an die
+Codebook-Diagnostik bleiben ebenfalls offen.
