@@ -75,3 +75,20 @@ python -X utf8 -m unittest discover -s tests -v
 ```
 
 Die Tests benötigen keine lokale Modellinferenz. Sie prüfen die reproduzierten Fehlerszenarien, Checkpoints, Abdeckung und den vollständigen YAML-Workflow über alle 15 Module mit einem ersetzten Modelltransport. Der vollständige Test umfasst externe Segment-IDs, vierstufige Codes, Personenmetadaten, Gegenbelege, einen absichtlichen Abbruch und die Wiederaufnahme. Die Cloud-Verbindungsprüfung verwendet ausschließlich synthetische Daten; sie ist kein Qualitätsbenchmark und kein Nachweis der Güte einer produktiven Studie.
+
+## Information-Loss-Audit: Grenzfälle im Entwicklungsstand
+
+Die Diagnose verwendet geprüfte Eingabe-, Konfigurations- und Output-Hashes. Ein
+fehlgeschlagenes Quellenmodul erzeugt einen vorläufigen Audit, keine erfolgreiche
+Nullauswertung. Ein separater Export überschreibt weder bestehende Ergebnisse
+noch Eingaben. Nur der bestehende Runner darf sein eigenes unfertiges
+Diagnosemodul mit passender Run-ID und Modulstatus erneut schreiben.
+
+Die Regression prüft einen analytischen Text mit über einer Million Zeichen,
+Unicode und Zeilenumbrüchen, 60 mögliche Nachfolgeeinträge, mehrfach codierte
+Passagen, reine Personenreferenzen, fehlende Gruppenbelege, veränderte Outputdateien
+und die Wiederholung nach einem Teilfehler. Wortlisten durchsuchen die gesamten
+projizierten Texte; nur die klar gekennzeichnete Vorschau wird begrenzt. Gemeinsame
+Referenzen erlauben keine automatische Aussagezuordnung. Negationen und Synonyme
+sind ausdrücklich dokumentierte Grenzen der sprachlichen Hinweise. Technische
+Tests weisen keine inhaltliche Validität des Audits nach.

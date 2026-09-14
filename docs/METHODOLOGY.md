@@ -4,7 +4,8 @@ Entwicklungshinweis: Die gemeinsame Grundlage für neue wissenschaftliche Diagno
 unterscheidet direkte Segmentbelege, Eingabezuordnungen, Personenreferenzen und
 Synthese-Quellengruppen. Vollständige Register zählen nicht automatisch als
 ausgewählte Evidenz. Datenvertrag und Grenzen stehen in [DIAGNOSTICS.md](DIAGNOSTICS.md).
-Coverage ist bereits integriert; die weiteren Diagnosemodule folgen.
+Coverage ist bereits integriert; der Information-Loss-Audit ist zunächst als
+separate CLI verfügbar. Die weiteren Diagnosemodule folgen.
 
 ### Coverage: Repräsentation in gespeicherten Analysebelegen
 
@@ -25,6 +26,25 @@ Qualitätsmangel; die menschliche Prüfung entscheidet, ob etwa Minderheitenposi
 angemessen berücksichtigt wurden. **Coverage ist kein Maß qualitativer Güte.**
 Die vollständigen Nenner und ein künstliches Rechenbeispiel stehen in
 [DIAGNOSTICS.md](DIAGNOSTICS.md).
+
+### Information-Loss-Audit: Grenzen der Verdichtung sichtbar machen
+
+Die Motivation ist, mögliche Verschiebungen von Evidenz, Kontext und sprachlicher
+Vorsicht zwischen Analysestufen gezielt nachprüfen zu können. Die technische
+Umsetzung vergleicht Referenzen entlang tatsächlich konfigurierter und konsumierter
+Quellübergänge. Explizite Passagen werden von Codierzeilen getrennt; reine
+Personenreferenzen ergeben keinen geschätzten Segmentverlust. Hinweise auf
+Gegenbelege, Ambivalenzen und die Zusammenführung mehrerer Ursprungseinträge führen
+zu manuellen Prüfpunkten. Einfache deutsche Wortlisten ergänzen Hinweise auf
+möglicherweise weggefallene Unsicherheit oder hinzugekommene Verallgemeinerungen.
+
+Diese Diagnostik ist deterministisch und benötigt keine Modellaufrufe. Sie beurteilt
+weder semantischen Erhalt noch Wahrheit. Synonyme, Negationen, Zitate und
+kontextabhängige Bedeutungen begrenzen die Wortlisten stark. Auch eine inhaltliche
+Minderheitenposition lässt sich nicht aus geringer Referenzhäufigkeit ableiten.
+Die Forschenden vergleichen die betreffenden Aussagen mit den Originalstellen
+und entscheiden über notwendige Korrekturen. Datenvertrag, vollständige Wortlisten,
+Beispiele und technische Grenzen stehen in [DIAGNOSTICS.md](DIAGNOSTICS.md).
 
 ## Methodische Einordnung, Qualitätssicherung und verwandte Arbeiten
 

@@ -1,8 +1,9 @@
 # Wissenschaftliche Diagnosen – technische Grundlage
 
 Entwicklungsstand: Die gemeinsame Quellenauswertung und Coverage sind in CLI,
-Pipeline, Modulauswahl, Promptansicht, Fortschritt und Berichte integriert. Die
-weiteren Diagnosemodule werden darauf aufbauend ergänzt. Dieser Abschnitt
+Pipeline, Modulauswahl, Promptansicht, Fortschritt und Berichte integriert.
+Der Information-Loss-Audit ist als Kern und separate CLI verfügbar; die Einbindung
+in die Modulauswahl folgt. Weitere Diagnosemodule werden darauf aufbauend ergänzt. Dieser Abschnitt
 beschreibt den überprüfbaren Datenvertrag und die technische Schnittstelle.
 
 ## Referenzen eindeutig unterscheiden
@@ -138,3 +139,72 @@ Die Diagnose misst die analytischen Referenzen, nicht das fertige HTML-Dokument.
 Der HTML-Export entsteht erst danach und muss im vollständigen Integrationstest
 gesondert geprüft werden. Berichte, Kennungen, analytische Texte und Quellenpfade
 können sensibel sein und bleiben in der privaten Projektablage.
+
+## Information-Loss-Audit: Referenzübergänge und menschliche Prüfung
+
+Der Audit liest dieselben verifizierten Zwischenprodukte wie Coverage. Er führt
+keine weitere Modellanalyse durch und ändert keine Eingabe. Ein Übergang wird nur
+gebildet, wenn ein analytisches Modul laut `depends_on` von der Quelle abhängt
+und deren deklarierte JSON-Datei tatsächlich in seinen Argumenten konsumiert.
+Auch `--source-json Label=Datei.json` wird berücksichtigt. Parallelzweige werden
+nicht zu einer künstlichen linearen Verdichtungskette verbunden.
+
+```bash
+python src/information_loss_analysis.py --config /pfad/zum/lauf/config_snapshot.yaml --input-csv /pfad/zur/unveraenderten/eingabe.csv --run-dir /pfad/zum/lauf --out-json /pfad/zur/diagnose/information_loss.json --out-md /pfad/zur/diagnose/information_loss.md
+```
+
+Die Pflichtparameter und Überschreibschutzregeln entsprechen Coverage. Die
+Standardausgaben heißen `information_loss.json` und `information_loss.md`.
+Derzeit erfolgt der Aufruf separat; ein UI-Häkchen wird erst mit abgeschlossener
+Runner-/UI-Integration dokumentiert. In alten Laufständen müssen Konfiguration
+und Eingabe exakt zum gespeicherten Herkunftsnachweis passen.
+
+### Was die Ausgaben bedeuten
+
+- `transitions`: ausschließlich konfigurierte, tatsächlich konsumierte Quellübergänge.
+- `reference_comparison`: nicht weiter referenzierte, neue und gemeinsame
+  Codierzeilen; daneben separat eindeutige Materialeinheiten. Personenanteile vor
+  und nach dem Übergang und nicht weiter referenzierte Codes sind beschreibend.
+- `persons_no_longer_referenced`: in der Quelle belegte oder ausdrücklich genannte
+  Personen ohne Nachfolgereferenz. Daraus folgt keine bestätigte inhaltliche Auslassung.
+- `review_items`: ausgewählte analytische Textfelder mit strukturellem Schlüssel,
+  Textfingerprint, Referenzen und möglichen Nachfolgeeinträgen. Gemeinsame
+  Referenzen stellen keine automatisch bestätigte Zuordnung von Aussagen dar.
+- `processing_status: incomplete`: mindestens eine ausgewählte Quelle ist nicht
+  abgeschlossen oder ungültig. Die Diagnose nach Fehlerbehebung erneut ausführen.
+  Fehlende Personen- oder Segmentverknüpfungen bleiben ausdrücklich Messgrenzen.
+
+Beispiel: `s1` und `s2` codieren dieselbe explizite Passage. Vorher werden `s1`
+und eine zweite Passage `s3` referenziert, danach nur `s2`. Dann fehlen zwei
+**Codierzeilenreferenzen**, aber nur **eine Materialeinheit** hat keine
+Nachfolgereferenz. Ein Bedeutungsverlust ist damit noch nicht nachgewiesen.
+
+Die Prüfung markiert Gegenbelege, Einzelbefunde, Negativfälle und Ambivalenzseiten
+auch bei erhaltenen Referenzen zur Kontextprüfung. Gemeinsame Referenzen mehrerer
+Ursprungseinträge geben Anlass zu prüfen, ob unterschiedliche Positionen noch
+erkennbar sind. Seltene Personen oder Codes sind nicht automatisch inhaltliche
+Minderheitenpositionen. Eine solche Einordnung bleibt bei den Forschenden.
+
+### Sprachliche Hinweise und Darstellungsgrenzen
+
+Die deutschen Wortlisten enthalten für Unsicherheit `vielleicht`, `möglicherweise`,
+`teilweise`, `vermutlich`, `könnte`, `könnten`, `unsicher`, `unklar`; für mögliche
+Verallgemeinerung `immer`, `alle`, `ausnahmslos`, `eindeutig`, `zweifelsfrei`,
+`ausschließlich`. Die Suche ignoriert Groß-/Kleinschreibung und verwendet Wortgrenzen.
+Fehlen Unsicherheitswörter später, kann dennoch ein Synonym wie „eventuell“ die
+Unsicherheit ausdrücken. „Nicht alle“ enthält „alle“, ist aber keine
+Verallgemeinerung. Die Ausgabe fordert deshalb ausdrücklich zur Prüfung von
+Negation, Zitat, Gegenposition und Originalkontext auf. Es gibt keinen Verlustscore.
+
+Geprüft werden die im Adapter dokumentierten analytischen Textfelder, nicht der
+gesamte Inhalt jedes Zwischenprodukts und nicht die Roh-CSV auf sprachliche Nuancen.
+Ein Referenzwechsel beweist keinen Verlust; erhaltene Referenzen beweisen keinen
+Bedeutungserhalt. Der fertige HTML-Bericht entsteht erst nach den Modulen und ist
+hier kein eigener Diagnoseeingang.
+
+Je Prüfpunkt erscheinen höchstens 50 Kandidaten und 1.200 Zeichen je Textvorschau.
+Kürzungen werden mit Originaltextlänge bzw. Zahl weiterer Kandidaten ausgewiesen.
+Die Wortlisten berücksichtigen trotzdem die vollständigen projizierten Texte
+aller Kandidaten. Anhand von Quellartefakt und Eintragsschlüssel sind die vollständigen
+Texte manuell nachzulesen. Die aktuelle JSON-Ausgabe enthält denselben begrenzten
+Vorschaubestand, keine heimliche Vollkopie der Originaltexte.

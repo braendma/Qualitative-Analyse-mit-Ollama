@@ -234,4 +234,25 @@ def load_snapshot(directory, config_path, input_path):
         if not provenance.get(key) or file_hash(path) != provenance[key]:
             raise ValueError('Diagnose abgelehnt: Eingabe oder Konfiguration fehlt im Herkunftsnachweis oder wurde verändert.')
     config = yaml.safe_load(Path(config_path).read_text(encoding='utf-8'))
-    return make_snapshot(load_segments(input_path, config['columns']), load_sources(directory, config))
+    snapshot = make_snapshot(load_segments(input_path, config['columns']), load_sources(directory, config))
+    snapshot['dependency_edges'] = dependency_edges(config)
+    return snapshot
+
+
+def dependency_edges(config):
+    """Only configured analytic dependencies whose declared JSON is actually an input."""
+    modules = {m['id']: m for m in config.get('pipeline', {}).get('modules', []) if m['id'] in STAGES}
+    edges = []
+    for target, module in modules.items():
+        args = module.get('args', [])
+        for source in module.get('depends_on', []):
+            if source not in modules:
+                continue
+            try:
+                path = declared_json(modules[source])
+            except ValueError:
+                # load_sources already marks enabled malformed sources invalid.
+                continue
+            if any(arg == path or (isinstance(arg, str) and arg.partition('=')[2] == path) for arg in args):
+                edges.append((source, target))
+    return sorted(set(edges))
