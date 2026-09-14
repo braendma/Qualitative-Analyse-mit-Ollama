@@ -30,6 +30,19 @@ function setup(){
 const checkResult={segments:2,passages:1,persons:1,codes:1,modules:[]};
 const settle=()=>new Promise(resolve=>setImmediate(resolve));
 
+test('optional diagnostics stay off by default and explain their cost',()=>{
+  const app=setup();
+  app.run("state.modules=[{id:'clusterer',name:'Cluster',depends_on:[]},{id:'coverage',name:'Coverage',depends_on:[],enabled:false,cost_profile:{class:'NIEDRIG',recommendation:'für iterative Arbeit geeignet',note:'Keine Modellaufrufe'}}]; loadFields();");
+  const modules=app.node('modules').children;
+  assert.equal(modules[0].children[0].children[0].checked,true);
+  assert.equal(modules[1].children[0].children[0].checked,false);
+  const text=modules[1].children[0].children[1];
+  assert.ok(text.children.some(n=>n.textContent.includes('Aufwand: NIEDRIG')));
+  app.run("project.settings.modules=['coverage']; loadFields();");
+  assert.equal(app.node('modules').children[0].children[0].children[0].checked,false);
+  assert.equal(app.node('modules').children[1].children[0].children[0].checked,true);
+});
+
 test('person grouping requires confirmation, counts unique IDs and clears approval after editing',async()=>{
   const app=setup();app.loadIdentity();
   assert.equal(app.run('personIdentityReady()'),false);

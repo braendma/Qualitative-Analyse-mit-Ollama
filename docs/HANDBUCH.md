@@ -459,3 +459,18 @@ Die Ansicht ist kein vollständiges Protokoll einer tatsächlich versendeten Anf
 ## Quellen und Originalzitate in der Gesamtsynthese
 
 Die Gesamtsynthese nennt unter „Grundlage aus vorherigen Analysen“ verständliche Modulnamen. „Herkunftsdetails“ klappt im HTML die gespeicherte Zwischenzusammenfassung und die zugehörigen Originaltextstellen auf, soweit deren Segment-IDs in der Herkunftskette gespeichert und im Export verfügbar sind. Diese Textstellen gehören zum Eingabematerial der Verdichtung; sie sind keine automatisch bestätigten Belege für jede einzelne Syntheseaussage. Fehlt eine direkte Zuordnung, zeigt der Bericht das ausdrücklich. Eine Quellengruppe kann Material mehrerer Analysen und Personen enthalten. Die fachliche Prüfung erfolgt an den Originalzitaten und den jeweiligen Modulberichten. Technische N-/L-Kennungen bleiben nur in den Details zur Nachvollziehbarkeit erhalten. Neue HTML-Exporte können diese Hilfe auch für alte Läufe aus deren gespeichertem Quellenregister erzeugen; dafür ist kein erneuter Modelllauf nötig.
+
+
+## Coverage und Blind Spots
+
+Unter **Analyse → Analysemodule auswählen** lässt sich **Coverage und Blind Spots** zusätzlich aktivieren. Standardmäßig ist es ausgeschaltet. Aufwand: **NIEDRIG · für iterative Arbeit geeignet**. Die Diagnose startet keine zusätzlichen Modellaufrufe oder Vorstufen.
+
+Wähle die Analysen, deren Belegauswahl du untersuchen möchtest, und ergänze Coverage. Es läuft nach den ausgewählten analytischen Modulen und liest ihre abgeschlossenen Ergebnisse. Nicht ausgewählte, fehlgeschlagene oder veränderte Quellen erscheinen als nicht auswertbar. Wenn du ausschließlich Coverage auswählst, erhältst du die Materialverteilung; Analysen aus früheren Läufen werden nicht automatisch übernommen. Dieser reine Diagnoselauf benötigt weder einen laufenden Ollama-Server noch einen API-Schlüssel.
+
+Im Ergebnisbereich stehen `coverage.md` und `coverage.json`; nach erfolgreichem Gesamtworkflow ist die Coverage-Ansicht auch Bestandteil des HTML-Berichts. Sie trennt ausgewählte Segmentbelege, zugeordnetes Clustermaterial und Material zitierter Synthese-Quellengruppen. Personenreferenzen ohne genaue Textzuordnung ergeben keine Segmentabdeckung.
+
+Die Tabelle vergleicht den Anteil jeder Person am Material und an der Evidenzauswahl. Explizite Passage-IDs werden einmal gezählt; ohne diese zählt jede Codierzeile einzeln. Kategorieanteile beziehen sich auf Codierzeilen derselben Hierarchieebene. Wortanteile im JSON beschreiben exportierte Stellen, nicht vollständige Interviews. Seltene oder fehlende Referenzen sind ein Prüfhinweis, kein automatisch festgestellter Qualitätsmangel.
+
+**Ergebnisbeispiel ansehen** zeigt ein künstliches Beispiel: P01 hat eine Passage mit zwei Codes, P02 eine mit einem Code. Beide stellen 50 % der zwei Materialeinheiten; bei ausschließlicher Referenz auf P01 stellt diese Person 100 % der Evidenzauswahl. Es bleiben drei Codierzeilen für die Kategorieauswertung. **Prompts ansehen** erklärt, dass dieses Modul keinen eigenen LLM-Aufruf benötigt.
+
+[Methodik und technische Details](DIAGNOSTICS.md) · [Künstliches Ergebnisbeispiel](BEISPIELE.html#module-coverage).

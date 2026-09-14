@@ -75,6 +75,13 @@ def normalize_modules(config: dict) -> list[dict]:
         if isinstance(deps, str):
             deps = [deps]
         item["depends_on"] = [str(x).strip() for x in deps if str(x).strip()]
+        after = raw.get('after_if_enabled', [])
+        if not isinstance(after, list) or any(not isinstance(x, str) for x in after):
+            raise ValueError('after_if_enabled muss eine Liste von Modul-IDs sein.')
+        item['after_if_enabled'] = after
+        if type(raw.get('requires_model', True)) is not bool:
+            raise ValueError('requires_model muss true oder false sein.')
+        item['requires_model'] = raw.get('requires_model', True)
         normalized.append(item)
 
     return normalized
@@ -102,7 +109,8 @@ def topological_order(modules: list[dict]) -> list[dict]:
     while remaining:
         progress = False
         for module in list(remaining):
-            if all(dep in completed for dep in module["depends_on"]):
+            wait_for = set(module['depends_on']) | (set(module.get('after_if_enabled', [])) & enabled)
+            if wait_for <= completed:
                 ordered.append(module)
                 completed.add(module["id"])
                 remaining.remove(module)
@@ -336,9 +344,10 @@ def main(argv=None):
         manifest.setdefault("failure_history", []).append({"failed_at": manifest.pop("failed_at", None), "error": manifest.pop("error")})
     manifest.pop("finished_at", None)
     atomic_json(output_dir / "workflow_manifest.json", manifest)
+    needs_model = any(m.get('requires_model', True) for m in modules)
     managed = ManagedOllama(config.get("llm", {}), output_dir)
     try:
-        manifest["ollama_runtime"] = managed.start()
+        manifest["ollama_runtime"] = managed.start() if needs_model else {'managed': False, 'model_required': False}
         atomic_json(output_dir / "workflow_manifest.json", manifest)
         failures=[]
         for module in modules:

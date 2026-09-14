@@ -78,7 +78,11 @@ def execute(command, **kwargs):
     if len(command)>1 and str(command[1]).endswith('.py'):
         old_cwd=Path.cwd()
         old_argv=sys.argv
+        old_env=dict(os.environ)
         try:
+            if 'env' in kwargs:
+                os.environ.clear()
+                os.environ.update(kwargs['env'])
             os.chdir(kwargs['cwd'])
             sys.argv=command[1:]
             runpy.run_path(command[1],run_name='__main__')
@@ -86,6 +90,8 @@ def execute(command, **kwargs):
         finally:
             os.chdir(old_cwd)
             sys.argv=old_argv
+            os.environ.clear()
+            os.environ.update(old_env)
     return original_run(command,**kwargs)
 
 subprocess.run=execute

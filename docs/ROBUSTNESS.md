@@ -1,5 +1,22 @@
 # Fehlerbehandlung und reproduzierbare Läufe
 
+## Modellfreie Coverage und unvollständige Quellen
+
+Die optionale Coverage prüft Datei-, Eingabe- und Konfigurationshashes. Ausfälle
+ausgewählter Vorstufen erzeugen einen vorläufigen Bericht mit
+`processing_status: incomplete`; er zählt nicht als abgeschlossenes Modul.
+Resume berechnet die Diagnose nach Behebung der Quellen erneut. Deaktivierte
+Vorstufen gelten nicht als Fehler. Ohne generatives Modul wird kein Modellserver
+gestartet oder API-Schlüssel benötigt. [Diagnosegrenzen](DIAGNOSTICS.md).
+
+Zusätzliche synthetische Grenztests prüfen Textstellen über 1 MB mit Unicode,
+Semikolon, Zeilenumbrüchen und HTML-artigem Text, große Codebuchdefinitionen,
+widersprüchliche Passage-IDs und beschädigte Quellenregister. Zu große generative
+Eingaben werden durch die Kontextvorprüfung erklärt abgewiesen; die
+deterministische Coverage kürzt sie nicht. Kennungen werden im Coverage-Markdown
+als Daten maskiert. Diese Tests belegen technische Schutzmechanismen, keinen
+Qualitätsbenchmark eines Modells.
+
 ## Ausführen und fortsetzen
 
 Die öffentliche `config/config_v2.yaml` verwendet lokale Inferenz über `http://localhost:11434` mit Granite. Das Beispielmaterial ist vollständig synthetisch; siehe [DEMO_DATA.md](DEMO_DATA.md). Private Daten und projektspezifische Konfigurationen gehören in eine separate lokale Arbeitskopie.

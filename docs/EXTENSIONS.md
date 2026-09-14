@@ -1,5 +1,14 @@
 # Mehrfachcodierung, Prüfliste und große Gesamtsynthesen
 
+## Optionale Coverage-Diagnose
+
+`coverage` ist standardmäßig ausgeschaltet und arbeitet ohne zusätzliche
+Modellaufrufe. Sie wartet über `after_if_enabled` auf die ebenfalls ausgewählten
+analytischen Module und aktiviert keine eigenen Vorstufen. Ergebnisse stehen in
+`coverage.json`, `coverage.md` und nach erfolgreichem Gesamtworkflow im HTML-Bericht.
+Personen-/Passagen-/Kategorie-Nenner und Messgrenzen: [DIAGNOSTICS](DIAGNOSTICS.md).
+Konfigurationsfelder und Defaults: [CONFIGURATION](CONFIGURATION.md).
+
 ## Mehrfachcodierung je Passage
 
 `coding_agreement.label_mode: multi_label` benötigt eine explizite Spalte `columns.unit_id`, im Beispiel `PassageID`. Mehrere Codierzeilen derselben Passage müssen exakt denselben Text und dieselbe Person haben. Gleiche Texte allein werden nicht automatisch zusammengelegt. Fehlende oder widersprüchliche Passage-IDs werden vor dem ersten Modellaufruf abgewiesen.

@@ -21,8 +21,8 @@ class PromptViewTests(unittest.TestCase):
             cfg['context'] = {'project_description': 'PRIVATE_STUDY_TEXT'}
             cfg['llm']['api_key'] = 'PRIVATE_API_KEY'
             data = catalog(cfg, RUNNER.normalize_modules(cfg))
-            self.assertEqual(len(data['modules']), 15)
-            deterministic = {'coding_agreement', 'review_queue'}
+            self.assertEqual(len(data['modules']), len(cfg['pipeline']['modules']))
+            deterministic = {'coding_agreement', 'review_queue', 'coverage'}
             for module in data['modules']:
                 if module['id'] in deterministic:
                     self.assertEqual(module['templates'], [])
@@ -73,7 +73,7 @@ class PromptViewTests(unittest.TestCase):
                     conn.request('GET','/api/prompts?project='+pid,headers={'X-App-Token':token})
                     response=conn.getresponse();body=response.read();conn.close()
                     self.assertEqual(response.status,expected)
-                    if expected==200:self.assertEqual(len(json.loads(body)['modules']),15)
+                    if expected==200:self.assertEqual(len(json.loads(body)['modules']),len(app.template['pipeline']['modules']))
             finally:
                 server.shutdown();server.server_close();thread.join()
 

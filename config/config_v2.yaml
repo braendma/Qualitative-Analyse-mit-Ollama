@@ -1703,6 +1703,24 @@ pipeline:
         title: Gesamtsynthese
         markdown: overall_synthesis_v1.md
 
+    # Optional: liest ausschließlich vorhandene Ergebnisse, keine Modellaufrufe.
+    - id: coverage
+      name: Coverage und Blind Spots
+      script: coverage_analysis.py
+      enabled: false
+      requires_model: false
+      depends_on: []
+      after_if_enabled: [clusterer, summarizer, swot, meta_swot, person_analysis, person_comparison, contrast_analysis, relation_analysis, ambiguity_analysis, evidence_audit, overall_synthesis]
+      cost_profile:
+        class: NIEDRIG
+        recommendation: für iterative Arbeit geeignet
+        note: Keine zusätzlichen Modellaufrufe. Wertet nur abgeschlossene ausgewählte Analysen aus; aktiviert keine Vorstufen.
+      args: [--config, "{config}", --input-csv, "{input_csv}"]
+      outputs: [coverage.json, coverage.md]
+      report:
+        title: Coverage und Blind Spots
+        markdown: coverage.md
+
 
 
 # Kappa requires explicit confirmation AND a configured unique columns.unit_id.

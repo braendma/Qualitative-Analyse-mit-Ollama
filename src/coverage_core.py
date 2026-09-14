@@ -1,7 +1,13 @@
 """Deterministic distributions of input material and recorded evidence selection."""
 from collections import Counter
+import html
+import re
 
-from coding_validation_common import markdown_escape
+
+def markdown_escape(value):
+    """Identifiers are data, including in a Markdown viewer outside this app."""
+    text = html.escape(str(value), quote=False).replace('\n', ' ').replace('\r', ' ')
+    return re.sub(r'([\\`*_{}\[\]()#!|])', r'\\\1', text)
 
 SCOPES = ('direct', 'input_association', 'source_group', 'person_reference')
 DEFAULT_SCOPE = {'clusterer': 'input_association', 'summarizer': 'input_association',
@@ -89,7 +95,10 @@ def analyze_coverage(snapshot):
             result['scopes'][scope] = {'record_count': len(rows), 'persons_named': sorted(persons),
                 'unlinked_records': no_links, 'measurable': measured,
                 'distribution': distribution(inputs, selected) if measured else None}
-    return {'schema_version': 1, 'processing_status': 'completed', 'model_calls': 0,
+    incomplete = any(s['status'] == 'invalid' or
+                     (s['status'] == 'unavailable' and s.get('reason') != 'disabled') or
+                     s.get('invalid_records') for s in stages.values())
+    return {'schema_version': 1, 'processing_status': 'incomplete' if incomplete else 'completed', 'model_calls': 0,
         'input_fingerprint': snapshot['input_fingerprint'], 'stages': stages,
         'material': distribution(inputs, inputs.keys()),
         'unit_basis': 'explicit_passages' if inputs and all(r.get('unit_id') for r in inputs.values()) else 'rows_with_explicit_passages_grouped',
@@ -106,6 +115,15 @@ def render_coverage(result):
     labels = {'direct': 'Ausgewählte Segmentbelege', 'input_association': 'Zugeordnetes Eingabematerial',
               'source_group': 'Material zitierter Quellengruppen', 'person_reference': 'Personenreferenzen'}
     percent = lambda value: 'nicht bestimmbar' if value is None else f'{100 * value:.1f} %'
+    material = result['material']
+    lines += ['## Ausgangsmaterial', '',
+              f"{material['input_coding_rows']} Codierzeilen · {material['material_units']} Materialeinheiten", '',
+              '| Person | Materialeinheiten | Anteil am Material |', '|---|---:|---:|']
+    for row in material['by_person']:
+        lines.append(f"| {markdown_escape(row['person'])} | {row['material_units']} | {percent(row['material_share'])} |")
+    lines += ['']
+    if result['processing_status'] != 'completed':
+        lines += ['Vorläufige Diagnose: Mindestens eine ausgewählte Quelle ist noch nicht vollständig oder verifizierbar. Nach Behebung den Lauf fortsetzen.', '']
     for mid, stage in result['stages'].items():
         lines += ['## ' + markdown_escape(mid), '']
         if stage['status'] != 'available':

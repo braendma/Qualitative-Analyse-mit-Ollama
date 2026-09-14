@@ -17,6 +17,7 @@ PROMPT_KEYS = {
     'evidence_audit': ('evidence_audit',),
     'review_queue': (),
     'overall_synthesis': ('overall_synthesis',),
+    'coverage': (),
 }
 
 

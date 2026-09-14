@@ -4,7 +4,27 @@ Entwicklungshinweis: Die gemeinsame Grundlage für neue wissenschaftliche Diagno
 unterscheidet direkte Segmentbelege, Eingabezuordnungen, Personenreferenzen und
 Synthese-Quellengruppen. Vollständige Register zählen nicht automatisch als
 ausgewählte Evidenz. Datenvertrag und Grenzen stehen in [DIAGNOSTICS.md](DIAGNOSTICS.md).
-Die vollständigen Diagnosemodule befinden sich noch in Integration.
+Coverage ist bereits integriert; die weiteren Diagnosemodule folgen.
+
+### Coverage: Repräsentation in gespeicherten Analysebelegen
+
+Motivation ist die transparente Betrachtung der Verteilung exportierter
+Textstellen über Personen und Kategorien sowie ihrer späteren Referenzierung.
+Technisch werden verifizierte Zwischenprodukte deterministisch ausgewertet;
+Modellaufrufe sind dafür nicht erforderlich. Explizite Passagen zählen bei
+Personenanteilen einmal, Kategorienanteile beziehen sich auf Codierzeilen je
+Hierarchieebene. Direkte Segmentauswahl, zugeordnetes Clustermaterial und
+Synthese-Quellengruppen bleiben getrennt. Fehlende Quellen ergeben keine
+Nullabdeckung. Ein erfolgreicher leerer Befundbestand und eine nicht berechenbare
+Verteilung sind unterschiedliche Situationen.
+
+Die Aussagekraft beschränkt sich auf dokumentierte Referenzen im exportierten
+Material. Weder Interviewlänge noch semantische Repräsentation jeder Nuance können
+daraus abgeleitet werden. Seltene Referenzierung ist kein automatischer
+Qualitätsmangel; die menschliche Prüfung entscheidet, ob etwa Minderheitenpositionen
+angemessen berücksichtigt wurden. **Coverage ist kein Maß qualitativer Güte.**
+Die vollständigen Nenner und ein künstliches Rechenbeispiel stehen in
+[DIAGNOSTICS.md](DIAGNOSTICS.md).
 
 ## Methodische Einordnung, Qualitätssicherung und verwandte Arbeiten
 

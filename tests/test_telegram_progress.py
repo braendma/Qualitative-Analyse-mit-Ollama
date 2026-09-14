@@ -11,7 +11,7 @@ class TelegramProgressTests(unittest.TestCase):
         import yaml
         from telegram_progress import MODULES
         modules=yaml.safe_load((ROOT/'config/config_v2.yaml').read_text(encoding='utf-8'))['pipeline']['modules']
-        self.assertEqual(len(modules),15)
+        self.assertTrue({m['id'] for m in modules} <= MODULES.keys())
         for module in modules:
             mid=module['id']
             for known in (True,False):

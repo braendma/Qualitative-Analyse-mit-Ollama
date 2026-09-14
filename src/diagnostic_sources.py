@@ -25,6 +25,8 @@ def strings(value):
 
 
 def records(value, key):
+    if not isinstance(value, dict):
+        raise ValueError('Diagnosequelle: Ergebnisobjekt erwartet.')
     result = value.get(key)
     if not isinstance(result, list) or any(not isinstance(x, dict) for x in result):
         raise ValueError(f'Diagnosequelle: Ergebnisliste {key} fehlt oder ist ungültig.')
@@ -32,6 +34,8 @@ def records(value, key):
 
 
 def mapping(value, key):
+    if not isinstance(value, dict):
+        raise ValueError('Diagnosequelle: Ergebnisobjekt erwartet.')
     result = value.get(key)
     if not isinstance(result, dict):
         raise ValueError(f'Diagnosequelle: Ergebnisobjekt {key} fehlt oder ist ungültig.')
@@ -78,6 +82,8 @@ def project_stage(module_id, payload):
                         if fid not in registry:
                             missing.append(fid)
                         else:
+                            if not isinstance(registry[fid], dict):
+                                raise ValueError('Ungültiger Befund im Quellenregister.')
                             ids.extend(strings(registry[fid].get('segment_ids', [])))
                     add(f'meta_swot/{dimension}/{section}/{i}', row, ids=ids,
                         kind='exception' if section == 'einzelbefunde' else 'pattern', unresolved=missing)

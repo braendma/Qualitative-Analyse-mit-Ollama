@@ -20,8 +20,13 @@ const moduleHelp = {
   ambiguity_analysis:'Untersucht gegenläufige Aussagen und Ambivalenzen innerhalb der einzelnen Personenanalysen.',
   evidence_audit:'Prüft ausgewählte Befunde auf Gegenbelege aus den vorherigen Analysen.',
   review_queue:'Erstellt die interaktive Liste zur manuellen Prüfung von Codierungen und Modellvorschlägen.',
-  overall_synthesis:'Führt die vorherigen Analyseergebnisse zu einer Gesamtsynthese zusammen.'
+  overall_synthesis:'Führt die vorherigen Analyseergebnisse zu einer Gesamtsynthese zusammen.',
+  coverage:'Zeigt Personen- und Kategorieanteile in gespeicherten Belegen. Wertet ausgewählte Analysen aus, ohne zusätzliche Vorstufen oder Modellaufrufe zu starten. Ohne weitere Analysen erscheint nur die Materialverteilung.'
 };
+function appendModuleProfile(target,module){
+  const profile=module.cost_profile;
+  if(profile){target.append(el('small','Aufwand: '+profile.class+' · '+profile.recommendation));if(profile.note)target.append(el('small',profile.note));}
+}
 function updateModuleSelection(){
   const selected=new Set([...document.querySelectorAll('[name=module]:checked')].map(n=>n.value));
   const required=new Set(selected);
@@ -95,8 +100,8 @@ function loadFields(){
   const context=s.context||state.defaults.context;
   $('context-project').value=context.project_description||'';$('context-persons').value=context.participants||'';$('context-method').value=context.methodology||'';
   $('modules').replaceChildren();
-  const selected=s.modules||state.modules.map(m=>m.id);
-  state.modules.forEach(m=>{const label=el('label',undefined,'checkbox'),input=el('input'),text=el('span',m.name);input.type='checkbox';input.value=m.id;input.name='module';input.checked=selected.includes(m.id);input.addEventListener('change',updateModuleSelection);if(moduleHelp[m.id])text.append(el('small',moduleHelp[m.id]));if(m.depends_on.length)text.append(el('small','Benötigt: '+m.depends_on.map(id=>state.modules.find(x=>x.id===id)?.name||id).join(', ')));label.append(input,text);const item=el('div',undefined,'module-example'),example=el('button','Ergebnisbeispiel ansehen','example-trigger');example.type='button';example.setAttribute('data-example','module-'+m.id);example.setAttribute('aria-haspopup','dialog');example.setAttribute('aria-controls','example-dialog');example.setAttribute('aria-label',m.name+' – Ergebnisbeispiel ansehen');item.append(label,example);const prompts=el('button','Prompts ansehen','example-trigger');prompts.type='button';prompts.setAttribute('aria-haspopup','dialog');prompts.setAttribute('aria-controls','prompt-dialog');prompts.setAttribute('aria-label',m.name+' – Prompts ansehen');prompts.addEventListener('click',()=>showModulePrompts(m.id));item.append(prompts);$('modules').append(item);});
+  const selected=s.modules||state.modules.filter(m=>m.enabled!==false).map(m=>m.id);
+  state.modules.forEach(m=>{const label=el('label',undefined,'checkbox'),input=el('input'),text=el('span',m.name);input.type='checkbox';input.value=m.id;input.name='module';input.checked=selected.includes(m.id);input.addEventListener('change',updateModuleSelection);appendModuleProfile(text,m);if(moduleHelp[m.id])text.append(el('small',moduleHelp[m.id]));if(m.depends_on.length)text.append(el('small','Benötigt: '+m.depends_on.map(id=>state.modules.find(x=>x.id===id)?.name||id).join(', ')));label.append(input,text);const item=el('div',undefined,'module-example'),example=el('button','Ergebnisbeispiel ansehen','example-trigger');example.type='button';example.setAttribute('data-example','module-'+m.id);example.setAttribute('aria-haspopup','dialog');example.setAttribute('aria-controls','example-dialog');example.setAttribute('aria-label',m.name+' – Ergebnisbeispiel ansehen');item.append(label,example);const prompts=el('button','Prompts ansehen','example-trigger');prompts.type='button';prompts.setAttribute('aria-haspopup','dialog');prompts.setAttribute('aria-controls','prompt-dialog');prompts.setAttribute('aria-label',m.name+' – Prompts ansehen');prompts.addEventListener('click',()=>showModulePrompts(m.id));item.append(prompts);$('modules').append(item);});
   updateModuleSelection();
   renderFiles();
   if(typeof loadProviderFields==='function')loadProviderFields();

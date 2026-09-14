@@ -1,9 +1,9 @@
 # Wissenschaftliche Diagnosen – technische Grundlage
 
-Entwicklungsstand: Die gemeinsame Quellenauswertung und der Coverage-Kern mit CLI
-sind implementiert. Die Auswahl in der Oberfläche und die weiteren Diagnosemodule
-werden darauf aufbauend integriert. Dieser Abschnitt beschreibt den überprüfbaren
-Datenvertrag und die bereits nutzbare technische Schnittstelle.
+Entwicklungsstand: Die gemeinsame Quellenauswertung und Coverage sind in CLI,
+Pipeline, Modulauswahl, Promptansicht, Fortschritt und Berichte integriert. Die
+weiteren Diagnosemodule werden darauf aufbauend ergänzt. Dieser Abschnitt
+beschreibt den überprüfbaren Datenvertrag und die technische Schnittstelle.
 
 ## Referenzen eindeutig unterscheiden
 
@@ -101,7 +101,21 @@ ungültige Verweise oder Quellennamen ohne gespeicherte Segmentzuordnung ergeben
 „nicht bestimmbar“. Gruppenmaterial einer Synthese ist kein bestätigter
 Direktbeleg. Coverage ist **kein Maß qualitativer Güte**.
 
-### Technischer Aufruf vor der UI-Integration
+### Oberfläche und technischer Aufruf
+
+**Coverage und Blind Spots** ist unter **Analyse → Analysemodule auswählen**
+standardmäßig ausgeschaltet. Es wartet auf die weiteren ausgewählten analytischen
+Module, schaltet aber keine zusätzliche Analyse ein. Ein Lauf nur mit Coverage
+liefert die Materialverteilung und benötigt kein Modell. Frühere Runs werden nicht
+automatisch eingelesen. Das Beispiel an der Modulkarte erklärt die Nenner;
+**Prompts ansehen** kennzeichnet die Verarbeitung ohne eigenen LLM-Aufruf.
+
+Fehlt eine ausgewählte Quelle nach einem technischen Fehler, wird die vorhandene
+Coverage-Datei als `processing_status: incomplete` gespeichert. Sie wird nicht als
+abgeschlossenes Modul für Resume zwischengespeichert. Nach Beheben der Vorstufe
+berechnet Resume die Diagnose erneut. Nicht ausgewählte Quellen sind kein Fehler.
+Quellengruppen ohne genaue Segmentzuordnung bleiben eine methodische Messgrenze,
+kein technischer Fehler.
 
 Den vorhandenen Lauf zuerst unverändert lassen. Ein separates Ausgabeverzeichnis
 für diese Nachprüfung verwenden. Vorhandene Ziele, Eingaben und gespeicherte
@@ -114,10 +128,11 @@ python src/coverage_analysis.py --config /pfad/zum/lauf/config_snapshot.yaml --i
 Alle Argumente verwenden vorhandene Pfadkonventionen. `--config` und `--input-csv`
 sind erforderlich. `--run-dir` ist standardmäßig das Arbeitsverzeichnis;
 `--out-json` und `--out-md` heißen standardmäßig `coverage.json` und `coverage.md`.
-Zur Integration im bestehenden Runner ist eine optionale Moduldefinition möglich;
-die gemeinsame Modulauswahl wird separat ergänzt. Die Stufe nach den gewünschten
-analytischen Quellen einordnen. Nicht abgeschlossene Module werden nicht nachträglich
-berechnet, sondern als nicht verfügbar ausgewiesen.
+Die ausgelieferte Pipeline enthält die ausgeschaltete Moduldefinition bereits.
+`after_if_enabled` ordnet sie nach den ausgewählten Quellen ein; eine fehlgeschlagene
+Quelle verhindert nicht die vorläufige Diagnose. Nicht abgeschlossene Module werden
+nicht nachträglich berechnet, sondern als nicht verfügbar ausgewiesen. Alle neuen
+Konfigurationsfelder stehen in [CONFIGURATION.md](CONFIGURATION.md).
 
 Die Diagnose misst die analytischen Referenzen, nicht das fertige HTML-Dokument.
 Der HTML-Export entsteht erst danach und muss im vollständigen Integrationstest

@@ -21,11 +21,17 @@ class FullPipelineTests(unittest.TestCase):
             with self.subTest(module=module):
                 self._run_pipeline(module=='hierarchical_reduction',module)
 
-    def _run_pipeline(self,multi,partial_module=None):
+    def test_coverage_integrated_after_sources_and_in_export(self):
+        self._run_pipeline(True, coverage=True)
+
+    def _run_pipeline(self,multi,partial_module=None,coverage=False):
         with tempfile.TemporaryDirectory() as tmp:
             temp=Path(tmp)
             cfg=yaml.safe_load((ROOT/'config/config_v2.yaml').read_text(encoding='utf-8'))
             cfg['llm']['model']='mock'
+            for module in cfg['pipeline']['modules']:
+                if module['id']=='coverage':
+                    module['enabled']=coverage
             cfg['coding_agreement']['label_mode']='multi_label' if multi else 'unspecified'
             if multi: cfg['llm']['hierarchical_synthesis']={'enabled':True,'force':True,'batch_items':12,'summary_chars':1200}
             cfg['context']={}
@@ -63,6 +69,10 @@ class FullPipelineTests(unittest.TestCase):
                 self.assertIn('ambiguity_analysis',manifest['completed_steps'])
                 self.assertEqual(manifest['module_status']['contrast_analysis'],'blocked')
                 self.assertTrue(manifest['module_errors']['person_comparison']['action'])
+                if coverage:
+                    self.assertNotIn('coverage', manifest['completed_steps'])
+                    partial=json.loads((run/'coverage.json').read_text(encoding='utf-8'))
+                    self.assertEqual(partial['processing_status'],'incomplete')
             if partial_module:
                 trace=[json.loads(line) for line in (temp/'requests.jsonl').read_text().splitlines()]
                 first_success=next(x for x in trace if x['module']==partial_module)
@@ -91,6 +101,12 @@ class FullPipelineTests(unittest.TestCase):
             self.assertTrue((run/'gesamtbericht.md').is_file())
             self.assertTrue((run/'gesamtbericht.html').is_file())
             self.assertIn('gesamtbericht.html',manifest['output_hashes'])
+            if coverage:
+                diagnosis=json.loads((run/'coverage.json').read_text(encoding='utf-8'))
+                self.assertEqual(diagnosis['stages']['swot']['status'],'available')
+                self.assertEqual(diagnosis['stages']['swot']['scopes']['direct']['distribution']['unit_coverage'],1)
+                self.assertIn('Coverage und Blind Spots',(run/'gesamtbericht.html').read_text(encoding='utf-8'))
+                self.assertGreater(manifest['completed_steps'].index('coverage'),manifest['completed_steps'].index('overall_synthesis'))
             self.assertTrue((run/'review_queue.html').is_file())
             # Diagnostic adapters must accept the real saved module schemas,
             # not merely handcrafted fixtures or complete input inventories.

@@ -325,7 +325,7 @@ class App(ReviewWorkspace):
                 raise ValueError('Kontextbeschreibung ist zu lang (maximal 12000 Zeichen je Feld).')
             cfg.setdefault('context',{})[key] = value
         modules = RUNNER.normalize_modules(cfg)
-        requested = settings.get('modules',[m['id'] for m in modules])
+        requested = settings.get('modules',[m['id'] for m in modules if m['enabled']])
         if not isinstance(requested,list) or not requested or not set(requested) <= {m['id'] for m in modules}:
             raise ValueError('Mindestens einen gültigen Analyseschritt auswählen.')
         selected = set(requested)
@@ -407,7 +407,7 @@ class App(ReviewWorkspace):
                 'context_check':context_check,
                 'passages':len({s.unit_id for s in segments}) if cfg['columns'].get('unit_id') else None,
                 'codebook_fields':{key:sum(bool(getattr(c,key)) for c in codes.values()) for key in ('einschluss','ausschluss','abgrenzung','ankerbeispiel')},
-                'codes':len(codes),'modules':[{'id':m['id'],'name':m['name']} for m in modules], 'model_calls':0}
+                'codes':len(codes),'modules':[{'id':m['id'],'name':m['name'],'requires_model':m['requires_model']} for m in modules], 'model_calls':0}
 
     def models(self):
         try:
@@ -509,15 +509,17 @@ class App(ReviewWorkspace):
                 job={'id':jid,'created':time.time(),'config':str(config),'status':'starting'}
             checked=self.validate_config(config)
             llm = yaml.safe_load(config.read_text(encoding='utf-8'))['llm']
-            selected = self.authorize_llm(pid, llm)
+            needs_model = any(m.get('requires_model', True) for m in checked['modules'])
+            selected = self.authorize_llm(pid, llm) if needs_model else {'provider':'not_required','model':''}
             from managed_ollama import preflight
-            preflight(llm)
+            if needs_model:
+                preflight(llm)
             pause=folder/'pause.request'
             pause.unlink(missing_ok=True)
             command=[sys.executable,str(ROOT/'00_WORKFLOW_RUNNER.py'),'--config',str(config),'--output-dir',str(folder/'runs'),'--pause-file',str(pause)]
             if resume: command.extend(['--resume',str(manifests[0].parent)])
             env={k:v for k,v in os.environ.items() if k not in KEY_ENVS and k not in ('QUALITATIVE_MANAGED_OLLAMA_HOST','OLLAMA_API_KEY','OLLAMA_HOST','WORKFLOW_CHECKPOINT_DIR','WORKFLOW_FINGERPRINT','WORKFLOW_RUN_ID','WORKFLOW_PROGRESS_FILE','WORKFLOW_MODULE')}
-            if selected['provider'] != 'ollama_local':
+            if needs_model and selected['provider'] != 'ollama_local':
                 env[selected['api_key_env']] = self.provider_keys.keys[selected['provider']]
             env.update(PYTHONUTF8='1',PYTHONIOENCODING='utf-8',MPLBACKEND='Agg')
             log=open(folder/'console.log','ab')
@@ -691,7 +693,8 @@ class Handler(BaseHTTPRequestHandler):
                 cfg=app.template
                 return self.json({'projects':app.projects(),'telegram':app.telegram.public(),'providers':PROVIDERS,'provider_keys':app.provider_keys.public(),
                     'defaults':{'llm':{**{k:cfg['llm'].get(k) for k in ('model','num_ctx','max_tokens','temperature','think')},'synthesis_max_calls':cfg['llm'].get('hierarchical_synthesis',{}).get('max_calls',64)},'context':cfg['context'],'columns':cfg['columns']},
-                    'modules':[{'id':m['id'],'name':m['name'],'depends_on':m['depends_on']} for m in RUNNER.normalize_modules(cfg)]})
+                    'modules':[{k:m[k] for k in ('id','name','depends_on','enabled','requires_model','after_if_enabled')} |
+                        {'cost_profile':m.get('cost_profile')} for m in RUNNER.normalize_modules(cfg)]})
             if parsed.path=='/api/project': return self.json(app.project(get('project')))
             if parsed.path=='/api/prompts': return self.json(app.prompt_templates(get('project'),get('job') or None))
             if parsed.path=='/api/jobs': return self.json({'jobs':app.jobs(get('project')),'telegram':app.telegram.public()})

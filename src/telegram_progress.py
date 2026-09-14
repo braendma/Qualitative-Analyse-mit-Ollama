@@ -9,7 +9,7 @@ MODULES={
  'swot':'SWOT','meta_swot':'Meta-SWOT','person_analysis':'Personenanalyse',
  'person_comparison':'Personenvergleich','contrast_analysis':'Kontrastanalyse',
  'relation_analysis':'Zusammenhangsanalyse','ambiguity_analysis':'Ambivalenzanalyse',
- 'evidence_audit':'Evidence-Audit','review_queue':'Prüfliste','overall_synthesis':'Gesamtsynthese'}
+ 'evidence_audit':'Evidence-Audit','review_queue':'Prüfliste','overall_synthesis':'Gesamtsynthese','coverage':'Coverage und Blind Spots'}
 UNITS={'passages':'Passagen','rows':'Codierzeilen','batches':'Prüfblöcke',
        'categories':'Kategorien','persons':'Personen','summaries':'Zusammenfassungen','dimensions':'SWOT-Dimensionen',
        'pairs':'Paare','steps':'Schritte'}

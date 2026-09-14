@@ -1,5 +1,11 @@
 # Qualitative Analyse mit Ollama
 
+Im aktuellen Entwicklungsstand ergänzt **Coverage und Blind Spots** die 15
+Basismodule als optionale, standardmäßig ausgeschaltete Diagnose. Sie vergleicht
+Personen- und Kategorieanteile mit gespeicherten Belegreferenzen und benötigt keine
+zusätzlichen Modellaufrufe. [Bedienung](docs/HANDBUCH.html#coverage) ·
+[Methodik und Grenzen](docs/DIAGNOSTICS.md) · [Konfiguration](docs/CONFIGURATION.md).
+
 ## Neu in 0.4.0-beta.1
 
 - **Personen ausdrücklich zuordnen:** Mehrere Dokumente können zu einer Person gehören. Vorschau und Bestätigung sind vor dem Start erforderlich. [Anleitung](docs/Personenzuordnung.md).
