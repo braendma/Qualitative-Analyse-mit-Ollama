@@ -551,9 +551,35 @@ Scheitert eine kontrollierte Wiederholung, zeigen Laufkarte und Teilbericht die 
 
 **Bei Problemen:** Den Stabilitäts-Teilbericht, die Fehlerhilfe und das Serienlog im Unterordner prüfen. Ziel-/Vorstufenauswahl korrigieren oder den technischen Fehler beheben. Nur bei unveränderter Laufgrundlage fortsetzen. Eine neue Konfiguration benötigt einen neuen Lauf.
 
+## Analyseperspektiven je Modul
+
+Im aktuellen Entwicklungsstand kannst du unter **Analyse → Analysemodule auswählen** für Clusteranalyse, Cluster-Zusammenfassungen und SWOT jeweils **Qualitativ**, **Häufigkeiten** oder **Beide Perspektiven** wählen. Die Programme lassen sich auch über die Workflow-CLI entsprechend konfigurieren. Weitere Module behalten ihre bisherige Arbeitsweise; insbesondere Meta-SWOT hat noch keinen eigenen Häufigkeitsmodus.
+
+**So gehst du vor:** Dokumente zuerst Personen zuordnen und die Personenzahl bestätigen. Dann die gewünschten Module und direkt darunter ihre Perspektive auswählen. „Analyseperspektiven: Inhalte oder Häufigkeiten?“ klappt Beispiele auf. Anschließend die Eingaben prüfen und bewusst einen neuen Lauf starten. Eine Perspektivenwahl bleibt gespeichert, wenn du das Modul abwählst; wird es als Vorstufe benötigt, gilt diese Wahl trotzdem. Bestehende Projekte ohne Moduswahl bleiben qualitativ.
+
+**Qualitativ:** Beschreibt Inhalte, Begründungen und Gegenpositionen in ihrem Zusammenhang. Es entstehen keine zusätzlichen thematischen Zuordnungs- oder Interpretationsanfragen durch diese Option.
+
+**Häufigkeiten:** Ergänzt berechnete Verteilungen und eine darauf bezogene Modellinterpretation. **Beide Perspektiven** zeigt zusätzlich die ursprüngliche qualitative Interpretation als benannte Vergleichsperspektive. Beide teilen pro Modul dieselbe Zählbasis; sie lösen keine doppelte Themenzuordnung aus. Die bisherige Ausgangsanalyse bleibt in jedem Fall nachvollziehbar und die gemeinsame ungewichtete Grundlage nachfolgender Module.
+
+**Künstliches Beispiel:** Acht zugeordnete Passagen stammen von drei Personen. Das sind acht Passagen und drei Personen, keine acht Befragten. Mehrere Dokumentteile derselben Person erhöhen die Personenzahl nicht. Eine Passage ist nicht automatisch genau eine Aussage; für die Auswertung die tatsächliche Einheit benennen. Explizite Passage-IDs werden zusammengeführt, andernfalls zählen Codierzeilen. Gleicher Wortlaut allein wird nicht als gleiche Passage behandelt.
+
+**Was wird gezählt?** Cluster und Cluster-Zusammenfassungen verwenden die vollständige Clusterzuordnung, nicht nur ausgewählte Beispielzitate. Das ist Clusterzugehörigkeit und keine unabhängig bestätigte Themenentscheidung. Freie Gesamtzusammenfassungen erhalten daraus keine erfundenen Themenhäufigkeiten. SWOT prüft für jeden abgeleiteten Befund die Einheiten seines Codepfads. Unterstützung eines solchen Befunds ist nicht automatisch eine wörtliche Nennung durch Befragte. Zustimmende, entgegenstehende, ambivalente und unklare Zuordnungen bleiben unterscheidbar. Die bestätigte Personenzuordnung bestätigt nicht die Modellentscheidungen.
+
+**Aufwand:** SWOT benötigt zusätzliche Blöcke für die vollständige Thema-Einheit-Matrix. Hinzu kommt je Thema eine Häufigkeitsinterpretation; bei Cluster und Zusammenfassungen wird die vorhandene Zuordnung verwendet. Themenzahl, Materialumfang, Kontextfenster und Reparaturen bestimmen zusätzliche Modellanfragen, Laufzeit und gegebenenfalls API-Kosten. „Beide“ teilt die Matrix, macht diese Arbeit aber nicht kostenlos. Benötigte Vorstufen sowie Stabilitäts- und Sensitivitätswiederholungen kommen hinzu. Der Fortschritt zeigt bearbeitete Zuordnungsblöcke und Interpretationen als eigene Phasen, keine Restzeit.
+
+**Ergebnisse lesen:** Im Modulbericht und HTML-Gesamtbericht folgt auf die gemeinsame Ausgangsbasis der Abschnitt „Häufigkeitsinformierte Analyseperspektive“. Berechnete Zähler und Nenner stehen getrennt von Modelltexten. Unklare oder fehlende Entscheidungen sind keine Nullnennungen; bei unvollständiger Prüfung sind beobachtete Werte Untergrenzen und exakte Anteile können fehlen. Auch formal gültige Modelltexte können Zahlen falsch auslegen. Prüfe Begründungen, Gegenpositionen und Zahlen nebeneinander; Häufigkeit ist weder eine Qualitätsquote noch statistische Repräsentativität. Für die vollständige strukturierte Prüfung zusätzlich die JSON-Datei des Moduls öffnen oder mitgeben.
+
+**Prompts:** Nach gültigem Speichern zeigt „Prompts ansehen“ die festen Systemanweisungen der zusätzlichen Phasen. Der angezeigte Aufgabenteil beschreibt die dynamischen Eingaben; er enthält nicht die tatsächlich eingesetzten Originaltexte. Die Ansicht ist schreibgeschützt und löst keine Modellanfrage aus.
+
+**Bei gesperrtem Start:** Eine unbekannte oder nicht verfügbare gespeicherte Perspektive korrigieren oder mit „Gespeicherte Auswahl entfernen“ ausdrücklich entfernen. Personenzuordnung erneut bestätigen, wenn Datei oder Spalten geändert wurden. Fehlerhafte Codes mit dem Kategoriensystem abgleichen. Stimmen Vorstufen oder Originaltext-Zuordnung nicht mehr überein, einen neuen Lauf einschließlich der Vorstufen erstellen; keine alten Ergebnisse unter neuen Dateinamen einschleusen.
+
+**Bei zu großem Kontext:** Originaltexte, Themenregister und vorhandene Gegenpositionen werden nicht still gekürzt. Ein einzelner zu langer Text oder ein großes Vergleichsregister kann die Prüfung deshalb stoppen. Kontextfenster und Antwortlimit anhand der Meldung prüfen; mehr Kontext muss zum Modell und verfügbaren Speicher passen. Alternativ die Eingabe methodisch begründet überarbeiten oder die zusätzliche Häufigkeitsperspektive abwählen. Keine Belege nur zur Erzielung einer gewünschten Zahl entfernen. Geänderte Daten, Modi oder Modelleinstellungen brauchen einen neuen Lauf. Bei einem rein technischen Ausfall mit unveränderter Grundlage kann das normale Fortsetzen geprüfte Teilblöcke wiederverwenden.
+
+[Methodische Einordnung und Literatur](#aussagen-und-personen-zählen-methodische-einordnung) · [YAML und CLI](CONFIGURATION.md#analyseperspektiven-je-modul) · [Technischer Zählvertrag](THEMATIC_COUNTING.md).
+
 ## Aussagen und Personen zählen: methodische Einordnung
 
-**Entwicklungsstand:** Dieses Kapitel erklärt die methodischen Entscheidungen für die geplanten zwei Analyseperspektiven. Die Auswahl „qualitativ“, „mit thematischer Zählung“ und „beide Perspektiven“ ist noch in Entwicklung. Bereits vorhandene Beleg- und Coverage-Zahlen sind keine vollständige Themenzählung.
+**Entwicklungsstand:** Die drei Perspektiven sind zunächst für Clusteranalyse, Cluster-Zusammenfassungen und SWOT umgesetzt. Das vorangehende Kapitel erklärt ihre Bedienung und Grenzen. Die folgenden methodischen Überlegungen gelten unabhängig davon, welche weiteren Module später integriert werden. Beleg- und Coverage-Zahlen sind weiterhin keine vollständige Themenzählung.
 
 ### Warum alle Aussagen berücksichtigen?
 

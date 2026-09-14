@@ -52,8 +52,24 @@ def check_context(config, segments, codebook, modules):
     for module,key in keys.items():
         if module in enabled:pair(module,key)
     if 'summarizer' in enabled:pair('summarizer','category_summary')
+    from thematic_pipeline import modes as thematic_modes
+    extra = {mid for mid, mode in thematic_modes(config).items() if mid in enabled and mode != 'qualitative'}
+    if extra:
+        from thematic_interpretation import SYSTEM as interpretation_system, CORRECTION as interpretation_correction
+        for mid in extra:
+            record(mid, [{'content': interpretation_system}, {'content': '{}'}, {'content': interpretation_correction}])
+        if 'swot' in extra:
+            from thematic_assignment import SYSTEM as assignment_system, CORRECTION as assignment_correction
+            for segment in segments:
+                # This is a lower bound before candidate themes exist. The actual
+                # full matrix/definition/response plan is checked again at runtime.
+                record('swot', [{'content': assignment_system}, {'content': segment.text + assignment_correction}])
     blocked=[{'module':module,'required_bound':needed} for module,needed in maxima.items() if needed>context]
     warnings=[]
+    if extra:
+        warnings.append('Zusätzliche Analyseperspektiven benötigen berechnete Themenzuordnungen und Interpretationen. '
+                        'Themenzahl und Vergleichsregister sind vorab unbekannt; die Laufzeitprüfung kann deshalb '
+                        'weiteren Kontext verlangen. Originaltexte und Zählregister werden dabei nicht gekürzt.')
     for module in ('code_verification','blind_coding'):
         if module in maxima and maxima[module]+4*answer+1024>context:
             warnings.append(f'{module}: Für eine längere Antwortreparatur könnte der Kontext zu knapp sein. Mehr Kontext wählen oder das Antwortlimit passend verringern.')

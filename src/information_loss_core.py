@@ -24,13 +24,19 @@ def _view(stage, inputs):
     rows = stage['records']
     if any(not row['valid'] for row in rows):
         return {'measurable': False, 'reason': 'invalid_references'}
+    # Counts and named thematic interpretations intentionally have no selected
+    # source references. They are compared by stability/sensitivity, not inferred
+    # to be broken reference links or linguistic losses in this transition audit.
+    thematic_count = sum(row['scope'] == 'thematic_result' for row in rows)
+    scopes = sorted({row['scope'] for row in rows})
+    rows = [row for row in rows if row['scope'] != 'thematic_result']
     no_links = [row['key'] for row in rows if row['scope'] != 'person_reference' and not row['segment_ids']]
     ids = {sid for row in rows for sid in row['segment_ids']}
     people = {p for row in rows for p in row['persons']} | {inputs[sid]['person'] for sid in ids}
-    scopes = sorted({row['scope'] for row in rows})
     return {'measurable': True, 'scopes': scopes, 'people': people, 'ids': ids,
-            'segment_measurable': not no_links and 'person_reference' not in scopes,
-            'unlinked_records': no_links, 'records': rows}
+            'segment_measurable': not no_links and 'person_reference' not in scopes and (bool(rows) or not thematic_count),
+            'unlinked_records': no_links, 'records': rows, 'thematic_record_count': thematic_count,
+            **({'reason': 'thematic_results_only'} if thematic_count and not rows else {})}
 
 
 def _excerpt(row):
@@ -128,6 +134,12 @@ def analyze_information_loss(snapshot, edges):
         transition.update(source_scopes=before['scopes'], target_scopes=after['scopes'],
                           persons_no_longer_referenced=sorted(before['people'] - after['people']),
                           persons_newly_referenced=sorted(after['people'] - before['people']))
+        if before['thematic_record_count'] or after['thematic_record_count']:
+            transition['non_reference_thematic_records'] = {
+                'source': before['thematic_record_count'], 'target': after['thematic_record_count']}
+            transition['thematic_note'] = ('Thematische Interpretationen und berechnete Zähler besitzen hier absichtlich keine ausgewählten Belegreferenzen. '
+                'Sie werden nicht als fehlende Verknüpfungen gewertet und nicht in die Referenz- oder Wortlistenprüfung einbezogen. '
+                'Stabilität und Sensitivität vergleichen diese Ausgaben getrennt; der folgende Übergang betrifft die ursprüngliche Kandidatenbasis.')
         transition['reference_comparison'] = None
         if before['segment_measurable'] and after['segment_measurable']:
             left, right = before['ids'], after['ids']
@@ -146,7 +158,10 @@ def analyze_information_loss(snapshot, edges):
                 'categories_no_longer_referenced': sorted({inputs[sid]['code'] for sid in left} -
                                                          {inputs[sid]['code'] for sid in right})}
         else:
-            transition['reference_comparison_note'] = 'Segmentvergleich nicht bestimmbar: reine Personenreferenzen oder Einträge ohne Segmentverknüpfung.'
+            transition['reference_comparison_note'] = (
+                'Segmentvergleich nicht bestimmbar: mindestens eine Stufe enthält ausschließlich thematische Ausgaben ohne ausgewählte Belegreferenzen.'
+                if any(view.get('reason') == 'thematic_results_only' for view in (before, after)) else
+                'Segmentvergleich nicht bestimmbar: reine Personenreferenzen oder Einträge ohne Segmentverknüpfung.')
         transition['review_items'] = _review_rows(before, after, inputs, unit_for_id)
     incomplete = any(stage['status'] == 'invalid' or
                      (stage['status'] == 'unavailable' and stage.get('reason') != 'disabled') or
@@ -187,11 +202,14 @@ def render_information_loss(result):
         lines += [f"{len(initial['unreferenced_material_units'])} Materialeinheiten ohne Clusterzuordnung.", '',
                   'Codierzeilen ohne Clusterzuordnung: ' + (', '.join(map(markdown_escape, initial['unreferenced_coding_rows'])) or 'keine'), '']
     else:
-        lines += ['Clusterzuordnung nicht bestimmbar: ' + markdown_escape(initial['reason']), '']
+        reason = ('Ausschließlich thematische Ausgaben ohne ausgewählte Belegreferenzen.'
+                  if initial['reason'] == 'thematic_results_only' else initial['reason'])
+        lines += ['Clusterzuordnung nicht bestimmbar: ' + markdown_escape(reason), '']
     if not result['transitions']:
         lines += ['Keine analytischen Quellübergänge ausgewählt. Die gewünschten Analysen zusätzlich aktivieren. Ergebnisse aus früheren Läufen werden nicht automatisch übernommen.', '']
     scope_labels = {'direct': 'direkte Segmentbelege', 'input_association': 'Eingabezuordnung',
-                    'source_group': 'Material einer Quellengruppe', 'person_reference': 'Personenreferenzen'}
+                    'source_group': 'Material einer Quellengruppe', 'person_reference': 'Personenreferenzen',
+                    'thematic_result': 'thematische Interpretation und berechnete Zähler (keine Belegauswahl)'}
     for edge in result['transitions']:
         lines += ['## ' + markdown_escape(edge['source']) + ' → ' + markdown_escape(edge['target']), '']
         source_paths = [result['source_artifacts'].get(mid, {}).get('artifact') for mid in (edge['source'], edge['target'])]
@@ -203,6 +221,8 @@ def render_information_loss(result):
         lines += ['Referenzarten: ' + ', '.join(scope_labels[s] for s in edge['source_scopes']) + ' → ' +
                   ', '.join(scope_labels[s] for s in edge['target_scopes']), '',
                   'Nicht mehr referenzierte Personen: ' + (', '.join(map(markdown_escape, edge['persons_no_longer_referenced'])) or 'keine'), '']
+        if edge.get('thematic_note'):
+            lines += [edge['thematic_note'], '']
         data = edge['reference_comparison']
         if data is None:
             lines += [edge['reference_comparison_note'], '']

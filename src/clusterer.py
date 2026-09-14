@@ -11,6 +11,7 @@ import pandas as pd
 
 from clusterer_core import run_clustering
 from coding_validation_common import load_codebook, resolve_config_path
+from thematic_pipeline import prepare as prepare_perspective, finish as finish_perspective
 
 # Logging konfigurieren (schreibt in clusterer_debug.log und stdout)
 logging.basicConfig(
@@ -55,6 +56,7 @@ def main(argv=None):
     # Pfade aus Config / Kommandozeile
     # -------------------------------------------------
     input_csv = args.csv or str(resolve_config_path(args.config, None, config["paths"]["input_csv"]))
+    perspective = prepare_perspective('clusterer', args.config, input_path=input_csv)
 
     # args.out-md hat jetzt standardmäßig bereits
     # den korrekten Namen clusterer_output.md
@@ -109,6 +111,7 @@ def main(argv=None):
     # -------------------------------------------------
     # Markdown schreiben
     # -------------------------------------------------
+    md, json_output = finish_perspective(perspective, json_output, md, ollama_params)
     atomic_text(output_md, md)
 
     # -------------------------------------------------
@@ -132,4 +135,3 @@ def main(argv=None):
 
 if __name__ == "__main__":
     main()
-

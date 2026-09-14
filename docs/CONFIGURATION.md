@@ -301,3 +301,68 @@ kennzeichnet den vollständigen neuen Lauf; keine Restzeit beim Resume.
 `model_calls_estimate` ist bei einem rein modellfreien Lauf 0, sonst `null`.
 `unplanned_child_modules` nennt eigene Module mit nicht berechneten Unterläufen;
 in diesem Fall ist `total_module_executions: null`. Keine Zeit-/Preisprognose.
+
+
+## Analyseperspektiven je Modul
+
+Der aktuelle Entwicklungsstand erlaubt zusätzliche Perspektiven für die
+unveränderten Standardmodule `clusterer`, `summarizer` und `swot`. Die Modi werden
+unabhängig je Modul gewählt:
+
+```yaml
+analysis_perspectives:
+  clusterer: qualitative
+  summarizer: both
+  swot: frequency
+```
+
+Dieser optionale Abschnitt ergänzt eine vorhandene Konfiguration; er aktiviert
+selbst keine Module. `pipeline.modules[].enabled` und die benötigten Vorstufen
+bestimmen weiter den Ausführungsumfang. Die Auswahl gilt auch für automatisch
+benötigte Vorstufen. Oberfläche: `settings.analysis_perspectives` verwendet
+dieselbe Zuordnung. Abgewählte Module behalten gespeicherte Modi.
+
+| Wert | Wirkung |
+|---|---|
+| `qualitative` | Bestehende Analyse ohne zusätzliche thematische Phase; Vorgabe bei fehlendem Eintrag. |
+| `frequency` | Gemeinsame Ausgangsanalyse, deterministische Zählung und benannte Häufigkeitsinterpretation. |
+| `both` | Dieselbe einmalige Zählbasis und Häufigkeitsinterpretation, zusätzlich die ursprüngliche qualitative Interpretation als benannte Vergleichsperspektive. |
+
+Ein fehlender oder `null` gesetzter gesamter Abschnitt bedeutet qualitativ.
+Null-Einzelwerte, Listen, unbekannte Modi und unbekannte Modul-IDs werden
+abgewiesen. Die Eignung weiterer analytischer Module bedeutet noch keine
+Freigabe ihrer zusätzlichen Modi. Codiervergleich, Review und Diagnosen erhalten
+keine künstlichen Interpretationsmodi. Eigene Skripte können keine Freigabe durch
+Wiederverwendung einer Standard-ID erlangen. Alle gespeicherten Einträge werden
+geprüft, auch bei gerade abgewählten Modulen; ungültige Werte bewusst korrigieren.
+
+Für `frequency`/`both` muss `person_identity` einen zur unveränderten CSV passenden
+Bestätigungsnachweis enthalten. Die Oberfläche erstellt ihn nach Prüfung und
+Bestätigung der Dokument-/Personenzuordnung. Für einen CLI-Lauf die entsprechend
+vorbereitete Konfiguration zusammen mit ihrer normalisierten Arbeits-CSV und
+den zugehörigen Eingabepfaden verwenden; ein frei gesetztes `confirmed: true`
+reicht nicht. Die [Personenzuordnung](Personenzuordnung.md) zuerst prüfen.
+Die reguläre Eingabeprüfung ist beispielsweise:
+
+```console
+python run_workflow.py --config pfad/zur/vorbereiteten_config.yaml --validate-only
+```
+
+Diese Prüfung führt keine Modellanfrage aus. Themen und Vergleichsregister
+entstehen erst aus den Analysen, deshalb ist eine bestandene Vorprüfung keine
+Garantie, dass alle späteren Häufigkeitsanfragen in das Kontextfenster passen.
+Einzeltexte, Register und Gegenpositionsmaterial werden nicht still gekürzt.
+Bei einem Kontextfehler Einstellungen oder Material begründet überarbeiten
+und einen neuen Lauf starten. Fortsetzen erfordert unveränderte Konfiguration,
+Eingaben und Programmversion; passende Teilblöcke können wiederverwendet werden.
+
+Die Aufwandübersicht nennt gemeinsame Zählbasen und zusätzliche
+Interpretationsphasen. Eine Basis ist keine einzelne Modellanfrage. SWOT führt
+zusätzlich die vollständige Thema-Einheit-Zuordnung im jeweiligen Codepfad aus;
+Cluster und Zusammenfassungen verwenden vollständige Clusterzuordnungen.
+Matrixumfang, Themen und Reparaturen bestimmen die tatsächliche Zusatzarbeit;
+Wiederholungsserien führen sie erneut aus. `both` teilt die Matrix pro Modul.
+Der Kern zählt selbst; Modelltexte können die berechneten Werte dennoch falsch
+interpretieren. Materialeinheiten, bestätigte Personen, Prüfstatus und Nenner
+bleiben deshalb explizit. Siehe [Bedienung und Fehlerhilfe](HANDBUCH.md#analyseperspektiven-je-modul)
+und [Entwicklervertrag](THEMATIC_COUNTING.md).

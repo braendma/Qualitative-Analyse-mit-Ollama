@@ -75,7 +75,7 @@ def _record_identity(row, *, include_text=True):
 
 
 def _cluster_pairs(rows):
-    groups = [r['segment_ids'] for r in rows]
+    groups = [r['segment_ids'] for r in rows if r['kind'] == 'cluster']
     events = sum(len(g) * (len(g) - 1) // 2 for g in groups)
     if events > PAIR_EVENT_LIMIT:
         return {'status': 'not_calculated', 'pair_events': events, 'limit': PAIR_EVENT_LIMIT}, None
@@ -136,7 +136,7 @@ def analyze_stage_repetitions(segments, module_id, samples):
     baseline = analyze_coverage(make_snapshot(segments, {}))
 
     def project(payload):
-        projected = project_stage(module_id, payload)
+        projected = project_stage(module_id, payload, segments=segments)
         projected['status'] = 'available'
         snapshot = make_snapshot(segments, {module_id: projected})
         checked = snapshot['stages'][module_id]
@@ -193,7 +193,7 @@ def analyze_stage_repetitions(segments, module_id, samples):
                 'person_overlap': _overlap(a['persons'], b['persons'])})
         if module_id == 'clusterer':
             # Arbitrary cluster names and array positions are deliberately ignored.
-            memberships = lambda sid: Counter(tuple(r['segment_ids']) for r in valid[sid]['records'])
+            memberships = lambda sid: Counter(tuple(r['segment_ids']) for r in valid[sid]['records'] if r['kind'] == 'cluster')
             pair['cluster_membership_overlap'] = _overlap(memberships(left), memberships(right))
             a, b = cluster_pairs[left], cluster_pairs[right]
             pair['coassignment_overlap'] = _overlap(a, b) if a is not None and b is not None else None

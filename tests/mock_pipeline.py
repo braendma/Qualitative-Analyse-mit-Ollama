@@ -29,6 +29,13 @@ def fake_chat(messages, **kwargs):
             trace.write(json.dumps({'module':logical_module,'prompt_sha256':hashlib.sha256(json.dumps(messages,sort_keys=True).encode()).hexdigest()})+'\n')
     if os.environ.get('MOCK_FAIL_MODULE')==logical_module and call_counts[logical_module]>int(os.environ.get('MOCK_FAIL_AFTER','0')):
         raise RuntimeError('Simulated interruption')
+    if module.startswith('Ordne jede angeforderte Zelle'):
+        data, _ = json.JSONDecoder().raw_decode(text)
+        return json.dumps({'assignments':[{**cell, 'status':'supported'} for cell in data['cells']]})
+    if module.startswith('Du interpretierst festgelegte qualitative Themen'):
+        data=json.loads(text)
+        return json.dumps({'topic_id':data['topic']['topic_id'], 'interpretation':'Häufigkeitsinformierte synthetische Einordnung.',
+                           'counterpositions':'Seltene Gegenpositionen bleiben relevant.', 'limitations':'Keine menschliche Bestätigung.'})
     if module.startswith('Codiere die gesamte Passage'):
         data=json.loads(text)
         codes=['A > B > C > '+code for needle,code in [('gut','positiv'),('schlecht','negativ')] if needle in data['segment']]

@@ -1,13 +1,13 @@
 # Thematische Zählung – Entwicklervertrag des gemeinsamen Kerns
 
-**Interner Entwicklungsstand S13b:** Der gemeinsame Kern besitzt jetzt eine
-ausführbare Themenzuordnung, deterministische Zählung, häufigkeitsinformierte
-Interpretation und drei Adapter für Cluster, Clusterzusammenfassungen und SWOT.
-`execute_perspective` verbindet diese Funktionen intern; die Abläufe lassen
-sich mit künstlichen Modellantworten testen. **Oberfläche und Workflow-CLI
-schalten die neuen Perspektiven noch nicht frei.** Die vorhandene
-Verfügbarkeitsprüfung bleibt gesperrt, bis der jeweilige Einstieg vollständig
-integriert ist. Die bisherige qualitative Arbeitsweise bleibt unverändert.
+**Entwicklungsstand S13c:** Clusteranalyse (`clusterer`), Clusterzusammenfassungen
+(`summarizer`) und SWOT (`swot`) sind jetzt über ihre regulären Module in
+Workflow-CLI und Oberfläche mit den Perspektiven `qualitative`, `frequency` und
+`both` verbunden. Die Auswahl gilt unabhängig je Modul; fehlende Einstellungen
+bleiben qualitativ. Für weitere Module sind die zusätzlichen Perspektiven noch
+nicht verfügbar. Dies beschreibt den aktuellen Entwicklungsstand, keine neue
+veröffentlichte Version. Der gemeinsame Kern verbindet vollständige
+Themenzuordnung, deterministische Zählung und häufigkeitsinformierte Interpretation.
 
 Methodische Einordnung und Literatur stehen im
 [Handbuch: Aussagen und Personen zählen](HANDBUCH.md#aussagen-und-personen-zählen-methodische-einordnung)
@@ -217,18 +217,21 @@ Themen beruhen oder einen gesonderten geprüften Vertrag erhalten.
 Fehlende oder `null` gesetzte Abschnitte bleiben qualitativ. Methodische Eignung
 ist von implementierter Verfügbarkeit getrennt: Nichtqualitative Modi werden
 ohne ausdrücklich freigegebenen Adapter als „noch nicht integriert“ abgewiesen.
-Die bestehenden Runner-/UI-Einstiege werden durch diesen Bibliothekskern nicht
-automatisch erweitert.
+Die zentrale Grenze `thematic_pipeline` gibt nur die drei integrierten
+Standardmodule frei. Ein eigenes Skript mit derselben Modul-ID erbt keine
+zusätzliche Verfügbarkeit. Die Oberfläche liest diese Freigabe vom Server.
+Ungültige gespeicherte Modi werden angezeigt und abgewiesen, auch bei gerade
+nicht ausgewählten Modulen; sie werden nicht still entfernt.
 
-Beide Perspektiven sollen je Modul dieselbe geprüfte Zuordnungsbasis verwenden
-und getrennte Interpretationen liefern. Vor Themen- und Blockplanung bleiben
+Beide Perspektiven verwenden je Modul dieselbe geprüfte Zuordnungsbasis
+und liefern getrennte Interpretationen. Vor Themen- und Blockplanung bleiben
 zusätzliche Matrixzellen und Modellanfragen unbekannt; eine logische gemeinsame
 Basis ist keine Zusage über eine einzelne oder kostenlose Modellanfrage.
-Mode-Metadaten, Material-, Themen- und Resultatfingerprints stehen für die
-Einbindung in bestehende Lauf-/Checkpointidentitäten bereit. Die internen
-Zuordnungs- und Interpretationsphasen verwenden die vorhandenen
-Teil-Checkpoints; die vollständige Aufnahme der Moduswahl in die öffentlichen
-Runner-/UI-Einstiege und Diagnoseprojektionen folgt noch. Kein Fingerprint
+Die gespeicherte Konfiguration enthält die Moduswahl und bindet sie damit
+an den bestehenden Lauf-Fingerprint. Material-, Themen- und Resultatidentität
+werden zusätzlich geprüft; Zuordnungs- und Interpretationsphasen verwenden
+die vorhandenen Teil-Checkpoints. Verifizierte Diagnoseprojektionen trennen
+thematische Kennzahlen von benannten Interpretationstexten. Kein Fingerprint
 beweist die fachliche Richtigkeit einer Zuordnung.
 
 ## 8. Vollständige Matrix intern ausführen
@@ -299,10 +302,10 @@ Auch ein formal gültiger Interpretationstext kann Zahlen falsch beschreiben
 oder unzutreffende Schlussfolgerungen ziehen. Gegenpositionen, Grenzen und
 die danebenstehenden berechneten Werte müssen fachlich geprüft werden.
 
-## 10. Interne Orchestrierung und getrennte Ausgaben
+## 10. Orchestrierung, Anwendungseinstiege und getrennte Ausgaben
 
 `thematic_execution.execute_perspective(module, mode, material, payload, params,
-*, cluster_payload=None, llm=None)` unterstützt intern `clusterer`,
+*, cluster_payload=None, llm=None)` unterstützt `clusterer`,
 `summarizer` und `swot`:
 
 1. Bei `qualitative` liefert die Funktion `None` und startet keine neue
@@ -332,9 +335,34 @@ nachgelagertes Modul darf gewichteten Text nicht still an die Stelle von
 Dadurch wird eine bereits gewichtete Interpretation nicht als angeblich
 ungewichtete Vergleichsbasis weitergereicht.
 
-Diese interne Ausführung umgeht nicht die öffentliche Verfügbarkeitsprüfung.
-Die Auswahl muss erst in den regulären Modulaufrufen, Konfigurations- und
-Projektgrenzen, Promptansichten, Berichten sowie Aufwand-/Fortschrittsanzeigen
-verdrahtet werden. Weitere geeignete Module und die neuen
-Diagnose-/Wiederholungsprojektionen stehen ebenfalls noch aus. Erst ihre
-getestete Integration darf neue Modi in der normalen Anwendung freischalten.
+`thematic_pipeline.prepare` prüft vor dem bisherigen Modulablauf die bestätigte
+Materialbasis. Für abhängige Module werden Cluster, Originaltext-Zuordnung und
+gegebenenfalls Clusterzusammenfassungen gegen Material und im Runner gegen die
+deklarierten, abgeschlossenen Artefakte geprüft. `finish` ergänzt das Ergebnis
+unter `analysis_perspective` und den Markdown-Bericht, ohne die ursprünglichen
+Quellfelder zu ersetzen. Veränderte Eingaben oder Vorstufen werden vor und nach
+der zusätzlichen Ausführung abgewiesen. Der HTML-Gesamtbericht übernimmt den
+Modulbericht; vollständige strukturierte Ergebnisse bleiben in der separaten
+JSON-Datei des Moduls.
+
+Die Promptansicht ergänzt bei gespeichertem `frequency`/`both` die festen
+Systemanweisungen für Häufigkeitsinterpretation und bei SWOT für Themenzuordnung.
+Sie beschreibt die dynamischen Eingaben, zeigt aber weder das vollständige
+Anfrageprotokoll noch automatisch Interviewmaterial. Stabilitäts-/Sensitivitätsansichten
+berücksichtigen die entsprechenden Zielmodule. Weitere Moduladapter bleiben
+nicht verfügbar; eine Eignungskennzeichnung ist keine Ausführungsfreigabe.
+
+Stabilität und Sensitivität vergleichen die benannten Interpretationen und
+berechneten Zahlen zusätzlich zur gemeinsamen Kandidatenbasis. Die Zähler werden
+dafür aus den Originaleinheiten erneut geprüft. Ihre vollständigen Scopes oder
+Zuordnungsmatrizen werden nicht als neu ausgewählte Zitate behandelt. Coverage
+misst weiterhin die vorhandenen vier Referenzarten. Der Information-Loss-Audit
+weist thematische Ergebnisrecords separat aus und nimmt sie nicht in seine
+Referenz- und Wortlistenübergänge auf; fehlende direkte Segmentlinks solcher
+Zähler sind kein festgestellter Belegverlust. Damit ist die neue Modellprosa
+nicht automatisch einer eigenständigen semantischen Verlustprüfung unterzogen.
+
+Bedienung, sichere Fehlerbehebung und Beispiele:
+[Analyseperspektiven im Handbuch](HANDBUCH.md#analyseperspektiven-je-modul).
+YAML-Vertrag und CLI-Voraussetzungen:
+[Konfigurationsreferenz](CONFIGURATION.md#analyseperspektiven-je-modul).

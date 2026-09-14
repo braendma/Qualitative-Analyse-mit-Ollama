@@ -44,7 +44,93 @@ def mapping(value, key):
     return result
 
 
-def project_stage(module_id, payload):
+def _thematic_projection(module_id, payload, segments):
+    """Reproduce metrics from original units; project no matrix/scope as evidence."""
+    from thematic_material import build_material
+    from thematic_counts import count_topics
+    from thematic_adapters import build_cluster_topics, build_summary_topics, build_swot_topics
+
+    def require(condition):
+        if not condition:
+            raise ValueError('Analyseperspektive passt nicht zu Modul, Originalmaterial oder Themenquelle.')
+
+    extension = payload['analysis_perspective']
+    require(module_id in ('clusterer', 'summarizer', 'swot') and isinstance(extension, dict))
+    require(type(extension.get('schema_version')) is int and extension['schema_version'] == 1)
+    require(extension.get('module_id') == module_id and extension.get('selected_mode') in ('frequency', 'both'))
+    require(extension.get('candidate_basis') == 'original_unweighted_findings' and segments is not None)
+    counted = extension.get('counting')
+    require(isinstance(counted, dict))
+    material = build_material(segments, person_basis=counted.get('person_basis'))
+    # The material-content hash and recomputed metrics verify the actual supplied
+    # original units; the surrounding artifact loader verifies run/config hashes.
+    material['basis_fingerprint'] = counted.get('basis_fingerprint')
+    require(count_topics(material, counted.get('definitions'), counted.get('assignments')) == counted)
+    original = {key: value for key, value in payload.items() if key != 'analysis_perspective'}
+    if module_id == 'clusterer':
+        prepared = build_cluster_topics(material, original)
+    elif module_id == 'swot':
+        prepared = build_swot_topics(material, original)
+    else:
+        # Summary records contain exact cluster identity and membership. Rebuild
+        # that structural source without pretending to recover plots/timestamps
+        # from the separate original cluster artifact.
+        metadata = {s.segment_id: {'person': s.person, 'unit_id': s.unit_id} for s in segments}
+        clusters = {'processing_status': 'completed', 'segment_metadata': metadata,
+                    'clusters': original.get('cluster_summaries')}
+        prepared = build_summary_topics(material, clusters, original)
+    require(extension.get('source_links') == prepared['source_links'])
+    require(counted['definitions'] == prepared['topics'])
+    if prepared['assignments'] is not None:
+        require(counted['assignments'] == prepared['assignments'])
+    origin = 'full_scoped_model_assignment' if module_id == 'swot' else 'complete_cluster_membership'
+    require(extension.get('assignment_origin') == origin)
+    require(extension.get('unassigned_context') == prepared.get('unassigned_context', {}))
+    digest = extension.get('candidate_source_fingerprint')
+    require(isinstance(digest, str) and len(digest) == 64 and all(c in '0123456789abcdef' for c in digest))
+    if module_id != 'summarizer':
+        require(digest == prepared['source_fingerprint'])
+    # For summaries the source hash also binds the separate cluster artifact;
+    # here its identity/membership is verified, its file hash is loader-owned.
+    modes = ('qualitative', 'frequency') if extension['selected_mode'] == 'both' else ('frequency',)
+    outputs = extension.get('interpretations')
+    require(isinstance(outputs, dict) and set(outputs) == set(modes))
+    topics = {topic['topic_id']: topic for topic in counted['definitions']}
+    result = []
+    def add(tid, perspective, kind, text):
+        result.append({'key': 'analysis_perspective/' + tid + '/' + perspective,
+            'kind': kind, 'scope': 'thematic_result',
+            'comparison_context': ['analysis_perspective', tid, perspective],
+            'segment_ids': [], 'persons': [], 'text': text, 'unresolved': []})
+    for mode in modes:
+        rows = outputs[mode]
+        require(isinstance(rows, list))
+        seen = set()
+        fields = {'topic_id', 'interpretation'} | ({'counterpositions', 'limitations'} if mode == 'frequency' else set())
+        for row in rows:
+            require(isinstance(row, dict) and set(row) == fields)
+            require(all(isinstance(row[key], str) and bool(row[key].strip()) for key in fields))
+            tid = row['topic_id']
+            require(tid in topics and tid not in seen)
+            seen.add(tid)
+            if mode == 'qualitative':
+                require(row['interpretation'] == prepared['source_links'][tid]['qualitative_text'])
+            text = '\n'.join(key + ': ' + row[key] for key in sorted(fields - {'topic_id'}))
+            add(tid, mode, 'thematic_interpretation', text)
+        require(seen == set(topics))
+    for row in counted['topics']:
+        scope = {key: value for key, value in row['scope'].items() if key not in ('unit_ids', 'person_ids')}
+        metrics = {stance: {key: value for key, value in values.items() if key not in ('unit_ids', 'person_ids')}
+                   for stance, values in row['counts'].items()}
+        value = {'kind': row['kind'], 'count_meaning': row['count_meaning'],
+                 'scope': scope, 'coverage': row['coverage'], 'counts': metrics,
+                 'assignment_review_status': counted['assignment_review_status'],
+                 'person_basis': counted['person_basis']}
+        add(row['topic_id'], 'counts', 'thematic_counts', json.dumps(value, ensure_ascii=False, sort_keys=True))
+    return result
+
+
+def project_stage(module_id, payload, *, segments=None):
     """Project one validated artifact. No source registers are traversed wholesale."""
     if not isinstance(payload, dict):
         raise ValueError('Diagnosequelle muss ein JSON-Objekt sein.')
@@ -157,6 +243,12 @@ def project_stage(module_id, payload):
         warnings.append('Synthese: Quellengruppen beschreiben Eingabematerial, keine bestätigte Evidenz pro Aussage.')
     else:
         raise ValueError(f'Kein Diagnoseadapter für Modul {module_id}.')
+    if 'analysis_perspective' in payload:
+        thematic = _thematic_projection(module_id, payload, segments)
+        for row in out:
+            row['comparison_context'] = ['candidate_basis', *row['comparison_context']]
+        out.extend(thematic)
+        warnings.append('Ursprüngliche Befunde sind die ungewichtete Kandidatenbasis. Ausgewählte Interpretationen und berechnete Zähler werden getrennt verglichen; keine semantische Gleichheit oder menschliche Bestätigung. Themenumfang und Zuordnungsmatrix sind keine ausgewählten Belege.')
     return {'records': out, 'warnings': warnings}
 
 
@@ -205,7 +297,7 @@ def load_declared_artifact(directory, module, manifest):
     return item
 
 
-def load_sources(directory, config):
+def load_sources(directory, config, *, segments=None):
     """Load only completed, hash-verified declared artifacts. Never scan random files."""
     directory = Path(directory).resolve()
     manifest_path = directory / 'workflow_manifest.json'
@@ -222,7 +314,7 @@ def load_sources(directory, config):
         if item['status'] != 'available':
             continue
         try:
-            item.update(project_stage(mid, item.pop('payload')))
+            item.update(project_stage(mid, item.pop('payload'), segments=segments))
         except (OSError, ValueError, TypeError, KeyError, AttributeError, RecursionError) as exc:
             item.update(status='invalid', reason=str(exc))
     return result
@@ -274,7 +366,8 @@ def load_snapshot(directory, config_path, input_path):
     """Bind the diagnostic to the original input and exact saved configuration."""
     from coding_validation_common import load_segments
     config, _, _ = load_input_context(directory, config_path, input_path)
-    snapshot = make_snapshot(load_segments(input_path, config['columns']), load_sources(directory, config))
+    segments = load_segments(input_path, config['columns'])
+    snapshot = make_snapshot(segments, load_sources(directory, config, segments=segments))
     snapshot['dependency_edges'] = dependency_edges(config)
     return snapshot
 

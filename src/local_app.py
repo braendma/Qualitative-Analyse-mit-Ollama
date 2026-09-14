@@ -1,5 +1,6 @@
 """Loopback-only desktop companion for the existing, independently usable runner."""
 import argparse
+import thematic_pipeline
 import base64
 import copy
 import csv
@@ -322,6 +323,9 @@ class App(ReviewWorkspace):
             if len(value)>12000:
                 raise ValueError('Kontextbeschreibung ist zu lang (maximal 12000 Zeichen je Feld).')
             cfg.setdefault('context',{})[key] = value
+        if 'analysis_perspectives' in settings:
+            cfg['analysis_perspectives'] = copy.deepcopy(settings['analysis_perspectives'])
+        thematic_pipeline.modes(cfg)
         modules = RUNNER.normalize_modules(cfg)
         requested = settings.get('modules',[m['id'] for m in modules if m['enabled']])
         if not isinstance(requested,list) or not requested or not set(requested) <= {m['id'] for m in modules}:
@@ -409,12 +413,14 @@ class App(ReviewWorkspace):
         if unknown:
             raise ValueError('Codes fehlen im Kategoriensystem: '+ '; '.join(f"Zeile {x['row']}: {x['code']}" for x in unknown[:10]))
         modules = RUNNER.topological_order(RUNNER.normalize_modules(cfg))
+        thematic_pipeline.validate_material(path, cfg, modules)
         from stability_analysis import configured_plan, planning_summary
         stability_plan = configured_plan(path)
         sensitivity_plan = configured_plan(path, kind='sensitivity')
         from workflow_effort import effort_summary
         effort = effort_summary(modules, stability=planning_summary(stability_plan),
                                 sensitivity=planning_summary(sensitivity_plan))
+        effort['analysis_perspectives'] = thematic_pipeline.effort(cfg, modules)
         from context_preflight import check_context, require_context
         context_check=check_context(cfg,segments,codes,modules)
         require_context(context_check)
@@ -738,10 +744,11 @@ class Handler(BaseHTTPRequestHandler):
                 if not isinstance(diagnostics,dict):diagnostics={}
                 return self.json({'projects':app.projects(),'telegram':app.telegram.public(),'providers':PROVIDERS,'provider_keys':app.provider_keys.public(),
                     'defaults':{'llm':{**{k:cfg['llm'].get(k) for k in ('model','num_ctx','max_tokens','temperature','think')},'synthesis_max_calls':cfg['llm'].get('hierarchical_synthesis',{}).get('max_calls',64)},'context':cfg['context'],'columns':cfg['columns'],
+                                'analysis_perspectives':thematic_pipeline.default_modes(cfg),
                                 'stability':diagnostics.get('stability',{'modules':[],'repetitions':3}),
                                 'sensitivity':diagnostics.get('sensitivity',{'modules':[],'repetitions':2,'variants':[]})},
                     'modules':[{k:m[k] for k in ('id','name','depends_on','enabled','requires_model','starts_child_runs','after_if_enabled')} |
-                        {'cost_profile':m.get('cost_profile')} for m in RUNNER.normalize_modules(cfg)]})
+                        {'cost_profile':m.get('cost_profile'), 'perspective_capability':thematic_pipeline.capability(m)} for m in RUNNER.normalize_modules(cfg)]})
             if parsed.path=='/api/project': return self.json(app.project(get('project')))
             if parsed.path=='/api/prompts': return self.json(app.prompt_templates(get('project'),get('job') or None))
             if parsed.path=='/api/jobs': return self.json({'jobs':app.jobs(get('project')),'telegram':app.telegram.public()})

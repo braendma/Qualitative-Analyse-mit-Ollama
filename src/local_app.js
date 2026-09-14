@@ -33,6 +33,57 @@ function appendModuleProfile(target,module){
   if(profile){target.append(el('small','Eigenaufwand: '+profile.class+' · '+profile.recommendation));if(profile.note)target.append(el('small',profile.note));}
   else{target.append(el('small','Aufwand: nicht eingestuft. Hinweise des Moduls prüfen.'));}
 }
+const perspectiveLabels={qualitative:'Qualitativ · Inhalte und Gegenpositionen',frequency:'Häufigkeiten · Einheiten und Personen',both:'Beide Perspektiven'};
+let perspectiveSelections={},perspectiveIssue='';
+function perspectiveSettings(){return JSON.parse(JSON.stringify(perspectiveSelections));}
+function loadPerspectiveFields(){
+  const saved=Object.hasOwn(project.settings||{},'analysis_perspectives')?project.settings.analysis_perspectives:state.defaults.analysis_perspectives;
+  perspectiveSelections=saved==null?{}:JSON.parse(JSON.stringify(saved));
+}
+function perspectiveProblems(modules,selections){
+  if(!selections||typeof selections!=='object'||Array.isArray(selections))return [{id:null,message:'Analyseperspektiven müssen eine Zuordnung von Modul zu Modus sein.'}];
+  const known=new Map(modules.map(m=>[m.id,m])),issues=[];
+  for(const [id,mode] of Object.entries(selections)){
+    const module=known.get(id),cap=module?.perspective_capability;
+    if(!module||!cap?.eligible){issues.push({id,message:`${module?.name||id}: Für dieses Modul ist keine Analyseperspektive freigegeben.`});continue;}
+    if(typeof mode!=='string'||!Object.hasOwn(perspectiveLabels,mode)){issues.push({id,message:`${module.name||id}: Ungültige gespeicherte Perspektive (${JSON.stringify(mode)}).`});continue;}
+    if(!Array.isArray(cap.available_modes)||!cap.available_modes.includes(mode)||(mode!=='qualitative'&&cap.implemented!==true))issues.push({id,message:`${module.name||id}: „${perspectiveLabels[mode]}“ ist nicht verfügbar. ${cap.reason||'Noch nicht integriert.'}`});
+  }
+  return issues;
+}
+function appendPerspectiveSelector(item,module){
+  const cap=module.perspective_capability,validMap=perspectiveSelections&&typeof perspectiveSelections==='object'&&!Array.isArray(perspectiveSelections);
+  const saved=validMap&&Object.hasOwn(perspectiveSelections,module.id),mode=saved?perspectiveSelections[module.id]:'qualitative';
+  if(cap?.implemented!==true&&(!saved||mode==='qualitative'))return;
+  const wrap=el('div',undefined,'module-perspective'),label=el('label','Analyseperspektive'),select=el('select');
+  select.id='perspective-'+module.id;select.name='analysis-perspective';label.setAttribute('for',select.id);
+  const modes=cap?.eligible&&Array.isArray(cap.available_modes)?cap.available_modes.filter(m=>Object.hasOwn(perspectiveLabels,m)&&(m==='qualitative'||cap.implemented===true)):[];
+  for(const value of modes){const option=el('option',perspectiveLabels[value]);option.value=value;select.append(option);}
+  const supported=typeof mode==='string'&&modes.includes(mode);
+  if(!supported){const option=el('option','Gespeichert, nicht verfügbar: '+JSON.stringify(mode));option.value='__unavailable__';select.append(option);}
+  select.value=supported?mode:'__unavailable__';select.disabled=!validMap||!modes.length;
+  select.addEventListener('change',()=>{if(!modes.includes(select.value))return;perspectiveSelections={...perspectiveSelections,[module.id]:select.value};updateModuleSelection();});
+  wrap.append(label,select,el('small','Die Auswahl bleibt beim Abwählen des Moduls gespeichert und gilt auch, wenn es als Vorstufe benötigt wird.'));
+  if(cap?.reason)wrap.append(el('small',' '+cap.reason));
+  item.append(wrap);
+}
+function updatePerspectivePlan(required){
+  const issues=perspectiveProblems(state.modules,perspectiveSelections);perspectiveIssue=issues.map(i=>i.message).join(' ');
+  const box=$('perspective-status');if(!box)return;
+  box.replaceChildren();
+  for(const issue of issues){
+    const row=el('div',undefined,'error');row.append(el('p',issue.message));
+    const reset=el('button',issue.id===null?'Ungültige Zuordnung entfernen':'Gespeicherte Auswahl entfernen','small secondary');reset.type='button';
+    reset.addEventListener('click',()=>{if(issue.id===null)perspectiveSelections={};else delete perspectiveSelections[issue.id];const selected=[...document.querySelectorAll('[name=module]:checked')].map(n=>n.value);renderModuleFields(selected);updateModuleSelection();});
+    row.append(reset);box.append(row);
+  }
+  if(!issues.length){
+    const active=state.modules.filter(m=>required.has(m.id)&&['frequency','both'].includes(perspectiveSelections[m.id]));
+    if(active.length)box.append(el('p','Zusätzliche Häufigkeitsperspektive: '+active.map(m=>(m.name||m.id)+' ('+perspectiveLabels[perspectiveSelections[m.id]]+')').join(', ')+'. Bestehende Clusterzuordnungen werden verwendet; SWOT benötigt eine vollständige Themenzuordnung im jeweiligen Materialumfang. Je Modul wird eine Zählbasis einmal erstellt und eine zusätzliche Interpretation erzeugt. „Beide“ teilt diese Basis.','selection-summary'));
+    if(active.length)box.append(el('p','Zusätzliche Modellanfragen, Laufzeit und Kosten hängen von Themen, Materialmenge, Kontext und Reparaturen ab. Wiederholungsserien führen auch diese Zusatzarbeit erneut aus. Die bisherige qualitative Analyse bleibt gemeinsame Grundlage nachfolgender Module.','hint'));
+  }
+  box.hidden=!box.children.length;
+}
 function updateModuleSelection(){
   settingsRevision++;
   const selected=new Set([...document.querySelectorAll('[name=module]:checked')].map(n=>n.value));
@@ -45,6 +96,7 @@ function updateModuleSelection(){
     $('module-selection').textContent+=' Reiner Diagnoselauf: Kein Modell oder API-Schlüssel nötig. Ohne analytische Vorstufen ist nur der Materialbestand auswertbar.';
   }
   const stability=updateStabilityPlan(required),sensitivity=updateSensitivityPlan(required);
+  updatePerspectivePlan(required);
   updateEffortPreview(required,stability,sensitivity);
   $('validation-result').hidden=true;updateStartGate();
 }
@@ -256,6 +308,10 @@ function renderFiles(){
   renderMapping('book-columns',bookLabels,uploads.codebook?.headers||[],project.settings.book_columns||{});
   updateStartGate();
 }
+function renderModuleFields(selected){
+  $('modules').replaceChildren();
+  state.modules.forEach(m=>{const label=el('label',undefined,'checkbox'),input=el('input'),text=el('span',m.name);input.type='checkbox';input.value=m.id;input.name='module';input.checked=selected.includes(m.id);input.addEventListener('change',updateModuleSelection);appendModuleProfile(text,m);if(moduleHelp[m.id])text.append(el('small',moduleHelp[m.id]));if(m.depends_on.length)text.append(el('small','Benötigt: '+m.depends_on.map(id=>state.modules.find(x=>x.id===id)?.name||id).join(', ')));label.append(input,text);const item=el('div',undefined,'module-example'),example=el('button','Ergebnisbeispiel ansehen','example-trigger');example.type='button';example.setAttribute('data-example','module-'+m.id);example.setAttribute('aria-haspopup','dialog');example.setAttribute('aria-controls','example-dialog');example.setAttribute('aria-label',m.name+' – Ergebnisbeispiel ansehen');item.append(label,example);const prompts=el('button','Prompts ansehen','example-trigger');prompts.type='button';prompts.setAttribute('aria-haspopup','dialog');prompts.setAttribute('aria-controls','prompt-dialog');prompts.setAttribute('aria-label',m.name+' – Prompts ansehen');prompts.addEventListener('click',()=>showModulePrompts(m.id));item.append(prompts);appendPerspectiveSelector(item,m);$('modules').append(item);});
+}
 function loadFields(){
   const s=project.settings||{}, llm=state.defaults.llm;
   $('preset-status').hidden=true;
@@ -266,9 +322,8 @@ function loadFields(){
   $('label-mode').value=s.label_mode||'multi_label';
   const context=s.context||state.defaults.context;
   $('context-project').value=context.project_description||'';$('context-persons').value=context.participants||'';$('context-method').value=context.methodology||'';
-  $('modules').replaceChildren();
-  const selected=s.modules||state.modules.filter(m=>m.enabled!==false).map(m=>m.id);
-  state.modules.forEach(m=>{const label=el('label',undefined,'checkbox'),input=el('input'),text=el('span',m.name);input.type='checkbox';input.value=m.id;input.name='module';input.checked=selected.includes(m.id);input.addEventListener('change',updateModuleSelection);appendModuleProfile(text,m);if(moduleHelp[m.id])text.append(el('small',moduleHelp[m.id]));if(m.depends_on.length)text.append(el('small','Benötigt: '+m.depends_on.map(id=>state.modules.find(x=>x.id===id)?.name||id).join(', ')));label.append(input,text);const item=el('div',undefined,'module-example'),example=el('button','Ergebnisbeispiel ansehen','example-trigger');example.type='button';example.setAttribute('data-example','module-'+m.id);example.setAttribute('aria-haspopup','dialog');example.setAttribute('aria-controls','example-dialog');example.setAttribute('aria-label',m.name+' – Ergebnisbeispiel ansehen');item.append(label,example);const prompts=el('button','Prompts ansehen','example-trigger');prompts.type='button';prompts.setAttribute('aria-haspopup','dialog');prompts.setAttribute('aria-controls','prompt-dialog');prompts.setAttribute('aria-label',m.name+' – Prompts ansehen');prompts.addEventListener('click',()=>showModulePrompts(m.id));item.append(prompts);$('modules').append(item);});
+  loadPerspectiveFields();
+  renderModuleFields(s.modules||state.modules.filter(m=>m.enabled!==false).map(m=>m.id));
   loadStabilityFields();loadSensitivityFields();
   renderFiles();
   if(typeof loadProviderFields==='function')loadProviderFields();
@@ -296,7 +351,7 @@ function settings(){
   return {...(typeof providerSelection==='function'?providerSelection():{}),columns,book_columns,person_identity:typeof personIdentitySettings==='function'?personIdentitySettings():null,parallel_workers:$('provider').value==='ollama_local'?Number($('parallel-workers').value):1,model:$('model').value,num_ctx:Number($('num-ctx').value),max_tokens:Number($('max-tokens').value),synthesis_max_calls:Number($('synthesis-max-calls').value),temperature:Number($('temperature').value),
     think:think==='true'?true:think==='false'?false:think,label_mode:$('label-mode').value,
     context:{project_description:$('context-project').value,participants:$('context-persons').value,methodology:$('context-method').value},
-    stability:stabilitySettings(),...([...document.querySelectorAll('[name=module]:checked')].some(n=>n.value==='sensitivity')?{sensitivity:sensitivitySettings()}:{}),modules:[...document.querySelectorAll('[name=module]:checked')].map(n=>n.value)};
+    analysis_perspectives:perspectiveSettings(),stability:stabilitySettings(),...([...document.querySelectorAll('[name=module]:checked')].some(n=>n.value==='sensitivity')?{sensitivity:sensitivitySettings()}:{}),modules:[...document.querySelectorAll('[name=module]:checked')].map(n=>n.value)};
 }
 async function saveAndValidate(pid=needProject()){
   $('validation-result').hidden=true;
@@ -307,7 +362,7 @@ async function saveAndValidate(pid=needProject()){
   const box=$('validation-result');box.replaceChildren(el('h3','Eingaben sind gültig'));box.hidden=false;
   if(result.stability_plan)box.append(el('p',`HOHER RECHENAUFWAND: ${result.stability_plan.repetitions} zusätzliche Wiederholungen mit ${result.stability_plan.module_executions} Modulausführungen einschließlich Vorstufen. Tatsächliche Modellanfragen können zahlreicher sein. Wiederholbarkeit ist kein Richtigkeitsnachweis.`,'selection-summary'));
   if(result.sensitivity_plan)box.append(el('p',`SEHR HOHER RECHENAUFWAND: ${result.sensitivity_plan.configuration_count} Einstellungen einschließlich Basis, je ${result.sensitivity_plan.repetitions} Wiederholungen: ${result.sensitivity_plan.module_executions} zusätzliche Modulausführungen. Alle Varianten wurden vorgeprüft. Das ist keine Qualitätsrangfolge.`,'selection-summary'));
-  if(result.effort){const effortBox=el('div');renderEffortSummary(effortBox,result.effort,true);box.append(effortBox);}
+  if(result.effort){const effortBox=el('div');renderEffortSummary(effortBox,result.effort,true);box.append(effortBox);const p=result.effort.analysis_perspectives;if(p?.additional_work_required)box.append(el('p',`Analyseperspektiven: ${p.shared_assignment_bases} gemeinsame Zählbasis/Basen und ${p.additional_frequency_interpretation_phases} zusätzliche Interpretationsphase(n) im Hauptlauf. Die Zahl der zusätzlichen Modellanfragen ist vorab nicht verlässlich bekannt. Wiederholungsserien kommen hinzu.`, 'selection-summary'));}
   const stats=el('div',undefined,'stats');[['Codierzeilen',result.segments],['Passagen',result.passages??'—'],['Personen',result.persons],['Codepfade',result.codes]].forEach(([label,n])=>{const part=el('div',undefined,'stat');part.append(el('b',String(n)),el('span',label));stats.append(part);});box.append(stats,el('p','Diese Module werden bei einem Start ausgeführt (einschließlich benötigter Vorstufen): '+result.modules.map(m=>m.name).join(' → '),'hint'));
   if(result.codebook_fields)box.append(el('p',`${result.codebook_fields.einschluss} Codes mit Einschlussregeln · ${result.codebook_fields.ausschluss} mit Ausschlussregeln · ${result.codebook_fields.abgrenzung||0} mit weiteren Codierhinweisen · ${result.codebook_fields.ankerbeispiel} mit Ankerbeispielen. Die zugeordneten Regeln werden bei der Codierung und Codeprüfung berücksichtigt.`));
   if(result.context_check){
@@ -517,7 +572,7 @@ function mappingProblems(){
   return issues;
 }
 function updateStartGate(){
-  const issues=mappingProblems();if(stabilityIssue)issues.push(stabilityIssue);if(sensitivityIssue)issues.push(sensitivityIssue);$('start').disabled=issues.length>0;
+  const issues=mappingProblems();if(stabilityIssue)issues.push(stabilityIssue);if(sensitivityIssue)issues.push(sensitivityIssue);if(perspectiveIssue)issues.push(perspectiveIssue);$('start').disabled=issues.length>0;
   $('start-requirements').textContent=issues.length?'Start gesperrt: '+issues.join(' '):'Spalten zugeordnet. Beim Start werden alle Eingaben erneut geprüft.';
   $('mapping-requirements').textContent=$('start-requirements').textContent;
 }

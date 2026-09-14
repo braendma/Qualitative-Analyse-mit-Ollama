@@ -56,6 +56,8 @@ def render_arg(value, runtime: dict) -> str:
 
 
 def normalize_modules(config: dict) -> list[dict]:
+    from thematic_pipeline import modes
+    modes(config)
     pipeline = config.get("pipeline", {})
     modules = pipeline.get("modules", [])
     if not isinstance(modules, list) or not modules:
@@ -318,6 +320,8 @@ def main(argv=None):
         raise FileNotFoundError(f"CSV nicht gefunden: {csv_path}")
 
     modules = topological_order(normalize_modules(config))
+    from thematic_pipeline import validate_material as validate_thematic_material
+    validate_thematic_material(config_path, config, modules, csv_path)
     needs_model = any(m.get('requires_model', True) for m in modules)
     llm = config.get('llm', {})
     selected_transport = (transport_selection(llm, llm.get('model', '')) if needs_model else
@@ -361,6 +365,8 @@ def main(argv=None):
         from workflow_effort import effort_summary
         validation["effort"] = effort_summary(modules, stability=planning_summary(stability_plan),
                                               sensitivity=planning_summary(sensitivity_plan))
+        from thematic_pipeline import effort as thematic_effort
+        validation['effort']['analysis_perspectives'] = thematic_effort(config, modules)
         print(json.dumps(validation))
         return
     provenance = execution_provenance(config_path, csv_path, config, script_dir)
@@ -387,6 +393,8 @@ def main(argv=None):
         atomic_text(output_dir / "config_snapshot.yaml", config_path.read_text(encoding="utf-8"))
     os.environ["WORKFLOW_RUN_ID"] = run_id
     os.environ["WORKFLOW_FINGERPRINT"] = identity
+    os.environ['WORKFLOW_RUN_DIR'] = str(output_dir)
+    os.environ['WORKFLOW_INPUT_CSV'] = str(csv_path)
     os.environ["WORKFLOW_CHECKPOINT_DIR"] = str(output_dir / "_checkpoints")
     os.environ.pop('WORKFLOW_PAUSE_FILE', None)
     if args.pause_file:

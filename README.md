@@ -14,6 +14,8 @@ Sie verändert keine Kategorien. [Coverage bedienen](docs/HANDBUCH.html#coverage
 
 Zusätzlich verfügbar im Entwicklungsstand: **Stabilitätsanalyse** mit auswählbaren Wiederholungszielen, Aufwandvorschau, geprüftem Fortsetzen und Bericht. Sie ist standardmäßig aus und verursacht zusätzliche Modellaufrufe. [Anleitung mit Beispiel](docs/HANDBUCH.html#stabilitaet-kontrollierter-wiederholungen).
 
+Im aktuellen Entwicklungsstand zusätzlich: **Analyseperspektiven je Modul** für Clusteranalyse, Cluster-Zusammenfassungen und SWOT in Oberfläche und CLI. „Qualitativ“ bleibt der Default; „Häufigkeiten“ ergänzt nachvollziehbare Einheiten-/Personenzahlen und eine Modellinterpretation, „Beide“ verwendet dieselbe Zählbasis für den Vergleich. Andere Module erhalten dadurch keinen eigenen Häufigkeitsmodus. Zusätzliche Zuordnungen und Interpretationen verursachen variablen Aufwand; Personenzuordnung muss bestätigt sein. [Bedienung mit Beispielen](docs/HANDBUCH.html#analyseperspektiven-je-modul) · [YAML und Voraussetzungen](docs/CONFIGURATION.md#analyseperspektiven-je-modul) · [Methodische Grenzen und Literatur](docs/HANDBUCH.html#aussagen-und-personen-zaehlen).
+
 ## Neu in 0.4.0-beta.1
 
 - **Personen ausdrücklich zuordnen:** Mehrere Dokumente können zu einer Person gehören. Vorschau und Bestätigung sind vor dem Start erforderlich. [Anleitung](docs/Personenzuordnung.md).

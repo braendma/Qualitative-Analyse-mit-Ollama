@@ -38,7 +38,7 @@ def _stage_features(within, module_id):
         binding = {k: row[k] for k in ('scope', 'kind', 'comparison_context', 'segment_ids', 'persons')}
         key = ('reference_binding', fingerprint(binding))
         features.setdefault(key, (binding, set()))[1].update(row['sample_ids'])
-        if module_id == 'clusterer':
+        if module_id == 'clusterer' and row['kind'] == 'cluster':
             membership = {'segment_ids': sorted(row['segment_ids']), 'persons': row['persons']}
             key = ('cluster_membership', fingerprint(membership))
             features.setdefault(key, (membership, set()))[1].update(row['sample_ids'])

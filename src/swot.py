@@ -9,6 +9,7 @@ import json
 from runtime_support import atomic_json, atomic_text
 
 from swot_core import build_swot
+from thematic_pipeline import prepare as prepare_perspective, finish as finish_perspective
 
 
 # -----------------------------------------------------
@@ -77,7 +78,11 @@ def main(argv=None):
         default="swot_v1.json"
     )
 
+    parser.add_argument('--csv', default=None, help='Bestätigte Original-CSV für zusätzliche Analyseperspektiven.')
     args = parser.parse_args(argv)
+    perspective = prepare_perspective('swot', args.config, input_path=args.csv,
+                                      cluster_path=args.clusters_json, idmap_path=args.idmap_json,
+                                      summary_path=args.summary_json)
 
     # -------------------------------------------------
     # Config
@@ -144,14 +149,8 @@ def main(argv=None):
     # -------------------------------------------------
     # Markdown
     # -------------------------------------------------
-    with open(
-        args.out_md,
-        "w",
-        encoding="utf-8"
-    ) as f:
-        f.write(
-            markdown_output
-        )
+    markdown_output, json_output = finish_perspective(perspective, json_output, markdown_output, ollama_params)
+    atomic_text(args.out_md, markdown_output)
 
     # -------------------------------------------------
     # JSON

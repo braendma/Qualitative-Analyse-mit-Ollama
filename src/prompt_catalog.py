@@ -26,6 +26,8 @@ PROMPT_KEYS = {
 
 
 def catalog(config, modules):
+    from thematic_pipeline import modes as thematic_modes
+    perspectives = thematic_modes(config)
     prompts=config.get('prompts',{})
     if not isinstance(prompts,dict):raise ValueError('Die Prompt-Konfiguration muss eine Zuordnung sein.')
     result=[]
@@ -69,6 +71,18 @@ def catalog(config, modules):
             note='Keine passende Vorlage in dieser Konfiguration vorhanden. Das Modul kann Vorgaben aus dem Programmcode verwenden; hier wird kein Prompt erfunden.'
         else:
             note='Vorlagen aus der gewählten Konfiguration. Daten, Projektkontext und weitere Regeln werden erst beim Modellaufruf eingesetzt. Zusätzliche Hilfs-, Verdichtungs- und Reparaturanweisungen sowie Antwortschemata können aus dem Programmcode hinzukommen.'
+        perspective_targets = required if mid in ('stability', 'sensitivity') else {mid}
+        extra_targets = sorted(target for target in perspective_targets if perspectives.get(target, 'qualitative') != 'qualitative')
+        if extra_targets:
+            from thematic_interpretation import SYSTEM as frequency_system
+            from thematic_assignment import SYSTEM as assignment_system
+            for target in extra_targets:
+                if target == 'swot':
+                    templates.append({'key':target+' / thematic_assignment', 'system':assignment_system,
+                                      'user':'Zur Laufzeit: feste Themen, vollständige Originaleinheiten und angeforderte Matrixzellen.', 'placeholders':[]})
+                templates.append({'key':target+' / frequency_interpretation', 'system':frequency_system,
+                                  'user':'Zur Laufzeit: Thema, qualitativer Ausgangsbefund, berechnete Kennzahlen und Gegenpositionsmaterial.', 'placeholders':[]})
+            note += ' Zusätzliche Perspektiven verwenden diese festen Programmanweisungen; beide Perspektiven teilen eine Zuordnungsmatrix.'
         result.append({'id':mid,'name':module['name'],'templates':templates,'note':note})
     # Referenced shared strings are shown separately and never expanded into research material.
     referenced=set(p for m in result for t in m['templates'] for p in t['placeholders'])

@@ -9,6 +9,7 @@ import json
 from runtime_support import atomic_json, atomic_text
 
 from summarizer_core import summarize_clusters
+from thematic_pipeline import prepare as prepare_perspective, finish as finish_perspective
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -60,7 +61,10 @@ def main(argv=None):
         default="summary_v1.json"
     )
 
+    parser.add_argument('--csv', default=None, help='Bestätigte Original-CSV für zusätzliche Analyseperspektiven.')
     args = parser.parse_args(argv)
+    perspective = prepare_perspective('summarizer', args.config, input_path=args.csv,
+                                      cluster_path=args.clusters_json, idmap_path=args.idmap_json)
 
     # -------------------------------------------------
     # Config laden
@@ -133,6 +137,7 @@ def main(argv=None):
     # -------------------------------------------------
     # Markdown schreiben
     # -------------------------------------------------
+    md, json_output = finish_perspective(perspective, json_output, md, ollama_params)
     atomic_text(args.out_md, md)
 
     # -------------------------------------------------
@@ -153,4 +158,3 @@ def main(argv=None):
 
 if __name__ == "__main__":
     main()
-
