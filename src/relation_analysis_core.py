@@ -42,18 +42,17 @@ def _path_for_cluster(cluster: dict) -> str:
     return " > ".join(str(x).strip() for x in parts if x is not None and str(x).strip())
 
 
+def _cluster_identity(cluster):
+    return (_path_for_cluster(cluster), cluster.get('cluster_name'),
+            cluster.get('definition'), tuple(sorted(str(sid) for sid in cluster.get('segments', []))))
+
+
 def _summary_index(summary_data: dict) -> dict:
     index = {}
     for item in summary_data.get("cluster_summaries", []):
         if not isinstance(item, dict):
             continue
-        key = (
-            item.get("hauptkategorie"),
-            item.get("subkategorie"),
-            item.get("auspraegung"),
-            item.get("facette"),
-            item.get("cluster_name"),
-        )
+        key = _cluster_identity(item)
         index[key] = str(item.get("summary", "")).strip()
     return index
 
@@ -83,13 +82,7 @@ def build_units(clusters: list, id_to_text: dict, summary_data: dict, metadata=N
         )
 
         seg_ids = [str(x).strip() for x in cluster.get("segments", []) if str(x).strip()]
-        key = (
-            cluster.get("hauptkategorie"),
-            cluster.get("subkategorie"),
-            cluster.get("auspraegung"),
-            cluster.get("facette"),
-            cluster.get("cluster_name"),
-        )
+        key = _cluster_identity(cluster)
         unit["cluster"].append(
             {
                 "cluster_name": str(cluster.get("cluster_name", "Unbenannt")).strip(),
@@ -114,7 +107,15 @@ def build_units(clusters: list, id_to_text: dict, summary_data: dict, metadata=N
     return units
 
 
-def build_candidate_pairs(units: dict, max_pairs: int, max_segments_per_path: int) -> tuple[list, int]:
+def validate_selection_limits(max_pairs, max_segments_per_path):
+    if type(max_pairs) is not int or max_pairs < 0:
+        raise ValueError('max_pairs muss eine nichtnegative Ganzzahl sein; 0 bedeutet alle zulässigen Codepaare.')
+    if type(max_segments_per_path) is not int or max_segments_per_path < 1:
+        raise ValueError('max_segments_per_path muss eine positive Ganzzahl sein.')
+
+
+def candidate_pair_index(units):
+    """Rank existing eligible pairs without constructing unused model payloads."""
     candidates = []
     paths = sorted(units)
 
@@ -128,6 +129,12 @@ def build_candidate_pairs(units: dict, max_pairs: int, max_segments_per_path: in
         candidates.append((len(shared), path_a, path_b, shared))
 
     candidates.sort(key=lambda x: (-x[0], x[1], x[2]))
+    return candidates
+
+
+def build_candidate_pairs(units: dict, max_pairs: int, max_segments_per_path: int) -> tuple[list, int]:
+    validate_selection_limits(max_pairs, max_segments_per_path)
+    candidates = candidate_pair_index(units)
     total = len(candidates)
     selected = candidates[:max(0, max_pairs)] if max_pairs > 0 else candidates
 
@@ -136,8 +143,6 @@ def build_candidate_pairs(units: dict, max_pairs: int, max_segments_per_path: in
         a = units[path_a]
         b = units[path_b]
         sample_a, sample_b, sampled_people = [], [], []
-        if max_segments_per_path < 1:
-            raise ValueError("max_segments_per_path muss positiv sein.")
         by_person_a = {p: [x for x in a["segmente"] if x.get("person") == p or (not x.get("person") and _person_from_sid(x["id"]) == p)] for p in shared}
         by_person_b = {p: [x for x in b["segmente"] if x.get("person") == p or (not x.get("person") and _person_from_sid(x["id"]) == p)] for p in shared}
         # Round-robin: preserve paired persons before adding more quotes per person.
@@ -286,7 +291,9 @@ def build_relation_analysis(
     context: dict,
     max_pairs: int = 80,
     max_segments_per_path: int = 6,
+    *, material=None,
 ):
+    validate_selection_limits(max_pairs, max_segments_per_path)
     with open(clusters_json_path, "r", encoding="utf-8") as f:
         cluster_data = json.load(f)
     with open(id_to_text_path, "r", encoding="utf-8") as f:
@@ -296,6 +303,19 @@ def build_relation_analysis(
 
     units = build_units(cluster_data.get("clusters", []), id_to_text, summary_data, cluster_data.get("segment_metadata"))
     pairs, total_candidates = build_candidate_pairs(units, max_pairs, max_segments_per_path)
+    selection = None
+    if material is not None:
+        from relation_selection import build_relation_selection
+        from runtime_support import fingerprint
+        selection = build_relation_selection(material, cluster_data, summary_data,
+            max_pairs=max_pairs, max_segments_per_path=max_segments_per_path)
+        expected_texts = {sid: material['units'][row['unit_id']]['text'] for sid,row in material['segment_index'].items()}
+        if id_to_text != expected_texts:
+            raise ValueError('Relationsauswahl benötigt die vollständige unveränderte Originaltext-Zuordnung.')
+        submitted = {row['pair_id']: row for row in selection['submitted_pairs'].values()}
+        if set(submitted) != {pair['pair_id'] for pair in pairs} or any(
+                submitted[pair['pair_id']]['original_pair_fingerprint'] != fingerprint(pair) for pair in pairs):
+            raise ValueError('Tatsächlich vorbereitete Relationspaare weichen vom geprüften Auswahlnachweis ab.')
     pair_lookup = {p["pair_id"]: p for p in pairs}
     context_receipts={}
 
@@ -357,6 +377,10 @@ def build_relation_analysis(
         "candidate_pair_count_without_validated_relation": len(pairs) - len(normalized["beziehungen"]),
         **normalized,
     }
+    if selection is not None:
+        from relation_selection import validate_relation_selection
+        json_output['selection_provenance'] = selection
+        validate_relation_selection(material, json_output, cluster_data, summary_data)
 
     md = [
         "# Zusammenhangsanalyse\n",
@@ -364,6 +388,10 @@ def build_relation_analysis(
         f"Analysierte Codepfade: **{len(units)}** · Kandidatenpaare: **{len(pairs)}** von **{total_candidates}**\n\n",
         "Die Beziehungen sind qualitative, datenbasierte Relationen. Sie sind nicht automatisch als Kausalität zu verstehen.\n\n",
     ]
+    if selection is not None:
+        md.append('**Auswahlnachweis:** Codepaare, Reihenfolge und ausgewählte Originaltextstellen sind gegen '
+                  'die bestätigte Personenbasis geprüft und im JSON gespeichert. Die Auswahl ist keine '
+                  'vollständige thematische Zuordnung und keine Zählung semantischer Beziehungen.\n\n')
     if context_receipts:md.append('Methodischer Hinweis: Umfangreiche Clusterkontexte wurden vollständig verdichtet. Details können verloren gehen; ausgewählte Originalsegmente und ihre Identitäten bleiben unverändert.\n\n')
     if normalized["gesamteinordnung"]:
         md.append(f"## Gesamteinordnung\n\n{normalized['gesamteinordnung']}\n\n")
@@ -388,4 +416,3 @@ def build_relation_analysis(
             md.append("\n")
 
     return "".join(md), json_output
-

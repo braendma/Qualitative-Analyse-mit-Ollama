@@ -547,3 +547,49 @@ Rollen. Register und qualitative Bezugstexte bleiben vollständig; bei zu große
 Kontext erfolgt keine stille Kürzung. Matrix und häufigkeitsinformierte
 Interpretation verwenden den bestehenden gemeinsamen Executor. `both` teilt
 diese Matrix, löst keine zweite Zählung aus.
+
+
+## 14. Relationsauswahl und Code-Kovorkommen: interne Vorbereitung
+
+Die zusätzlichen Relationsperspektiven sind weiterhin nicht freigegeben.
+Der folgende Stand beschreibt interne Bausteine für ihre vollständige Einbindung,
+keinen neuen auswählbaren Modus in der Oberfläche.
+
+`relation_selection.build_relation_selection(material, clusters, summaries,
+max_pairs=..., max_segments_per_path=...)` prüft die vollständige bestätigte
+Originalbasis und beide Vorstufen. Es verwendet die tatsächliche bestehende
+Auswahl: Codepfadpaare mit gemeinsamen Personen, absteigend nach deren Anzahl,
+danach nach Pfaden sortiert; je Paar personenweise gepaarte Beispiele im
+Round-Robin-Verfahren. Der vollständige Kandidatenindex benötigt keine
+Modelltexte für verworfene Paare. `0` bei `max_pairs` bedeutet alle zulässigen
+Paare, keine vollständige semantische Prüfung aller denkbaren Beziehungen.
+
+`selection_provenance` speichert Algorithmus, Parameter, vollständige Rangfolge,
+Pfadregister, gewählte Seiten-IDs und Personen sowie Fingerprints der Original-
+quellen und des tatsächlichen Paarinputs vor Kontextverdichtung. Der optionale
+Core-Parameter `material` aktiviert diese bestätigte Nachweisstufe. Ohne ihn
+bleibt der qualitative Altpfad erhalten; historische Ergebnisse erhalten keine
+rückwirkend erfundene Auswahlprovenienz.
+
+`validate_relation_selection` spielt den Nachweis mit den gespeicherten
+Parametern erneut ab. Statistiken, Seitenpfade, übermittelte Belege und ihre
+Originaltexte sowie die Personenüberschneidung des Belegsatzes müssen passen.
+Verdichtungsnachweise beziehen sich auf den ursprünglichen Clusterkontext;
+sie beweisen keine semantische Verlustfreiheit. Gleiche Clusternamen genügen
+nicht zur Zuordnung einer Zusammenfassung: Definition und vollständige
+Segmentmenge gehören ebenfalls zur Identität.
+
+`relation_cooccurrence.count_code_path_cooccurrences(material)` zählt dagegen
+rein deterministisch bestehende Codezuordnungen für alle Codepfadpaare,
+einschließlich Nullüberschneidungen. Personen mit beiden Codes können diese
+an verschiedenen Stellen verwenden. Gemeinsame Passagen sind nur ausdrücklich
+identifizierte, mehrfach codierte Stellen. Bei fehlenden Passage-IDs bleiben
+exakte Passagezahlen und -anteile unbestimmt; bekannte Passagen werden separat
+als beobachtete Untergrenze ausgewiesen. Der Nenner ist der vollständige
+bestätigte Exportumfang, nicht die Zahl ausgewählter Beispielpersonen.
+
+Diese Codeüberschneidung ist keine Häufigkeit einer inhaltlich beschriebenen
+Relation und kein Kausalnachweis. Der spätere semantische Adapter benötigt
+zusätzlich eine eigene vollständige Themenzuordnung. Beide Bausteine führen
+selbst keine Modellanfragen aus. Vor einer Freischaltung fehlen noch
+Anwendungs-/Manifestbindung, Themenadapter und Diagnose-/Berichtsintegration.

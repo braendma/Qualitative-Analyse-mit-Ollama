@@ -59,8 +59,8 @@ def main(argv=None):
         ollama_params=ollama_params,
         prompts=config.get("prompts", {}),
         context=config.get("context", {}),
-        max_pairs=int(settings.get("max_pairs", 80)),
-        max_segments_per_path=int(settings.get("max_segments_per_path", 6)),
+        max_pairs=settings.get("max_pairs", 80),
+        max_segments_per_path=settings.get("max_segments_per_path", 6),
     )
 
     atomic_text(args.out_md, md)
@@ -72,4 +72,3 @@ def main(argv=None):
 
 if __name__ == "__main__":
     main()
-

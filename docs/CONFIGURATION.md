@@ -450,3 +450,15 @@ Nenner in das Kennzahlenregister. Globale und Einzelfallzahlen werden weder
 addiert noch voneinander abgezogen. Auch bei nur einer Studienperson bleiben
 diese Rollen verschieden. Register und Bezugstexte werden nicht gekürzt, um
 ein Kontextlimit zu umgehen. Dies ist kein zusätzlicher YAML-Schalter.
+
+
+## Auswahlgrenzen der Zusammenhangsanalyse
+
+Unter `analysis_settings.relation_analysis` sind `max_pairs` (Standard: 80)
+und `max_segments_per_path` (Standard: 6) Ganzzahlen. `max_pairs: 0` wählt alle
+zulässigen Codepaare; negative Werte sind ungültig. Das Segmentlimit muss
+mindestens 1 sein. Boolesche Werte, Dezimalzahlen und als Text gespeicherte
+Zahlen werden abgewiesen, auch wenn keine Kandidaten existieren. So bleibt
+eine ungültige Einstellung nicht unbemerkt. Diese Grenzen steuern die
+Beispielauswahl der bestehenden qualitativen Relationsanalyse; sie stellen
+keine vollständige thematische Häufigkeitsprüfung her.
