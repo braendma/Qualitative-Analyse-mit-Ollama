@@ -96,10 +96,14 @@ class Checkpoint:
 
 
 def checkpoint_identity(segments, codebook, prompts, context, params):
+    from package_identity import current_package_identity
     root = Path(__file__).parent
-    return {'segments': segments, 'codebook': codebook, 'prompts': prompts,
+    identity = {'segments': segments, 'codebook': codebook, 'prompts': prompts,
             'context': context, 'params': params,
             'code': {p.name: file_hash(p) for p in sorted(root.glob('*.py'))}}
+    package = current_package_identity()
+    if package is not None:identity['package'] = package
+    return identity
 
 
 def person_for_segment(sid, metadata=None):
@@ -113,6 +117,8 @@ def person_for_segment(sid, metadata=None):
 class PartCheckpoint:
     """Persist a logical work item only after its compute/validation callback succeeds."""
     def __init__(self, module, params):
+        from package_identity import current_package_identity
+        package = current_package_identity()
         directory = params.get('partial_checkpoint_dir') or os.environ.get('WORKFLOW_CHECKPOINT_DIR')
         self.directory = Path(directory) / module if directory and params.get('partial_checkpoints', True) else None
         self.hits = 0
@@ -120,9 +126,11 @@ class PartCheckpoint:
         self.identity = None
         if self.directory:
             root = Path(__file__).parent
-            self.identity = fingerprint({'module':module, 'params':params,
+            identity = {'module':module, 'params':params,
                 'workflow':os.environ.get('WORKFLOW_FINGERPRINT'),
-                'code':{p.name:file_hash(p) for p in sorted(root.glob('*.py'))}})
+                'code':{p.name:file_hash(p) for p in sorted(root.glob('*.py'))}}
+            if package is not None:identity['package'] = package
+            self.identity = fingerprint(identity)
 
     def run(self, key, inputs, compute):
         if self.directory is None:

@@ -258,7 +258,11 @@ def build_full_report(output_dir: Path, modules: list[dict], created_at: str) ->
 def execution_provenance(config_path, csv_path, config, script_dir=None):
     """Shared execution identity for ordinary runs and controlled repetitions."""
     reject_config_secrets(config)
+    from package_identity import current_package_identity
+    package = current_package_identity()
     script_dir = Path(script_dir or Path(__file__).resolve().parent)
+    if package is not None and script_dir.resolve() != (Path(sys._MEIPASS) / 'src').resolve():
+        raise ValueError('Das Programmpaket darf nur seine eigenen geprüften Analyseskripte verwenden.')
     config_path = Path(config_path)
     provenance = {
         'review_provenance': config.get('review_provenance'),
@@ -271,10 +275,14 @@ def execution_provenance(config_path, csv_path, config, script_dir=None):
     codebook_path = config.get("paths", {}).get("category_system_csv")
     if codebook_path:
         provenance["codebook_sha256"] = file_hash(resolve_path(config_path.parent, codebook_path))
-    try:
-        provenance["commit"] = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=script_dir, stderr=subprocess.DEVNULL, text=True).strip()
-    except (OSError, subprocess.CalledProcessError):
-        provenance["commit"] = None
+    if package is not None:
+        provenance['package'] = package
+        provenance['commit'] = package['source_commit']
+    else:
+        try:
+            provenance["commit"] = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=script_dir, stderr=subprocess.DEVNULL, text=True).strip()
+        except (OSError, subprocess.CalledProcessError):
+            provenance["commit"] = None
     return provenance
 
 

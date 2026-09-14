@@ -21,3 +21,8 @@ local_app_data/
 telegram.private.json
 
 llm_keys.private.json
+
+# Generated native build products; build inputs remain versioned.
+/packaging/build-manifest.json
+/build/
+/dist/

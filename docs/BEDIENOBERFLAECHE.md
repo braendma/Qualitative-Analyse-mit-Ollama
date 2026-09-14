@@ -14,12 +14,14 @@ Ein neues Programmverzeichnis verschiebt bestehende Projekte nicht automatisch. 
 
 ## Einmalig einrichten und starten
 
-1. Das gesamte GitHub-Projekt herunterladen und entpacken. Python 3.10 oder neuer und Ollama müssen installiert sein.
+1. Das gesamte GitHub-Projekt herunterladen und entpacken. Die Source-Version benötigt Python 3.10 oder neuer. Ollama wird zusätzlich für lokale Modellanalysen benötigt.
 2. Unter Windows `Einrichtung.cmd` doppelklicken. Dies legt eine `.venv` im Programmordner an und installiert die Pakete aus `requirements.txt` aus dem Internet. Es werden keine Modelle installiert oder gestartet.
-3. Ollama starten und ein geeignetes **lokales** Modell installieren. Der Speicherbedarf hängt vom Modell und dem Kontextfenster ab.
+3. Für lokale Modellanalysen Ollama starten und ein geeignetes **lokales** Modell installieren. Der Speicherbedarf hängt vom Modell und dem Kontextfenster ab. Für reine Diagnosen ohne Modellbedarf und freigegebene Cloud-Anbieter ist dieser Schritt nicht erforderlich.
 4. `Start_Oberflaeche.cmd` doppelklicken. Im Browser öffnet sich die Oberfläche. Das Startfenster während der Analyse geöffnet lassen.
 
 Falls eine passende Python-Umgebung bereits eingerichtet ist, reicht `python -X utf8 src/local_app.py`. Auf anderen Betriebssystemen lässt sich die Oberfläche ebenfalls so starten; die Windows-Startdateien und die dauerhafte Windows-Tokenverschlüsselung sind dort nicht verfügbar.
+
+**Systemprüfung ohne Modellaufruf** prüft Programmabhängigkeiten und die gewählte Verbindung, ohne etwas zu installieren. Fehlende Abhängigkeiten führen in der Source-Version zum passenden Einrichtungsskript (`Einrichtung.cmd` bzw. `start/macos/Einrichtung.command`). Im vorbereiteten Windows-Paketbetrieb wird die enthaltene Python-Laufzeit kenntlich gemacht; dort lautet die Reparatur, das vollständige Paket erneut herunterzuladen und in einen neuen Ordner zu entpacken. Eine externe Python-Installation ist dafür nicht nötig. Diese Hinweise sind noch keine Abnahme einer fertigen EXE-Distribution.
 
 Die Oberfläche ist nur an `127.0.0.1` gebunden und wird nicht veröffentlicht. Ein zufälliger Sitzungsschlüssel schützt ihre API. Die angezeigte Startadresse gehört ausschließlich auf diesen PC. Standardmäßig gilt die DSGVO-Sperre mit lokalem Ollama. Cloud-Anbieter sind nach ausdrücklicher Freigabe im Projekt verfügbar; siehe [Handbuch](HANDBUCH.md#datenfreigabe-anbieter-und-schlussel) und [Anbieterhinweise](KI_ANBIETER.md).
 
