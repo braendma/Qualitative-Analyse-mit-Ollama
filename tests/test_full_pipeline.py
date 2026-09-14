@@ -27,7 +27,10 @@ class FullPipelineTests(unittest.TestCase):
     def test_information_loss_with_coverage_integrated_and_resumed(self):
         self._run_pipeline(True, coverage=True, information_loss=True)
 
-    def _run_pipeline(self,multi,partial_module=None,coverage=False,information_loss=False):
+    def test_codebook_diagnostic_after_coding_failure_and_resume(self):
+        self._run_pipeline(True, partial_module='code_verification', codebook_diagnostic=True)
+
+    def _run_pipeline(self,multi,partial_module=None,coverage=False,information_loss=False,codebook_diagnostic=False):
         with tempfile.TemporaryDirectory() as tmp:
             temp=Path(tmp)
             cfg=yaml.safe_load((ROOT/'config/config_v2.yaml').read_text(encoding='utf-8'))
@@ -37,6 +40,8 @@ class FullPipelineTests(unittest.TestCase):
                     module['enabled']=coverage
                 if module['id']=='information_loss':
                     module['enabled']=information_loss
+                if module['id']=='codebook_diagnostics':
+                    module['enabled']=codebook_diagnostic
             cfg['coding_agreement']['label_mode']='multi_label' if multi else 'unspecified'
             if multi: cfg['llm']['hierarchical_synthesis']={'enabled':True,'force':True,'batch_items':12,'summary_chars':1200}
             cfg['context']={}
@@ -69,6 +74,11 @@ class FullPipelineTests(unittest.TestCase):
             if not partial_module:self.assertIn('person_analysis',manifest['completed_steps'],first.stderr[-6000:])
             self.assertEqual(manifest['status'],'failed')
             self.assertEqual(manifest['module_status'][manifest['current_module']], 'failed')
+            if codebook_diagnostic:
+                partial_book=json.loads((run/'codebook_diagnostics.json').read_text(encoding='utf-8'))
+                self.assertEqual(partial_book['processing_status'],'incomplete')
+                self.assertNotIn('codebook_diagnostics',manifest['completed_steps'])
+                self.assertEqual(manifest['module_errors']['codebook_diagnostics']['kind'],'diagnostic_sources')
             if not partial_module:
                 self.assertIn('relation_analysis',manifest['completed_steps'])
                 self.assertIn('ambiguity_analysis',manifest['completed_steps'])
@@ -111,6 +121,11 @@ class FullPipelineTests(unittest.TestCase):
             self.assertTrue((run/'gesamtbericht.md').is_file())
             self.assertTrue((run/'gesamtbericht.html').is_file())
             self.assertIn('gesamtbericht.html',manifest['output_hashes'])
+            if codebook_diagnostic:
+                book_result=json.loads((run/'codebook_diagnostics.json').read_text(encoding='utf-8'))
+                self.assertEqual(book_result['processing_status'],'completed')
+                self.assertIn('Codebook-Diagnostik',(run/'gesamtbericht.html').read_text(encoding='utf-8'))
+                self.assertGreater(manifest['completed_steps'].index('codebook_diagnostics'),manifest['completed_steps'].index('review_queue'))
             if coverage:
                 diagnosis=json.loads((run/'coverage.json').read_text(encoding='utf-8'))
                 self.assertEqual(diagnosis['stages']['swot']['status'],'available')

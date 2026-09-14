@@ -110,3 +110,17 @@ Ausgabedateinamen, Pfade außerhalb des Laufordners, fremde Segment-IDs, veränd
 Prüfsummen, fehlende Herkunftsnachweise und Wiederaufnahme ohne Überschreiben des
 Codebuchs. Ein vollständiger Testworkflow prüft die CLI zusätzlich an tatsächlich
 erzeugten Single- und Multi-Label-Ergebnissen nach Fehler und Wiederaufnahme.
+
+Die Codebook-Diagnostik ist optional in der bestehenden Pipeline integriert.
+Ein Test unterbricht die Code-Verifikation, prüft den vorläufigen Diagnosezustand
+und setzt den Lauf fort, ohne erfolgreiche Modellanfragen zu wiederholen. Ein
+weiterer Test startet die drei modellfreien Diagnosen gemeinsam über die App,
+ohne einen Provider oder die GPU-Prüfung aufzurufen. Alle Diagnoseabschnitte
+erscheinen im HTML-Bericht.
+
+Der gemeinsame HTML-Textbetrachter zeigt maskierte Codepfade (`&gt;`, `&amp;`)
+und Markdown-Sonderzeichen wieder lesbar an. Die Entschlüsselung der Schreibweise
+erfolgt ausschließlich in Textknoten; daraus entstehen weder HTML-Elemente noch
+ausführbare Links. Inline-Code und Codeblöcke behalten ihre wörtliche Schreibweise.
+Tests prüfen auch HTML-ähnliche Texte, numerische Zeichenreferenzen und maskierte
+Tabellentrennzeichen.

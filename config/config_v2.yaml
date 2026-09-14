@@ -1738,6 +1738,23 @@ pipeline:
         title: Information-Loss-Audit
         markdown: information_loss.md
 
+    - id: codebook_diagnostics
+      name: Codebook-Diagnostik
+      script: codebook_diagnostics.py
+      enabled: false
+      requires_model: false
+      depends_on: []
+      after_if_enabled: [code_verification, blind_coding, coding_agreement, review_queue]
+      cost_profile:
+        class: NIEDRIG
+        recommendation: für iterative Arbeit geeignet
+        note: Keine zusätzlichen Modellaufrufe. Prüft das Kategoriensystem und ausgewählte Codierergebnisse; ändert keine Codes.
+      args: [--config, "{config}", --input-csv, "{input_csv}"]
+      outputs: [codebook_diagnostics.json, codebook_diagnostics.md]
+      report:
+        title: Codebook-Diagnostik
+        markdown: codebook_diagnostics.md
+
 
 
 # Kappa requires explicit confirmation AND a configured unique columns.unit_id.

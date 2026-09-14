@@ -22,7 +22,8 @@ const moduleHelp = {
   review_queue:'Erstellt die interaktive Liste zur manuellen Prüfung von Codierungen und Modellvorschlägen.',
   overall_synthesis:'Führt die vorherigen Analyseergebnisse zu einer Gesamtsynthese zusammen.',
   coverage:'Zeigt Personen- und Kategorieanteile in gespeicherten Belegen. Wertet ausgewählte Analysen aus, ohne zusätzliche Vorstufen oder Modellaufrufe zu starten. Ohne weitere Analysen erscheint nur die Materialverteilung.',
-  information_loss:'Zeigt Prüfpunkte zu Unsicherheit, Gegenpositionen und Kontext bei der Verdichtung. Kein automatisches Urteil über Informationsverlust; Ergebnisse früherer Läufe werden nicht übernommen.'
+  information_loss:'Zeigt Prüfpunkte zu Unsicherheit, Gegenpositionen und Kontext bei der Verdichtung. Kein automatisches Urteil über Informationsverlust; Ergebnisse früherer Läufe werden nicht übernommen.',
+  codebook_diagnostics:'Zeigt selten verwendete Codes, identische Definitionen und Ankertexte sowie Abweichungen in ausgewählten Codieranalysen. Ohne Codieranalysen werden nur Material und Kategoriensystem geprüft. Ändert keine Codes und benötigt keine eigenen Modellaufrufe.'
 };
 function appendModuleProfile(target,module){
   const profile=module.cost_profile;

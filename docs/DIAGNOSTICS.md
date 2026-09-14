@@ -3,7 +3,9 @@
 Entwicklungsstand: Die gemeinsame Quellenauswertung und Coverage sind in CLI,
 Pipeline, Modulauswahl, Promptansicht, Fortschritt und Berichte integriert.
 Der Information-Loss-Audit ist ebenfalls in CLI, Modulauswahl, Fortschritt,
-Beispielhilfe und Berichte integriert. Weitere Diagnosemodule folgen. Dieser Abschnitt
+Beispielhilfe und Berichte integriert. Die Codebook-Diagnostik ist ebenfalls in
+Modulauswahl, Berichte, Fortschritt und Beispielhilfe eingebunden. Stabilität und
+Sensitivität folgen. Dieser Abschnitt
 beschreibt den überprüfbaren Datenvertrag und die technische Schnittstelle.
 
 ## Referenzen eindeutig unterscheiden
@@ -223,13 +225,18 @@ aller Kandidaten. Anhand von Quellartefakt und Eintragsschlüssel sind die volls
 Texte manuell nachzulesen. Die aktuelle JSON-Ausgabe enthält denselben begrenzten
 Vorschaubestand, keine heimliche Vollkopie der Originaltexte.
 
-## Codebook-Diagnostik – Kern und CLI, UI folgt
+## Codebook-Diagnostik
 
 `codebook_diagnostics_core.analyze_codebook(segments, codebook, verification=...,
 blind=..., agreement=..., review=..., settings=...)` verarbeitet vorhandene
 Python-Datenobjekte; `render_codebook_diagnostics` erzeugt Markdown. Die CLI
-`src/codebook_diagnostics.py` liest die Dateien eines gespeicherten Laufs. Die
-UI-Integration folgt. Die Diagnose führt keine Modellaufrufe durch und verändert
+`src/codebook_diagnostics.py` liest die Dateien eines gespeicherten Laufs. Unter
+**Analyse → Analysemodule auswählen** ist die Diagnose optional verfügbar und
+standardmäßig ausgeschaltet. Sie wartet nur auf ebenfalls gewählte Codieranalysen.
+Ohne diese zeigt sie Material-/Codebuchhinweise, keine erfundenen Modellzahlen.
+Markdown und JSON stehen unter **Ergebnisse**; der erfolgreiche Gesamtworkflow
+integriert die Diagnose in den HTML-Bericht. [Anleitung und Beispiel](HANDBUCH.html#codebook-diagnostik).
+Die Diagnose führt keine Modellaufrufe durch und verändert
 weder Originaldaten noch Codebuch. Der gemeinsame Diagnoselader prüft die
 Dateiprüfsummen; der Kern validiert Datenstrukturen, IDs, ursprüngliche Codezuordnungen und die
 Konsistenz abhängiger Ergebnisse. Eingabe- und Codebuchfingerprints stehen im Ergebnis.

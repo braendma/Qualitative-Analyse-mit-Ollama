@@ -19,6 +19,16 @@ bereit. Die Ausgabe ist kein semantisches Verlustmaß. Aufwand MITTEL, standardm
 ausgeschaltet; Ergebnisse in `information_loss.json`, `information_loss.md` und im
 abschließenden HTML-Bericht. [Anleitung](HANDBUCH.html#information-loss-audit).
 
+## Optionale Codebook-Diagnostik
+
+`codebook_diagnostics` wartet auf die ebenfalls ausgewählten Codieranalysen,
+aktiviert aber keine Vorstufen. Ohne sie werden nur Codeverwendung und gespeicherte
+Definitionen/Ankertexte geprüft. Aufwand NIEDRIG, standardmäßig ausgeschaltet,
+keine eigenen Modellaufrufe. Ergebnisse: `codebook_diagnostics.json`,
+`codebook_diagnostics.md` und der HTML-Bericht. Bei Quellfehlern wird die Diagnose
+ausdrücklich vorläufig und nach Behebung erneut berechnet. Codes werden nicht
+automatisch geändert. [Anleitung](HANDBUCH.html#codebook-diagnostik).
+
 ## Mehrfachcodierung je Passage
 
 `coding_agreement.label_mode: multi_label` benötigt eine explizite Spalte `columns.unit_id`, im Beispiel `PassageID`. Mehrere Codierzeilen derselben Passage müssen exakt denselben Text und dieselbe Person haben. Gleiche Texte allein werden nicht automatisch zusammengelegt. Fehlende oder widersprüchliche Passage-IDs werden vor dem ersten Modellaufruf abgewiesen.

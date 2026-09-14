@@ -10,6 +10,7 @@ class FailureHelpTests(unittest.TestCase):
         for marker, kind in [('Diagnose abgelehnt', 'diagnostic_integrity'),
                              ('Diagnoseausgabe existiert bereits', 'diagnostic_output'),
                              ('Modul information_loss lieferte unvollständige Ergebnisse', 'diagnostic_sources'),
+                             ('Modul codebook_diagnostics lieferte unvollständige Ergebnisse', 'diagnostic_sources'),
                              ('Modul coverage lieferte unvollständige Ergebnisse', 'diagnostic_sources')]:
             result=failure_help(marker+' PRIVATE_CONTENT')
             self.assertEqual(result['kind'],kind)

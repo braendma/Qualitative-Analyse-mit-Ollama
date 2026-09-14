@@ -1,9 +1,20 @@
 'use strict';
 // Rendering uses text nodes only. Raw HTML, remote images and executable links stay inert.
+function reportText(text){
+  const named={amp:'&',lt:'<',gt:'>',quot:'"',apos:"'"};
+  return text.replace(/&(amp|lt|gt|quot|apos|#\d{1,7}|#x[0-9a-f]{1,6});/gi,(whole,key)=>{
+    if(key[0]!=='#')return named[key.toLowerCase()];
+    const hex=key[1].toLowerCase()==='x',value=parseInt(key.slice(hex?2:1),hex?16:10);
+    return value>0&&value<=0x10ffff&&!(value>=0xd800&&value<=0xdfff)?String.fromCodePoint(value):whole;
+  });
+}
 function reportInline(node,text){
-  const pattern=/(\*\*([^*]+)\*\*|`([^`]+)`)/g;let end=0,match;
-  while((match=pattern.exec(text))){node.append(document.createTextNode(text.slice(end,match.index)));node.append(el(match[2]?'strong':'code',match[2]||match[3]));end=pattern.lastIndex;}
-  node.append(document.createTextNode(text.slice(end)));
+  const pattern=/\\([\\`*_{}\[\]()#!|])|\*\*([^*]+)\*\*|`([^`]+)`/g;let end=0,match;
+  while((match=pattern.exec(text))){
+    node.append(document.createTextNode(reportText(text.slice(end,match.index))));
+    node.append(match[1]?document.createTextNode(match[1]):el(match[2]?'strong':'code',match[2]?reportText(match[2]):match[3]));end=pattern.lastIndex;
+  }
+  node.append(document.createTextNode(reportText(text.slice(end))));
 }
 function sourceReferenceDetails(root,line,references,evidence={}){
   for(const raw of line.replace(/^\*\*(?:Analytische Quellen|Herkunftsdetails):\*\*\s*/,'').split(',')){

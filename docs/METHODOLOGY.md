@@ -52,7 +52,8 @@ Entwicklungsstand Codebook-Diagnostik: Ein deterministischer Kern prüft die
 Verwendung von Codes, gespeicherte Zuordnungsabweichungen, gleiche Definitionen
 und Ankertexte sowie gemeinsame Mehrfachcodierungen. Die CLI bindet Eingaben,
 Kategoriensystem und deklarierte Analyseergebnisse über die gespeicherten
-Prüfsummen an denselben Lauf; die UI-Integration folgt. Die Kennzahlen geben Anlass zur menschlichen Prüfung;
+Prüfsummen an denselben Lauf. Die Diagnose ist auch in der Modulauswahl und im
+HTML-Bericht verfügbar. Die Kennzahlen geben Anlass zur menschlichen Prüfung;
 sie begründen keine automatische Löschung, Zusammenführung oder Änderung von Codes.
 Technische Fehler, Enthaltung und begründet keine Zuordnung bleiben getrennt.
 Gemeinsame Codes auf einer Passage sind keine Verwechslung. Gerade seltene

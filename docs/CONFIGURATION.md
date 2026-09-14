@@ -81,3 +81,37 @@ dokumentiert. Die methodisch relevanten Referenzkanten stammen aus den
 `after_if_enabled` erfindet keinen inhaltlichen Analyseübergang. Fehlgeschlagene
 Quellen führen zu vorläufigen Ergebnissen und gezielter Fehlerhilfe. Wird das
 Quellenproblem behoben, berechnet der bestehende Resume die Diagnose erneut.
+
+## Codebook-Diagnostik
+
+`codebook_diagnostics` hat keine eigenen Modellparameter und ist standardmäßig
+ausgeschaltet. Die vorhandenen Einstellungen zur Personenzuordnung sowie
+`coding_agreement.label_mode` bestimmen die Analyseeinheiten. Im Mehrfachmodus ist
+`columns.unit_id` erforderlich. Konfiguration und Originalcodebuch sind Teil des
+Herkunftsnachweises; nur unveränderte Grundlagen dürfen erneut ausgewertet werden.
+
+```yaml
+- id: codebook_diagnostics
+  name: Codebook-Diagnostik
+  script: codebook_diagnostics.py
+  enabled: false
+  requires_model: false
+  depends_on: []
+  after_if_enabled: [code_verification, blind_coding, coding_agreement, review_queue]
+  cost_profile:
+    class: NIEDRIG
+    recommendation: für iterative Arbeit geeignet
+    note: Keine zusätzlichen Modellaufrufe; ausgewählte Vorstufen haben eigenen Aufwand.
+  args: [--config, "{config}", --input-csv, "{input_csv}"]
+  outputs: [codebook_diagnostics.json, codebook_diagnostics.md]
+  report:
+    title: Codebook-Diagnostik
+    markdown: codebook_diagnostics.md
+```
+
+`after_if_enabled` schaltet keine Codieranalyse ein. Ohne solche Quellen stehen
+nur Material-/Codebuchhinweise zur Verfügung. Eine fehlende gewählte Quelle führt
+zur vorläufigen Diagnose und wird bei Resume erneut geprüft. Die Schwellen für
+geringe Häufigkeit, Co-Codierung sowie die Darstellungs-/Rechengrenzen sind feste,
+versionierte Regeln in [DIAGNOSTICS.md](DIAGNOSTICS.md), keine versteckten
+Modellparameter. Die Diagnose ändert keine Codes oder menschlichen Entscheidungen.

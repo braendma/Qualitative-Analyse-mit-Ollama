@@ -1,12 +1,15 @@
 # Qualitative Analyse mit Ollama
 
-Im aktuellen Entwicklungsstand ergänzen **Coverage und Blind Spots** sowie der
-**Information-Loss-Audit** die 15 Basismodule. Beide sind optional, standardmäßig
+Im aktuellen Entwicklungsstand ergänzen **Coverage und Blind Spots**, der
+**Information-Loss-Audit** und die **Codebook-Diagnostik** die 15 Basismodule. Alle drei sind optional, standardmäßig
 ausgeschaltet und benötigen keine zusätzlichen Modellaufrufe. Coverage vergleicht
 Personen- und Kategorieanteile mit gespeicherten Belegreferenzen. Der Audit zeigt
 Referenzänderungen und manuelle Prüfpunkte zu Unsicherheit, Gegenpositionen und
-Kontext zwischen Analysestufen. [Coverage bedienen](docs/HANDBUCH.html#coverage) ·
+Kontext zwischen Analysestufen. Die Codebook-Diagnostik zeigt Prüfhinweise zur
+Codeverwendung, zu Definitionen und zu gespeicherten Zuordnungsabweichungen.
+Sie verändert keine Kategorien. [Coverage bedienen](docs/HANDBUCH.html#coverage) ·
 [Audit mit Beispiel](docs/HANDBUCH.html#information-loss-audit) ·
+[Codebook-Diagnostik](docs/HANDBUCH.html#codebook-diagnostik) ·
 [Methodik und Grenzen](docs/DIAGNOSTICS.md) · [Konfiguration](docs/CONFIGURATION.md).
 
 ## Neu in 0.4.0-beta.1

@@ -11,7 +11,7 @@ def failure_help(text):
         kind='diagnostic_output'
         cause='Die gewählten Diagnoseausgaben würden vorhandene Dateien überschreiben.'
         action='Für den separaten Diagnoseexport neue Ausgabedateinamen oder einen neuen Zielordner wählen. Eingaben und vorhandene Ergebnisse erhalten.'
-    elif any(x in value for x in ('modul coverage lieferte unvollständige', 'modul information_loss lieferte unvollständige')):
+    elif any(x in value for x in ('modul coverage lieferte unvollständige', 'modul information_loss lieferte unvollständige', 'modul codebook_diagnostics lieferte unvollständige')):
         kind='diagnostic_sources'
         cause='Mindestens eine ausgewählte Analysequelle ist unvollständig oder nicht verifizierbar. Die Diagnose ist vorläufig.'
         action='Zuerst das vorher fehlgeschlagene Analysenmodul und dessen Fehlerhilfe prüfen. Nach Behebung den Lauf fortsetzen; die Diagnose wird erneut berechnet. Bei veränderten Quelldateien einen neuen Lauf anlegen. Das Antwortlimit der Diagnose muss nicht erhöht werden.'

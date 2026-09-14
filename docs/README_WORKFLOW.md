@@ -3,7 +3,7 @@ Mehrfachcodierung, Prüfliste und mehrstufige Gesamtsynthese: [EXTENSIONS.md](EX
 # Erweiterung: Coding-Validierung
 
 Die 15 Basismodule bleiben verfügbar. Optional ergänzen `coverage` und
-`information_loss` ihre Ergebnisse:
+`information_loss` sowie `codebook_diagnostics` ihre Ergebnisse:
 
 ```mermaid
 flowchart LR
@@ -12,13 +12,16 @@ flowchart LR
   Analysen -. verifizierte ausgewählte Quellen .-> Coverage
   Analysen -. tatsächliche Quellübergänge .-> Audit[Information-Loss: Referenzen und Prüfpunkte]
   Input --> Audit
+  Input --> Codebook[Codebook-Diagnostik]
+  Codieranalysen -. verifizierte ausgewählte Quellen .-> Codebook
+  Codebook --> Bericht
   Audit --> Bericht
   Coverage --> Bericht[Markdown / JSON / HTML]
 ```
 
 Die gestrichelte Verbindung schaltet keine Analyse zusätzlich ein. Technische
 Ausfälle werden im vorläufigen Bericht ausgewiesen und bei Resume erneut geprüft.
-Beide Diagnosen sind standardmäßig aus und benötigen keine zusätzlichen
+Alle drei Diagnosen sind standardmäßig aus und benötigen keine zusätzlichen
 Modellaufrufe. Sie teilen die vorhandene Ausführungs-/Resume-Logik und den
 Überschreibschutz; [Felder und Beispiel](CONFIGURATION.md).
 

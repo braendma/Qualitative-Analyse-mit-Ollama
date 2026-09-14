@@ -19,6 +19,7 @@ PROMPT_KEYS = {
     'overall_synthesis': ('overall_synthesis',),
     'coverage': (),
     'information_loss': (),
+    'codebook_diagnostics': (),
 }
 
 

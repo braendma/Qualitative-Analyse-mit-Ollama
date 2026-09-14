@@ -51,6 +51,17 @@ test('pure diagnostics explain model-free selection but generative stages remove
   assert.doesNotMatch(app.node('module-selection').textContent,/Kein Modell oder API-Schlüssel nötig/);
 });
 
+test('codebook diagnostic selection exposes synthetic help and model-free scope',()=>{
+  const app=setup();
+  app.run("state.modules=[{id:'codebook_diagnostics',name:'Codebook-Diagnostik',depends_on:[],requires_model:false,enabled:false}]; loadFields();");
+  const option=app.node('modules').children[0];
+  assert.equal(option.children[0].children[0].checked,false);
+  assert.match(app.run('moduleHelp.codebook_diagnostics'),/Ändert keine Codes/);
+  app.run("project.settings.modules=['codebook_diagnostics']; document.querySelectorAll=()=>[{value:'codebook_diagnostics'}]; loadFields(); updateModuleSelection();");
+  assert.equal(app.node('modules').children[0].children[0].children[0].checked,true);
+  assert.match(app.node('module-selection').textContent,/Kein Modell oder API-Schlüssel nötig/);
+});
+
 test('person grouping requires confirmation, counts unique IDs and clears approval after editing',async()=>{
   const app=setup();app.loadIdentity();
   assert.equal(app.run('personIdentityReady()'),false);

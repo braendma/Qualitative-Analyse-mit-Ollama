@@ -286,7 +286,8 @@ def render_codebook_diagnostics(result):
             lines.append('| ' + markdown_escape(mid) + ' | ' + markdown_escape(source.get('artifact', '–')) +
                          ' | ' + markdown_escape(state + (': ' + reason if reason else '')) + ' |')
         lines += ['']
-    lines += [f"{result['n_rows']} Codierzeilen; {result['n_units']} Analyseeinheiten ({result['unit_basis']}).", '',
+    basis = 'explizite Passagen' if result['unit_basis'] == 'explicit_passages' else 'Codierzeilen'
+    lines += [f"{result['n_rows']} Codierzeilen; {result['n_units']} Analyseeinheiten ({basis}).", '',
               '| Code | Menschliche Einheiten | Modellzuordnungen | Verifikation unklar (Zeilen) | Blind-Enthaltungen (Einheiten) | Keine Blindzuordnung (Einheiten) | Technisch nicht vergleichbar (Einheiten) |', '|---|---:|---:|---:|---:|---:|---:|']
     def display(value):
         return 'nicht verfügbar' if value is None else str(value)

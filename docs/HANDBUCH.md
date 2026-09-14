@@ -497,3 +497,26 @@ Fehlt eine ausgewählte Quelle wegen eines Fehlers, ist die Diagnose vorläufig.
 Künstliches Beispiel: SWOT „Vielleicht erleichtern feste Zeiten die Planung teilweise.“ → Meta-SWOT „Feste Zeiten erleichtern immer die Planung.“ Beide nennen S01. Die Referenz bleibt, die Formulierung wird zum Prüfpunkt. Das ist kein bestätigter Fehler; Negation, Synonyme und Originalkontext müssen geprüft werden.
 
 [Künstliches Ergebnisbeispiel](BEISPIELE.html#module-information_loss).
+
+
+## Codebook-Diagnostik
+
+Wähle unter **Analyse → Analysemodule auswählen** die **Codebook-Diagnostik**. Sie ist standardmäßig ausgeschaltet. Aufwand: **NIEDRIG · für iterative Arbeit geeignet**. Das Modul benötigt keine eigenen Modellaufrufe.
+
+Für eine Prüfung von Häufigkeiten, gleichen Definitionen und Ankertexten reicht das Modul allein. Für Zuordnungsabweichungen wähle auch Code-Verifikation und Blind-Coding, bei Bedarf Coding Agreement und Prüfliste. Diese zusätzlichen Analysen behalten ihren eigenen Rechenaufwand. Die Diagnose aktiviert sie nicht automatisch und übernimmt keine Ergebnisse aus früheren Läufen.
+
+Unter **Ergebnisse** findest du `codebook_diagnostics.md` und `codebook_diagnostics.json`. Nach erfolgreichem Gesamtworkflow enthält auch der HTML-Bericht den Abschnitt **Codebook-Diagnostik**. Prüfe zuerst die Quellenverfügbarkeit, dann die Kategorieübersicht und die konkreten Prüffälle.
+
+Im Mehrfachmodus zählen ausdrücklich zugeordnete Passagen; im Zeilen-/Single-Label-Modus zählt jede Codierzeile. Verifikation zählt immer Zeilen. Technische Fehler, Enthaltung und keine Zuordnung werden getrennt ausgewiesen. Bei mehreren fehlenden und zusätzlichen Codes bleibt die Abweichung eine Codemenge; es werden keine angeblichen einzelnen Verwechslungspaare daraus erfunden.
+
+Weniger als drei Einheiten und ungenutzte Codes sind Prüfhinweise, keine Löschregeln. Gleiche Definitionen oder Ankertexte werden nach Vereinheitlichung von Schreibweise und Leerraum erkannt. Das ist keine semantische Ähnlichkeitsprüfung. Menschliche Codierungen sind Vergleichsreferenz, kein gesicherter Wahrheitsmaßstab. Das Kategoriensystem bleibt unverändert.
+
+Wenn eine gewählte Quelle fehlt oder fehlgeschlagen ist, bleibt die Diagnose vorläufig. Prüfe die Fehlerhilfe der Vorstufe und setze den Lauf nach Behebung fort. Bei geänderten Eingaben oder Kategorien beginne einen neuen Lauf. Bearbeite die gespeicherten Prüfsummen nicht manuell.
+
+Sehr lange Definitionen werden vollständig verglichen; die JSON-Vorschau ist auf 600 Zeichen begrenzt und als gekürzt gekennzeichnet. Überschreitet eine Mehrfachcodierung insgesamt 100.000 Paarereignisse, wird die Paaranalyse ausdrücklich nicht berechnet; die Einzelzahlen bleiben. Stabilitäts- und Sensitivitätsbefunde folgen erst mit diesen noch ausstehenden Modulen.
+
+[Methodik, Nenner und technische Details](DIAGNOSTICS.md) · [Konfigurationsreferenz](CONFIGURATION.md)
+
+Künstliches Beispiel: Drei Passagen tragen „Zeitplanung“, eine davon zusätzlich „Begleitung“. „Ortswahl“ wird nicht verwendet. Das ergibt vier Codierzeilen, drei Passagen und Prüfhinweise zur geringen Datenbasis bzw. fehlenden Verwendung. Es sind keine automatischen Löschvorschläge.
+
+[Bebildertes Ergebnisbeispiel](BEISPIELE.html#module-codebook_diagnostics).
