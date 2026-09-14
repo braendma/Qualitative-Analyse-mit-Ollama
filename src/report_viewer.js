@@ -5,7 +5,25 @@ function reportInline(node,text){
   while((match=pattern.exec(text))){node.append(document.createTextNode(text.slice(end,match.index)));node.append(el(match[2]?'strong':'code',match[2]||match[3]));end=pattern.lastIndex;}
   node.append(document.createTextNode(text.slice(end)));
 }
-function markdownReport(text,root,media={}){
+function sourceReferenceDetails(root,line,references,evidence={}){
+  for(const raw of line.replace(/^\*\*(?:Analytische Quellen|Herkunftsdetails):\*\*\s*/,'').split(',')){
+    const id=raw.trim().replace(/`/g,''),ref=references[id];
+    const box=el('details'),summary=el('summary',ref?ref.title+' · '+(ref.labels.join(', ')||'Herkunft unvollständig'):'Herkunft nicht auflösbar');
+    box.append(summary);
+    box.append(el('p',ref?.note||'Diese Kennung ist kein Interviewzitat. Das gespeicherte Quellenregister fehlt oder enthält diesen Eintrag nicht.','hint'));
+    if(ref?.unresolved)box.append(el('p','Die gespeicherte Herkunftskette ist unvollständig.','warning'));
+    if(ref?.summary)box.append(el('h4','Zwischenzusammenfassung (Modellergebnis)'),el('p',ref.summary));
+    const ids=ref?.segment_ids||[],found=ids.filter(sid=>evidence[sid]?.text);
+    if(found.length){
+      const quotes=el('details');quotes.append(el('summary',found.length+' gespeicherte Textstellen im Quellenmaterial'));
+      for(const sid of found){const entry=evidence[sid],item=el('details');item.append(el('summary',(entry.person||'Person nicht dokumentiert')+' · '+sid),el('blockquote',entry.text));quotes.append(item);}
+      box.append(quotes);
+    }else box.append(el('p','Kein direkt zugeordnetes Originalzitat in dieser Herkunftskette gespeichert. Die genannten Modulberichte zur fachlichen Prüfung heranziehen.'));
+    if(ids.length>found.length)box.append(el('p',(ids.length-found.length)+' referenzierte Textstellen sind in diesem Export nicht verfügbar.','hint'));
+    box.append(el('small','Technische Referenz: '+id));root.append(box);
+  }
+}
+function markdownReport(text,root,media={},sourceRefs={},evidence={}){
   root.replaceChildren();const lines=text.split(/\r?\n/);let fenced=false,code=[];
   const cells=line=>line.replace(/^\s*\||\|\s*$/g,'').split(/(?<!\\)\|/).map(x=>x.trim().replace(/\\\|/g,'|'));
   for(let i=0;i<lines.length;i++){
@@ -13,6 +31,9 @@ function markdownReport(text,root,media={}){
     if(/^\s*```/.test(line)){if(fenced){root.append(el('pre',code.join('\n')));code=[];}fenced=!fenced;continue;}
     if(fenced){code.push(line);continue;}
     if(!line.trim())continue;
+    if(/^\*\*(Analytische Quellen|Herkunftsdetails):\*\*/.test(line)){
+      sourceReferenceDetails(root,line,sourceRefs,evidence);continue;
+    }
     const picture=line.match(/^\s*!\[([^\]]*)\]\(([^)]+)\)\s*$/);
     if(picture){
       const src=media[picture[2]];

@@ -454,3 +454,8 @@ Beispiel: {segments} steht für die später eingefügten Textstellen, {context} 
 Die Ansicht ist kein vollständiges Protokoll einer tatsächlich versendeten Anfrage: dynamisch eingesetzte Daten, Antwortschemata und zusätzliche Verdichtungs- oder Reparaturanweisungen aus dem Programmcode können hinzukommen. Selbst bearbeitete Promptvorlagen können bereits sensible Angaben enthalten; vor dem Teilen prüfen. Codierübereinstimmung und Prüfliste verarbeiten vorhandene Ergebnisse ohne eigenen LLM-Aufruf und werden entsprechend gekennzeichnet.
 
 ![Schreibgeschützte Clustering-Vorlagen mit sichtbaren Platzhaltern.](screenshots/18-modulprompts.jpg)
+
+
+## Quellen und Originalzitate in der Gesamtsynthese
+
+Die Gesamtsynthese nennt unter „Grundlage aus vorherigen Analysen“ verständliche Modulnamen. „Herkunftsdetails“ klappt im HTML die gespeicherte Zwischenzusammenfassung und die zugehörigen Originaltextstellen auf, soweit deren Segment-IDs in der Herkunftskette gespeichert und im Export verfügbar sind. Diese Textstellen gehören zum Eingabematerial der Verdichtung; sie sind keine automatisch bestätigten Belege für jede einzelne Syntheseaussage. Fehlt eine direkte Zuordnung, zeigt der Bericht das ausdrücklich. Eine Quellengruppe kann Material mehrerer Analysen und Personen enthalten. Die fachliche Prüfung erfolgt an den Originalzitaten und den jeweiligen Modulberichten. Technische N-/L-Kennungen bleiben nur in den Details zur Nachvollziehbarkeit erhalten. Neue HTML-Exporte können diese Hilfe auch für alte Läufe aus deren gespeichertem Quellenregister erzeugen; dafür ist kein erneuter Modelllauf nötig.

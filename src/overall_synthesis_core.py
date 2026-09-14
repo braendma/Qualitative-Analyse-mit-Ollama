@@ -229,10 +229,13 @@ def build_overall_synthesis(
         **normalized,
     }
 
+    from synthesis_sources import source_details, readable_source_line, SOURCE_NOTE
+    details = source_details(json_output)
     md = [
         "# Gesamtsynthese\n",
         f"Erstellt am: {json_output['created_at']}\n\n",
         f"Einbezogene analytische Ebenen: **{', '.join(source_labels)}**\n\n",
+        f"> {SOURCE_NOTE}\n\n",
     ]
 
     if normalized["gesamtsynthese"]:
@@ -249,7 +252,7 @@ def build_overall_synthesis(
         for entry in entries:
             md.append(f"### {entry['thema']}\n\n{entry['verdichtung']}\n\n")
             if entry["quellen"]:
-                md.append(f"**Analytische Quellen:** {', '.join(entry['quellen'])}\n\n")
+                md.append(readable_source_line(entry['quellen'], details))
 
     md.append("## Spannungen und Relativierungen\n\n")
     if not normalized["spannungen_und_relativierungen"]:
@@ -257,7 +260,7 @@ def build_overall_synthesis(
     for entry in normalized["spannungen_und_relativierungen"]:
         md.append(f"### {entry['aussage'] or 'Relativierung'}\n\n{entry['einordnung']}\n\n")
         if entry["quellen"]:
-            md.append(f"**Analytische Quellen:** {', '.join(entry['quellen'])}\n\n")
+            md.append(readable_source_line(entry['quellen'], details))
 
     md.append("## Methodische Einordnung\n\n")
     if normalized["methodische_einordnung"]:

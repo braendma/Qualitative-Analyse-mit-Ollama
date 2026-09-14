@@ -1,6 +1,6 @@
 # Prüfung für 0.4.0-beta.1 (13. September 2026)
 
-199 Python- und 15 JavaScript-Tests bestanden unter Windows mit Python 3.12. Die Tests verwenden künstliche Daten und simulierte Modellantworten, einschließlich kompletter Pipeline und Wiederaufnahme. Der Windows-DPAPI-Test lief im Benutzerkontext. Ein isolierter HTTP-Start mit Leerzeichen im Datenpfad und dem neuen Prompt-Dialog wurde ebenfalls geprüft.
+203 Python- und 21 JavaScript-Tests bestanden unter Windows mit Python 3.12. Die Tests verwenden künstliche Daten und simulierte Modellantworten, einschließlich kompletter Pipeline und Wiederaufnahme. Der Windows-DPAPI-Test lief im Benutzerkontext. Ein isolierter HTTP-Start mit Leerzeichen im Datenpfad und dem neuen Prompt-Dialog wurde ebenfalls geprüft.
 
 Die GitHub-Prüfung installiert für Windows und macOS jeweils eine frische Python-Umgebung über die mitgelieferten Einrichtungsskripte. Anschließend laufen Regressionen und ein HTTP-Starttest. Den tatsächlichen Status des Release-Commits unter GitHub Actions prüfen; ein vorbereiteter Workflow ist noch kein bestandener Lauf. Physische Mac-GPU-Leistung und macOS-Schlüsselbundintegration sind damit nicht nachgewiesen.
 
