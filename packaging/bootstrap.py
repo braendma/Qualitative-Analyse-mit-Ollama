@@ -36,7 +36,9 @@ def main():
             import json
             modules = {}
             for name in ('package_identity', 'project_paths', 'process_commands',
-                         'runtime_support', 'windows_process_job', 'setup_checks'):
+                         'runtime_support', 'windows_process_job', 'setup_checks',
+                         '00_WORKFLOW_RUNNER', 'clusterer_core', 'diagnostic_series',
+                         'app_lifecycle', 'managed_ollama'):
                 module = importlib.import_module(name)
                 origin = Path(module.__file__).resolve(strict=True)
                 if (origin != source / (name + '.py') or not isinstance(

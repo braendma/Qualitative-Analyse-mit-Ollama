@@ -87,7 +87,9 @@ if duplicates:
     raise SystemExit('Project module entered PYZ despite exclusions: ' + ', '.join(duplicates))
 pyz = PYZ(a.pure)
 exe = EXE(
-    pyz, a.scripts, [], exclude_binaries=True,
+    # Embedded Python ignores PYTHONUTF8/PYTHONIOENCODING from child env.
+    # Keep redirected German logs and supervisor/runner text consistently UTF-8.
+    pyz, a.scripts, [('X utf8=1', None, 'OPTION')], exclude_binaries=True,
     name='QualitativeAnalyse', debug=False, bootloader_ignore_signals=False,
     strip=False, upx=False, console=True, disable_windowed_traceback=False,
     contents_directory='_internal',
