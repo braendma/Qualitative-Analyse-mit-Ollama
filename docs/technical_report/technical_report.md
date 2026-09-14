@@ -1,5 +1,4 @@
-# Qualitative Analyse mit Ollama
-## Ein modularer Workflow für kodierte Textdaten
+# Qualitative Analyse mit lokalen Large Language Models (Ollama): Ein modularer Workflow für kodierte Interviewdaten
 
 **Marcus Brändle und OpenAI Codex (KI-Mitautor)**
 
