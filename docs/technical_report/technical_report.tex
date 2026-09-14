@@ -6,7 +6,12 @@
 \usepackage[margin=2.2cm]{geometry}
 \usepackage{tabularx,booktabs,array}
 \usepackage{xurl}
-\usepackage[hidelinks,pdftitle={Qualitative Analyse mit Ollama: Technischer Kurzbericht},pdfauthor={Marcus Brändle und OpenAI Codex (KI-Mitautor)}]{hyperref}
+\usepackage{xcolor,float,caption}
+\usepackage[normalem]{ulem}
+\definecolor{linkblue}{RGB}{0,70,170}
+\usepackage[colorlinks=true,allcolors=linkblue,pdftitle={Qualitative Analyse mit Ollama: Technischer Kurzbericht},pdfauthor={Marcus Brändle und OpenAI Codex (KI-Mitautor)}]{hyperref}
+\newcommand{\weblink}[2]{\href{#1}{\uline{#2}}}
+\captionsetup[table]{position=top,justification=raggedright,singlelinecheck=false,skip=6pt}
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{6pt}
 \setlength{\emergencystretch}{2em}
@@ -44,8 +49,11 @@ Codierte Segmente und Kategoriensystem werden als CSV oder XLSX eingelesen. Die 
 Die 15 bisherigen Module umfassen Clusterung und Zusammenfassungen, SWOT und Meta-SWOT, Personenanalyse und Personenvergleich, Kontrast-, Zusammenhangs- und Ambivalenzanalyse sowie die Gesamtsynthese. Code-Verifikation, Blind-Coding, Coding Agreement, Evidence-Audit und Prüfliste unterstützen die Kontrolle. Bei der Verifikation ist die vorhandene Codierung bekannt; beim Blind-Coding wird sie dem Modell nicht als Zielzuordnung mitgeteilt.
 
 \newpage
-Fünf optionale Diagnosemodule ergänzen diesen Ablauf:
+\hyperref[tab:diagnosen]{\uline{Tabelle~\ref*{tab:diagnosen}}} gibt einen Überblick über die fünf optionalen Diagnosemodule.
 
+\begin{table}[H]
+\caption{Optionale Diagnosemodule und ihre Aussagegrenzen}
+\label{tab:diagnosen}
 \begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{3.6cm}X@{}}
 \toprule
 Modul & Funktion und Grenze \\
@@ -57,6 +65,7 @@ Stabilitätsanalyse & Wiederholt ausgewählte Analysen unter gleich konfiguriert
 Sensitivitätsanalyse & Vergleicht ausdrücklich gewählte Modellparameter oder Promptvarianten. Unterschiede gelten für die geprüften Bedingungen. \\
 \bottomrule
 \end{tabularx}
+\end{table}
 
 Die ersten drei Diagnosen berechnen ihre Hinweise ohne zusätzliche Modellanfragen aus vorhandenen Daten und Ergebnissen. Stabilitäts- und Sensitivitätsanalysen erzeugen zusätzliche Läufe und entsprechenden Aufwand.
 
@@ -80,16 +89,16 @@ Modellvorschläge können falsch, selektiv oder instabil sein. Weder Coding Agre
 Die Anwendung bietet eine lokale Browseroberfläche und einen Python-Kommandozeilenweg. Verfügbar sind ein Windows-Standalone-Paket mit enthaltener Python-Laufzeit sowie gesonderte Python-Quellpakete für Windows und macOS mit den jeweiligen Einrichtungs- und Startdateien. Die Quellpakete benötigen eine eigene Python-Installation. Ollama und Modelle werden separat bereitgestellt. Lokales Ollama ist voreingestellt; Cloud-Anbieter erfordern eine ausdrückliche Datenfreigabe und eigene Zugangsdaten. Die Source-Installationsprüfungen für Windows und macOS wurden bestanden. Ein natives Mac-Paket bleibt zurückgestellt.
 
 \begin{itemize}\setlength{\itemsep}{0pt}
-\item \href{https://github.com/braendma/Qualitative-Analyse-mit-Ollama}{Repository und Quellcode}
-\item \href{https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/tag/v0.5.0-beta.1}{Version 0.5.0-beta.1 mit Windows- und macOS-Python-Downloads}
-\item \href{https://github.com/braendma/Qualitative-Analyse-mit-Ollama/blob/main/docs/HANDBUCH.md}{Handbuch mit Bildern, Beispielen und ausführlicher methodischer Einordnung}
+\item \weblink{https://github.com/braendma/Qualitative-Analyse-mit-Ollama}{Repository und Quellcode}
+\item \weblink{https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/tag/v0.5.0-beta.1}{Version 0.5.0-beta.1 mit Windows- und macOS-Python-Downloads}
+\item \weblink{https://github.com/braendma/Qualitative-Analyse-mit-Ollama/blob/main/docs/HANDBUCH.md}{Handbuch mit Bildern, Beispielen und ausführlicher methodischer Einordnung}
 \end{itemize}
 
 OpenAI Codex ist auf Wunsch des Autors als KI-Mitautor genannt. Der Beitrag umfasst Unterstützung bei Softwareentwicklung, Dokumentation und diesem Bericht. Die wissenschaftlichen Entscheidungen und die Verantwortung für eine veröffentlichte Fassung liegen bei Marcus Brändle; eine eigenständige empirische Forschungsleistung der KI wird damit nicht behauptet.
 
 \section*{Literatur}
 
-\hangindent=1.5em\hangafter=1 Maxwell, J. A. (2010). Using numbers in qualitative research. \textit{Qualitative Inquiry, 16}(6), 475–482. doi:10.1177/1077800410364740\par
+\hangindent=1.5em\hangafter=1 Maxwell, J. A. (2010). Using numbers in qualitative research. \textit{Qualitative Inquiry, 16}(6), 475–482. \weblink{https://doi.org/10.1177/1077800410364740}{doi:10.1177/1077800410364740}\par
 
-\hangindent=1.5em\hangafter=1 Sandelowski, M. (2001). Real qualitative researchers do not count: The use of numbers in qualitative research. \textit{Research in Nursing \& Health, 24}(3), 230–240. doi:10.1002/nur.1025\par
+\hangindent=1.5em\hangafter=1 Sandelowski, M. (2001). Real qualitative researchers do not count: The use of numbers in qualitative research. \textit{Research in Nursing \& Health, 24}(3), 230–240. \weblink{https://doi.org/10.1002/nur.1025}{doi:10.1002/nur.1025}\par
 \end{document}

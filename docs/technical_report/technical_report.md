@@ -24,7 +24,9 @@ Codierte Segmente und Kategoriensystem werden als CSV oder XLSX eingelesen. Die 
 
 Die 15 bisherigen Module umfassen Clusterung und Zusammenfassungen, SWOT und Meta-SWOT, Personenanalyse und Personenvergleich, Kontrast-, Zusammenhangs- und Ambivalenzanalyse sowie die Gesamtsynthese. Code-Verifikation, Blind-Coding, Coding Agreement, Evidence-Audit und Prüfliste unterstützen die Kontrolle. Bei der Verifikation ist die vorhandene Codierung bekannt; beim Blind-Coding wird sie dem Modell nicht als Zielzuordnung mitgeteilt.
 
-Fünf optionale Diagnosemodule ergänzen diesen Ablauf:
+Tabelle 1 gibt einen Überblick über die fünf optionalen Diagnosemodule.
+
+**Tabelle 1: Optionale Diagnosemodule und ihre Aussagegrenzen**
 
 | Modul | Funktion und Grenze |
 |---|---|
