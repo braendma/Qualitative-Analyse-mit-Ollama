@@ -28,7 +28,7 @@ from runtime_support import atomic_json, atomic_text
 from review_workspace import ReviewWorkspace, decisions_xlsx
 from telegram_notifications import Telegram, NoRedirect
 from llm_providers import PROVIDERS, KEY_ENVS, selection
-from provider_keys import ProviderKeys
+from provider_keys import ProviderKeys, reject_secret_settings
 
 ROOT = Path(__file__).resolve().parent
 SPEC = importlib.util.spec_from_file_location('desktop_runner', ROOT / '00_WORKFLOW_RUNNER.py')
@@ -106,18 +106,6 @@ def pid_alive(pid):
         return True
     except OSError:
         return False
-
-
-def reject_secret_settings(settings):
-    # Browser settings are persisted verbatim in revisions: reject credential-like
-    # keys recursively before any snapshot, including passage-ID preparation.
-    if isinstance(settings, dict):
-        for key, value in settings.items():
-            if re.search(r'(api.?key|token(?!s$)|secret|password|authorization|credential)',str(key),re.I):
-                raise ValueError('API-Schlüssel ausschließlich im separaten Schlüsselfeld speichern.')
-            reject_secret_settings(value)
-    elif isinstance(settings, list):
-        for value in settings: reject_secret_settings(value)
 
 
 class App(ReviewWorkspace):

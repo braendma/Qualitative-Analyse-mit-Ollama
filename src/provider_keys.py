@@ -2,10 +2,22 @@
 import base64
 import json
 import os
+import re
 from pathlib import Path
 from llm_providers import PROVIDERS
 from runtime_support import atomic_json
 from telegram_notifications import protect
+
+
+def reject_secret_settings(settings):
+    """Reject credential-like fields before project or diagnostic snapshots."""
+    if isinstance(settings, dict):
+        for key, value in settings.items():
+            if re.search(r'(api.?key|token(?!s$)|secret|password|authorization|credential)',str(key),re.I):
+                raise ValueError('API-Schlüssel ausschließlich im separaten Schlüsselfeld speichern.')
+            reject_secret_settings(value)
+    elif isinstance(settings, list):
+        for value in settings: reject_secret_settings(value)
 
 
 class ProviderKeys:

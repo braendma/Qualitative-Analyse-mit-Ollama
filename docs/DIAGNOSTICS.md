@@ -8,6 +8,49 @@ Modulauswahl, Berichte, Fortschritt und Beispielhilfe eingebunden. Stabilität u
 Sensitivität folgen. Dieser Abschnitt
 beschreibt den überprüfbaren Datenvertrag und die technische Schnittstelle.
 
+## Entwicklungsstand der Wiederholungsplanung
+
+`diagnostic_repetitions.prepare_repetitions(config_path, module_ids,
+repetitions=3)` bereitet einen stabilen Laufplan vor. Diese interne API startet
+noch keine Modellanfragen und ist noch kein auswählbares Stabilitätsmodul.
+Zulässig sind 2 bis 20 Wiederholungen. Ziele müssen ausdrücklich benannt und in
+der Ausgangskonfiguration bereits aktiviert sein. Die vorhandene topologische
+Sortierung ergänzt notwendige Vorstufen im Plan und weist diese gesondert aus.
+Andere Analysen sowie sämtliche Diagnosemodule werden in den Unterläufen
+deaktiviert. Ein markierter Unterlauf darf nicht erneut Wiederholungen planen.
+
+Die Planung hält Material, Personen-/Spaltenzuordnung, Codebuch, Prompts und
+LLM-Einstellungen gleich. Relative Pfade zu Eingaben und Codebuch werden gegen
+die Ausgangskonfiguration aufgelöst. Hashes binden diese Dateien an den Plan.
+API-Schlüssel gehören ausschließlich in die vorhandene Schlüsselverwaltung oder
+Umgebung; Schlüsselwerte in Konfigurationsfeldern werden abgewiesen. Anbieter und
+DSGVO-Einstellung werden nicht geändert. Der Plan übernimmt die vorhandene
+Providerprüfung und erzeugt keinen Anbieterwechsel.
+
+Checkpoints müssen zum einzelnen Lauf gehören. Eine gemeinsame
+`llm.partial_checkpoint_dir`, absolute oder übergeordnete Ausgabe-/Checkpointpfade,
+Steuerdateien als Modulausgaben, gespeicherte Mockantworten und abweichende
+Modulskripte sind daher in Wiederholungsplänen nicht zulässig. Feste relative
+Ausgabedateinamen und Checkpoints bleiben möglich. Ausgewertet werden derzeit
+die mitgelieferten 15 Analyse-/Codiermodule; benutzerdefinierte Skripte benötigen
+einen eigenen geprüften Wiederholungsvertrag.
+
+`samples` enthält eindeutige Stichprobenkennungen und denselben
+`configuration_fingerprint`. Das sind noch keine Runner-Lauf-IDs. Jeder neue
+Versuch muss vom bestehenden Runner ein eigenes Verzeichnis und eine frische
+Lauf-ID erhalten. Nur zum Fortsetzen desselben Versuchs darf `--resume` benutzt
+werden. Ein Integrationstest weist nach, dass zwei getrennte Läufe die Anfragen
+neu ausführen und der anschließende Resume fertige Ergebnisse wiederverwendet.
+
+`module_executions` zählt geplante Modulausführungen einschließlich Vorstufen;
+`model_calls` bleibt unbekannt (`null`), da Paketbildung und Reparaturversuche
+noch nicht feststehen. `parameter_status: configured_not_runtime_verified`
+verhindert die Behauptung, Modellgewichte oder tatsächlich wirksame Parameter
+seien bereits geprüft. Gerade Thinking kann bisher auf einen Modellstandard
+zurückfallen. Laufzeitnachweis, koordinierte Ausführung, Abbruch/Resume der Serie
+und eigentliche Stabilitäts-/Sensitivitätsauswertung folgen in den nächsten
+technischen Einheiten. Keine Stabilitätskennzahl wird aus dem Plan abgeleitet.
+
 ## Referenzen eindeutig unterscheiden
 
 `diagnostic_sources.py` liest die JSON-Ausgabe aus dem vorhandenen Outputvertrag

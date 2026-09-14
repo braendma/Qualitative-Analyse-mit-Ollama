@@ -124,3 +124,19 @@ erfolgt ausschließlich in Textknoten; daraus entstehen weder HTML-Elemente noch
 ausführbare Links. Inline-Code und Codeblöcke behalten ihre wörtliche Schreibweise.
 Tests prüfen auch HTML-ähnliche Texte, numerische Zeichenreferenzen und maskierte
 Tabellentrennzeichen.
+
+## Wiederholungen: vorbereiteter Plan und Cache-Trennung
+
+Der Entwicklungsstand kann Wiederholungen mit identischen konfigurierten
+Bedingungen planen. Noch erfolgt keine automatische Serienausführung. Die
+Planung verwendet dieselbe Modulsortierung und denselben Schutz vor gespeicherten
+Schlüsselwerten wie die bestehende Anwendung. Sie lehnt rekursive Diagnosen,
+gemeinsame Checkpointordner und Ausgabeziele außerhalb eines Unterlaufs ab.
+
+Die Tests starten zwei getrennte tatsächliche Runner-Läufe mit künstlichem
+Modelltransport. Beide rechnen neu; ein Resume des zweiten Laufs wiederholt
+keine erfolgreichen Anfragen. Weitere Prüfungen betreffen deaktivierte Ziele,
+explizite Vorstufen, falsche YAML-Typen, fehlende Eingabedateien, DOS-/UNC-Pfade,
+reservierte Windows-Dateinamen, alternative relative Ausgaben und unveränderte
+Datenschutzvorgaben. Die Ergebnisse belegen die technische Vorbereitung und
+Cache-Isolation, noch keine wissenschaftliche Stabilität eines Modells.
