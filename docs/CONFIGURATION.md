@@ -306,10 +306,10 @@ in diesem Fall ist `total_module_executions: null`. Keine Zeit-/Preisprognose.
 ## Analyseperspektiven je Modul
 
 Der aktuelle Entwicklungsstand erlaubt zusätzliche Perspektiven für die
-sieben unveränderten Standardmodule `clusterer`, `summarizer`, `swot`,
-`meta_swot`, `person_analysis`, `person_comparison` und `ambiguity_analysis`. Die Modi werden unabhängig
+acht unveränderten Standardmodule `clusterer`, `summarizer`, `swot`,
+`meta_swot`, `person_analysis`, `person_comparison`, `contrast_analysis` und `ambiguity_analysis`. Die Modi werden unabhängig
 je Modul gewählt; die folgende Auswahl ist ein Beispiel, keine automatische
-Aktivierung aller sieben Module:
+Aktivierung aller acht Module:
 
 ```yaml
 analysis_perspectives:
@@ -319,6 +319,7 @@ analysis_perspectives:
   meta_swot: both
   person_analysis: frequency
   person_comparison: both
+  contrast_analysis: both
   ambiguity_analysis: both
 ```
 
@@ -336,8 +337,8 @@ dieselbe Zuordnung. Abgewählte Module behalten gespeicherte Modi.
 
 Ein fehlender oder `null` gesetzter gesamter Abschnitt bedeutet qualitativ.
 Null-Einzelwerte, Listen, unbekannte Modi und unbekannte Modul-IDs werden
-abgewiesen. Die drei übrigen geeigneten Module
-`contrast_analysis`, `relation_analysis` und `overall_synthesis` bleiben für
+abgewiesen. Die zwei übrigen geeigneten Module
+`relation_analysis` und `overall_synthesis` bleiben für
 `frequency`/`both` gesperrt. Ihre methodische Eignung bedeutet keine
 Ausführungsfreigabe. Codiervergleich, Review und Diagnosen erhalten
 keine künstlichen Interpretationsmodi. Eigene Skripte können keine Freigabe durch
@@ -426,3 +427,26 @@ Der Personenvergleich benötigt die vollständige originale Personenanalyse und
 einen dazu passenden Verdichtungsnachweis (`input_reduction`). Fremde Personen,
 fehlende Originalpersonen oder falsche Quell-/Verdichtungshashes verhindern die
 zusätzliche Auswertung. Die Moduswahl ändert nicht die bestätigte Personenbasis.
+
+
+Die Kontrastanalyse zählt vollständig definierte dominante Muster über das gesamte
+bestätigte Originalmaterial und eindeutig an ein lokales Muster gebundene
+Gegenfälle über sämtliche Originaleinheiten ihrer jeweiligen Person.
+`getragen_von` ist keine vollständige Mitgliedschaftsliste. Mehrdeutige oder
+nicht passende Freitextbezüge auf Muster bleiben mit Grund ungezählter Kontext,
+ebenso Typenspannungen, Relativierungen und Gesamteinordnung. Ein fehlender
+Bezug ist kein Nachweis für null Nennungen. Fremde Personen oder fehlerhafte
+Quell-/Verdichtungsnachweise dagegen verhindern die zusätzliche Auswertung.
+Benötigt werden die vollständige Personenanalyse und der dazu passende originale
+Personenvergleich; beide bleiben ungewichtete Quellen.
+
+Der feste Kontrastvergleich heißt `comparison_basis: contrast_scoped`.
+`comparison_scope: global_patterns` enthält alle globalen Muster; eindeutig
+zugeordnete Gegenfälle des jeweiligen Musters stehen vollständig als getrennte
+qualitative Bezüge daneben. `same_person_countercases` enthält alle gezählten
+Gegenfallthemen derselben Person; das gebundene globale Muster steht separat
+als vollständiger qualitativer Bezug. `reference_context` mischt keine fremden
+Nenner in das Kennzahlenregister. Globale und Einzelfallzahlen werden weder
+addiert noch voneinander abgezogen. Auch bei nur einer Studienperson bleiben
+diese Rollen verschieden. Register und Bezugstexte werden nicht gekürzt, um
+ein Kontextlimit zu umgehen. Dies ist kein zusätzlicher YAML-Schalter.

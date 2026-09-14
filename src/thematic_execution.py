@@ -14,11 +14,11 @@ from thematic_interpretation import interpret_counts, comparison_basis
 
 
 ADAPTER_MODULES = ('clusterer', 'summarizer', 'swot', 'meta_swot',
-                   'person_analysis', 'ambiguity_analysis', 'person_comparison')
+                   'person_analysis', 'ambiguity_analysis', 'person_comparison', 'contrast_analysis')
 
 
 def execute_perspective(module, mode, material, payload, params, *, cluster_payload=None,
-                        swot_payload=None, person_payload=None, llm=None):
+                        swot_payload=None, person_payload=None, comparison_payload=None, llm=None):
     """Build one shared matrix and named interpretations; leave inputs untouched.
 
 This is an internal adapter boundary, not a user-configurable capability bypass.
@@ -44,6 +44,9 @@ The qualitative default has no new material, model or output requirements.
     elif module == 'person_comparison':
         from thematic_comparison_adapter import build_person_comparison_topics
         prepared = build_person_comparison_topics(material, payload, person_payload)
+    elif module == 'contrast_analysis':
+        from thematic_contrast_adapter import build_contrast_topics
+        prepared = build_contrast_topics(material, payload, person_payload, comparison_payload)
     else:
         from thematic_person_adapters import build_ambiguity_topics
         prepared = build_ambiguity_topics(material, payload, person_payload)
@@ -55,7 +58,8 @@ The qualitative default has no new material, model or output requirements.
         origin = 'full_scoped_model_assignment'
     counted = count_topics(material, prepared['topics'], assignments)
     qualitative = {tid: link['qualitative_text'] for tid, link in prepared['source_links'].items()}
-    frequency = interpret_counts(material, counted, qualitative, params, module=module, llm=llm)
+    frequency = interpret_counts(material, counted, qualitative, params, module=module, llm=llm,
+                                 source_links=prepared['source_links'])
     outputs = {'frequency': frequency}
     if mode == 'both':
         outputs['qualitative'] = [{'topic_id': tid, 'interpretation': text} for tid, text in qualitative.items()]
@@ -90,6 +94,10 @@ def perspective_markdown(result):
     if result.get('interpretation_comparison_basis') == 'same_person_scope':
         lines.append('\nDie Interpretation vergleicht sämtliche festen Themen innerhalb derselben Einzelperson. '
                      'Themen anderer Personen sind kein Teil dieses Vergleichs; ein Personenvergleich ist eine eigene Analyse.')
+    if result.get('interpretation_comparison_basis') == 'contrast_scoped':
+        lines.append('\nGlobale Kontrastmuster werden untereinander über das gesamte Material verglichen. '
+                     'Gegenfälle werden mit sämtlichen Gegenfallthemen derselben Person verglichen. '
+                     'Verknüpfte Befunde bleiben gesonderter qualitativer Kontext; ihre unterschiedlichen Nenner werden nicht vermischt.')
     meanings = {'explicit': 'Äußerungsbezogene Themenzuordnung', 'derived': 'Materialbasis einer analytischen Ableitung',
                 'membership': 'Clusterzuordnung; keine Zählung jeder Zusammenfassungsaussage'}
 
@@ -120,6 +128,14 @@ def perspective_markdown(result):
         link = result['source_links'][tid]
         if link.get('counting_note'):
             lines.append('\n' + escape(link['counting_note']))
+        if result['module_id'] == 'contrast_analysis':
+            related = link.get('countercase_topic_ids', []) if link['scope_kind'] == 'global_pattern' else [link['pattern_topic_id']]
+            if related:
+                lines.append('\n**Verknüpfte qualitative Befunde – getrennte Bezugsgrößen**\n')
+                for other_id in related:
+                    other = result['source_links'][other_id]
+                    prefix = ('Person ' + str(other['person']) + ': ') if other.get('person') else 'Bezugsmuster: '
+                    lines.append(escape(prefix + other['qualitative_text']))
         if result['module_id'] == 'ambiguity_analysis':
             lines.append('\nDie Seiten A und B werden unabhängig geprüft. „Beide Positionen“ in dieser '
                          'Tabelle bedeutet Stützung und Widerspruch zu dieser einen Seite, nicht die '
@@ -132,4 +148,16 @@ def perspective_markdown(result):
     if result['unassigned_context']:
         note = result['unassigned_context'].get('counting_note')
         lines.append('\n' + escape(note or 'Eine freie Gesamtzusammenfassung bleibt qualitativer Kontext. Ihre einzelnen Aussagen erhalten dadurch keine eigenen Nennungshäufigkeiten.'))
+        if result['module_id'] == 'contrast_analysis' and result['unassigned_context'].get('records'):
+            import json
+            reasons = {'unresolved_pattern_reference': 'Bezugsmuster nicht eindeutig im lokalen Musterregister gefunden',
+                       'ambiguous_pattern_reference': 'Mehrere verschiedene Musterdefinitionen mit diesem Titel',
+                       'incomplete_candidate': 'Unvollständig definierter Befund',
+                       'ambiguous_type_reference': 'Typname mit mehreren verschiedenen Definitionen',
+                       'uncounted_type_context': 'Typenspannung bleibt qualitativ',
+                       'uncounted_qualifier_context': 'Relativierung bleibt qualitativ'}
+            lines.append('\n### Nicht thematisch gezählte Befunde\n')
+            for item in result['unassigned_context']['records']:
+                lines.append(escape(reasons.get(item['reason'], item['reason'])) + ': ' +
+                             escape(json.dumps(item['record'], ensure_ascii=False, sort_keys=True)))
     return '\n\n'.join(lines) + '\n'

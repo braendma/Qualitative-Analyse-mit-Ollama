@@ -72,6 +72,11 @@ def fake_chat(messages, **kwargs):
     elif module=='contrast_analysis':
         result={'dominante_muster':[],'negativfaelle':[{'person':'P1','bezugs_muster':'Test','abweichung':'Gegenbeleg','begruendung':'Test'}],
                 'spannungen_zwischen_typen':[],'relativierungen':[],'gesamteinordnung':'Test'}
+        if os.environ.get('MOCK_CONTRAST_PATTERNS') == '1':
+            people=sorted(data['personenanalyse']['persons'])
+            result['dominante_muster']=[{'muster':'Planbarkeit','beschreibung':'Planbare Zeiten helfen.', 'getragen_von':people}]
+            result['negativfaelle']=[{'person':people[-1],'bezugs_muster':'Planbarkeit',
+                'abweichung':'Spontane Gestaltung wird bevorzugt.','begruendung':'Einzelne Gegenposition bleibt relevant.'}]
     elif module=='relation_analysis':
         result={'beziehungen':[{'pair_id':p['pair_id'],'thema':'Test','beziehungstyp':'tritt_gemeinsam_auf','beschreibung':'Test',
                               'segment_ids_a':[p['segmente_a'][0]['id']],'segment_ids_b':[p['segmente_b'][0]['id']]} for p in data['kandidaten']],

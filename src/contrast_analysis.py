@@ -9,6 +9,7 @@ import logging
 import yaml
 
 from contrast_analysis_core import build_contrast_analysis
+from thematic_pipeline import prepare, finish
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -29,6 +30,7 @@ def main(argv=None):
     parser.add_argument("--config", "-c", default=str(DEFAULT_CONFIG))
     parser.add_argument("--person-json", "-p", default="person_analysis_v1.json")
     parser.add_argument("--comparison-json", "-j", default="person_comparison_v1.json")
+    parser.add_argument("--csv", default=None, help="Originalmaterial für die optionale Häufigkeitsperspektive")
     parser.add_argument("--out-md", "-o", default="contrast_analysis_v1.md")
     parser.add_argument("--out-json", "-x", default="contrast_analysis_v1.json")
     args = parser.parse_args(argv)
@@ -45,6 +47,8 @@ def main(argv=None):
         "log_thinking": bool(llm_cfg.get("log_thinking", False)),
     }
 
+    prepared = prepare('contrast_analysis', args.config, input_path=args.csv,
+                       person_path=args.person_json, comparison_path=args.comparison_json)
     md, json_output = build_contrast_analysis(
         person_analysis_json_path=args.person_json,
         person_comparison_json_path=args.comparison_json,
@@ -53,6 +57,7 @@ def main(argv=None):
         context=config.get("context", {}),
     )
 
+    md, json_output = finish(prepared, json_output, md, ollama_params)
     atomic_text(args.out_md, md)
     atomic_json(args.out_json, json_output)
 
@@ -62,4 +67,3 @@ def main(argv=None):
 
 if __name__ == "__main__":
     main()
-

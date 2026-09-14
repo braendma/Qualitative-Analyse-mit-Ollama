@@ -16,9 +16,9 @@ const load=(app,modules,settings={})=>{app.run(`state.modules=${JSON.stringify(m
 const snapshot=app=>JSON.parse(app.run('JSON.stringify(perspectiveSettings())'));
 
 test('new case and meta perspectives retain choices and explain their counting scope',()=>{
- const app=setup();const ids=['meta_swot','person_analysis','ambiguity_analysis','person_comparison'];
+ const app=setup();const ids=['meta_swot','person_analysis','ambiguity_analysis','person_comparison','contrast_analysis'];
  load(app,ids.map(id=>moduleRow(id)),{modules:ids,analysis_perspectives:Object.fromEntries(ids.map(id=>[id,'both']))});
- assert.equal(app.selectors().length,4);assert.ok(app.selectors().every(s=>s.value==='both'));
+ assert.equal(app.selectors().length,5);assert.ok(app.selectors().every(s=>s.value==='both'));
  assert.deepEqual(snapshot(app),Object.fromEntries(ids.map(id=>[id,'both'])));
  app.run('updatePerspectivePlan(new Set(["meta_swot","person_analysis","ambiguity_analysis","person_comparison"]))');
  assert.match(app.read(app.node('perspective-status')),/vollständige Themenzuordnungen/);

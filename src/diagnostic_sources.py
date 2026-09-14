@@ -55,7 +55,7 @@ def _thematic_projection(module_id, payload, segments, upstream_payloads=None):
             raise ValueError('Analyseperspektive passt nicht zu Modul, Originalmaterial oder Themenquelle.')
 
     extension = payload['analysis_perspective']
-    require(module_id in ('clusterer', 'summarizer', 'swot', 'meta_swot', 'person_analysis', 'ambiguity_analysis', 'person_comparison')
+    require(module_id in ('clusterer', 'summarizer', 'swot', 'meta_swot', 'person_analysis', 'ambiguity_analysis', 'person_comparison', 'contrast_analysis')
             and isinstance(extension, dict))
     upstream_payloads = {} if upstream_payloads is None else upstream_payloads
     require(isinstance(upstream_payloads, dict))
@@ -84,6 +84,10 @@ def _thematic_projection(module_id, payload, segments, upstream_payloads=None):
     elif module_id == 'person_analysis':
         from thematic_person_adapters import build_person_topics
         prepared = build_person_topics(material, original)
+    elif module_id == 'contrast_analysis':
+        from thematic_contrast_adapter import build_contrast_topics
+        require(all(isinstance(upstream_payloads.get(mid), dict) for mid in ('person_analysis', 'person_comparison')))
+        prepared = build_contrast_topics(material, original, upstream_payloads['person_analysis'], upstream_payloads['person_comparison'])
     elif module_id == 'person_comparison':
         from thematic_comparison_adapter import build_person_comparison_topics
         require(isinstance(upstream_payloads.get('person_analysis'), dict))

@@ -18,7 +18,7 @@ _CAPABILITIES = (
     ('meta_swot', True, 'Personen und Passagen über Mengenvereinigung zählen; neue Metathemen brauchen eine eigene geprüfte Zuordnung.'),
     ('person_analysis', True, 'Passagen innerhalb einer Person vergleichen; keine irreführende Personenquote im Einzelfall.'),
     ('person_comparison', True, 'Nur gemeinsame Muster über vollständiges Originalmaterial aller bestätigten Personen prüfen. Typen, Unterschiede, nicht zugeordnete Personen und Gesamtvergleich bleiben qualitativ.'),
-    ('contrast_analysis', True, 'Stützende Fälle und Gegenpositionen getrennt zählen; Häufigkeit entkräftet keinen Einzelfall.'),
+    ('contrast_analysis', True, 'Globale Muster im gesamten Material und eindeutig gebundene Gegenfälle innerhalb ihrer Person prüfen. Nenner getrennt halten; unaufgelöste Bezüge und Typenspannungen bleiben qualitativ.'),
     ('relation_analysis', True, 'Gemeinsames Auftreten mit Bezugsmenge beschreiben; daraus keine Kausalität ableiten.'),
     ('ambiguity_analysis', True, 'Beide Positionen und ihre Personenüberschneidung erhalten; Gegenpositionen nicht verrechnen.'),
     ('overall_synthesis', True, 'Aussagen benötigen eigene Themenzuordnung; transitive Quellen allein sind keine vollständige Nennungshäufigkeit.'),

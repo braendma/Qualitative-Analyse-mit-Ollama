@@ -1,12 +1,13 @@
 # Thematische Zählung – Entwicklervertrag des gemeinsamen Kerns
 
-**Entwicklungsstand S13f:** Clusteranalyse (`clusterer`), Clusterzusammenfassungen
+**Entwicklungsstand S13g:** Clusteranalyse (`clusterer`), Clusterzusammenfassungen
 (`summarizer`), SWOT (`swot`), Meta-SWOT (`meta_swot`), Personenanalyse
-(`person_analysis`), Personenvergleich (`person_comparison`) und Ambivalenzanalyse (`ambiguity_analysis`) sind über ihre regulären Module in
+(`person_analysis`), Personenvergleich (`person_comparison`), Kontrastanalyse
+(`contrast_analysis`) und Ambivalenzanalyse (`ambiguity_analysis`) sind über ihre regulären Module in
 Workflow-CLI und Oberfläche mit den Perspektiven `qualitative`, `frequency` und
 `both` verbunden. Die Auswahl gilt unabhängig je Modul; fehlende Einstellungen
-bleiben qualitativ. Die drei weiteren geeigneten Module
-Kontrastanalyse, Zusammenhangsanalyse und Gesamtsynthese haben noch keine
+bleiben qualitativ. Die zwei weiteren geeigneten Module
+Zusammenhangsanalyse und Gesamtsynthese haben noch keine
 zusätzlichen Perspektiven. Dies beschreibt den aktuellen Entwicklungsstand, keine neue
 veröffentlichte Version. Der gemeinsame Kern verbindet vollständige
 Themenzuordnung, deterministische Zählung und häufigkeitsinformierte Interpretation.
@@ -219,7 +220,7 @@ Themen beruhen oder einen gesonderten geprüften Vertrag erhalten.
 Fehlende oder `null` gesetzte Abschnitte bleiben qualitativ. Methodische Eignung
 ist von implementierter Verfügbarkeit getrennt: Nichtqualitative Modi werden
 ohne ausdrücklich freigegebenen Adapter als „noch nicht integriert“ abgewiesen.
-Die zentrale Grenze `thematic_pipeline` gibt nur die sieben integrierten
+Die zentrale Grenze `thematic_pipeline` gibt nur die acht integrierten
 Standardmodule frei. Ein eigenes Skript mit derselben Modul-ID erbt keine
 zusätzliche Verfügbarkeit. Die Oberfläche liest diese Freigabe vom Server.
 Ungültige gespeicherte Modi werden angezeigt und abgewiesen, auch bei gerade
@@ -318,16 +319,16 @@ die danebenstehenden berechneten Werte müssen fachlich geprüft werden.
 
 ## 10. Orchestrierung, Anwendungseinstiege und getrennte Ausgaben
 
-`thematic_execution.execute_perspective(module, mode, material, payload, params,
-*, cluster_payload=None, swot_payload=None, person_payload=None, llm=None)`
+`thematic_execution.execute_perspective` erhält Modul, Modus, Material,
+Originalergebnis, Modellparameter und die tatsächlich benötigten geprüften Vorstufen. Die Funktion
 unterstützt `clusterer`, `summarizer`, `swot`, `meta_swot`, `person_analysis`,
-`person_comparison` und `ambiguity_analysis`:
+`person_comparison`, `contrast_analysis` und `ambiguity_analysis`:
 
 1. Bei `qualitative` liefert die Funktion `None` und startet keine neue
    Materialprüfung oder Modellanfrage; der bestehende Standardpfad bleibt.
 2. Der passende Adapter bereitet gemeinsame ungewichtete Themen vor.
    Cluster und Summarizer verwenden ihre vollständige Mitgliedschaft,
-   SWOT, Meta-SWOT, Personenanalyse, Personenvergleich und Ambivalenzanalyse führen eine zusätzliche
+   SWOT, Meta-SWOT, Personenanalyse, Personenvergleich, Kontrastanalyse und Ambivalenzanalyse führen eine zusätzliche
    vollständige Matrixphase in ihrem ausdrücklich definierten Scope aus.
 3. Der Kern zählt die gemeinsame Zuordnung einmal und führt anschließend
    häufigkeitsinformierte Interpretationen pro Thema aus.
@@ -370,7 +371,7 @@ JSON-Datei des Moduls.
 
 Die Promptansicht ergänzt bei gespeichertem `frequency`/`both` die festen
 Systemanweisungen für Häufigkeitsinterpretation und bei SWOT, Meta-SWOT,
-Personenanalyse, Personenvergleich und Ambivalenzanalyse für vollständige Themenzuordnung.
+Personenanalyse, Personenvergleich, Kontrastanalyse und Ambivalenzanalyse für vollständige Themenzuordnung.
 Sie beschreibt die dynamischen Eingaben, zeigt aber weder das vollständige
 Anfrageprotokoll noch automatisch Interviewmaterial. Stabilitäts-/Sensitivitätsansichten
 berücksichtigen die entsprechenden Zielmodule. Weitere Moduladapter bleiben
@@ -491,3 +492,58 @@ wie bisher eine Zuordnungsmatrix. Neue Modellzuordnungen können ursprüngliche
 Mehrheitsformulierungen einschränken; die Bezeichnung als gemeinsames Muster
 beweist keine Mehrheit. Die Matrix ergänzt die Prüfung vorhandener Kandidaten
 und entdeckt keine zuvor in der Verdichtung übersehenen Muster nachträglich.
+
+
+## 13. Kontrast: globale Muster und gebundene Einzelgegenfälle
+
+Der Kontrastadapter erhält Material, Originalkontrast, vollständige originale
+Personenanalyse und originalen Personenvergleich. Deren Personenbestand,
+Referenzen und vorhandene Reduktionsnachweise werden geprüft. Zusätzliche
+`analysis_perspective`-Ansichten ändern die gemeinsame Kandidatenbasis nicht;
+die Anwendung prüft trotzdem die vollständigen Dateihashes.
+
+Vollständige `dominante_muster` werden als `derived` Themen über alle
+Originaleinheiten geprüft. `getragen_von` setzt keine Matrixzellen vorab.
+Ein Gegenfall wird nur bei eindeutigem exaktem Bezug auf einen vollständig
+definierten lokalen Mustertitel zum eigenen Thema über das gesamte Material
+seiner Person. Seine Definition bewahrt die Abweichung und den Musterkontext.
+Identische vollständige Muster aus mehreren Blöcken ergeben ein Thema mit
+erhaltener Herkunft; gleiche Titel mit verschiedenen Definitionen sind
+mehrdeutig. Es werden keine Batch-IDs oder unscharfen Verknüpfungen erfunden.
+
+Unaufgelöste oder mehrdeutige Freitextbezüge und unvollständige Kandidaten bleiben
+mit konkretem Grund in `unassigned_context`. Typenspannungen, Relativierungen und
+Gesamteinordnung bleiben ebenfalls qualitativ. Diese Gründe erscheinen im
+Bericht; vollständige Strukturen bleiben zusätzlich im Modul-JSON. Ungezählt
+bedeutet weder `no_evidence` noch null Nennungen. Fremde Personen, beschädigte
+Vorstufen oder falsche Reduktionsnachweise sind harte Validierungsfehler.
+
+**Fester gemischter Vergleichsvertrag:** `source_links` unterscheidet
+`scope_kind: global_pattern` und `individual_countercase`; Fallthemen nennen
+`person` und `pattern_topic_id`. Rollen werden ausdrücklich geprüft und nicht
+aus einem Personennenner von eins erraten. Der globale Scope muss sämtliche
+Originaleinheiten umfassen, der Fall-Scope sämtliche Einheiten dieser Person,
+das referenzierte Musterthema muss ein gültiges globales Thema sein.
+
+- Modulbasis: `comparison_basis: contrast_scoped`.
+- Globales Muster: `comparison_scope: global_patterns`, Kennzahlenregister aller
+  globalen Muster. `reference_context` enthält vollständig alle diesem Muster
+  eindeutig zugeordneten Gegenfälle als qualitative Bezüge mit Person und
+  Topic-ID; deren Einzelfallzähler werden nicht ins globale Register gemischt.
+- Gegenfall: `comparison_scope: same_person_countercases`, Kennzahlenregister
+  aller gezählten Gegenfallthemen derselben Person, auch zu anderen Mustern.
+  `reference_context` enthält das konkret gebundene globale Muster mit seiner
+  vollständigen Definition. Keine Gegenfallregister anderer Personen und kein
+  scheinbar gleichberechtigter globaler Nenner im Fallregister.
+
+Das Kontrastvergleichsregister enthält die vollständige Definition jedes Themas, damit auch identische Titel unterscheidbar bleiben; auch dieses Register wird niemals still gekürzt.
+
+`comparison_topic_count` zählt nur das Kennzahlenregister, `module_topic_count`
+alle gezählten Modulthemen. Der zusätzliche Bezugskontext ist keine weitere
+Zählbasis. Alle Muster/Fälle bleiben im Gesamtergebnis erhalten; Gegenfälle
+werden weder von globalen Zählern abgezogen noch automatisch als logische
+Negation behandelt. Auch eine Einpersonenstudie behält die zwei verschiedenen
+Rollen. Register und qualitative Bezugstexte bleiben vollständig; bei zu großem
+Kontext erfolgt keine stille Kürzung. Matrix und häufigkeitsinformierte
+Interpretation verwenden den bestehenden gemeinsamen Executor. `both` teilt
+diese Matrix, löst keine zweite Zählung aus.

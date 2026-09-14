@@ -37,6 +37,11 @@ model_assigned_group_membership zählt Gruppenmitgliedschaft, nicht jede Aussage
 comparison_basis erklärt den Vergleichsraum: same_person_scope enthält sämtliche
 festen Themen desselben vollständigen Einzelfalls, keinen Personenvergleich.
 all_fixed_topics enthält das vollständige Themenregister der Modulinterpretation.
+contrast_scoped trennt globale Muster (comparison_scope=global_patterns) von
+Gegenfällen derselben Person (same_person_countercases). reference_context enthält
+vollständige verknüpfte Befunde separat, keine vergleichbaren Häufigkeitszahlen.
+Ein Gegenfall und sein Bezugsmuster sind nicht automatisch logische Negationen;
+ihre Modellzuordnungen werden unabhängig geprüft. Glätte widersprüchliche Befunde nicht.
 Häufigkeit darf die Schwerpunktsetzung informieren, beweist aber weder Bedeutung,
 Repräsentativität noch Kausalität. Erhalte seltene Gegenpositionen und ambivalente Fälle.
 Begründe die häufigkeitsinformierte Einordnung gegenüber dem qualitativen Ausgangsbefund.
@@ -49,6 +54,8 @@ CORRECTION = ('Die Antwort entsprach nicht dem Format. Nutze exakt die geplante 
 
 def comparison_basis(module):
     """Case modules compare all findings within each complete individual scope."""
+    if module == 'contrast_analysis':
+        return 'contrast_scoped'
     return 'same_person_scope' if module in ('person_analysis', 'ambiguity_analysis') else 'all_fixed_topics'
 
 
@@ -88,7 +95,7 @@ def _parse(raw):
         raise ValueError('Interpretation benötigt ein eindeutiges JSON-Objekt.') from None
 
 
-def interpret_counts(material, counted, qualitative_by_topic, params, *, module, llm=None):
+def interpret_counts(material, counted, qualitative_by_topic, params, *, module, llm=None, source_links=None):
     """Return one model interpretation per theme, never replace counted metrics.
 
 The input count object must be fully reproducible from this material. ``unclear``
@@ -112,7 +119,12 @@ caller keeps qualitative texts and these frequency texts in separate fields.
         register.append({**_summary(result), 'label': definition.get('label', definition['definition'])})
     basis = comparison_basis(module)
     register_by_topic = {}
-    if basis == 'same_person_scope':
+    contrast = {}
+    if basis == 'contrast_scoped':
+        from thematic_contrast_context import contrast_context
+        contrast = contrast_context(material, counted, register, source_links)
+        register_by_topic = {tid: value['register'] for tid, value in contrast.items()}
+    elif basis == 'same_person_scope':
         # This is an explicit methodological comparison boundary, not an
         # adaptive truncation to make a request fit. Every finding of this
         # complete case stays in the register, including both ambiguity sides.
@@ -146,6 +158,8 @@ caller keeps qualitative texts and these frequency texts in separate fields.
             'counterposition_material': [{'unit_id': uid, 'text': material['units'][uid]['text']}
                                          for uid in counter_units],
         }
+        if basis == 'contrast_scoped':
+            payload.update({key: contrast[tid][key] for key in ('comparison_scope', 'reference_context')})
         user = json.dumps(payload, ensure_ascii=False, sort_keys=True)
         items.append({'key': 'frequency_interpretation:' + tid, 'system': SYSTEM,
                       'user': user, 'texts': [qualitative_by_topic[tid]], 'topic_id': tid})

@@ -80,7 +80,7 @@ class ThematicCaseExecutionTests(unittest.TestCase):
             self.assertEqual(result, repeated)
 
     def test_remaining_internal_adapters_do_not_bypass_application_release_gate(self):
-        for module in ('contrast_analysis', 'relation_analysis', 'overall_synthesis'):
+        for module in ('relation_analysis', 'overall_synthesis'):
             with self.subTest(module=module):
                 cap = capability({'id': module, 'script': module + '.py'})
                 self.assertFalse(cap['implemented'])

@@ -10,8 +10,8 @@ from analysis_perspectives import normalize_analysis_perspectives, perspective_c
 
 
 IMPLEMENTED = ('clusterer', 'summarizer', 'swot', 'meta_swot',
-               'person_analysis', 'ambiguity_analysis', 'person_comparison')
-FULL_ASSIGNMENT_MODULES = ('swot', 'meta_swot', 'person_analysis', 'ambiguity_analysis', 'person_comparison')
+               'person_analysis', 'ambiguity_analysis', 'person_comparison', 'contrast_analysis')
+FULL_ASSIGNMENT_MODULES = ('swot', 'meta_swot', 'person_analysis', 'ambiguity_analysis', 'person_comparison', 'contrast_analysis')
 
 
 def modes(config):
@@ -52,7 +52,7 @@ def validate_material(config_path, config, modules, input_path=None):
 
 
 def prepare(module, config_path, *, input_path=None, cluster_path=None, idmap_path=None,
-            summary_path=None, swot_path=None, person_path=None):
+            summary_path=None, swot_path=None, person_path=None, comparison_path=None):
     """Verify inputs and source files before the existing core makes any call."""
     from coding_validation_common import resolve_config_path
     from runtime_support import file_hash
@@ -107,7 +107,7 @@ def prepare(module, config_path, *, input_path=None, cluster_path=None, idmap_pa
         files[str(path)] = digest
         return payload
 
-    clusters = swot = persons = None
+    clusters = swot = persons = comparison = None
     if module in ('summarizer', 'swot', 'person_analysis'):
         if cluster_path is None:
             raise ValueError('Cluster und Originaltext-Zuordnung werden für die Perspektivprüfung benötigt.')
@@ -129,14 +129,20 @@ def prepare(module, config_path, *, input_path=None, cluster_path=None, idmap_pa
             raise ValueError('Geprüfte originale SWOT-Analyse fehlt für die Meta-SWOT-Perspektive.')
         swot = source(swot_path, 'swot')
         build_swot_topics(material, swot)
-    if module in ('ambiguity_analysis', 'person_comparison'):
+    if module in ('ambiguity_analysis', 'person_comparison', 'contrast_analysis'):
         from thematic_person_adapters import build_person_topics
         if person_path is None:
             raise ValueError('Geprüfte originale Personenanalyse fehlt für die zusätzliche Analyseperspektive.')
         persons = source(person_path, 'person_analysis')
         build_person_topics(material, persons)
+    if module == 'contrast_analysis':
+        from thematic_comparison_adapter import build_person_comparison_topics
+        if comparison_path is None:
+            raise ValueError('Geprüfter originaler Personenvergleich fehlt für die Kontrastperspektive.')
+        comparison = source(comparison_path, 'person_comparison')
+        build_person_comparison_topics(material, comparison, persons)
     return {'module_id': module, 'mode': mode, 'material': material, 'clusters': clusters,
-            'swot': swot, 'persons': persons, 'files': files}
+            'swot': swot, 'persons': persons, 'comparison': comparison, 'files': files}
 
 
 def finish(prepared, payload, markdown, params, *, llm=None):
@@ -150,7 +156,7 @@ def finish(prepared, payload, markdown, params, *, llm=None):
     unchanged()
     result = execute_perspective(prepared['module_id'], prepared['mode'], prepared['material'], payload, params,
                                  cluster_payload=prepared['clusters'], swot_payload=prepared.get('swot'),
-                                 person_payload=prepared.get('persons'), llm=llm)
+                                 person_payload=prepared.get('persons'), comparison_payload=prepared.get('comparison'), llm=llm)
     unchanged()
     output = deepcopy(payload)
     output['analysis_perspective'] = result
