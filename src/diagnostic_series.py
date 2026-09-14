@@ -18,6 +18,7 @@ import yaml
 
 from diagnostic_repetitions import prepare_repetitions
 from managed_ollama import stop_tree
+from process_commands import python_command
 from runtime_support import atomic_json, atomic_text, exclusive_file_lock, file_hash, fingerprint
 
 
@@ -31,7 +32,7 @@ def _runner():
 
 
 def _runner_command():
-    return [sys.executable, str(Path(__file__).with_name('00_WORKFLOW_RUNNER.py'))]
+    return python_command(Path(__file__).with_name('00_WORKFLOW_RUNNER.py'))
 
 
 def _check_plan(plan):
@@ -243,8 +244,8 @@ def _execute(command, directory, log, env):
     parent = command[command.index('--output-dir') + 1] if '--output-dir' in command else None
     atomic_json(request_path, {'ticket': ticket, 'command_sha256': fingerprint(command),
         'execution_fingerprint': identity, 'run_parent': parent})
-    supervised = [sys.executable, str(Path(__file__).with_name('managed_ollama.py')),
-                  '--command', str(receipt_path), ticket, *command]
+    supervised = python_command(Path(__file__).with_name('managed_ollama.py'),
+                  ['--command', str(receipt_path), ticket, *command])
     with open(log, 'ab') as output:
         process = subprocess.Popen(supervised, cwd=directory, env=env, stdin=subprocess.PIPE,
             stdout=output, stderr=subprocess.STDOUT, start_new_session=os.name != 'nt',

@@ -8,6 +8,7 @@ Neue Analysemodule werden ausschließlich in config_v2.yaml unter
 """
 
 from project_paths import DEFAULT_CONFIG, resolve_output_parent, validate_output_location
+from process_commands import python_command, validate_script
 from cost_profiles import normalize_cost_profile
 from provider_keys import reject_config_secrets
 from contextvars import ContextVar
@@ -321,6 +322,8 @@ def main(argv=None):
         raise FileNotFoundError(f"CSV nicht gefunden: {csv_path}")
 
     modules = topological_order(normalize_modules(config))
+    for module in modules:
+        validate_script(resolve_path(script_dir, module['script']))
     from thematic_pipeline import validate_material as validate_thematic_material
     validate_thematic_material(config_path, config, modules, csv_path)
     needs_model = any(m.get('requires_model', True) for m in modules)
@@ -468,7 +471,7 @@ def main(argv=None):
                 if not script_path.is_file():
                     raise FileNotFoundError(script_path)
                 rendered = [render_arg(value, runtime).strip() for value in module.get("args", [])]
-                command = [sys.executable, str(script_path), *[v for v in rendered if v]]
+                command = python_command(script_path, [v for v in rendered if v])
                 # Preserve the established module-call interface and isolate per-run credentials.
                 token = STEP_TRANSPORT.set(selected_transport if module['requires_model'] else
                     {'provider':'ollama_local','api_key_env':selected_transport['api_key_env']})

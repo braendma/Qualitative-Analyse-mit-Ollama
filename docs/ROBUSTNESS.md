@@ -1,5 +1,11 @@
 # Fehlerbehandlung und reproduzierbare Läufe
 
+## Paketvorbereitung: Aufrufe und Grenzen (P02a)
+
+Die gemeinsame Startlogik erhält im Sourcebetrieb das bisherige Python-Kommando einschließlich eigener Skripte. Im vorbereiteten Paketbetrieb sind ausschließlich 24 festgelegte Programmeinstiege zulässig. Geprüft wird die genaue gebündelte Datei, nicht nur ihr Name; fremde Skriptpfade werden vor dem Modellstart abgewiesen. Interne Modulaufrufe öffnen keine zusätzliche Oberfläche. Argumente, Arbeitsordner und Modul-Rückgabecodes bleiben erhalten, insbesondere `75` für die kontrollierte Pause.
+
+Diese Änderung ist noch keine Abnahme einer ausführbaren Distribution. Am tatsächlichen Paket sind zusätzlich die Herkunft der wirklich geladenen Projektquellen, deren Übereinstimmung mit den gespeicherten Prüfsummen, die vollständige Prozessbeendigung und der Schutz vor konkurrierenden Appinstanzen zu prüfen. Die bisherigen Herkunfts- und Resumeprüfungen bleiben aktiv; ein gemockter Paketmodus ersetzt diese Paketprüfung nicht.
+
 ## Bestehende Konfigurationen, Datenfreigabe und Schlüssel
 
 Der normale CLI-Einstieg und die kontrollierten Wiederholungspläne verwenden

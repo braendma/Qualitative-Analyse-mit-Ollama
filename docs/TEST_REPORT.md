@@ -1,3 +1,20 @@
+# Gemeinsamer Programmeinstieg / P02a · 14. September 2026
+
+**61 gezielte Python-Tests bestanden** (76,752 Sekunden). Geprüft wurden der
+gemeinsame Programmeinstieg, erhaltene Sourceaufrufe, die feste Liste der
+Paketeinstiege, frühe Ablehnung fremder Skripte im simulierten Frozenbetrieb,
+Argumente und Exitcodes einschließlich Pause sowie bestehende App-/Diagnoserien-
+und Runtimeübergaben. Ein echter Sourceprozess führte eine modellfreie Diagnose
+aus und setzte sie anhand unveränderter Ergebnisse fort. Eigene Source-Skripte
+bleiben nutzbar; es gab keine echten Modellanfragen.
+
+Die Frozenprüfung ist hier noch simuliert. Tatsächliche Windows-/macOS-Pakete,
+deren ausgeführte Quellen, Prozessaufsicht und kontrolliertes Schließen sind
+eigene folgende Abnahmeschritte. Die folgende Vollregression gehört zu P01c;
+für P02a wird keine zusätzliche vollständige Regression behauptet.
+
+---
+
 # Lokale Datei-/Ordnerauswahl / P01c · 14. September 2026
 
 **834 Python-Tests ausgeführt: 833 bestanden, ein Windows-Symlinktest übersprungen;

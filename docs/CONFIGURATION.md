@@ -1,5 +1,11 @@
 # Konfigurationsreferenz der wissenschaftlichen Diagnosen
 
+## Paketvorbereitung: Programmeinstiege (P02a)
+
+Im Sourcebetrieb bleiben die bisherigen Python-Aufrufe und eigene, über die Pipeline konfigurierte Skripte möglich. Für den vorbereiteten Paketbetrieb gilt eine feste Liste von 24 Programmeinstiegen: die 20 Standardmodule sowie Oberfläche, Workflow-Runner, Prozessaufsicht und Kategorienüberarbeitung. Eine Benutzer-YAML erweitert diese Liste nicht. Der vollständige Skriptpfad muss zur zugelassenen gebündelten Datei gehören; ein gleichnamiges fremdes Skript genügt nicht. Nicht zugelassene Pfade werden vor dem Modellstart abgewiesen.
+
+Die gemeinsame Aufruflogik erhält Argumente, Arbeitsordner und Rückgabecodes einschließlich Pausecode `75`. Dafür sind keine neuen Einstellungen in der Oberfläche nötig. Ein tatsächlich gebautes Paket, der Nachweis seiner wirklich ausgeführten Projektquellen sowie das Beenden und der Schutz vor konkurrierenden Appinstanzen benötigen weiterhin gesonderte Prüfungen. P02a allein gibt kein Installationspaket frei.
+
 ## Ergebnisordner und technische Appdaten (P01c)
 
 Ohne `--output-dir` erstellt die CLI neben der tatsächlich verwendeten Eingabedatei einen neuen Ordner `QualitativeAnalyse_<Lauf-ID>`. Maßgeblich ist `--csv`, falls angegeben, sonst `paths.input_csv` aus der Konfiguration; relative Konfigurations-Eingaben werden gegen deren Ordner aufgelöst. Ein explizites `--output-dir` bleibt relativ zum aktuellen Arbeitsordner, wird bei Bedarf angelegt und enthält wie bisher Unterordner `<Lauf-ID>`. Vor dem neuen Lauf wird die Beschreibbarkeit geprüft. Bei einem ungültigen oder nicht beschreibbaren Ziel erfolgt eine Fehlermeldung, kein Ausweichen in AppData oder einen temporären Ordner. `--validate-only` prüft die Analysedaten, noch nicht die spätere Schreibbarkeit des Ergebnisziels. Resume verwendet unverändert den ausdrücklich angegebenen bestehenden Laufordner und prüft dessen Herkunft.

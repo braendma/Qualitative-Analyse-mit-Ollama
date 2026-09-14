@@ -25,6 +25,7 @@ import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from project_paths import DEFAULT_CONFIG, DEMO_DIR, default_data_dir, resolve_output_parent
+from process_commands import python_command, validate_script
 import yaml
 from runtime_support import atomic_json, atomic_text
 from review_workspace import ReviewWorkspace, decisions_xlsx
@@ -498,6 +499,8 @@ class App(ReviewWorkspace):
         if unknown:
             raise ValueError('Codes fehlen im Kategoriensystem: '+ '; '.join(f"Zeile {x['row']}: {x['code']}" for x in unknown[:10]))
         modules = RUNNER.topological_order(RUNNER.normalize_modules(cfg))
+        for module in modules:
+            validate_script(RUNNER.resolve_path(ROOT,module['script']))
         thematic_pipeline.validate_material(path, cfg, modules)
         from stability_analysis import configured_plan, planning_summary
         stability_plan = configured_plan(path)
@@ -641,8 +644,8 @@ class App(ReviewWorkspace):
                 job['storage']=job_storage.create_binding(folder,config,parent)
             pause=folder/'pause.request'
             pause.unlink(missing_ok=True)
-            command=[sys.executable,str(ROOT/'00_WORKFLOW_RUNNER.py'),'--config',str(config),
-                     '--output-dir',str(job_storage.runs_root(folder,job)),'--pause-file',str(pause)]
+            command=python_command(ROOT/'00_WORKFLOW_RUNNER.py',['--config',str(config),
+                     '--output-dir',str(job_storage.runs_root(folder,job)),'--pause-file',str(pause)])
             if resume: command.extend(['--resume',str(run)])
             env={k:v for k,v in os.environ.items() if k not in KEY_ENVS and not k.startswith('WORKFLOW_') and k not in ('QUALITATIVE_MANAGED_OLLAMA_HOST','OLLAMA_API_KEY','OLLAMA_HOST')}
             if needs_model and selected['provider']!='ollama_local':

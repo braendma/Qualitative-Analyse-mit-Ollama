@@ -10,6 +10,7 @@ import shutil
 import signal
 import socket
 import subprocess
+from process_commands import python_command
 import sys
 import threading
 import time
@@ -75,8 +76,8 @@ class ManagedOllama:
         for key in ('OLLAMA_API_KEY', 'OLLAMA_ORIGINS', HOST_ENV): env.pop(key, None)
         self.log = (self.directory / 'ollama_runtime.log').open('ab')
         try:
-            self.process = subprocess.Popen([sys.executable, str(Path(__file__).resolve()),
-                '--serve', executable()], env=env, stdin=subprocess.PIPE, stdout=self.log,
+            self.process = subprocess.Popen(python_command(Path(__file__).resolve(),
+                ['--serve', executable()]), env=env, stdin=subprocess.PIPE, stdout=self.log,
                 stderr=subprocess.STDOUT, start_new_session=os.name != 'nt',
                 creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
             opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
