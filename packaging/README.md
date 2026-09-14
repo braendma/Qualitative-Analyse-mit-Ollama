@@ -31,8 +31,41 @@ oder geänderte Pins erfordern eine bewusst geprüfte neue Buildgrundlage.
 
 ## 1. Umgebung und vollständige Regression
 
+Der Windows-Paketworkflow verwendet **CPython 3.12.14, Astral
+python-build-standalone, Build 20260901, x86_64-pc-windows-msvc,
+install_only_stripped**. `actions/setup-python` stellt für diesen Patchstand
+keinen Windows-Download bereit: [Python 3.12.14 ist eine Source-only-Version](https://www.python.org/downloads/release/python-31214/).
+Ein Wechsel zu Python 3.12.10 ist deshalb nicht Bestandteil dieses Builds.
+
+Feste Downloadquelle und SHA-256 stehen im Workflow und stammen aus den
+[offiziellen uv-Downloadmetadaten](https://raw.githubusercontent.com/astral-sh/uv/main/crates/uv-python/download-metadata.json)
+(Eintrag `cpython-3.12.14-windows-x86_64-none`, geprüft am 14.09.2026):
+
+- [Versioniertes Windows-Archiv, PBS 20260901](https://github.com/astral-sh/python-build-standalone/releases/download/20260901/cpython-3.12.14%2B20260901-x86_64-pc-windows-msvc-install_only_stripped.tar.gz)
+- SHA-256: `7c45c9622400d578709a9b2cddbe8124cc21d382409d9f13406d706d28e31b14`
+
+Die CI lädt dieses Archiv in einen neuen Ordner unter `RUNNER_TEMP`, prüft den
+festen Hash **vor dem Entpacken** und prüft anschließend Version, Windows-x64
+und `python/LICENSE.txt`. Sie startet ausdrücklich dessen `python/python.exe`;
+kein Installer, kein unversioniertes uv und kein automatisch gewählter
+Systeminterpreter werden verwendet. Für den gleichen lokalen Build das Archiv
+ebenfalls erst gegen diesen Hash prüfen, in einen neuen temporären Ordner
+entpacken und `$buildPython` auf dessen vollständigen `python/python.exe`-Pfad
+setzen. Eine schon vorhandene, bewusst geprüfte 3.12.14-Installation kann mit
+einem eigenen dokumentierten Buildnachweis verwendet werden.
+
+Die bisherigen lokalen Test- und EXE-Nachweise wurden mit der verfügbaren
+Codex-Python-Runtime **3.12.14** erstellt. Der CI-Build verwendet den hier
+ausdrücklich gepinnten Astral-Build. Gleiche Python-Versionsnummer bedeutet keine
+Bytegleichheit der Interpreter oder EXE-Dateien. Beide Builds benötigen ihre
+eigenen tatsächlichen Manifest-/EXE-Hashes und bestandenen Tests; die bisherigen
+lokalen Nachweise werden nicht nachträglich dem CI-Interpreter zugeschrieben.
+
 ```powershell
-py -3.12 -m venv .venv
+# $buildPython ist der vollständige Pfad des zuvor geprüften Pythoninterpreters.
+& $buildPython -c "import sys, struct; assert sys.version_info[:3] == (3, 12, 14), sys.version; assert sys.platform == 'win32' and struct.calcsize('P') == 8"
+if ($LASTEXITCODE -ne 0) { throw 'Python 3.12.14 Windows x64 erforderlich.' }
+& $buildPython -m venv .venv
 if ($LASTEXITCODE -ne 0) { throw 'Python-Umgebung konnte nicht angelegt werden.' }
 & ./.venv/Scripts/python.exe -c "import sys; assert sys.version_info[:3] == (3, 12, 14), sys.version"
 if ($LASTEXITCODE -ne 0) { throw 'Python 3.12.14 erforderlich.' }
