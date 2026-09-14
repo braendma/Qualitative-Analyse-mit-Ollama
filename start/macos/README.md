@@ -2,7 +2,7 @@
 
 Dieses Unterverzeichnis enthält die Mac-Startdateien. Der Programmcode, die Beispiele und das Handbuch liegen gemeinsam im übergeordneten Programmordner. Bitte **das gesamte ZIP entpacken** und die Ordner zusammenlassen.
 
-**Releasekandidat 0.5.0-beta.1:** Eine native Mac-Distribution ist pausiert. Der hier beschriebene Source-Weg mit eigener Python-Umgebung bleibt erhalten; er ist keine Abnahme eines eigenständigen Mac-Pakets. Die Grenzen der Prozessbeendigung stehen unten.
+**Version 0.5.0-beta.1:** Eine native Mac-Distribution ist pausiert. Der hier beschriebene Source-Weg mit eigener Python-Umgebung bleibt erhalten; er ist keine Abnahme eines eigenständigen Mac-Pakets. Die Grenzen der Prozessbeendigung stehen unten.
 
 1. [Python 3.10 oder neuer](https://www.python.org/downloads/macos/) installieren. Empfohlen ist Python 3.12 oder 3.13. Für lokale Analysen zusätzlich [Ollama für macOS](https://docs.ollama.com/macos) installieren und öffnen. Ollama benötigt macOS 14 oder neuer; Apple Silicon unterstützt GPU-Beschleunigung, Intel-Macs verwenden die CPU.
 2. **Einrichtung.command** doppelklicken. Sie legt im Programmordner `.venv-macos` an und installiert die Python-Pakete aus dem Internet. Es wird kein Modell heruntergeladen oder gestartet. Die Umgebung ist von der Windows-Umgebung getrennt.
@@ -17,10 +17,11 @@ Neue technische Appdaten liegen unter `~/Library/Application Support/Qualitative
 
 ## Grenzen dieser Ausgabe
 
-- Gemeinsamer Source-Code des Releasekandidaten **0.5.0-beta.1**, noch keine neue veröffentlichte Mac-Distribution. Die gemeinsame Analyseimplementierung ersetzt keine Prüfung der betriebssystemspezifischen Funktionen.
+- Gemeinsamer Source-Code der Version **0.5.0-beta.1**, noch keine neue veröffentlichte Mac-Distribution. Die gemeinsame Analyseimplementierung ersetzt keine Prüfung der betriebssystemspezifischen Funktionen.
 - Auf dem Mac **eine gleichzeitige Modellanfrage** verwenden. Die automatische Speicherprüfung für mehrere Anfragen benötigt derzeit NVIDIA und kann Apple Unified Memory nicht zuverlässig beurteilen.
 - API- und Telegram-Schlüssel sind unter macOS nur für die aktuelle Anwendungssitzung verfügbar. Die dauerhafte verschlüsselte Ablage verwendet unter Windows DPAPI; eine macOS-Schlüsselbundanbindung ist noch nicht implementiert.
 - Der GitHub-Workflow prüft Einrichtung, Programmtests und den Start des lokalen Webservers auf macOS. Ein vollständiger Ollama-Analyselauf auf einem physischen Mac und der Finder-Doppelklick sind noch nicht geprüft. Den aktuellen Prüflauf findest du unter [GitHub Actions](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/actions/workflows/macos.yml).
+- Im [Mac-Quelltest auf `92b8971`](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/actions/runs/34895099770/job/104147000925) bestanden die Startprüfungen. Zwei Prozessprüfungen schlugen fehl: die Abschlussbestätigung nach Pause/Wiederaufnahme und nach unerwartetem Ende des steuernden Prozesses. Damit ist auch der aktuelle Source-Stand auf macOS nicht freigegeben. Diese Fehler werden nicht durch Windows-Ergebnisse oder übersprungene Tests ersetzt.
 - Die vollständige Beendigung verschachtelter Prozessgruppen bei Diagnose-Wiederholungen ist auf macOS noch nicht nativ abgenommen. Eine beendete äußere Prozessgruppe belegt nicht automatisch, dass auch alle untergeordneten Prozessaufsichten bereits aufgeräumt sind. Der erfolgreiche Windows-Nachweis der Prozessbereinigung ist kein Nachweis für diesen macOS-Fall.
 
 Die Bedienung erklärt das [Handbuch mit Bildern und Beispielen](../../docs/HANDBUCH.md). Die Datei `docs/HANDBUCH.html` lässt sich auch direkt im Browser öffnen. Einrichtung und Start benötigen keine Änderungen an YAML-Dateien.

@@ -64,7 +64,10 @@ class SupervisionTests(unittest.TestCase):
             os.kill(owner,signal.SIGTERM)
             receipt=self.wait_json('probe.supervision.json',lambda r:r['status']=='finished')
             self.assertTrue(receipt['cleanup_confirmed']);self.assertTrue(receipt['parent_released'])
-            self.assert_stopped(leaf,tree)
+            # The terminal receipt confirms descendant cleanup. Its writer can
+            # still hold probe.log until it exits, so also wait for that owned
+            # supervisor before TemporaryDirectory removes the fixture files.
+            self.assert_stopped(leaf,tree,receipt['supervisor_pid'])
             self.assertIsNone(outsider.poll())
             controller.wait(timeout=10)
         finally:

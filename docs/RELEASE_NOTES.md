@@ -27,7 +27,7 @@ Python-Laufzeit und neue Prüfungen für wissenschaftliche Auswertungen.
   erneut geprüft; dauerhafte Zugriffssperren bleiben sichtbare Fehler.
 
 **Prüfstand:** [Testbericht](TEST_REPORT.md). Eine neue native Mac-Distribution ist zurückgestellt; vorhandene
-Mac-Source-Startdateien bleiben erhalten. Es wird keine native Mac-Abnahme behauptet.
+Mac-Source-Startdateien bleiben erhalten. Zwei aktuelle Mac-Quelltests zur Prozessbeendigung sind noch fehlgeschlagen; auch dieser Source-Stand ist dort nicht freigegeben. Die Windows-Abnahme erfolgt separat. [Mac-Grenzen](../start/macos/README.md).
 
 **Umstieg:** Laufende Analysen vor einem Update abschließen und das vollständige
 Windows-Paket in einen neuen Programmordner entpacken. Private Projekt- und

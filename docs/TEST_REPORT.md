@@ -1,5 +1,17 @@
 # Abschlussprüfung für 0.5.0-beta.1 · 14. September 2026
 
+Auf `92b8971` bestand die GitHub-Windows-Sourceprüfung 947 Python-Tests in
+631,116 Sekunden, 67 JavaScript-Tests sowie den HTTP-Start der Oberfläche.
+Der separate Paketjob führte ebenfalls 947 Python-Tests aus; dort scheiterte
+die anschließende Entfernung einer Test-Logdatei an einem noch auslaufenden
+Hilfsprozess. Der Test wartet nun auch auf dessen vollständiges Ende, zusätzlich
+zur bestätigten Bereinigung seiner Nachkommen. Die fünf betroffenen lokalen
+Prozesstests bestanden danach in 2,202 Sekunden. Die erneute Paketabnahme bleibt
+unter [GitHub Actions](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/actions/workflows/windows-package.yml)
+am jeweiligen Commit prüfbar; ein erfolgreicher Source-Test allein ist keine
+Paketfreigabe. Die zwei aktuellen [Mac-Prozessfehler](../start/macos/README.md)
+sind ausdrücklich davon getrennt und noch offen.
+
 Nachtrag zum Oberflächenstart: 16 lokale App-/Instanztests bestanden nach dem
 Entfernen einer unnötigen DNS-Namensauflösung beim Binden an `127.0.0.1`.
 Ein gezielter Test verbietet `socket.getfqdn` und prüft den tatsächlich

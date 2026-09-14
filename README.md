@@ -35,7 +35,7 @@ Mit diesem Programm kannst du bereits codierte Interviewstellen auswerten und me
 
 Die Auswertung läuft standardmäßig mit lokalem Ollama. Für freigegebene Inhalte sind optional Ollama Cloud, OpenAI, Anthropic und Hugging Face verfügbar; die DSGVO-Sperre ist pro Projekt zunächst aktiviert. Modellvorschläge und Berichte müssen fachlich geprüft werden; sie ersetzen keine eigenständige qualitative Analyse.
 
-**Bisher veröffentlichte Vorabversion: [0.4.0-beta.1](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/tag/v0.4.0-beta.1).** Der Source-Code bleibt verfügbar; die native macOS-Distribution ist pausiert. OpenAI, Anthropic und Hugging Face sind mit simulierten Antworten geprüft; Live-Tests dieser Anbieter stehen aus.
+**Downloads und veröffentlichte Vorabversionen:** [GitHub Releases](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases). Der Source-Code bleibt verfügbar; die native macOS-Distribution ist pausiert. OpenAI, Anthropic und Hugging Face sind mit simulierten Antworten geprüft; Live-Tests dieser Anbieter stehen aus.
 
 Das gefaltete **b** von braendma ist jetzt als lokales Programmsignet eingebunden. Über **Handbuch** neben **Telegram-Updates** öffnet sich die vollständige Anleitung mit Bildern und Beispielen, auch ohne Internet.
 
@@ -70,7 +70,7 @@ Seit Beta 3: lesbarere Clusterdiagramme und Konfusionsmatrix, anklickbare Person
 2. Python **3.10 oder neuer** installieren. Unter Windows einmal `Einrichtung.cmd` öffnen; dabei werden Python-Pakete aus dem Internet installiert, keine Modelle ausgeführt.
 3. `Start_Oberflaeche.cmd` öffnen. Alternativ aus einer passenden Python-Umgebung `python -X utf8 src/local_app.py` verwenden.
 
-**macOS:** Eine neue native Mac-Distribution ist pausiert. Die bisherigen Source-Starter bleiben unter `start/macos/` verfügbar. [Mac-Source-Anleitung und Grenzen](start/macos/README.md).
+**macOS:** Eine neue native Mac-Distribution ist pausiert. Die bisherigen Source-Starter bleiben unter `start/macos/` verfügbar. Im aktuellen Mac-Quelltest sind das bestätigte Beenden nach Pause und nach unerwartetem Ende des steuernden Prozesses noch nicht zuverlässig bestanden; dieser Stand ist dort nicht freigegeben. [Mac-Source-Anleitung und Grenzen](start/macos/README.md).
 
 Für lokale Modellanalysen zusätzlich Ollama und ein passendes Modell bereitstellen. Beides ist nicht im Windows-Paket enthalten. Ohne lokales Ollama bleiben Vorbereitung, reine Diagnosen ohne Modellbedarf und ausdrücklich freigegebene Cloud-Anbieter nutzbar.
 
