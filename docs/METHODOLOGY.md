@@ -1,5 +1,11 @@
 # Methodology
 
+Entwicklungshinweis: Die gemeinsame Grundlage für neue wissenschaftliche Diagnosen
+unterscheidet direkte Segmentbelege, Eingabezuordnungen, Personenreferenzen und
+Synthese-Quellengruppen. Vollständige Register zählen nicht automatisch als
+ausgewählte Evidenz. Datenvertrag und Grenzen stehen in [DIAGNOSTICS.md](DIAGNOSTICS.md).
+Die vollständigen Diagnosemodule befinden sich noch in Integration.
+
 ## Methodische Einordnung, Qualitätssicherung und verwandte Arbeiten
 
 > **Stand der Dokumentation:** August 2026.  

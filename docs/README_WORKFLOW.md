@@ -2,6 +2,11 @@ Mehrfachcodierung, Prüfliste und mehrstufige Gesamtsynthese: [EXTENSIONS.md](EX
 
 # Erweiterung: Coding-Validierung
 
+Die in Entwicklung befindlichen wissenschaftlichen Diagnosen verwenden dieselben
+deklarativen Modul-Outputs und Run-Manifeste. Die bereits getestete gemeinsame
+Quellenprojektion ist in [DIAGNOSTICS.md](DIAGNOSTICS.md) beschrieben; sie fügt keinen
+zweiten Workflow-Runner hinzu.
+
 Der YAML-gesteuerte Workflow enthält drei zusätzliche Module. Der generische
 Runner `00_WORKFLOW_RUNNER.py` wurde dafür nicht verändert; Aktivierung,
 Abhängigkeiten, Argumente, Outputs und Berichtseinbindung stehen ausschließlich

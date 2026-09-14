@@ -92,6 +92,16 @@ class FullPipelineTests(unittest.TestCase):
             self.assertTrue((run/'gesamtbericht.html').is_file())
             self.assertIn('gesamtbericht.html',manifest['output_hashes'])
             self.assertTrue((run/'review_queue.html').is_file())
+            # Diagnostic adapters must accept the real saved module schemas,
+            # not merely handcrafted fixtures or complete input inventories.
+            sys.path.insert(0, str(ROOT/'src'))
+            from diagnostic_sources import load_sources, make_snapshot, STAGES
+            from coding_validation_common import load_segments
+            sources = load_sources(run, cfg)
+            self.assertEqual(set(sources), set(STAGES))
+            self.assertTrue(all(s['status']=='available' for s in sources.values()), sources)
+            snapshot = make_snapshot(load_segments(temp/'input.csv', cfg['columns']), sources)
+            self.assertTrue(all(r['valid'] for s in snapshot['stages'].values() for r in s['records']))
             if multi:
                 agreement=json.loads((run/'coding_agreement_v1.json').read_text(encoding='utf-8'))
                 self.assertEqual(agreement['n_units'],3)
