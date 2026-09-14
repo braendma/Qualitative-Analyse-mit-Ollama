@@ -1,0 +1,45 @@
+Qualitative Analyse – Windows-Paket
+
+1. Das gesamte ZIP in einen neuen Ordner entpacken.
+2. QualitativeAnalyse.exe doppelklicken. Das Startfenster geöffnet lassen.
+3. Im Browser ein Projekt anlegen oder künstliche Beispieldaten laden.
+4. „Handbuch“ neben „Telegram-Updates“ erklärt Import, Einstellungen und Ergebnisse.
+5. Zum Beenden „Programm beenden“ in der Oberfläche verwenden. Bei einer laufenden
+   Analyse eine Pause nach dem aktuellen Modul oder den bestätigten Abbruch wählen.
+
+Python ist enthalten. Eigene Python-Installation, pip, Kommandozeile und
+Administratorrechte sind für dieses entpackte Paket nicht erforderlich.
+EXE und _internal-Ordner zusammenlassen. Ollama und Modelle werden nicht gebündelt
+oder automatisch installiert. Ohne Ollama sind Vorbereitung, modellfreie
+Diagnosen und nach Datenfreigabe konfigurierte Cloud-Anbieter weiter nutzbar.
+
+Die Anwendung ist nicht digital signiert. Windows kann deshalb eine Warnung
+anzeigen. Quelle und SHA256-Prüfsumme mit dem GitHub-Release vergleichen;
+bei unbekannter Herkunft oder abweichender Prüfsumme nicht starten. Es wird
+keine Abschaltung von Windows-Sicherheitsfunktionen benötigt oder empfohlen.
+
+Technische Projektablage: %LOCALAPPDATA%\QualitativeAnalyse (vorhandene ältere
+Ablagen werden erkannt). Ergebnisordner vor der Analyse auswählen; bei Auswahl
+über den lokalen Dateidialog wird der Ordner der Eingabedatei vorgeschlagen.
+Jeder neue Lauf erhält einen eigenen Ordner. Originaldateien bleiben unverändert.
+Technische Start-/Ende-/Fehlerereignisse stehen unter logs\app.log innerhalb
+der Projektablage, begrenzt auf vier Dateien zu je etwa 1 MiB. Schlüssel,
+Interviewtexte und vollständige Fehlermeldungen werden dort nicht gespeichert.
+Ausführliche wissenschaftliche Laufprotokolle bleiben im jeweiligen Ergebnisordner.
+
+Updates in einen neuen Programmordner entpacken, nachdem laufende Analysen beendet
+sind. Forschungs- und Projektordner behalten. Es gibt keinen automatischen Updater.
+Alte Ergebnisse bleiben lesbar; Fortsetzen verlangt denselben geprüften
+Programmstand, dieselben Eingaben und dieselbe Konfiguration.
+
+Version und Buildnachweis: _internal\VERSION sowie
+_internal\packaging\build-manifest.json. Das Manifest dient der Nachvollziehbarkeit
+und ist keine digitale Signatur. Offline-Handbuch: _internal\docs\HANDBUCH.html.
+Projektlizenz: _internal\LICENSE. Fremdbibliotheken behalten ihre jeweiligen
+Lizenzen in den mitgelieferten *.dist-info-Ordnern; Python unter
+_internal\third_party_licenses\python\LICENSE.txt.
+
+Download und Quellcode:
+https://github.com/braendma/Qualitative-Analyse-mit-Ollama
+
+Die mitgelieferten Beispieldaten sind vollständig erfunden.

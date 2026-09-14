@@ -4,6 +4,7 @@ import hashlib
 import importlib.metadata
 import json
 from pathlib import Path
+import shutil
 import sys
 
 from PyInstaller.utils.hooks import copy_metadata
@@ -69,7 +70,12 @@ datas = [(str(path), str(Path(relative).parent)) for relative, path in resources
 datas += [(str(PACKAGING / name), 'packaging') for name in BUILD_FILES]
 datas.append((str(manifest_path), 'packaging'))
 for distribution in METADATA_DISTRIBUTIONS:
-    datas += copy_metadata(distribution)
+    datas += copy_metadata(distribution, recursive=True)
+# Preserve copyright/license files supplied in dependency metadata, including
+# the PyInstaller bootloader exception and Python's own license.
+datas += copy_metadata('pyinstaller')
+datas += copy_metadata('setuptools')
+datas.append((str(Path(sys.base_prefix) / 'LICENSE.txt'), 'third_party_licenses/python'))
 
 a = Analysis(
     [str(PACKAGING / 'bootstrap.py')],
@@ -95,3 +101,5 @@ exe = EXE(
     contents_directory='_internal',
 )
 coll = COLLECT(exe, a.binaries, a.datas, strip=False, upx=False, name='QualitativeAnalyse')
+shutil.copyfile(REPOSITORY / 'docs' / 'WINDOWS_STANDALONE.txt',
+                Path(DISTPATH) / 'QualitativeAnalyse' / 'README.txt')

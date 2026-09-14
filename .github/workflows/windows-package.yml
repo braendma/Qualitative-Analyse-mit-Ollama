@@ -1,0 +1,83 @@
+name: Windows package build and frozen checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-package-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows-package:
+    runs-on: windows-2025
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      MPLBACKEND: Agg
+      PYTHONUTF8: '1'
+      PYTHONIOENCODING: utf-8
+      PYTHONPATH: 'src;tests'
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12.14'
+          architecture: x64
+      - name: Install the pinned build environment
+        run: |
+          python -m venv .venv
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          ./.venv/Scripts/python.exe -m pip install -r packaging/requirements-build.txt
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          ./.venv/Scripts/python.exe -m pip check
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --version
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Complete Python regression suite (synthetic data, mocked models)
+        run: ./.venv/Scripts/python.exe -u -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Complete JavaScript regression suite
+        run: |
+          $testFiles = @(Get-ChildItem -LiteralPath tests -Filter 'test_*.cjs' | Sort-Object Name | ForEach-Object FullName)
+          if ($testFiles.Count -eq 0) { throw 'No JavaScript tests found.' }
+          node --test @testFiles
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Bind the build to the clean checked-out commit
+        run: |
+          $sourceCommit = git rev-parse HEAD
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          ./.venv/Scripts/python.exe packaging/build_manifest.py --repository . --source-commit $sourceCommit.Trim() --output packaging/build-manifest.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Build the native Windows application
+        run: ./.venv/Scripts/python.exe -m PyInstaller --clean --noconfirm --distpath dist --workpath build packaging/windows.spec
+      - name: Create and extract the exact candidate ZIP
+        run: |
+          if (-not (Test-Path -LiteralPath dist/QualitativeAnalyse/QualitativeAnalyse.exe -PathType Leaf)) { throw 'Built executable missing.' }
+          Compress-Archive -LiteralPath dist/QualitativeAnalyse -DestinationPath dist/QualitativeAnalyse-windows-x64.zip
+          Expand-Archive -LiteralPath dist/QualitativeAnalyse-windows-x64.zip -DestinationPath "$env:RUNNER_TEMP/qualitative-package-check"
+      - name: Verify package identity and actual source loaders
+        run: |
+          & "$env:RUNNER_TEMP/qualitative-package-check/QualitativeAnalyse/QualitativeAnalyse.exe" --package-check
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Exercise the real packaged UI without a model
+        run: ./.venv/Scripts/python.exe tests/smoke_frozen_ui.py --package "$env:RUNNER_TEMP/qualitative-package-check/QualitativeAnalyse"
+      - name: Exercise the real packaged workflow without a model
+        run: ./.venv/Scripts/python.exe tests/smoke_frozen_workflow.py --package "$env:RUNNER_TEMP/qualitative-package-check/QualitativeAnalyse"
+      - name: Upload only the successfully checked application ZIP
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: QualitativeAnalyse-windows-x64-${{ github.sha }}
+          path: dist/QualitativeAnalyse-windows-x64.zip
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14

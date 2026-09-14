@@ -1033,13 +1033,14 @@ class Handler(BaseHTTPRequestHandler):
                 '/DIAGNOSTICS.md':'../docs/DIAGNOSTICS.md','/CONFIGURATION.md':'../docs/CONFIGURATION.md',
                 '/METHODOLOGY.md':'../docs/METHODOLOGY.md','/ROBUSTNESS.md':'../docs/ROBUSTNESS.md',
                 '/KI_ANBIETER.md':'../docs/KI_ANBIETER.md','/EXTENSIONS.md':'../docs/EXTENSIONS.md','/RELEASE_NOTES.md':'../docs/RELEASE_NOTES.md'}
-        for screenshot in (ROOT.parent/'docs/screenshots').glob('*.jpg'):
-            assets['/screenshots/'+screenshot.name]='../docs/screenshots/'+screenshot.name
+        for screenshot in (ROOT.parent/'docs/screenshots').glob('*'):
+            if screenshot.is_file() and screenshot.suffix.lower() in {'.jpg','.png'}:
+                assets['/screenshots/'+screenshot.name]='../docs/screenshots/'+screenshot.name
         if not self.allowed(auth=parsed.path not in assets): return self.json({'error':'Zugriff abgelehnt. Oberfläche über die Startdatei öffnen.'},403)
         try:
             if parsed.path in assets:
                 p=ROOT/assets[parsed.path]
-                return self.send_bytes(p.read_bytes(),{'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.jpg':'image/jpeg','.svg':'image/svg+xml','.md':'text/plain; charset=utf-8'}[p.suffix])
+                return self.send_bytes(p.read_bytes(),{'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.jpg':'image/jpeg','.png':'image/png','.svg':'image/svg+xml','.md':'text/plain; charset=utf-8'}[p.suffix.lower()])
             query=urllib.parse.parse_qs(parsed.query)
             get=lambda key:query.get(key,[''])[0]
             app=self.server.app
@@ -1178,7 +1179,10 @@ def main():
     try:instance.__enter__()
     except RuntimeError:
         parser.error('Diese Projektablage ist bereits geöffnet. Vorhandene Oberfläche verwenden oder zuerst beenden.')
+    from app_logging import AppLog
+    app_log=AppLog(data_dir,ROOT.parent/'VERSION')
     try:
+        app_log.event('start')
         app=App(data_dir,args.config);server=make_server(app,args.port)
         try:
             url=f'http://127.0.0.1:{server.server_port}/#'+server.token
@@ -1194,7 +1198,13 @@ def main():
                         print('Pause angefordert. Die Oberfläche bleibt bis zum bestätigten Prozessende verfügbar. Für sofortigen Abbruch die bestätigte Aktion in der Oberfläche verwenden.',flush=True)
                     else:app.shutdown('idle')
         finally:server.server_close()
-    finally:instance.__exit__(None,None,None)
+        app_log.event('closed')
+    except BaseException as exc:
+        app_log.event('unhandled_error',exc)
+        raise
+    finally:
+        app_log.close()
+        instance.__exit__(None,None,None)
 
 
 if __name__=='__main__': main()
