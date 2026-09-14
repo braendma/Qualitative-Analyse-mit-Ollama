@@ -92,3 +92,21 @@ projizierten Texte; nur die klar gekennzeichnete Vorschau wird begrenzt. Gemeins
 Referenzen erlauben keine automatische Aussagezuordnung. Negationen und Synonyme
 sind ausdrücklich dokumentierte Grenzen der sprachlichen Hinweise. Technische
 Tests weisen keine inhaltliche Validität des Audits nach.
+
+## Codebook-Diagnostik: geschützte Dateien und ungewöhnliche Eingaben
+
+Der gemeinsame Diagnoselader prüft deklarierte Ergebnisdateien und bindet bei der
+Codebook-Diagnose auch das Kategoriensystem über seinen gespeicherten SHA-256-Wert
+an den Lauf. Veränderte Grundlagen werden abgelehnt. Fehlende, beschädigte,
+übermäßig verschachtelte oder unvollständige JSON-Quellen werden als ungültig
+ausgewiesen. Ein passender Dateihash ersetzt keine Prüfung der Datenstruktur.
+
+Tests lesen synthetische CSV-Dateien mit über einer Million Zeichen pro Segment
+und Definition, UTF-8-BOM, Semikolons, Zeilenumbrüchen, Tabs, Emoji und HTML-Text.
+Der Inhalt bleibt vollständig; die bestehende Leerraumnormalisierung des
+Codebuchimports und ausdrücklich gekürzte Berichtsvorschauen bleiben unterscheidbar.
+Die Originaldateien sind anschließend bytegleich. Weitere Tests prüfen alternative
+Ausgabedateinamen, Pfade außerhalb des Laufordners, fremde Segment-IDs, veränderte
+Prüfsummen, fehlende Herkunftsnachweise und Wiederaufnahme ohne Überschreiben des
+Codebuchs. Ein vollständiger Testworkflow prüft die CLI zusätzlich an tatsächlich
+erzeugten Single- und Multi-Label-Ergebnissen nach Fehler und Wiederaufnahme.

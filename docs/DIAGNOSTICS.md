@@ -223,16 +223,51 @@ aller Kandidaten. Anhand von Quellartefakt und Eintragsschlüssel sind die volls
 Texte manuell nachzulesen. Die aktuelle JSON-Ausgabe enthält denselben begrenzten
 Vorschaubestand, keine heimliche Vollkopie der Originaltexte.
 
-## Codebook-Diagnostik – derzeit geprüfter Kern, noch keine UI-Funktion
+## Codebook-Diagnostik – Kern und CLI, UI folgt
 
 `codebook_diagnostics_core.analyze_codebook(segments, codebook, verification=...,
 blind=..., agreement=..., review=..., settings=...)` verarbeitet vorhandene
-Python-Datenobjekte; `render_codebook_diagnostics` erzeugt Markdown. Ein geschützter
-Dateilader, CLI und UI-Integration folgen als nächste technische Einheit. Der Kern
-führt keine Modellaufrufe durch und verändert weder Originaldaten noch Codebuch.
-Die Dateiprüfsummen muss künftig der gemeinsame Diagnoselader prüfen; der Kern
-validiert bereits Datenstrukturen, IDs, ursprüngliche Codezuordnungen und die
+Python-Datenobjekte; `render_codebook_diagnostics` erzeugt Markdown. Die CLI
+`src/codebook_diagnostics.py` liest die Dateien eines gespeicherten Laufs. Die
+UI-Integration folgt. Die Diagnose führt keine Modellaufrufe durch und verändert
+weder Originaldaten noch Codebuch. Der gemeinsame Diagnoselader prüft die
+Dateiprüfsummen; der Kern validiert Datenstrukturen, IDs, ursprüngliche Codezuordnungen und die
 Konsistenz abhängiger Ergebnisse. Eingabe- und Codebuchfingerprints stehen im Ergebnis.
+
+### Gespeicherten Lauf über die CLI prüfen
+
+```sh
+python src/codebook_diagnostics.py --config /pfad/zum/lauf/config_snapshot.yaml --input-csv /pfad/zum/lauf/input.csv --run-dir /pfad/zum/lauf --out-json /pfad/zum/lauf/codebook_diagnostics.json --out-md /pfad/zum/lauf/codebook_diagnostics.md
+```
+
+Die Dateinamen sind Beispiele. Verwenden Sie die tatsächliche gespeicherte
+Konfiguration und Eingabe. Das Kategoriensystem wird aus
+`paths.category_system_csv` dieser Konfiguration aufgelöst. Die SHA-256-Werte von
+Konfiguration, Eingabe und Kategoriensystem müssen den Herkunftsnachweisen in
+`workflow_manifest.json` entsprechen. Fehlt ein Nachweis oder wurde eine dieser
+Dateien verändert, wird die Diagnose abgelehnt. Originaldateien nicht nachträglich
+ändern, um eine Diagnose passend zu machen; bei geänderten Grundlagen einen neuen
+Lauf erstellen.
+
+Berücksichtigt werden ausschließlich deklarierte, aktivierte und abgeschlossene
+Ergebnisse von `code_verification`, `blind_coding`, `coding_agreement` und
+`review_queue`, deren Prüfsummen stimmen. Alternative Ausgabedateinamen werden aus
+den Modulargumenten gelesen, bei der Prüfliste aus `--queue-json`. Dateien außerhalb
+des Laufordners sind nicht zulässig. Beschädigte oder fehlende gewählte Quellen
+erzeugen eine ausdrücklich unvollständige Diagnose; sie zählen nicht als null
+Abweichungen. Agreement und Prüfliste sind ohne ihre verifizierbaren Grundquellen
+nicht unabhängig auswertbar. Deaktivierte Quellen werden nicht gelesen.
+
+Markdown und JSON nennen die verwendeten Artefakte und ihren Status. Die Diagnose
+speichert keine zusätzliche Vollkopie der Quellartefakte. Vorhandene Ausgaben werden
+bei manuellem Aufruf nicht überschrieben; wählen Sie neue Namen. Nur der bestehende
+Runner darf seine eigene laufende Diagnose wiederholen. Eingaben, Codebuch,
+Konfiguration, Manifest und bereits registrierte Ergebnisse bleiben dabei geschützt.
+
+Sehr lange Segment- und Definitionstexte werden für die Diagnose nicht am
+Modellkontext abgeschnitten. Der bestehende Codebuchimport vereinheitlicht Leerraum;
+Segmenttexte bleiben vollständig erhalten. Begrenzungen der Darstellung und der
+Paaranalyse sind unten ausgewiesen.
 
 ### Nenner, Fehler und Grenzen
 

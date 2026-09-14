@@ -146,6 +146,15 @@ class FullPipelineTests(unittest.TestCase):
             coverage = json.loads((temp/'coverage.json').read_text(encoding='utf-8'))
             self.assertEqual(coverage['material']['material_units'], 3 if multi else 4)
             self.assertEqual(coverage['stages']['clusterer']['scopes']['input_association']['distribution']['unit_coverage'], 1)
+            from codebook_diagnostics import main as codebook_main
+            codebook_main(['--config', str(config), '--input-csv', str(temp/'input.csv'),
+                           '--run-dir', str(run), '--out-json', str(temp/'codebook_diagnostics.json'),
+                           '--out-md', str(temp/'codebook_diagnostics.md')])
+            codebook_diagnosis=json.loads((temp/'codebook_diagnostics.json').read_text(encoding='utf-8'))
+            self.assertEqual(codebook_diagnosis['processing_status'],'completed')
+            self.assertTrue(all(s['status']=='available' for s in codebook_diagnosis['source_artifacts'].values()))
+            self.assertEqual(codebook_diagnosis['codebook_source']['sha256'],manifest['provenance']['codebook_sha256'])
+            self.assertEqual(sum(c['human_rows'] for c in codebook_diagnosis['categories']),4)
             if multi:
                 agreement=json.loads((run/'coding_agreement_v1.json').read_text(encoding='utf-8'))
                 self.assertEqual(agreement['n_units'],3)

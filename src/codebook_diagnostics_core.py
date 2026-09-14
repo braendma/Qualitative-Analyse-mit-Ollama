@@ -274,6 +274,18 @@ def render_codebook_diagnostics(result):
     lines = ['# Codebook-Diagnostik', '', result['methodological_note'], '']
     if result['processing_status'] != 'completed':
         lines += ['Vorläufige Diagnose: Technische Fehler oder unvollständige Quellen zuerst beheben.', '']
+    if result.get('codebook_source'):
+        lines += ['Kategoriensystem: ' + markdown_escape(result['codebook_source']['file']), '']
+    if result.get('source_artifacts'):
+        lines += ['## Verwendbare Quellen', '', '| Modul | Ergebnisdatei | Status / Hinweis |', '|---|---|---|']
+        for mid, source in result['source_artifacts'].items():
+            state = {'available': 'verifiziert', 'unavailable': 'nicht verfügbar', 'invalid': 'ungültig'}.get(source['status'], source['status'])
+            reason = source.get('reason', '')
+            if reason == 'disabled':
+                reason = 'nicht ausgewählt'
+            lines.append('| ' + markdown_escape(mid) + ' | ' + markdown_escape(source.get('artifact', '–')) +
+                         ' | ' + markdown_escape(state + (': ' + reason if reason else '')) + ' |')
+        lines += ['']
     lines += [f"{result['n_rows']} Codierzeilen; {result['n_units']} Analyseeinheiten ({result['unit_basis']}).", '',
               '| Code | Menschliche Einheiten | Modellzuordnungen | Verifikation unklar (Zeilen) | Blind-Enthaltungen (Einheiten) | Keine Blindzuordnung (Einheiten) | Technisch nicht vergleichbar (Einheiten) |', '|---|---:|---:|---:|---:|---:|---:|']
     def display(value):

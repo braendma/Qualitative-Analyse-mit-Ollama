@@ -162,7 +162,7 @@ def project_stage(module_id, payload):
 def declared_json(module):
     """Prefer explicit CLI output over auxiliary JSON (e.g. text mappings)."""
     args = module.get('args', [])
-    for flag in ('--out-json', '-x'):
+    for flag in ('--out-json', '-x', '--queue-json'):
         if flag in args:
             index = args.index(flag)
             if index + 1 >= len(args):
@@ -175,6 +175,33 @@ def declared_json(module):
     if len(candidates) != 1:
         raise ValueError('JSON-Ausgabe ist nicht eindeutig deklariert.')
     return candidates[0]
+
+
+def load_declared_artifact(directory, module, manifest):
+    """One provenance guard for all diagnostics; decoding is not schema validation."""
+    item = {'status': 'unavailable'}
+    mid = module['id']
+    if not module.get('enabled', True):
+        item['reason'] = 'disabled'
+        return item
+    if mid not in manifest.get('completed_steps', []):
+        item['reason'] = manifest.get('module_status', {}).get(mid, 'not_verified')
+        return item
+    try:
+        name = declared_json(module)
+        path = local_file(Path(directory).resolve(), name)
+        digest = file_hash(path)
+        if digest != manifest.get('output_hashes', {}).get(name):
+            raise ValueError('Output-Prüfsumme fehlt oder stimmt nicht überein.')
+        payload = json.loads(path.read_text(encoding='utf-8'))
+        if not isinstance(payload, dict):
+            raise ValueError('Diagnosequelle muss ein JSON-Objekt sein.')
+        if payload.get('processing_status', 'completed') != 'completed':
+            raise ValueError('Unvollständige Diagnosequelle wird nicht als Ergebnis gewertet.')
+        item.update(status='available', artifact=name, sha256=digest, payload=payload)
+    except (OSError, ValueError, TypeError, KeyError, RecursionError) as exc:
+        item.update(status='invalid', reason=str(exc))
+    return item
 
 
 def load_sources(directory, config):
@@ -190,23 +217,12 @@ def load_sources(directory, config):
             continue
         if mid in result:
             raise ValueError('Doppelte Modul-ID in Diagnosekonfiguration.')
-        item = result[mid] = {'status': 'unavailable', 'records': [], 'warnings': []}
-        if not module.get('enabled', True):
-            item['reason'] = 'disabled'
-            continue
-        if mid not in manifest.get('completed_steps', []):
-            item['reason'] = manifest.get('module_status', {}).get(mid, 'not_verified')
+        item = result[mid] = {**load_declared_artifact(directory, module, manifest), 'records': [], 'warnings': []}
+        if item['status'] != 'available':
             continue
         try:
-            name = declared_json(module)
-            path = local_file(directory, name)
-            digest = file_hash(path)
-            if digest != manifest.get('output_hashes', {}).get(name):
-                raise ValueError('Output-Prüfsumme fehlt oder stimmt nicht überein.')
-            payload = json.loads(path.read_text(encoding='utf-8'))
-            projected = project_stage(mid, payload)
-            item.update(projected, status='available', artifact=name, sha256=digest)
-        except (OSError, ValueError, TypeError, KeyError) as exc:
+            item.update(project_stage(mid, item.pop('payload')))
+        except (OSError, ValueError, TypeError, KeyError, AttributeError, RecursionError) as exc:
             item.update(status='invalid', reason=str(exc))
     return result
 
@@ -232,10 +248,10 @@ def make_snapshot(segments, sources):
             'note': 'Referenzen und Herkunft werden geprüft, nicht die semantische Richtigkeit. Keine Modellaufrufe.'}
 
 
-def load_snapshot(directory, config_path, input_path):
-    """Bind the diagnostic to the original input and exact saved configuration."""
+def load_input_context(directory, config_path, input_path, *, require_codebook=False):
+    """Bind diagnostics to saved inputs before any source is interpreted."""
     import yaml
-    from coding_validation_common import load_segments
+    from coding_validation_common import resolve_config_path
     directory = Path(directory).resolve()
     manifest = json.loads((directory / 'workflow_manifest.json').read_text(encoding='utf-8'))
     provenance = manifest.get('provenance', {})
@@ -243,6 +259,20 @@ def load_snapshot(directory, config_path, input_path):
         if not provenance.get(key) or file_hash(path) != provenance[key]:
             raise ValueError('Diagnose abgelehnt: Eingabe oder Konfiguration fehlt im Herkunftsnachweis oder wurde verändert.')
     config = yaml.safe_load(Path(config_path).read_text(encoding='utf-8'))
+    if not isinstance(config, dict):
+        raise ValueError('Diagnose abgelehnt: Konfiguration muss eine Zuordnung sein.')
+    codebook_path = None
+    if require_codebook:
+        codebook_path = resolve_config_path(config_path, None, config.get('paths', {}).get('category_system_csv'))
+        if not provenance.get('codebook_sha256') or file_hash(codebook_path) != provenance['codebook_sha256']:
+            raise ValueError('Diagnose abgelehnt: Kategoriesystem fehlt im Herkunftsnachweis oder wurde verändert.')
+    return config, manifest, codebook_path
+
+
+def load_snapshot(directory, config_path, input_path):
+    """Bind the diagnostic to the original input and exact saved configuration."""
+    from coding_validation_common import load_segments
+    config, _, _ = load_input_context(directory, config_path, input_path)
     snapshot = make_snapshot(load_segments(input_path, config['columns']), load_sources(directory, config))
     snapshot['dependency_edges'] = dependency_edges(config)
     return snapshot
