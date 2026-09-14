@@ -116,9 +116,9 @@ caller keeps qualitative texts and these frequency texts in separate fields.
     register = []
     for result in counted['topics']:
         definition = topics[result['topic_id']]
-        register.append({**_summary(result), 'label': definition.get('label', definition['definition'])})
-        if module == 'relation_analysis':
-            register[-1]['definition'] = definition['definition']
+        register.append({**_summary(result), 'label': definition.get('label', definition['definition']),
+                         'definition': definition['definition'],
+                         'inclusion': definition['inclusion'], 'exclusion': definition['exclusion']})
     basis = comparison_basis(module)
     register_by_topic = {}
     contrast = {}

@@ -50,7 +50,30 @@ def _material(material):
         actual_persons.add(unit['person'])
     if set(persons) != actual_persons:
         raise ValueError('Personenverzeichnis passt nicht zu den Materialeinheiten.')
+    # Pure unit counting also accepts a minimal material without a row index.
+    # Whenever an index exists, it must represent every original coding row;
+    # downstream sources must not validate one another against a shortened copy.
+    if 'segment_index' in material:
+        _material_index(material)
     return material
+
+
+def _material_index(material):
+    """Verify row-to-unit/code provenance against the complete original units."""
+    index = material.get('segment_index')
+    expected = {sid: uid for uid, unit in material['units'].items() for sid in unit['segment_ids']}
+    if not isinstance(index, dict) or set(index) != set(expected):
+        raise ValueError('Thematische Analyse benötigt die vollständige Originalzuordnung jeder Codierzeile.')
+    paths = {uid: set() for uid in material['units']}
+    for sid, row in index.items():
+        if (not isinstance(row, dict) or set(row) != {'unit_id', 'code_path'}
+                or row.get('unit_id') != expected[sid]
+                or not isinstance(row.get('code_path'), str) or not row['code_path'].strip()):
+            raise ValueError('Codierzeile, Materialeinheit und exakter Codepfad passen nicht zusammen.')
+        paths[expected[sid]].add(row['code_path'])
+    if any(paths[uid] != set(unit['code_paths']) for uid, unit in material['units'].items()):
+        raise ValueError('Codepfade der Materialeinheiten stimmen nicht mit den einzelnen Codierzeilen überein.')
+    return index
 
 
 def _topics(material, topics):

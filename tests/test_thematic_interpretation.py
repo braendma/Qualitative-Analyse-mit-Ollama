@@ -17,6 +17,35 @@ def response(tid='T'):
 
 
 class ThematicInterpretationTests(unittest.TestCase):
+    def test_equal_labels_keep_full_distinct_definitions_and_rules_in_every_register(self):
+        basis = material(['P1'])
+        topics = [{**topic(tid, ['u0'], definition=definition), 'label': 'Sicherheit',
+                   'inclusion': 'Einschluss ' + tid, 'exclusion': 'Ausschluss ' + tid}
+                  for tid, definition in [('A', 'Sicherheit des Arbeitsplatzes'),
+                                          ('B', 'Sicherheit im fachlichen Handeln')]]
+        counted = count_topics(basis, topics, [])
+        for module in ('clusterer', 'summarizer', 'swot', 'meta_swot', 'person_analysis',
+                       'person_comparison', 'ambiguity_analysis', 'relation_analysis'):
+            with self.subTest(module=module):
+                llm = MockLLM([response('A'), response('B')])
+                interpret_counts(basis, counted, {'A': 'Befund A', 'B': 'Befund B'},
+                                 {'num_ctx': 32000, 'max_tokens': 512, 'partial_checkpoints': False},
+                                 module=module, llm=llm)
+                for call in llm.calls:
+                    register = json.loads(call[1]['content'])['comparison_register']
+                    self.assertEqual([(r['definition'], r['inclusion'], r['exclusion']) for r in register],
+                                     [(t['definition'], t['inclusion'], t['exclusion']) for t in topics])
+
+    def test_long_other_definition_is_never_silently_cut_from_register(self):
+        basis = material(['P1'])
+        topics = [topic('A', ['u0']), topic('Z', ['u0'], definition='Vollständige Definition 🧪 ' * 5000)]
+        llm = MockLLM([])
+        with self.assertRaises(ContextBudgetError):
+            interpret_counts(basis, count_topics(basis, topics, []), {'A': 'Kurz', 'Z': 'Auch kurz'},
+                             {'num_ctx': 32000, 'max_tokens': 512, 'partial_checkpoints': False},
+                             module='swot', llm=llm)
+        self.assertEqual(llm.calls, [])
+
     def test_case_register_contains_every_same_person_topic_and_no_other_case(self):
         basis = material(['P1','P1','P2'])
         topics = [topic('A',['u0','u1']),topic('B',['u0','u1']),topic('C',['u2'])]

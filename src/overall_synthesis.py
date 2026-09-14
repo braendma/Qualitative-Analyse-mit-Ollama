@@ -10,6 +10,7 @@ import logging
 import yaml
 
 from overall_synthesis_core import build_overall_synthesis
+from synthesis_inputs import parse_source, resolve_sources
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -23,16 +24,10 @@ logger = logging.getLogger("overall_synthesis")
 
 
 def _parse_source_arg(value: str) -> tuple[str, str]:
-    if "=" not in value:
-        raise argparse.ArgumentTypeError(
-            "--source-json erwartet LABEL=DATEI, z. B. Meta-SWOT=meta_swot_v1.json"
-        )
-    label, path = value.split("=", 1)
-    label = label.strip()
-    path = path.strip()
-    if not label or not path:
-        raise argparse.ArgumentTypeError("LABEL und DATEI dürfen nicht leer sein.")
-    return label, path
+    try:
+        return parse_source(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(str(exc)) from None
 
 
 from progress_events import track_module
@@ -40,7 +35,7 @@ from progress_events import track_module
 @track_module
 def main(argv=None):
     parser = argparse.ArgumentParser(
-        description="Gesamtsynthese aus frei deklarierbaren analytischen JSON-Quellen"
+        description="Gesamtsynthese aus frei deklarierbaren analytischen JSON-Quellen", allow_abbrev=False
     )
     parser.add_argument("--config", "-c", default=str(DEFAULT_CONFIG))
     parser.add_argument(
@@ -60,6 +55,9 @@ def main(argv=None):
     parser.add_argument("--out-json", "-x", default="overall_synthesis_v1.json")
     args = parser.parse_args(argv)
 
+    sources = resolve_sources(args.source_json, meta_swot_json=args.meta_swot_json,
+                              comparison_json=args.comparison_json, contrast_json=args.contrast_json)
+
     with open(args.config, "r", encoding="utf-8") as f:
         config = yaml.safe_load(f)
 
@@ -72,26 +70,6 @@ def main(argv=None):
         "think": llm_cfg.get("think"),
         "log_thinking": bool(llm_cfg.get("log_thinking", False)),
     }
-
-    sources = {}
-    for raw in args.source_json:
-        label, path = _parse_source_arg(raw)
-        sources[label] = path
-
-    if args.meta_swot_json:
-        sources.setdefault("Meta-SWOT", args.meta_swot_json)
-    if args.comparison_json:
-        sources.setdefault("Personenvergleich", args.comparison_json)
-    if args.contrast_json:
-        sources.setdefault("Kontrastanalyse", args.contrast_json)
-
-    if not sources:
-        # Rückwärtskompatible Defaults.
-        sources = {
-            "Meta-SWOT": "meta_swot_v1.json",
-            "Personenvergleich": "person_comparison_v1.json",
-            "Kontrastanalyse": "contrast_analysis_v1.json",
-        }
 
     md, json_output = build_overall_synthesis(
         source_json_paths=sources,
@@ -109,4 +87,3 @@ def main(argv=None):
 
 if __name__ == "__main__":
     main()
-

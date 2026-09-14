@@ -597,3 +597,53 @@ benötigen die beiden eigenen geprüften Kindlaufquellen. In der ursprünglichen
 Gesamtsynthese-Kandidatenprojektion werden `selection_provenance`, zusätzliche
 `code_cooccurrence`-Felder und `analysis_perspective` ausgeschlossen: technische
 Register ersetzen keine qualitativen Ausgangsbefunde.
+
+## Gemeinsame Material- und Vergleichsprüfung
+
+Alle vorhandenen Codierzeilen im Materialverzeichnis müssen exakt auf ihre
+Originaleinheiten und Codepfade verweisen. Ein gekürztes Verzeichnis wird auch
+dann verworfen, wenn eine ebenfalls gekürzte Analysequelle dazu passen würde.
+Der reine Zählkern kann weiterhin minimale Einheiten ohne Zeilenindex verarbeiten;
+Quelladapter benötigen dagegen die vollständige Originalzuordnung.
+
+Die Vergleichsregister aller Perspektivmodule enthalten vollständige Definitionen
+und Ein-/Ausschlussregeln zusätzlich zu Bezeichnung und berechneten Kennzahlen.
+Gleich benannte Themen bleiben dadurch inhaltlich unterscheidbar. Das erhöht den
+Kontextbedarf; der bestehende Preflight lehnt zu große Anfragen vor dem ersten
+Modellaufruf ab, statt Definitionen still zu kürzen.
+
+## Gesamtsynthese: interne Vorbereitung, noch keine UI-Freigabe
+
+Die Gesamtsynthese bleibt in der Oberfläche vorerst auf `qualitative` beschränkt.
+Die folgenden Bausteine sind implementiert und synthetisch geprüft, müssen aber
+noch mit Ausführung, Diagnosen, Fortschritt und Bericht verbunden werden:
+
+- `synthesis_inputs`: dieselbe explizite CLI-Quellenauswahl und eindeutige
+  Zuordnung frei benannter Quellen zu deklarierten Moduldateien. Doppelte Labels
+  werden abgewiesen; eine explizite Auswahl lädt keine zusätzlichen Standardquellen.
+- `synthesis_provenance`: prüft echte Quellprojektionen und vollständige
+  mehrstufige Verdichtungsgraphen, einschließlich Blattpfaden, Inhaltshashes,
+  Abdeckung, Ebenen, Eltern und finalen Referenzen. Neue Syntheseausgaben speichern
+  `source_projection_fingerprints`. Ältere Ausgaben bleiben qualitativ lesbar;
+  ohne diesen Nachweis dienen sie nicht als Grundlage des neuen Zähladapters.
+- `synthesis_material`: prüft bekannte analytische Quellen mit den vorhandenen
+  Adaptern gegen bestätigtes Originalmaterial und tatsächliche benötigte Vorstufen.
+  Evidence-Audit-Personen und Belegtexte werden ebenfalls am Original geprüft.
+  Datei-/Laufhashprüfung bleibt zusätzlich Aufgabe der Anwendung.
+- `synthesis_countability`: klassifiziert jede vollständige vorhandene Aussage
+  ohne Umformulierung. Nur `material_assertion` wird als Kandidat ausgewählt.
+  Mengen-/Gruppen-/Methodenbehauptungen, übergreifende Beziehungsbehauptungen und
+  gemischte oder unklare Aussagen bleiben mit Begründung Kontext. Methodenteil,
+  zusammengesetzter Gesamttext und unvollständige Records erhalten keine eigene
+  Klassifikationsanfrage. Fehlerhafte Antworten werden nicht als Ausschluss gewertet.
+- `thematic_synthesis_adapter`: bereitet ausgewählte vollständige Aussagen als
+  neue analytische Themen über alle Originaleinheiten aller bestätigten Personen
+  vor. Herkunftsquellen sind weder der Nenner noch vollständige Belegmitgliedschaften.
+
+Die Auswahl ist ausdrücklich eine **Modellentscheidung ohne menschliche Prüfung**.
+Ein formal gültiger Auswahlbeleg beweist nicht, dass das Modell die Aussage richtig
+klassifiziert hat. Eine vollständige anschließende Matrix bestätigt weder allgemeine
+Kausalität noch Gruppenverteilungen oder die semantische Wahrheit der Synthese.
+Vor Aktivierung sind Quellenprüfung vor der Klassifikation, sichtbare Auswahlgründe,
+unveränderliche Laufbindung und die qualitative Relationsquelle mit ihrem benötigten
+Herkunftsnachweis durchgängig zu integrieren.

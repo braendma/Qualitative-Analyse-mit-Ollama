@@ -18,6 +18,27 @@ def fixture():
 
 
 class MembershipTests(unittest.TestCase):
+    def test_shortened_index_and_sources_cannot_hide_an_original_row(self):
+        material, payload = fixture()
+        del material['segment_index']['s3']
+        del payload['segment_metadata']['s3']
+        payload['clusters'].pop(1)
+        with self.assertRaisesRegex(ValueError, 'vollständige Originalzuordnung'):
+            cluster_memberships(material, payload)
+
+    def test_wrong_unit_or_code_index_rejected_against_original_units(self):
+        for change in ('unit', 'code', 'missing_index'):
+            with self.subTest(change=change):
+                material, payload = fixture()
+                if change == 'unit':
+                    material['segment_index']['s1']['unit_id'] = 'passage:u2'
+                elif change == 'code':
+                    material['segment_index']['s2']['code_path'] = 'A'
+                else:
+                    del material['segment_index']
+                with self.assertRaises(ValueError):
+                    cluster_memberships(material, payload)
+
     def test_complete_clusters_project_to_scoped_cells_without_new_model_work(self):
         material,payload=fixture();before=copy.deepcopy(payload);result=cluster_memberships(material,payload)
         self.assertEqual(result['model_calls'],0);self.assertEqual(payload,before)

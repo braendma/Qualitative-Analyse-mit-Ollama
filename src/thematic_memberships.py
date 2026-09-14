@@ -1,6 +1,7 @@
 """Project complete existing cluster membership; selected quotes cannot use this adapter."""
 from runtime_support import fingerprint
 from thematic_material import unit_ids_for_segments
+from thematic_counts import _material, _material_index
 
 
 def cluster_memberships(material, payload):
@@ -13,7 +14,8 @@ def cluster_memberships(material, payload):
         if not condition:
             raise ValueError('Clusterzuordnung ist unvollständig oder passt nicht zur geprüften Zählgrundlage.')
     require(isinstance(payload,dict) and payload.get('processing_status')=='completed')
-    index=material['segment_index'];units=material['units']
+    _material(material)
+    index=_material_index(material);units=material['units']
     metadata=payload.get('segment_metadata')
     require(isinstance(metadata,dict) and set(metadata)==set(index))
     for sid,entry in metadata.items():

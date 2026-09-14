@@ -26,6 +26,15 @@ def swot(material, clusters):
 
 
 class ThematicAdapterTests(unittest.TestCase):
+    def test_matching_but_shortened_swot_and_index_cannot_hide_original_rows(self):
+        material, clusters = fixture()
+        payload = swot(material, clusters)
+        del material['segment_index']['s3']
+        del payload['segment_metadata']['s3']
+        payload['swot']['A']['segment_count'] -= 1
+        with self.assertRaisesRegex(ValueError, 'vollständige Originalzuordnung'):
+            build_swot_topics(material, payload)
+
     def test_swot_uses_whole_code_scope_not_selected_quotes_and_never_returns_assignments(self):
         material, clusters = fixture(); payload = swot(material, clusters)
         before = copy.deepcopy((material, payload))

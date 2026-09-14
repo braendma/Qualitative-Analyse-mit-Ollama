@@ -193,8 +193,10 @@ def build_overall_synthesis(
         return build_prompt_for_module("overall_synthesis", prompts=prompts, context=context,
             data=json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
     begin_phase('preparation')
-    payload, reduction = reduce_sources(
-        {label: project_synthesis_source(data) for label, data in sources.items()}, final_prompt, ollama_params, default_llm)
+    projected_sources = {label: project_synthesis_source(data) for label, data in sources.items()}
+    from runtime_support import fingerprint
+    source_projection_fingerprints = {label: fingerprint(data) for label, data in projected_sources.items()}
+    payload, reduction = reduce_sources(projected_sources, final_prompt, ollama_params, default_llm)
 
     system_prompt, user_prompt = build_prompt_for_module(
         "overall_synthesis",
@@ -226,6 +228,7 @@ def build_overall_synthesis(
         "created_at": datetime.now().isoformat(),
         "source_labels": source_labels,
         "source_created_at": source_created_at,
+        "source_projection_fingerprints": source_projection_fingerprints,
         **normalized,
     }
 
