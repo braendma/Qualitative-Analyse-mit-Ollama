@@ -4,8 +4,13 @@ Der aktuelle Paketkandidat enthält eine eigene Python-Laufzeit. Bau und
 Prüfverfahren stehen in [packaging/README.md](../packaging/README.md), die
 Bedienhinweise in [WINDOWS_STANDALONE.txt](WINDOWS_STANDALONE.txt). Ergebnisse
 und der noch offene Freigabepunkt stehen im [aktuellen Testbericht](TEST_REPORT.md).
-Eine neue native Mac-Distribution ist zurückgestellt. Die unten genannten
-Versionen und Testzahlen bleiben als historische Nachweise erhalten.
+Am tatsächlich gebauten Kandidaten `56750ed` bestanden die modellfreie
+Oberflächenprüfung, ihre Variante mit einem Ergebnisordner über 300 Zeichen
+sowie CSV-/XLSX-Verarbeitung und Wiederaufnahme. Diese Prüfungen starteten die
+EXE ohne Python im Suchpfad; eine frische virtuelle Maschine wurde nicht geprüft.
+Die abschließende Regression und der neu zu bauende Auslieferungsstand bleiben
+separat abzunehmen. Eine neue native Mac-Distribution ist zurückgestellt.
+Die unten genannten Versionen und Testzahlen bleiben als historische Nachweise erhalten.
 # Prüfung für 0.4.0-beta.1 (13. September 2026)
 
 203 Python- und 21 JavaScript-Tests bestanden unter Windows mit Python 3.12. Die Tests verwenden künstliche Daten und simulierte Modellantworten, einschließlich kompletter Pipeline und Wiederaufnahme. Der Windows-DPAPI-Test lief im Benutzerkontext. Ein isolierter HTTP-Start mit Leerzeichen im Datenpfad und dem neuen Prompt-Dialog wurde ebenfalls geprüft.

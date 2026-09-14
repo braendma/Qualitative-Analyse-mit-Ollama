@@ -1,10 +1,19 @@
 import json,sys,tempfile,unittest
+import time
 from pathlib import Path
 from unittest.mock import Mock,patch
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT/'src'))
 from telegram_progress import format_progress
 from local_app import App
 from test_local_app import attach_supervision
+
+
+def monitor_clock(advance, ticks):
+    """Control only the monitor clock, not other modules' atomic-write timers."""
+    clock = Mock(wraps=time)
+    clock.sleep.side_effect = advance
+    clock.monotonic.side_effect = ticks
+    return patch('local_app.time', clock)
 
 
 def monitored_app(folder, iterations, update=None):
@@ -23,6 +32,17 @@ def monitored_app(folder, iterations, update=None):
 
 
 class TelegramProgressTests(unittest.TestCase):
+    def test_monitor_clock_does_not_replace_shared_runtime_clock(self):
+        import local_app
+        import runtime_support
+        monotonic, sleep = time.monotonic, time.sleep
+        with monitor_clock(lambda *_: None, [0, 121]):
+            self.assertEqual(local_app.time.monotonic(), 0)
+            self.assertEqual(local_app.time.monotonic(), 121)
+            self.assertIs(runtime_support.time.monotonic, monotonic)
+            self.assertIs(runtime_support.time.sleep, sleep)
+        self.assertIs(local_app.time, time)
+
     def test_all_configured_modules_show_steps_or_request_activity(self):
         import yaml
         from telegram_progress import MODULES
@@ -52,7 +72,7 @@ class TelegramProgressTests(unittest.TestCase):
             def update():
                 (run/'progress.json').write_text(json.dumps({**detail,'detail_completed':2}))
             app,process,advance=monitored_app(folder,2,update)
-            with patch('local_app.time.sleep',side_effect=advance),patch('local_app.time.monotonic',side_effect=itertools.count(0,121)):
+            with monitor_clock(advance, itertools.count(0,121)):
                 app.monitor(folder,process,15)
             calls=[c for c in app.telegram.send.call_args_list if c.args[0]=='progress']
             self.assertEqual(len(calls),2)
@@ -95,7 +115,7 @@ class TelegramProgressTests(unittest.TestCase):
             (run/'progress.json').write_text(json.dumps({'module':'clusterer' if old_detail else 'blind_coding',
                  'completed':7,'total':10,'requests':9}))
             app,process,advance=monitored_app(folder,1)
-            with patch('local_app.time.sleep',side_effect=advance),patch('local_app.time.monotonic',side_effect=[0,121]):
+            with monitor_clock(advance, [0,121]):
                 app.monitor(folder,process,15)
             calls=[c for c in app.telegram.send.call_args_list if c.args[0]=='progress']
             self.assertEqual(len(calls),1);self.assertIsNone(app.active)
@@ -118,7 +138,7 @@ class TelegramProgressTests(unittest.TestCase):
             detail={'module':'overall_synthesis','requests':43,'request_active':True,'request_started_at':800}
             (run/'progress.json').write_text(json.dumps(detail))
             app,process,advance=monitored_app(folder,3)
-            with patch('local_app.time.sleep',side_effect=advance),patch('local_app.time.monotonic',side_effect=[0,121,240,721]):
+            with monitor_clock(advance, [0,121,240,721]):
                 app.monitor(folder,process,15)
             calls=[c for c in app.telegram.send.call_args_list if c.args[0]=='progress']
             self.assertEqual(len(calls),2)
@@ -143,7 +163,7 @@ class TelegramProgressTests(unittest.TestCase):
                 frame=next(remaining,None)
                 if frame is not None:write(frame)
             app,process,advance=monitored_app(folder,len(frames),update)
-            with patch('local_app.time.sleep',side_effect=advance),patch('local_app.time.monotonic',side_effect=[0]+ticks):
+            with monitor_clock(advance, [0]+ticks):
                 app.monitor(folder,process,20)
             return app.telegram.send.call_args_list
 

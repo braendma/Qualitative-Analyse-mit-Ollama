@@ -51,15 +51,23 @@ class ReceiptTests(unittest.TestCase):
 
     def test_request_identity_and_parent_are_still_checked_by_diagnostic_wrapper(self):
         from diagnostic_series import _confirmed_supervision
+        from filesystem_paths import canonical_path, io_path
         with tempfile.TemporaryDirectory() as temp:
             log = Path(temp) / 'child.log'
+            parent = canonical_path(Path(temp) / 'bound-parent')
             request = {'ticket': 'attempt-one', 'command_sha256': 'a' * 64,
-                       'execution_fingerprint': 'expected-source', 'run_parent': 'bound-parent'}
+                       'execution_fingerprint': 'expected-source', 'run_parent': str(parent)}
             atomic_json(log.with_suffix('.supervision.request.json'), request)
             atomic_json(log.with_suffix('.supervision.json'), receipt())
-            self.assertEqual(_confirmed_supervision(log, 'expected-source', 'bound-parent'), receipt())
-            with self.assertRaises(ValueError): _confirmed_supervision(log, 'other-source', 'bound-parent')
-            with self.assertRaises(ValueError): _confirmed_supervision(log, 'expected-source', 'other-parent')
+            self.assertEqual(_confirmed_supervision(log, 'expected-source', str(parent)), receipt())
+            self.assertEqual(_confirmed_supervision(log, 'expected-source', str(io_path(parent))), receipt())
+            with self.assertRaises(ValueError): _confirmed_supervision(log, 'other-source', str(parent))
+            with self.assertRaises(ValueError):
+                _confirmed_supervision(log, 'expected-source', str(Path(temp) / 'other' / parent.name))
+            with self.assertRaises(ValueError): _confirmed_supervision(log, 'expected-source', parent.name)
+            request['run_parent'] = parent.name
+            atomic_json(log.with_suffix('.supervision.request.json'), request)
+            with self.assertRaises(ValueError): _confirmed_supervision(log, 'expected-source', parent.name)
 
 
 class SupervisorFailureTests(unittest.TestCase):

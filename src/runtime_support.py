@@ -7,6 +7,7 @@ import os
 import tempfile
 import copy
 import logging
+import time
 from contextlib import contextmanager
 from dataclasses import asdict, is_dataclass
 from pathlib import Path
@@ -42,6 +43,21 @@ def file_hash(path):
     return hashlib.sha256(io_path(path).read_bytes()).hexdigest()
 
 
+def _replace_atomic(temporary, destination):
+    """Wait briefly for Windows readers, retaining the same fsynced temp file."""
+    deadline = time.monotonic() + 0.75
+    while True:
+        try:
+            os.replace(temporary, destination)
+            return
+        except PermissionError as exc:
+            remaining = deadline - time.monotonic()
+            if (os.name != 'nt' or getattr(exc, 'winerror', None) not in (5, 32, 33)
+                    or remaining <= 0):
+                raise
+            time.sleep(min(0.05, remaining))
+
+
 def atomic_text(path, text):
     path = io_path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -51,7 +67,7 @@ def atomic_text(path, text):
             handle.write(text)
             handle.flush()
             os.fsync(handle.fileno())
-        os.replace(temporary, path)
+        _replace_atomic(temporary, path)
     finally:
         if os.path.exists(temporary):
             os.unlink(temporary)

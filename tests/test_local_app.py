@@ -228,7 +228,7 @@ class DesktopTests(unittest.TestCase):
                 self.assertEqual(job['completed'],['clusterer','summarizer'])
                 self.assertIn('gesamtbericht.md',job['files'])
                 self.assertEqual(Path(job['research_path']),research_path)
-            self.assertTrue(canonical_path(app.artifact(pid,started['id'],'gesamtbericht.md')).is_relative_to(canonical_path(research_path)))
+                self.assertTrue(canonical_path(app.artifact(pid,started['id'],'gesamtbericht.md')).is_relative_to(canonical_path(research_path)))
                 self.assertEqual(app.job_config(pid,started['id']),first_config)
                 with self.assertRaises(ValueError):app.artifact(pid,started['id'],'../../telegram.private.json')
                 with self.assertRaisesRegex(ValueError,'bereits abgeschlossen'):app.start(pid,started['id'])

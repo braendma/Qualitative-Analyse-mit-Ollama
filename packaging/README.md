@@ -94,12 +94,18 @@ $packageDir = Join-Path $checkDir 'QualitativeAnalyse'
 if ($LASTEXITCODE -ne 0) { throw 'Paketidentität oder Quellloader passen nicht.' }
 & ./.venv/Scripts/python.exe tests/smoke_frozen_ui.py --package $packageDir
 if ($LASTEXITCODE -ne 0) { throw 'Frozen-Oberflächentest fehlgeschlagen.' }
+& ./.venv/Scripts/python.exe tests/smoke_frozen_ui.py --package $packageDir --long-output
+if ($LASTEXITCODE -ne 0) { throw 'Frozen-Langpfadtest fehlgeschlagen.' }
 & ./.venv/Scripts/python.exe tests/smoke_frozen_workflow.py --package $packageDir
 if ($LASTEXITCODE -ne 0) { throw 'Frozen-Workflowtest fehlgeschlagen.' }
 Get-FileHash -LiteralPath $zipPath -Algorithm SHA256
 ```
 
-Die Smokes müssen erfolgreich enden; ihre Prüfungen und Grenzen stehen direkt in
+Die beiden UI-Durchläufe prüfen den normalen Ergebnisordner und einen vom
+Benutzer angegebenen Windows-Pfad über 300 Zeichen. Dazu ist keine Änderung der
+Windows-Registrierung vorgesehen. Der Workflowtest prüft zusätzlich CSV-/XLSX-
+Verarbeitung und Wiederaufnahme. Alle Smokes müssen erfolgreich enden; ihre
+Prüfungen und Grenzen stehen direkt in
 [smoke_frozen_ui.py](../tests/smoke_frozen_ui.py) und
 [smoke_frozen_workflow.py](../tests/smoke_frozen_workflow.py). Ein grüner Source-Test
 ersetzt diese Prüfung der tatsächlich gebauten EXE nicht. Den temporären
@@ -120,6 +126,6 @@ Runnerimage, Toolchain und weitere Plattformdetails können Buildbytes beeinflus
 Die Windows-CI verwendet die bereits im Projekt gepinnten Checkout-/Python-Setup-
 Actions. Der zusätzliche Upload ist auf den offiziellen
 [Commit von upload-artifact v7.0.1](https://github.com/actions/upload-artifact/commit/043fb46d1a93c77aae656e7c1c64a875d1fc6a0a)
-festgelegt. Nur das nach Regression, Build, Entpacken und beiden Frozen-Smokes
+festgelegt. Nur das nach Regression, Build, Entpacken und allen drei Frozen-Smokes
 erfolgreich geprüfte ZIP wird für 14 Tage als Actions-Artefakt bereitgestellt.
 Logs, Checkouts, Schlüssel und Forschungsdaten werden nicht als Artefakt hochgeladen.

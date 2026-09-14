@@ -20,6 +20,8 @@ Python-Laufzeit und neue Prüfungen für wissenschaftliche Auswertungen.
   Berichtslinks bleiben relativ. Unterschiedliche Windows-Pfadschreibweisen
   dürfen den Schutz von Originaldateien und Laufbindungen nicht umgehen.
   Sehr lange Kategorien erhalten begrenzte Grafikdateinamen mit Hashkennung.
+  Vorübergehende Windows-Dateisperren beim atomaren Speichern werden kurz
+  erneut geprüft; dauerhafte Zugriffssperren bleiben sichtbare Fehler.
 
 **Prüfstand:** [Testbericht](TEST_REPORT.md). Die abschließende Windows-Paketabnahme
 läuft noch. Eine neue native Mac-Distribution ist zurückgestellt; vorhandene

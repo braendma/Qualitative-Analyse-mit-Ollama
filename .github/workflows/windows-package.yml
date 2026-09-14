@@ -71,6 +71,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Exercise the real packaged UI without a model
         run: ./.venv/Scripts/python.exe tests/smoke_frozen_ui.py --package "$env:RUNNER_TEMP/qualitative-package-check/QualitativeAnalyse"
+      - name: Exercise the real packaged UI with a long Windows output path
+        run: ./.venv/Scripts/python.exe tests/smoke_frozen_ui.py --package "$env:RUNNER_TEMP/qualitative-package-check/QualitativeAnalyse" --long-output
       - name: Exercise the real packaged workflow without a model
         run: ./.venv/Scripts/python.exe tests/smoke_frozen_workflow.py --package "$env:RUNNER_TEMP/qualitative-package-check/QualitativeAnalyse"
       - name: Upload only the successfully checked application ZIP

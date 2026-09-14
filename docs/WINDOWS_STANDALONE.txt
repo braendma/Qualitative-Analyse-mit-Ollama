@@ -17,6 +17,8 @@ Die Anwendung ist nicht digital signiert. Windows kann deshalb eine Warnung
 anzeigen. Quelle und SHA256-Prüfsumme mit dem GitHub-Release vergleichen;
 bei unbekannter Herkunft oder abweichender Prüfsumme nicht starten. Es wird
 keine Abschaltung von Windows-Sicherheitsfunktionen benötigt oder empfohlen.
+Kurze Windows-Dateisperren beim Speichern werden automatisch für höchstens
+etwa eine Sekunde erneut geprüft. Bleibt die Sperre bestehen, wird sie angezeigt.
 Wenn das Speichern mit „Zugriff verweigert“ scheitert, offene Dateien, die
 Ordnerrechte und Meldungen des Virenschutzes prüfen. Eine Schreibsperre kann
 auch eine bereits gestartete EXE betreffen. Freigaben nur für das überprüfte

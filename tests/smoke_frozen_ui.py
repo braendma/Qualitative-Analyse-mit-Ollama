@@ -189,9 +189,10 @@ def main():
             if opts.long_output and results is not None and results.is_dir():
                 # This exact synthetic child belongs to the temporary test area.
                 # Use extended IO for its cleanup too, after owned children exit.
-                ordinary = Path(str(results).removeprefix('\\\\?\\')).resolve()
+                cleanup_root = Path('\\\\?\\' + str(area/'Synthetische Ergebnisse ä'))
+                ordinary = Path(str(cleanup_root).removeprefix('\\\\?\\')).resolve()
                 assert ordinary.is_relative_to(area), 'Refusing cleanup outside the test area'
-                shutil.rmtree(results)
+                shutil.rmtree(cleanup_root)
     assert not area.exists(), 'Temporary extracted installation was not removed'
     summary['temporary_install_removed'] = True
     evidence = 'frozen-ui-long-path-smoke.json' if opts.long_output else 'frozen-ui-smoke.json'

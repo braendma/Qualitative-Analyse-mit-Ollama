@@ -5,22 +5,30 @@ in 434,437 Sekunden** aus: 894 bestanden, ein Windows-Symlinktest wurde
 übersprungen. **82 JavaScript-Tests** bestanden. Die Tests verwenden synthetische
 Daten und simulierte Modellantworten; sie belegen keine allgemeine Modellqualität.
 
-Der native Windows-Build verwendet Python 3.12.14 und PyInstaller 6.22.3. Die
-wirkliche EXE wurde zusätzlich mit CSV und echter XLSX, modellfreier Coverage,
-HTML-/Markdown-Export, unveränderten Originalen und geprüfter Wiederaufnahme
-getestet. Dabei befand sich kein Python im Suchpfad der gestarteten EXE. Die
-Paketprüfung bestätigt tatsächliche Quellenloader und den erfassten Bootstrap;
-eine Paketänderung verhindert die Wiederverwendung unpassender Checkpoints.
-Das ist eine isolierte Paketprüfung auf Windows, kein Test in einer frischen VM.
+Der native Windows-Paketkandidat aus Commit `56750ed` verwendet Python 3.12.14
+und PyInstaller 6.22.3. An der tatsächlichen EXE bestanden **11 Prüfungen der
+Oberfläche** und **12 Prüfungen mit einem Ergebnisordner über 300 Zeichen**.
+Der Langpfadtest bestand bei erneuter Ausführung mit unveränderter EXE. Die
+Oberflächenprüfungen umfassen drei modellfreie Module, Berichtserzeugung,
+Instanzschutz, Neustart sowie bestätigtes Ende der eigenen Kindprozesse.
+Zusätzlich bestanden CSV-/XLSX-Verarbeitung, modellfreie Coverage,
+HTML-/Markdown-Export, unveränderte Originale und geprüfte Wiederaufnahme.
+Dabei befand sich kein Python im Suchpfad der gestarteten EXE. Die Paketprüfung
+bestätigt tatsächliche Quellenloader und den erfassten Bootstrap; eine
+Paketänderung verhindert die Wiederverwendung unpassender Checkpoints.
+Das ist eine isolierte Paketprüfung auf Windows, kein Test in einer frischen VM
+und keine allgemeine Freigabe aller Pfadlängen oder Virenschutzkonfigurationen.
 
-**Paketfreigabe noch offen:** Die aus der Oberfläche gestartete Verarbeitung
-bestand mit drei modellfreien Modulen, HTML-/Markdown-Bericht und bestätigtem
-Ende der Kindprozesse. Eine zuvor beobachtete Schreibsperre wurde vom Anwender
-Avast zugeordnet; nach seiner Freigabe funktionierte unverändertes Speichern
-direkt und in einer frischen Paketkopie. Ein separater Fehler bei einem tiefen
-Ergebnispfad (temporäre Datei mit 272 Zeichen) wird noch geprüft. Das ist keine
-allgemeine Freigabe aller Pfadlängen oder Virenschutzkonfigurationen.
-Der vorbereitete GitHub-Buildworkflow ist kein
+**Abschließende Freigabe noch offen:** Die oben genannte vollständige Regression
+belegt den früheren Quellstand `ad553db`. Ein späterer Durchlauf blieb wegen
+eines Einrückungsfehlers in einer Testdatei und einer veralteten Pfadannahme in
+einer Testfixture unvollständig erfolgreich. Die erneute vollständige Regression
+nach den Korrekturen läuft noch. Der aktuelle Quellstand ergänzt außerdem ein
+kurzes, begrenztes Wiederholen atomarer Schreibvorgänge bei vorübergehenden
+Windows-Dateisperren. Für diesen Stand sind ein neuer Build und die erneute
+Prüfung genau des auszuliefernden ZIP erforderlich; die bestandenen Smokes von
+`56750ed` ersetzen diese Abschlussprüfung nicht.
+Der vorbereitete GitHub-Buildworkflow einschließlich Langpfadprüfung ist kein
 bereits bestandener GitHub-Lauf. Die native Mac-Distribution ist zurückgestellt;
 bestehende Mac-Source-Dateien bleiben erhalten.
 
