@@ -10,7 +10,7 @@ Eine bebilderte Schritt-für-Schritt-Anleitung findest du am Anfang der [README]
 
 Die Startdateien bleiben im obersten Ordner. Programmcode und Oberfläche liegen unter `src/`, die YAML-Vorlage unter `config/`, künstliche Beispieldaten unter `demo/` und Anleitungen unter `docs/`. Die komplette Ordnerstruktur zusammenlassen.
 
-Ein neues Programmverzeichnis ändert nicht automatisch die private Projektablage unter `%LOCALAPPDATA%\QualitativeOllama`. Bestehende Projekte bleiben dort verfügbar. Nach Änderungen am Programm einen neuen Lauf mit den geprüften Projekteinstellungen starten; frühere Ergebnisse aufbewahren.
+Ein neues Programmverzeichnis verschiebt bestehende Projekte nicht automatisch. Neue technische Appdaten liegen unter Windows in `%LOCALAPPDATA%\QualitativeAnalyse`, unter macOS in `~/Library/Application Support/QualitativeAnalyse`, unter Linux bei absolut gesetztem `XDG_DATA_HOME` in `$XDG_DATA_HOME/QualitativeAnalyse`, sonst in `~/.local/share/QualitativeAnalyse`. Ein eindeutig vorhandener alter `QualitativeOllama`-Ordner wird weiterverwendet; es wird nichts verschoben. Werden mehrere bestehende Ablagen gefunden, mit `--data-dir` ausdrücklich die gewünschte auswählen. Nach Änderungen am Programm einen neuen Lauf mit den geprüften Projekteinstellungen starten; frühere Ergebnisse aufbewahren.
 
 ## Einmalig einrichten und starten
 
@@ -107,9 +107,11 @@ Veränderte Zwischenstände innerhalb eines Moduls werden höchstens alle zwei M
 
 ## Wo liegen meine Daten?
 
-Unter Windows standardmäßig in `%LOCALAPPDATA%\QualitativeOllama`. Darin liegen `projects/` mit Eingabekopien, Einstellungen, Revisionen und Läufen sowie separat `telegram.private.json` mit Einstellungen und gegebenenfalls verschlüsseltem Token. Die Daten gehören außerhalb öffentlicher Repositories. Für eine Sicherung die Oberfläche nach Abschluss eines Laufs schließen und den Projektordner kopieren. Die Telegram-Verschlüsselung ist an das Windows-Benutzerkonto gebunden.
+Neue technische Appdaten liegen unter Windows in `%LOCALAPPDATA%\QualitativeAnalyse`, unter macOS in `~/Library/Application Support/QualitativeAnalyse`, unter Linux bei absolut gesetztem `XDG_DATA_HOME` in `$XDG_DATA_HOME/QualitativeAnalyse`, sonst in `~/.local/share/QualitativeAnalyse`. Ein eindeutig vorhandener alter `QualitativeOllama`-Ordner wird weiterverwendet; es wird nichts verschoben. Werden mehrere bestehende Ablagen gefunden, mit `--data-dir` ausdrücklich die gewünschte auswählen.
 
-Ein anderer lokaler Speicherort kann mit `python src/local_app.py --data-dir PFAD` gewählt werden. Eine vertrauenswürdige lokale YAML-Vorlage lässt sich mit `--config PFAD` verwenden. Die Oberfläche erlaubt keine hochgeladenen ausführbaren Pipeline-Konfigurationen. Die Ollama-Modellliste stammt aus dem lokalen [`/api/tags`-Endpunkt](https://docs.ollama.com/api/tags).
+**Entwicklungsstand P01a:** Die externe Ergebniswahl ist bisher nur für die CLI umgesetzt. In der Oberfläche liegen Eingabekopien, Revisionen, Forschungsresultate und Prüfentscheidungen weiterhin im technischen Projektordner. Ein Browserupload verrät den ursprünglichen Dateiordner nicht. Eine gesonderte Ergebniszielwahl in der Oberfläche folgt erst mit P01b; diese Beschreibung ist keine Freigabe neuer Windows-/macOS-Installationspakete. Im App-Datenordner liegen `projects/` mit Eingabekopien, Einstellungen, Revisionen und Läufen sowie separat `telegram.private.json` mit Einstellungen und gegebenenfalls verschlüsseltem Token. Die Daten gehören außerhalb öffentlicher Repositories. Für eine Sicherung die Oberfläche nach Abschluss eines Laufs schließen und den Projektordner kopieren. Die Telegram-Verschlüsselung ist an das Windows-Benutzerkonto gebunden.
+
+Ein anderer vollständiger App-Datenordner kann mit `python src/local_app.py --data-dir PFAD` ausdrücklich gewählt werden. Dies ist derzeit keine getrennte Ergebniszielwahl pro Analyse. Eine vertrauenswürdige lokale YAML-Vorlage lässt sich mit `--config PFAD` verwenden. Die Oberfläche erlaubt keine hochgeladenen ausführbaren Pipeline-Konfigurationen. Die Ollama-Modellliste stammt aus dem lokalen [`/api/tags`-Endpunkt](https://docs.ollama.com/api/tags).
 
 ## Tests und Grenzen
 

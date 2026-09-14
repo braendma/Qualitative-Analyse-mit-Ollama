@@ -23,7 +23,7 @@ import uuid
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from project_paths import DEFAULT_CONFIG, DEMO_DIR
+from project_paths import DEFAULT_CONFIG, DEMO_DIR, default_data_dir
 import yaml
 from runtime_support import atomic_json, atomic_text
 from review_workspace import ReviewWorkspace, decisions_xlsx
@@ -839,12 +839,16 @@ def make_server(app,port=0):
 
 def main():
     parser=argparse.ArgumentParser(description='Lokale Bedienoberfläche für qualitative Analyse')
-    parser.add_argument('--data-dir',default=str(Path(os.environ.get('LOCALAPPDATA',Path.home()/'.local/share'))/'QualitativeOllama'))
+    parser.add_argument('--data-dir',default=None,help='Technische App-Daten; vorhandene Projektablage wird automatisch erkannt')
     parser.add_argument('--config',default=None,help='Vertrauenswürdige lokale Vorlage, keine Browser-Uploads von ausführbaren Pipelines')
     parser.add_argument('--no-browser',action='store_true')
     parser.add_argument('--port',type=int,default=0)
     args=parser.parse_args()
-    server=make_server(App(args.data_dir,args.config),args.port)
+    try:
+        data_dir = args.data_dir if args.data_dir is not None else default_data_dir()
+    except ValueError as exc:
+        parser.error(str(exc))
+    server=make_server(App(data_dir,args.config),args.port)
     url=f'http://127.0.0.1:{server.server_port}/#'+server.token
     print('Lokale Oberfläche: '+url,flush=True)
     print('Dieses Fenster während der Analyse geöffnet lassen. Beenden mit Strg+C.',flush=True)

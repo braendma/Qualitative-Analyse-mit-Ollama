@@ -11,7 +11,7 @@ Falls macOS die Startdatei nicht öffnet, kannst du sie ausdrücklich im Termina
 
 ## Daten und Updates
 
-Projekte und Ergebnisse liegen standardmäßig unter `~/.local/share/QualitativeOllama`. Im Finder **Gehe zu → Gehe zum Ordner** verwenden und diesen Pfad einfügen. Sie bleiben beim Austausch des Programmordners erhalten. Nach dem Entpacken einer neuen Version erneut deren Einrichtung starten. `.venv-macos` lässt sich nicht zwischen Rechnern verschieben; sie wird auf jedem Mac eingerichtet. Modelle verwaltet Ollama separat.
+Im aktuellen Entwicklungsstand P01a liegen neue Appdaten unter `~/Library/Application Support/QualitativeAnalyse`. Ein eindeutig vorhandener alter Ordner `~/.local/share/QualitativeOllama` wird ohne Migration weiterverwendet; bei mehreren vorhandenen Ablagen ausdrücklich `--data-dir` wählen. Die Oberfläche hält ihre Forschungsresultate bis P01b weiterhin im technischen Projektordner. Die neue CLI-Standardausgabe neben der tatsächlichen Eingabedatei ist davon getrennt. Im Finder **Gehe zu → Gehe zum Ordner** verwenden und den für deine Ablage zutreffenden Pfad einfügen. Sie bleiben beim Austausch des Programmordners erhalten. Nach dem Entpacken einer neuen Version erneut deren Einrichtung starten. `.venv-macos` lässt sich nicht zwischen Rechnern verschieben; sie wird auf jedem Mac eingerichtet. Modelle verwaltet Ollama separat.
 
 ## Grenzen dieser Ausgabe
 

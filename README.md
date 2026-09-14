@@ -165,7 +165,7 @@ Gewünschte Ereignisse auswählen und **„Telegram-Einstellungen speichern“**
 | Ollama oder Modell nicht verfügbar | Ollama starten und prüfen, ob der im Modellfeld eingetragene Name lokal installiert ist. |
 | Eine Änderung erscheint nicht | Oberfläche und Startfenster schließen und `Start_Oberflaeche.cmd` neu öffnen. Laufende Analysen zuvor beenden lassen oder pausieren. |
 
-Die Projektdaten liegen unter Windows standardmäßig in `%LOCALAPPDATA%\QualitativeOllama`. Für eine Sicherung die Oberfläche nach Abschluss eines Laufs schließen und den Projektordner kopieren. Die öffentliche Projektversion und die Screenshots enthalten ausschließlich künstliche Daten. Mehr zu [Datenablage und Zugriffsschutz](docs/BEDIENOBERFLAECHE.md#wo-liegen-meine-daten), [Robustheit und Wiederaufnahme](docs/ROBUSTNESS.md) und [Tests samt Grenzen](docs/TEST_REPORT.md).
+Neue technische Appdaten liegen unter Windows in `%LOCALAPPDATA%\QualitativeAnalyse`, unter macOS in `~/Library/Application Support/QualitativeAnalyse`, unter Linux bei absolut gesetztem `XDG_DATA_HOME` in `$XDG_DATA_HOME/QualitativeAnalyse`, sonst in `~/.local/share/QualitativeAnalyse`. Ein eindeutig vorhandener alter `QualitativeOllama`-Ordner wird weiterverwendet; es wird nichts verschoben. Werden mehrere bestehende Ablagen gefunden, mit `--data-dir` ausdrücklich die gewünschte auswählen. **Entwicklungsstand P01a:** Die externe Ergebniswahl ist bisher nur für die CLI umgesetzt. In der Oberfläche liegen Eingabekopien, Revisionen, Forschungsresultate und Prüfentscheidungen weiterhin im technischen Projektordner. Ein Browserupload verrät den ursprünglichen Dateiordner nicht. Eine gesonderte Ergebniszielwahl in der Oberfläche folgt erst mit P01b; diese Beschreibung ist keine Freigabe neuer Windows-/macOS-Installationspakete. Für eine Sicherung die Oberfläche nach Abschluss eines Laufs schließen und den Projektordner kopieren. Die öffentliche Projektversion und die Screenshots enthalten ausschließlich künstliche Daten. Mehr zu [Datenablage und Zugriffsschutz](docs/BEDIENOBERFLAECHE.md#wo-liegen-meine-daten), [Robustheit und Wiederaufnahme](docs/ROBUSTNESS.md) und [Tests samt Grenzen](docs/TEST_REPORT.md).
 
 ## Technische Referenz
 
@@ -756,7 +756,7 @@ Mit einer anderen Interview-CSV:
 python run_workflow.py --csv eigener_export.csv
 ```
 
-Mit eigenem Output-Verzeichnis:
+Ohne eigenes Ziel entsteht `QualitativeAnalyse_<Lauf-ID>` neben `eigener_export.csv`. Mit eigenem Output-Verzeichnis (bei Bedarf angelegt; Unterordner `<Lauf-ID>`):
 
 ```bash
 python run_workflow.py \
@@ -904,7 +904,7 @@ Das macht die Pipeline zu einem kleinen erweiterbaren Framework für qualitative
 # 📂 Typische Output-Struktur
 
 ```text
-workflow_output/<Lauf-ID>/
+<Ordner der tatsächlichen Eingabedatei>/QualitativeAnalyse_<Lauf-ID>/
 │
 ├── clusterer_output.md
 ├── clusters_output.json
@@ -1128,7 +1128,7 @@ Qualitative-Analyse-mit-Ollama/
 └── docs/                     Fachliche Dokumentation und Screenshots
 ```
 
-Vom Projektordner aus startet `python run_workflow.py` den CLI-Workflow. Die Standardkonfiguration liegt in `config/config_v2.yaml`; ihre relativen Eingabepfade zeigen auf `demo/`. Explizite `--config`- und `--output-dir`-Pfade des Runners werden relativ zum aktuellen Arbeitsordner aufgelöst. Ohne `--output-dir` liegt die Ausgabe unter `workflow_output/` im Projektordner. Die Oberfläche speichert Projekte weiterhin in ihrer privaten lokalen Datenablage.
+Vom Projektordner aus startet `python run_workflow.py` den CLI-Workflow. Die Standardkonfiguration liegt in `config/config_v2.yaml`; ihre relativen Eingabepfade zeigen auf `demo/`. Explizite `--config`- und `--output-dir`-Pfade des Runners werden relativ zum aktuellen Arbeitsordner aufgelöst. Ohne `--output-dir` erstellt die CLI neben der tatsächlich verwendeten Eingabedatei einen neuen Ordner `QualitativeAnalyse_<Lauf-ID>`. Maßgeblich ist `--csv`, falls angegeben, sonst `paths.input_csv` aus der Konfiguration; relative Konfigurations-Eingaben werden gegen deren Ordner aufgelöst. Ein explizites `--output-dir` bleibt relativ zum aktuellen Arbeitsordner, wird bei Bedarf angelegt und enthält wie bisher Unterordner `<Lauf-ID>`. Vor dem neuen Lauf wird die Beschreibbarkeit geprüft. Bei einem ungültigen oder nicht beschreibbaren Ziel erfolgt eine Fehlermeldung, kein Ausweichen in AppData oder einen temporären Ordner. `--validate-only` prüft die Analysedaten, noch nicht die spätere Schreibbarkeit des Ergebnisziels. Resume verwendet unverändert den ausdrücklich angegebenen bestehenden Laufordner und prüft dessen Herkunft. **Entwicklungsstand P01a:** Die externe Ergebniswahl ist bisher nur für die CLI umgesetzt. In der Oberfläche liegen Eingabekopien, Revisionen, Forschungsresultate und Prüfentscheidungen weiterhin im technischen Projektordner. Ein Browserupload verrät den ursprünglichen Dateiordner nicht. Eine gesonderte Ergebniszielwahl in der Oberfläche folgt erst mit P01b; diese Beschreibung ist keine Freigabe neuer Windows-/macOS-Installationspakete.
 
 **Umstieg von der bisherigen flachen Ablage:** Das vollständige Projekt in einen neuen Ordner entpacken. Benutzerdefinierte YAML-Dateien bei Bedarf übernehmen und ihre Eingabepfade prüfen; relative Eingabepfade beziehen sich auf den Ordner der YAML-Datei. Der bisherige direkte Aufruf von `00_WORKFLOW_RUNNER.py` wird durch `run_workflow.py` ersetzt. Einzelne Module liegen jetzt unter `src/`. Nach diesem Programmwechsel einen neuen Analyselauf starten; vorhandene Projektdateien und Ergebnisse bleiben erhalten, alte Checkpoints werden nicht automatisch migriert.
 

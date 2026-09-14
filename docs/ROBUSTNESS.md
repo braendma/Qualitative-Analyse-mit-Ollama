@@ -60,10 +60,12 @@ Die öffentliche `config/config_v2.yaml` verwendet lokale Inferenz über `http:/
 ```bash
 python run_workflow.py --validate-only
 python run_workflow.py --config config/config_v2.yaml
-python run_workflow.py --config config/config_v2.yaml --resume workflow_output/LAUF-ID
+python run_workflow.py --config config/config_v2.yaml --resume demo/QualitativeAnalyse_LAUF-ID
 ```
 
-Jeder neue Lauf erhält ein eigenes Verzeichnis unter `workflow_output`. Darin stehen der Gesamtbericht, die Konfigurationskopie und das Manifest mit Lauf-ID, SHA-256-Prüfsummen, Modellparametern, Codeversion und Abhängigkeitsversionen. JSON- und Markdown-Ergebnisse werden atomar geschrieben. Ein Modul darf weder unveränderte alte Dateien noch unvollständige Ergebnisse als Erfolg melden.
+Ohne `--output-dir` erstellt die CLI neben der tatsächlich verwendeten Eingabedatei einen neuen Ordner `QualitativeAnalyse_<Lauf-ID>`. Maßgeblich ist `--csv`, falls angegeben, sonst `paths.input_csv` aus der Konfiguration; relative Konfigurations-Eingaben werden gegen deren Ordner aufgelöst. Ein explizites `--output-dir` bleibt relativ zum aktuellen Arbeitsordner, wird bei Bedarf angelegt und enthält wie bisher Unterordner `<Lauf-ID>`. Vor dem neuen Lauf wird die Beschreibbarkeit geprüft. Bei einem ungültigen oder nicht beschreibbaren Ziel erfolgt eine Fehlermeldung, kein Ausweichen in AppData oder einen temporären Ordner. `--validate-only` prüft die Analysedaten, noch nicht die spätere Schreibbarkeit des Ergebnisziels. Resume verwendet unverändert den ausdrücklich angegebenen bestehenden Laufordner und prüft dessen Herkunft. Die folgenden Dateien liegen im jeweils erzeugten Laufordner. Darin stehen der Gesamtbericht, die Konfigurationskopie und das Manifest mit Lauf-ID, SHA-256-Prüfsummen, Modellparametern, Codeversion und Abhängigkeitsversionen. JSON- und Markdown-Ergebnisse werden atomar geschrieben. Ein Modul darf weder unveränderte alte Dateien noch unvollständige Ergebnisse als Erfolg melden.
+
+Das Resume-Beispiel verwendet die öffentliche Demo-Eingabe; `LAUF-ID` durch den tatsächlich entstandenen Ordnernamen ersetzen. Bei `--csv` oder einem expliziten Ziel entsprechend dessen bestehenden Laufordner angeben. **Entwicklungsstand P01a:** Die externe Ergebniswahl ist bisher nur für die CLI umgesetzt. In der Oberfläche liegen Eingabekopien, Revisionen, Forschungsresultate und Prüfentscheidungen weiterhin im technischen Projektordner. Ein Browserupload verrät den ursprünglichen Dateiordner nicht. Eine gesonderte Ergebniszielwahl in der Oberfläche folgt erst mit P01b; diese Beschreibung ist keine Freigabe neuer Windows-/macOS-Installationspakete.
 
 Eine Wiederaufnahme prüft zuerst Eingaben, Codebuch, Konfiguration, Programmdateien, Abhängigkeiten und bereits abgeschlossene Ergebnisdateien. Änderungen führen zu einer Ablehnung; dafür ist ein neuer Lauf vorgesehen. Logs werden fortlaufend geschrieben und sind von der unveränderlichen Ergebnisprüfung ausgenommen. Die Checkpoints der Coding-Module speichern ausschließlich vollständig validierte Segmentergebnisse. Nach einer Unterbrechung werden diese wiederverwendet; fehlgeschlagene Segmente werden erneut bearbeitet. Ein Upgrade von älteren Programmversionen setzt einen neuen Lauf voraus.
 
@@ -71,7 +73,7 @@ Eine Wiederaufnahme prüft zuerst Eingaben, Codebuch, Konfiguration, Programmdat
 
 ### Zwischenstände innerhalb eines Moduls
 
-Mit `llm.partial_checkpoints: true` (Standard) speichert der Runner zusätzlich geprüfte Teilanalysen unter `workflow_output/LAUF-ID/_checkpoints`: je Codepfad bei Clustern und SWOT, je Cluster bei Zusammenfassungen, je Person bei Personen- und Ambiguitätsanalysen, je SWOT-Dimension bei Meta-SWOT sowie je Paket bei Relationsanalyse, Evidence-Audit und hierarchischer Synthese. Die Coding-Module behalten ihre eigenen Segment-/Passagen-Checkpoints.
+Mit `llm.partial_checkpoints: true` (Standard) speichert der Runner zusätzlich geprüfte Teilanalysen unter `<Laufordner>/_checkpoints`: je Codepfad bei Clustern und SWOT, je Cluster bei Zusammenfassungen, je Person bei Personen- und Ambiguitätsanalysen, je SWOT-Dimension bei Meta-SWOT sowie je Paket bei Relationsanalyse, Evidence-Audit und hierarchischer Synthese. Die Coding-Module behalten ihre eigenen Segment-/Passagen-Checkpoints.
 
 Nach einem Abbruch genügt derselbe oben gezeigte `--resume`-Befehl. Fertige Teile werden ohne erneuten Modellaufruf geladen; die unterbrochene Teilanalyse wird erneut ausgeführt. Fehlerhafte, unvollständige oder veränderte Zwischenstände werden nicht übernommen. Eingaben, Prompts, Modellparameter und Programmversion müssen weiterhin übereinstimmen. Einzelne globale Modellaufrufe werden erst nach Abschluss ihres Moduls wiederverwendet.
 

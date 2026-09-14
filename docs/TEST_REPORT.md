@@ -1,3 +1,16 @@
+# Pfadgrundlage für die Distribution / P01a · 14. September 2026
+
+34 gezielte Python-Tests bestanden. Geprüft wurden die CLI-Ausgabe neben der
+tatsächlichen Eingabe, getrennte neue Laufordner, unveränderte Originaldateien,
+Wiederaufnahme, explizite Ausgabeziele, vorhandene App-Projekte und der gemeinsame
+Lauf aller fünf Diagnosen. Die Tests verwenden ausschließlich künstliche Daten.
+Source-/Frozen-Pfade wurden simuliert, einschließlich gesperrter Ausgabe in
+gebündelte Ressourcen; dies ist noch kein Test einer gebauten EXE oder macOS-App.
+Die Ergebnisordnerwahl in der Oberfläche folgt in einem eigenen Integrationsschritt.
+Der zuvor dokumentierte vollständige Testlauf bleibt ein eigener Nachweis.
+
+---
+
 # Entwicklungsprüfung v7 / S13i2 · 14. September 2026
 
 **767 Python-Tests und 52 JavaScript-Tests bestanden.** Die vollständige
