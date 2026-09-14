@@ -9,6 +9,7 @@ import unicodedata
 
 from codebook_diagnostics_core import _blind, _verification
 from coding_validation_common import UNKNOWN_CODES
+from coverage_core import analyze_coverage
 from diagnostic_sources import STAGES, make_snapshot, project_stage
 from multi_label_core import group_units
 from runtime_support import fingerprint
@@ -82,22 +83,71 @@ def _cluster_pairs(rows):
         pair for group in groups for pair in combinations(sorted(group), 2)}
 
 
+def _distribution_changes(left, right):
+    """Compare shared Coverage counts. These are selected sources, not all mentions."""
+    result = []
+    for scope in left['scopes']:
+        a, b = left['scopes'][scope], right['scopes'][scope]
+        if not (a['record_count'] or b['record_count'] or a['measurable'] or b['measurable']):
+            continue
+        item = {'scope': scope, 'comparable': a['measurable'] and b['measurable'],
+                'persons_named_left': a['persons_named'], 'persons_named_right': b['persons_named'],
+                'by_person': [], 'by_category': []}
+        result.append(item)
+        if not item['comparable']:
+            item['reason'] = 'person_references_only' if scope == 'person_reference' else 'missing_segment_links'
+            continue
+        a, b = a['distribution'], b['distribution']
+        if len(a['by_person']) != len(b['by_person']) or len(a['by_category']) != len(b['by_category']):
+            raise ValueError('Materialbasis der Wiederholungen weicht ab.')
+        item.update(selected_units_left=a['selected_units'], selected_units_right=b['selected_units'],
+                    material_units=a['material_units'])
+        for p, q in zip(a['by_person'], b['by_person']):
+            if p['person'] != q['person'] or p['material_units'] != q['material_units']:
+                raise ValueError('Personenbasis der Wiederholungen weicht ab.')
+            item['by_person'].append({'person': p['person'], 'material_units': p['material_units'],
+                'selected_units_left': p['selected_units'], 'selected_units_right': q['selected_units'],
+                'share_left': p['evidence_share'], 'share_right': q['evidence_share'],
+                'share_delta': q['evidence_share'] - p['evidence_share']
+                    if p['evidence_share'] is not None and q['evidence_share'] is not None else None})
+        level_a, level_b = Counter(), Counter()
+        for row in a['by_category']:
+            level_a[row['level']] += row['selected_coding_rows']
+        for row in b['by_category']:
+            level_b[row['level']] += row['selected_coding_rows']
+        for p, q in zip(a['by_category'], b['by_category']):
+            if (p['level'], p['code'], p['material_coding_rows']) != (q['level'], q['code'], q['material_coding_rows']):
+                raise ValueError('Kategorienbasis der Wiederholungen weicht ab.')
+            item['by_category'].append({'level': p['level'], 'code': p['code'],
+                'material_coding_rows': p['material_coding_rows'],
+                'selected_coding_rows_left': p['selected_coding_rows'], 'selected_coding_rows_right': q['selected_coding_rows'],
+                'level_selected_rows_left': level_a[p['level']], 'level_selected_rows_right': level_b[p['level']],
+                'share_left': p['evidence_share_at_level'], 'share_right': q['evidence_share_at_level'],
+                'share_delta': q['evidence_share_at_level'] - p['evidence_share_at_level']
+                    if p['evidence_share_at_level'] is not None and q['evidence_share_at_level'] is not None else None})
+    return result
+
+
 def analyze_stage_repetitions(segments, module_id, samples):
     """Compare projected records/evidence, not semantic equivalence of whole reports."""
     if module_id not in STAGES:
         raise ValueError('Unbekanntes analytisches Modul.')
     # Validate original IDs even when all samples fail.
-    make_snapshot(segments, {})
+    baseline = analyze_coverage(make_snapshot(segments, {}))
 
     def project(payload):
         projected = project_stage(module_id, payload)
-        checked = make_snapshot(segments, {module_id: projected})['stages'][module_id]
+        projected['status'] = 'available'
+        snapshot = make_snapshot(segments, {module_id: projected})
+        checked = snapshot['stages'][module_id]
         if any(not row['valid'] for row in checked['records']):
             raise ValueError('Unaufgelöste oder fremde Referenzen.')
+        checked['coverage'] = analyze_coverage(snapshot)['stages'][module_id]
         return checked
 
     valid, excluded = _samples(samples, project)
     result = {**_base(samples, valid, excluded), 'module_id': module_id,
+              'material': baseline['material'], 'unit_basis': baseline['unit_basis'],
               'pairs': [], 'record_occurrences': [], 'sample_details': [],
               'interpretation': 'Beschreibende Wiederholbarkeit, keine Richtigkeit oder semantische Gleichheit.'}
     identities, inventories, representatives, cluster_pairs = {}, {}, {}, {}
@@ -115,7 +165,8 @@ def analyze_stage_repetitions(segments, module_id, samples):
                 'comparison_context': row['comparison_context'], 'segment_ids': row['segment_ids'],
                 'persons': row['persons'], 'text_preview': row['text'][:1200],
                 'text_characters': len(row['text']), 'text_preview_truncated': len(row['text']) > 1200})
-        details = {'sample_id': sid, 'projected_records': len(rows), 'warnings': data['warnings']}
+        details = {'sample_id': sid, 'projected_records': len(rows), 'warnings': data['warnings'],
+                   'coverage': data['coverage']}
         if module_id == 'clusterer':
             details['coassignment'], cluster_pairs[sid] = _cluster_pairs(rows)
         result['sample_details'].append(details)
@@ -128,6 +179,7 @@ def analyze_stage_repetitions(segments, module_id, samples):
                 'present_in_all' if len(present) == len(valid) else 'variable'})
     for left, right in combinations(valid, 2):
         pair = {'left': left, 'right': right,
+                'selection_distribution_changes': _distribution_changes(valid[left]['coverage'], valid[right]['coverage']),
                 'projected_record_overlap': _overlap(identities[left], identities[right]),
                 'projected_reference_binding_overlap': _overlap(
                     Counter(_record_identity(r, include_text=False) for r in valid[left]['records']),

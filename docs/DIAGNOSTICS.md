@@ -582,6 +582,40 @@ höchstens 50 wechselnde Kombinationen und 50 auffällige Codierungen; weitere F
 und die explizite Restzahl verweisen auf das vollständige JSON-Ergebnis.
 HTML-/Markdown-Zeichen aus Eingaben werden als Daten maskiert.
 
-CLI, Aufwandshinweise, Oberfläche und Integration in den Gesamtbericht folgen
-innerhalb S06. Personen-/Kategorieverteilungen und die spätere Anbindung an die
-Codebook-Diagnostik bleiben ebenfalls offen.
+### Verteilung der ausgewählten Quellen über Wiederholungen
+
+Der Stabilitätsvergleich verwendet dafür unmittelbar `coverage_core.analyze_coverage`.
+Es gibt keine zweite, abweichende Zähllogik. Je erfolgreicher Wiederholung und
+Quellenart stehen die vollständigen Coverage-Verteilungen im JSON. Paarweise werden
+die Auswahlzahlen und Anteilsänderungen ausgewiesen, über die Abschnitte des jeweiligen
+Moduls zusammengefasst. Die bereits getrennten Text-/Referenzvergleiche prüfen zusätzlich
+Abschnittswechsel, etwa zwischen SWOT-Dimensionen.
+
+Personenanteile beziehen sich auf ausgewählte Materialeinheiten: konsistente,
+explizite Passage-IDs werden einmal gezählt, sonst einzelne Codierzeilen. Mehrere
+Dokumentteile derselben bereits zugeordneten Person bleiben diese eine Person.
+Gleicher Text ohne gemeinsame Passage-ID wird nicht automatisch zusammengelegt.
+Eine widersprüchliche Passage-ID sperrt die Diagnose auch dann, wenn alle
+Wiederholungen fehlgeschlagen sind. Wiederholte Zitate derselben Stelle erhöhen
+die Auswahlzahl nicht. Kategorieanteile zählen dagegen die tatsächlich referenzierten
+Codierzeilen innerhalb derselben Hierarchieebene (1–4); eine Mehrfachcodierung kann
+mehrere Kategorien betreffen. Der Nenner enthält ausschließlich Codierzeilen mit
+einem Pfad auf dieser Ebene. Menschliche Originalcodes werden dabei nicht durch
+neue Modellcodes ersetzt; deren Häufigkeiten stehen separat im Codiervergleich.
+
+Die Darstellung nennt linke/rechte Auswahlzahlen, jeweilige Anteilsnenner und
+die Materialmenge im gemeinsamen Export. Ein nicht berechenbarer Anteil ergibt
+auch keine berechenbare Anteilsänderung. Null ausgewählte Stellen in einer gültigen
+Quelle bleibt von fehlenden Referenzdaten und ausgeschlossenen Läufen unterscheidbar.
+Reine Personenreferenzen werden nicht in die zugehörigen Textstellen oder Kategorien
+aufgefächert. Quellengruppen bleiben als Kontext gekennzeichnet.
+
+Dies ist ein Vergleich der gespeicherten Quellenauswahl, keine vollständige Zählung
+thematischer Nennungen, kein Maß wissenschaftlicher Bedeutung und keine automatische
+Änderung der Gewichtung des LLM. Die gesondert geplanten Analyseperspektiven aus S13
+werden dadurch nicht vorweggenommen. Im Markdown erscheinen geänderte Personen- und
+Kategoriezeilen (je höchstens 50 mit expliziter Restzahl); das JSON enthält auch die
+unveränderten Verteilungen vollständig.
+
+CLI, Aufwandshinweise, Oberfläche, Integration in den Gesamtbericht und spätere
+Anbindung an die Codebook-Diagnostik folgen innerhalb der weiteren Integrationsschritte.

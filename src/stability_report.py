@@ -93,6 +93,37 @@ def render_stability(result):
                 lines += ['- ' + esc(label) + ': Segmentüberlappung ' + ratio(ref['segment_overlap']) +
                           '; Personenüberlappung ' + ratio(ref['person_overlap'])]
             lines += ['']
+            for selection in pair.get('selection_distribution_changes', []):
+                lines += ['**Verteilung: ' + esc(SCOPES.get(selection['scope'], selection['scope'])) + '**', '']
+                if not selection['comparable']:
+                    lines += ['Keine vergleichbare Verteilung von Textstellen: nur Personenreferenzen oder fehlende Segmentverknüpfungen. '
+                              'Aus Personennamen werden keine Textstellen oder Kategorien ergänzt.', '']
+                    continue
+                lines += [f"Ausgewählte Materialeinheiten: {selection['selected_units_left']} → {selection['selected_units_right']} "
+                          f"bei {selection['material_units']} Einheiten im gemeinsamen Export.", '',
+                          'Personenanteile zählen eindeutige explizite Passagen, sonst Codierzeilen. '
+                          'Kategorieanteile zählen referenzierte Codierzeilen je Hierarchieebene. '
+                          'Diese Werte beschreiben die gespeicherte Quellenauswahl, keine umfassende thematische Nennungshäufigkeit.', '']
+                people = [p for p in selection['by_person'] if p['selected_units_left'] != p['selected_units_right'] or p['share_delta'] not in (None, 0)]
+                categories = [p for p in selection['by_category'] if p['selected_coding_rows_left'] != p['selected_coding_rows_right'] or p['share_delta'] not in (None, 0)]
+                def fraction(n, d):
+                    return f'{n}/{d} ({n/d:.1%})' if d else 'nicht berechenbar (keine ausgewählten Einheiten)'
+                if people:
+                    lines += ['| Person | Anteil links | Anteil rechts | Eigene Materialeinheiten im Export |', '|---|---:|---:|---:|']
+                    for p in people[:50]:
+                        lines += ['| ' + esc(p['person']) + ' | ' + fraction(p['selected_units_left'],selection['selected_units_left']) +
+                                  ' | ' + fraction(p['selected_units_right'],selection['selected_units_right']) + f" | {p['material_units']} |"]
+                    lines += ['']
+                if categories:
+                    lines += ['| Ebene / Kategorie | Anteil links | Anteil rechts | Codierzeilen im Export |', '|---|---:|---:|---:|']
+                    for p in categories[:50]:
+                        lines += [f"| {p['level']} / " + esc(p['code']) + ' | ' + fraction(p['selected_coding_rows_left'],p['level_selected_rows_left']) +
+                                  ' | ' + fraction(p['selected_coding_rows_right'],p['level_selected_rows_right']) + f" | {p['material_coding_rows']} |"]
+                    lines += ['']
+                if not people and not categories:
+                    lines += ['Keine Änderung der gespeicherten Auswahlzahlen oder berechenbaren Anteile.', '']
+                if len(people)>50 or len(categories)>50:
+                    lines += [f'{max(0,len(people)-50)} weitere Personen und {max(0,len(categories)-50)} weitere Kategorieänderungen stehen im JSON-Ergebnis.', '']
         changed = [r for r in data.get('record_occurrences', []) if r['repeat_status'] == 'variable']
         if changed:
             lines += ['#### Unterschiedlich vorkommende projizierte Befunde', '',
