@@ -20,6 +20,22 @@ def reject_secret_settings(settings):
         for value in settings: reject_secret_settings(value)
 
 
+def reject_config_secrets(config):
+    """Validate snapshot input; only llm.api_key_env may name a credential source."""
+    if not isinstance(config, dict) or not isinstance(config.get('llm', {}), dict):
+        raise ValueError('Konfiguration und llm müssen YAML-Objekte sein.')
+    guarded = dict(config)
+    llm = guarded['llm'] = dict(config.get('llm', {}))
+    if 'api_key_env' in llm:
+        name = llm.pop('api_key_env')
+        if not isinstance(name, str) or not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]{0,199}', name):
+            raise ValueError('llm.api_key_env darf nur den Namen einer Schlüssel-Umgebungsvariable enthalten.')
+    try:
+        reject_secret_settings(guarded)
+    except RecursionError:
+        raise ValueError('Konfiguration ist zu tief verschachtelt oder enthält zyklische YAML-Verweise.') from None
+
+
 class ProviderKeys:
     def __init__(self, directory):
         self.path = Path(directory) / 'llm_keys.private.json'

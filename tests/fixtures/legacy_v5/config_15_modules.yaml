@@ -1,0 +1,417 @@
+# Synthetic frozen legacy-shaped configuration, not private research material.
+llm:
+  host: http://localhost:11434
+  model: mock
+  num_ctx: 65536
+  max_tokens: 2048
+  temperature: 0.05
+  think: false
+paths:
+  input_csv: segments.csv
+  category_system_csv: codebook.csv
+columns:
+  segment_id: ID
+  person: Dokument
+  code: Code
+  segment: Text
+  unit_id: Passage
+context:
+  project_description: Rein künstliches Beispiel eines älteren Projekts.
+coding_agreement:
+  label_mode: multi_label
+  independent_units_confirmed: false
+prompts:
+  cluster_analysis:
+    system: Historische Clustervorlage
+    user: '{segments}'
+  cluster_summary:
+    system: Historische Clusterauswertung
+    user: '{clusters}'
+  category_summary:
+    system: Historische Kategorieauswertung
+    user: '{subcats}'
+pipeline:
+  modules:
+  - id: clusterer
+    name: Clusteranalyse
+    script: clusterer.py
+    enabled: true
+    depends_on: []
+    args:
+    - --config
+    - '{config}'
+    - --csv
+    - '{input_csv}'
+    - --out-md
+    - clusterer_output.md
+    - --out-json
+    - clusters_output.json
+    - --idmap-json
+    - id_to_text.json
+    - --plots-dir
+    - plots
+    - '{log_raw_flag}'
+    outputs:
+    - clusterer_output.md
+    - clusters_output.json
+    - id_to_text.json
+    report:
+      title: Clusteranalyse
+      markdown: clusterer_output.md
+  - id: code_verification
+    name: Code-Verifikation
+    script: code_verification.py
+    enabled: false
+    depends_on:
+    - clusterer
+    args:
+    - --config
+    - '{config}'
+    - --input-csv
+    - '{input_csv}'
+    - --idmap-json
+    - id_to_text.json
+    - --out-md
+    - code_verification_v1.md
+    - --out-json
+    - code_verification_v1.json
+    - --log-file
+    - code_verification.log
+    outputs:
+    - code_verification_v1.md
+    - code_verification_v1.json
+    - code_verification.log
+    report:
+      title: Code-Verifikation
+      markdown: code_verification_v1.md
+  - id: blind_coding
+    name: Blind-Coding
+    script: blind_coding.py
+    enabled: false
+    depends_on:
+    - clusterer
+    args:
+    - --config
+    - '{config}'
+    - --input-csv
+    - '{input_csv}'
+    - --idmap-json
+    - id_to_text.json
+    - --out-md
+    - blind_coding_v1.md
+    - --out-json
+    - blind_coding_v1.json
+    - --log-file
+    - blind_coding.log
+    outputs:
+    - blind_coding_v1.md
+    - blind_coding_v1.json
+    - blind_coding.log
+    report:
+      title: Blind-Coding
+      markdown: blind_coding_v1.md
+  - id: coding_agreement
+    name: Human–LLM Coding Agreement
+    script: coding_agreement.py
+    enabled: false
+    depends_on:
+    - code_verification
+    - blind_coding
+    args:
+    - --config
+    - '{config}'
+    - --input-csv
+    - '{input_csv}'
+    - --verify-json
+    - code_verification_v1.json
+    - --blind-json
+    - blind_coding_v1.json
+    - --out-md
+    - coding_agreement_v1.md
+    - --out-json
+    - coding_agreement_v1.json
+    - --out-confusion-png
+    - coding_agreement_confusion.png
+    - --log-file
+    - coding_agreement.log
+    outputs:
+    - coding_agreement_v1.md
+    - coding_agreement_v1.json
+    - coding_agreement.log
+    report:
+      title: Human–LLM Coding Agreement
+      markdown: coding_agreement_v1.md
+  - id: summarizer
+    name: Cluster-Zusammenfassungen
+    script: summarizer.py
+    enabled: true
+    depends_on:
+    - clusterer
+    args:
+    - --config
+    - '{config}'
+    - --clusters-json
+    - clusters_output.json
+    - --idmap-json
+    - id_to_text.json
+    - --out-md
+    - summary_v1.md
+    - --out-json
+    - summary_v1.json
+    outputs:
+    - summary_v1.md
+    - summary_v1.json
+    report:
+      title: Cluster-Zusammenfassungen
+      markdown: summary_v1.md
+  - id: swot
+    name: SWOT-Analysen
+    script: swot.py
+    enabled: false
+    depends_on:
+    - summarizer
+    args:
+    - --config
+    - '{config}'
+    - --clusters-json
+    - clusters_output.json
+    - --idmap-json
+    - id_to_text.json
+    - --summary-json
+    - summary_v1.json
+    - --out-md
+    - swot_v1.md
+    - --out-json
+    - swot_v1.json
+    outputs:
+    - swot_v1.md
+    - swot_v1.json
+    report:
+      title: SWOT-Analysen
+      markdown: swot_v1.md
+  - id: meta_swot
+    name: Meta-SWOT
+    script: meta_swot.py
+    enabled: false
+    depends_on:
+    - swot
+    args:
+    - --config
+    - '{config}'
+    - --swot-json
+    - swot_v1.json
+    - --out-md
+    - meta_swot_v1.md
+    - --out-json
+    - meta_swot_v1.json
+    outputs:
+    - meta_swot_v1.md
+    - meta_swot_v1.json
+    report:
+      title: Meta-SWOT
+      markdown: meta_swot_v1.md
+  - id: person_analysis
+    name: Personenanalyse
+    script: person_analysis.py
+    enabled: false
+    depends_on:
+    - summarizer
+    args:
+    - --config
+    - '{config}'
+    - --clusters-json
+    - clusters_output.json
+    - --idmap-json
+    - id_to_text.json
+    - --summary-json
+    - summary_v1.json
+    - --out-md
+    - person_analysis_v1.md
+    - --out-json
+    - person_analysis_v1.json
+    outputs:
+    - person_analysis_v1.md
+    - person_analysis_v1.json
+    report:
+      title: Personenanalysen
+      markdown: person_analysis_v1.md
+  - id: person_comparison
+    name: Personenvergleich und Typenbildung
+    script: person_comparison.py
+    enabled: false
+    depends_on:
+    - person_analysis
+    args:
+    - --config
+    - '{config}'
+    - --person-json
+    - person_analysis_v1.json
+    - --out-md
+    - person_comparison_v1.md
+    - --out-json
+    - person_comparison_v1.json
+    outputs:
+    - person_comparison_v1.md
+    - person_comparison_v1.json
+    report:
+      title: Personenvergleich und Typenbildung
+      markdown: person_comparison_v1.md
+  - id: contrast_analysis
+    name: Kontrast- und Negativfallanalyse
+    script: contrast_analysis.py
+    enabled: false
+    depends_on:
+    - person_analysis
+    - person_comparison
+    args:
+    - --config
+    - '{config}'
+    - --person-json
+    - person_analysis_v1.json
+    - --comparison-json
+    - person_comparison_v1.json
+    - --out-md
+    - contrast_analysis_v1.md
+    - --out-json
+    - contrast_analysis_v1.json
+    outputs:
+    - contrast_analysis_v1.md
+    - contrast_analysis_v1.json
+    report:
+      title: Kontrast- und Negativfallanalyse
+      markdown: contrast_analysis_v1.md
+  - id: relation_analysis
+    name: Zusammenhangsanalyse
+    script: relation_analysis.py
+    enabled: false
+    depends_on:
+    - summarizer
+    args:
+    - --config
+    - '{config}'
+    - --clusters-json
+    - clusters_output.json
+    - --idmap-json
+    - id_to_text.json
+    - --summary-json
+    - summary_v1.json
+    - --out-md
+    - relation_analysis_v1.md
+    - --out-json
+    - relation_analysis_v1.json
+    outputs:
+    - relation_analysis_v1.md
+    - relation_analysis_v1.json
+    report:
+      title: Zusammenhangsanalyse
+      markdown: relation_analysis_v1.md
+  - id: ambiguity_analysis
+    name: Ambivalenz- und Widerspruchsanalyse
+    script: ambiguity_analysis.py
+    enabled: false
+    depends_on:
+    - person_analysis
+    args:
+    - --config
+    - '{config}'
+    - --person-json
+    - person_analysis_v1.json
+    - --idmap-json
+    - id_to_text.json
+    - --out-md
+    - ambiguity_analysis_v1.md
+    - --out-json
+    - ambiguity_analysis_v1.json
+    outputs:
+    - ambiguity_analysis_v1.md
+    - ambiguity_analysis_v1.json
+    report:
+      title: Ambivalenz- und Widerspruchsanalyse
+      markdown: ambiguity_analysis_v1.md
+  - id: evidence_audit
+    name: Evidence-Audit
+    script: evidence_audit.py
+    enabled: false
+    depends_on:
+    - swot
+    - meta_swot
+    - contrast_analysis
+    - ambiguity_analysis
+    args:
+    - --config
+    - '{config}'
+    - --swot-json
+    - swot_v1.json
+    - --meta-swot-json
+    - meta_swot_v1.json
+    - --contrast-json
+    - contrast_analysis_v1.json
+    - --ambiguity-json
+    - ambiguity_analysis_v1.json
+    - --idmap-json
+    - id_to_text.json
+    - --out-md
+    - evidence_audit_v1.md
+    - --out-json
+    - evidence_audit_v1.json
+    outputs:
+    - evidence_audit_v1.md
+    - evidence_audit_v1.json
+    report:
+      title: Evidence-Audit
+      markdown: evidence_audit_v1.md
+  - id: review_queue
+    name: Prüfliste der Codierungen
+    script: review_queue.py
+    enabled: false
+    depends_on:
+    - coding_agreement
+    - evidence_audit
+    args:
+    - --config
+    - '{config}'
+    - --input-csv
+    - '{input_csv}'
+    outputs:
+    - review_queue.json
+    - review_queue.md
+    - review_queue.html
+    report:
+      title: Prüfliste der Codierungen
+      markdown: review_queue.md
+  - id: overall_synthesis
+    name: Gesamtsynthese
+    script: overall_synthesis.py
+    enabled: false
+    depends_on:
+    - meta_swot
+    - person_comparison
+    - contrast_analysis
+    - relation_analysis
+    - ambiguity_analysis
+    - evidence_audit
+    args:
+    - --config
+    - '{config}'
+    - --source-json
+    - Meta-SWOT=meta_swot_v1.json
+    - --source-json
+    - Personenvergleich=person_comparison_v1.json
+    - --source-json
+    - Kontrastanalyse=contrast_analysis_v1.json
+    - --source-json
+    - Zusammenhangsanalyse=relation_analysis_v1.json
+    - --source-json
+    - Ambivalenzanalyse=ambiguity_analysis_v1.json
+    - --source-json
+    - Evidence-Audit=evidence_audit_v1.json
+    - --out-md
+    - overall_synthesis_v1.md
+    - --out-json
+    - overall_synthesis_v1.json
+    outputs:
+    - overall_synthesis_v1.md
+    - overall_synthesis_v1.json
+    report:
+      title: Gesamtsynthese
+      markdown: overall_synthesis_v1.md

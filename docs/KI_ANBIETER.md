@@ -12,7 +12,7 @@ Die Oberfläche startet mit `gdpr_relevant: true` und `provider: ollama_local`. 
 
 In der Oberfläche werden feste Anbieteradressen verwendet. Eigene Gateways und weitere Anbieter sind noch nicht vorgesehen. Hugging Face kann an weitere Anbieter routen. Das Modell muss im jeweiligen API-Konto verfügbar sein; Namen direkt dort nachsehen. Chat-Abonnements und API-Zugang können unterschiedliche Abrechnung und Berechtigungen haben.
 
-Schlüssel im separaten Feld speichern, ersetzen oder entfernen. Ohne Windows-Speicheroption bleiben sie nur im laufenden Serverprozess. Optional speichert Windows sie über DPAPI an das Benutzerkonto gebunden verschlüsselt. Die Datei `llm_keys.private.json` liegt außerhalb der Projektordner und gehört nicht in GitHub. Der Kindprozess erhält nur den Schlüssel seines ausgewählten Anbieters; Schlüssel werden nicht in Argumentlisten, Projektkonfigurationen, Berichtsmetadaten oder Prüfexporte geschrieben.
+Schlüssel im separaten Feld speichern, ersetzen oder entfernen. Ohne Windows-Speicheroption bleiben sie nur im laufenden Serverprozess. Optional speichert Windows sie über DPAPI an das Benutzerkonto gebunden verschlüsselt. Die Datei `llm_keys.private.json` liegt außerhalb der Projektordner und gehört nicht in GitHub. Die Anwendung schreibt diese Schlüssel nicht in Argumentlisten, Projektkonfigurationen, Berichtsmetadaten oder Prüfexporte.
 
 Die lokale Projektsperre wird auch vor Wiederaufnahme und Kategorienvorschlägen kontrolliert. Alte Cloud-Konfigurationen können sie nicht übergehen. Vor erneuter Aktivierung der Sperre einen aktiven Lauf abschließen oder nach dem aktuellen Modul pausieren. Bereits übermittelte Inhalte werden nicht zurückgerufen. Ein Anbieterwechsel erfordert einen neuen Lauf; die Wiederaufnahme bleibt an die bisherige Konfiguration gebunden.
 
@@ -29,7 +29,41 @@ llm:
   model: gemma4:31b
 ```
 
-Die übrigen Einstellungen aus der vollständigen Konfiguration beibehalten. Den Schlüssel ausschließlich als Umgebungsvariable setzen. Bei den anderen Cloud-Anbietern `provider` und `api_key_env` gemäß Tabelle ändern und den dort verfügbaren Modellnamen eintragen. Die Transportadressen dieser Anbieter sind fest hinterlegt. Frühere CLI-Konfigurationen mit explizitem Ollama-Cloud-Host bleiben kompatibel; `gdpr_relevant: true` sperrt Cloud unabhängig davon. Neue Konfigurationen sollten beide Auswahlfelder ausdrücklich setzen.
+Die übrigen Einstellungen aus der vollständigen Konfiguration beibehalten. Den Schlüssel ausschließlich als Umgebungsvariable setzen. Bei den anderen Cloud-Anbietern `provider` und `api_key_env` gemäß Tabelle ändern und den dort verfügbaren Modellnamen eintragen. Die Transportadressen dieser Anbieter sind fest hinterlegt. Neue Konfigurationen sollten `provider` und `gdpr_relevant` ausdrücklich setzen.
+
+Fehlt `gdpr_relevant`, bleibt die Kommandozeile grundsätzlich im privaten Modus.
+Ein gesetzter Cloud-Anbieter oder ein geerbtes `OLLAMA_HOST=https://ollama.com`
+erteilt für sich allein keine Datenfreigabe. Der Modelltransport wird dann vor
+der Anfrage abgewiesen. Eine lokale Loopback-Adresse mit abweichendem Port über
+`OLLAMA_HOST` bleibt möglich.
+
+Eine enge Ausnahme erhält frühere Ollama-Cloud-YAMLs: Steht `host: https://ollama.com`
+ausdrücklich in der Datei und ist der gewählte Anbieter Ollama Cloud, wird dies
+weiterhin als bisherige Freigabe behandelt. Ein abschließender `/` und Port `443`
+sind zulässig; Zugangsdaten in der Adresse, andere Pfade, Queries, Fragmente oder
+Ports begründen diese Ausnahme nicht. `gdpr_relevant: true` sperrt Cloud auch bei
+solchen alten Konfigurationen. Die Datei wird dabei nicht automatisch umgeschrieben.
+
+### Schlüsselquellen und Unterprozesse
+
+In der YAML darf `llm.api_key_env` ausschließlich einen Variablennamen wie
+`OLLAMA_API_KEY` oder `MEIN_MODELL_KEY` enthalten, niemals den Schlüsselwert.
+Eingebettete Felder wie `api_key`, `token`, `password` oder `credential` werden
+auch verschachtelt abgelehnt. Das gilt vor dem normalen Runnerstart, bei
+`--validate-only` und beim Vorbereiten einer Wiederholungsserie. Die Prüfung
+bereinigt die Datei nicht still, sondern verlangt eine Korrektur vor der neuen
+Laufausgabe. Schlüsselwerte nicht in andere YAML-Felder oder Prompttexte kopieren;
+die Feldprüfung ist keine allgemeine Erkennung beliebiger Geheimnisse in Texten.
+
+Vor regulären Modulprozessen und kontrollierten Unterläufen entfernt die
+Anwendung die bekannten Anbieter-Schlüsselvariablen und den ausdrücklich
+konfigurierten eigenen Schlüsselnamen aus der übernommenen Umgebung. Ein
+Modellprozess erhält davon nur den benötigten Schlüssel seines ausgewählten
+Cloud-Anbieters. Lokale und modellfreie Module erhalten keinen dieser Schlüssel.
+Andere Laufzeitvariablen bleiben erhalten; beliebig anders benannte geheime
+Variablen werden nicht allgemein erkannt. Unter Windows werden bekannte
+Schlüsselnamen unabhängig von Groß-/Kleinschreibung behandelt; widersprüchliche
+Aliaswerte für den benötigten Cloudschlüssel werden abgewiesen.
 
 ## API-Verhalten und Teststand
 

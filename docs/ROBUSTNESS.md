@@ -1,5 +1,41 @@
 # Fehlerbehandlung und reproduzierbare Läufe
 
+## Bestehende Konfigurationen, Datenfreigabe und Schlüssel
+
+Der normale CLI-Einstieg und die kontrollierten Wiederholungspläne verwenden
+dieselbe rekursive Prüfung auf Credential-Felder. Sie läuft vor neuer
+Laufausgabe, Provenienz und Konfigurationssnapshot und gilt auch für
+`--validate-only`. Nur `llm.api_key_env` darf als Name einer Umgebungsvariable
+angegeben werden. Eingebettete Schlüssel werden abgelehnt; die Konfiguration
+wird nicht still bereinigt. Vorhandene Dateien bleiben dabei erhalten.
+Diese Feldprüfung erkennt nicht beliebige Geheimnisse in frei formulierten
+Textwerten. Schlüssel deshalb ausschließlich über die vorgesehenen Schlüsselquellen eingeben.
+
+Fehlende CLI-Datenfreigabe bedeutet grundsätzlich privaten Modus. Ein geerbter
+Ollama-Cloud-Host oder eine Anbieterwahl allein hebt die Sperre nicht auf.
+Die enge Ausnahme für frühere, ausdrücklich in der YAML gesetzte reine
+`https://ollama.com`-Adressen ist in [KI_ANBIETER.md](KI_ANBIETER.md#kommandozeile)
+beschrieben; ein explizites `gdpr_relevant: true` hat auch dort Vorrang.
+Modellfreie Module benötigen weiterhin keinen Modellstart oder API-Schlüssel.
+
+Reguläre Modulprozesse und Serienkinder filtern die bekannten Provider-Schlüssel
+sowie den ausdrücklich konfigurierten eigenen Schlüsselnamen aus der geerbten
+Umgebung. Nur der benötigte Cloudschlüssel wird weitergegeben; lokale und
+modellfreie Module erhalten keinen dieser Schlüssel. Gewöhnliche
+Laufzeitvariablen bleiben erhalten. Dies ist kein allgemeiner Scanner für
+beliebig anders benannte geheime Umgebungsvariablen.
+
+Die synthetische Legacyfixture enthält ausschließlich die 15 Basismodule ohne
+Diagnose-, Aufwand- oder Unterlauf-Felder. Die Tests prüfen, dass Normalisierung
+und Vorprüfung keine neuen Module aktivieren und die Originaldatei unverändert
+lassen. Ein vorhandenes Projekt behält beim Öffnen Auswahl, bestätigte
+Personenzuordnung, gespeicherte Promptvorlagen und Berichte. Eine ausdrückliche
+Speicherung erzeugt eine neue Revision; alte Revisionen und Ergebnisse bleiben
+erhalten, neue Diagnosen ohne Auswahl ausgeschaltet. Unveränderte Lesbarkeit
+alter Berichte bedeutet keine Lockerung der Wiederaufnahme: Ein anderer
+Fingerprint durch geänderte Eingaben, Einstellungen, Code oder Abhängigkeiten
+führt weiterhin zur begründeten Ablehnung von Resume.
+
 ## Modellfreie Coverage und unvollständige Quellen
 
 Die optionale Coverage prüft Datei-, Eingabe- und Konfigurationshashes. Ausfälle

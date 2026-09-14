@@ -9,6 +9,9 @@ Neue Analysemodule werden ausschließlich in config_v2.yaml unter
 
 from project_paths import DEFAULT_CONFIG, DEFAULT_OUTPUT
 from cost_profiles import normalize_cost_profile
+from provider_keys import reject_config_secrets
+from contextvars import ContextVar
+from llm_providers import provider_environment, transport_selection
 import argparse
 import os
 import uuid
@@ -26,6 +29,7 @@ import yaml
 
 LOGGER = logging.getLogger("workflow")
 TOKEN_RE = re.compile(r"\{([A-Za-z_][A-Za-z0-9_]*)\}")
+STEP_TRANSPORT = ContextVar('workflow_step_transport', default=None)
 
 
 class ModulePaused(RuntimeError):
@@ -146,7 +150,8 @@ def run_step(module: dict, command: list[str], cwd: Path):
             previous[output] = (path.stat().st_mtime_ns, file_hash(path))
     progress_path = cwd / 'progress.json'
     atomic_json(progress_path, {'module':module['id'],'completed':0,'total':None,'requests':0,'request_active':False})
-    child_env = {**os.environ, "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8",
+    selected = STEP_TRANSPORT.get() or {'provider':'ollama_local','api_key_env':'OLLAMA_API_KEY'}
+    child_env = {**provider_environment(selected, os.environ), "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8",
                  'WORKFLOW_MODULE':module['id'],'WORKFLOW_PROGRESS_FILE':str(progress_path)}
     execution_path = cwd / ('execution_' + module['id'] + '.log')
     with execution_path.open('ab') as execution_log:
@@ -249,6 +254,7 @@ def build_full_report(output_dir: Path, modules: list[dict], created_at: str) ->
 
 def execution_provenance(config_path, csv_path, config, script_dir=None):
     """Shared execution identity for ordinary runs and controlled repetitions."""
+    reject_config_secrets(config)
     script_dir = Path(script_dir or Path(__file__).resolve().parent)
     config_path = Path(config_path)
     provenance = {
@@ -299,6 +305,7 @@ def main(argv=None):
 
     with open(config_path, "r", encoding="utf-8") as f:
         config = yaml.safe_load(f)
+    reject_config_secrets(config)
 
     configured_csv = config.get("paths", {}).get("input_csv")
     if args.csv:
@@ -311,6 +318,10 @@ def main(argv=None):
         raise FileNotFoundError(f"CSV nicht gefunden: {csv_path}")
 
     modules = topological_order(normalize_modules(config))
+    needs_model = any(m.get('requires_model', True) for m in modules)
+    llm = config.get('llm', {})
+    selected_transport = (transport_selection(llm, llm.get('model', '')) if needs_model else
+                          {'provider':'ollama_local','api_key_env':llm.get('api_key_env','OLLAMA_API_KEY')})
     if config.get('_diagnostic_child') and any(m['starts_child_runs'] for m in modules):
         raise ValueError('Ein Diagnose-Unterlauf darf keine weiteren Modell-Unterläufe starten.')
     from stability_analysis import configured_plan, planning_summary
@@ -333,7 +344,8 @@ def main(argv=None):
     if unknown:
         raise ValueError(f"{unknown} Codierzeilen passen nicht zum Codebuch. Codepfade vor dem Lauf abgleichen.")
     from managed_ollama import workers, ManagedOllama
-    workers(config.get("llm", {}))
+    if needs_model:
+        workers(config.get("llm", {}))
     from context_preflight import check_context, require_context
     context_check=check_context(config,input_segments,code_index,modules)
     require_context(context_check)
@@ -395,7 +407,6 @@ def main(argv=None):
         manifest.setdefault("failure_history", []).append({"failed_at": manifest.pop("failed_at", None), "error": manifest.pop("error")})
     manifest.pop("finished_at", None)
     atomic_json(output_dir / "workflow_manifest.json", manifest)
-    needs_model = any(m.get('requires_model', True) for m in modules)
     managed = ManagedOllama(config.get("llm", {}), output_dir)
     managed_started = False
     from managed_ollama import HOST_ENV
@@ -439,7 +450,13 @@ def main(argv=None):
                     raise FileNotFoundError(script_path)
                 rendered = [render_arg(value, runtime).strip() for value in module.get("args", [])]
                 command = [sys.executable, str(script_path), *[v for v in rendered if v]]
-                run_step(module, command, output_dir)
+                # Preserve the established module-call interface and isolate per-run credentials.
+                token = STEP_TRANSPORT.set(selected_transport if module['requires_model'] else
+                    {'provider':'ollama_local','api_key_env':selected_transport['api_key_env']})
+                try:
+                    run_step(module, command, output_dir)
+                finally:
+                    STEP_TRANSPORT.reset(token)
             except ModulePaused:
                 manifest['module_status'][module['id']] = 'paused'
                 manifest.update(status='paused', current_module=module['id'])

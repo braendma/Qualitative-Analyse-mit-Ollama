@@ -34,12 +34,31 @@ def selection(settings, *, default_private=True):
             'host': PROVIDERS[provider]['host'], 'api_key_env': PROVIDERS[provider]['env'] or 'OLLAMA_API_KEY'}
 
 
+def _explicit_legacy_cloud_host(settings):
+    """Compatibility consent applies only to the host written in an old YAML.
+
+    An inherited OLLAMA_HOST is a transport preference, never data-release consent.
+    Credentials, redirects and alternate endpoint paths are not legacy host syntax.
+    """
+    host = settings.get('host')
+    if not isinstance(host, str):
+        return False
+    try:
+        parsed = urlparse(host)
+        return (parsed.scheme == 'https' and parsed.hostname == 'ollama.com' and
+                parsed.port in (None, 443) and not parsed.username and not parsed.password and
+                parsed.path in ('', '/') and not parsed.query and not parsed.fragment)
+    except ValueError:
+        return False
+
+
 def transport_selection(settings, model):
     # Legacy CLI configurations can explicitly use Ollama Cloud. New configs and
     # every dashboard project default to private; an explicit True always wins.
     legacy_host = settings.get('host') or os.environ.get('OLLAMA_HOST', 'http://localhost:11434')
     provider = settings.get('provider') or ('ollama_cloud' if urlparse(legacy_host).hostname == 'ollama.com' else 'ollama_local')
-    result = selection({**settings, 'provider': provider, 'model': model}, default_private=provider == 'ollama_local')
+    legacy_consent = provider == 'ollama_cloud' and _explicit_legacy_cloud_host(settings)
+    result = selection({**settings, 'provider': provider, 'model': model}, default_private=not legacy_consent)
     if settings.get('api_key_env'):
         if not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*',settings['api_key_env']):
             raise ValueError('Ungültiger Name der Schlüssel-Umgebungsvariable.')
@@ -51,6 +70,30 @@ def transport_selection(settings, model):
         result['host'] = legacy_host
         if os.environ.get('QUALITATIVE_CLOUD_TEST_ONLY') == '1':
             raise ValueError('In dieser Cloud-Testoberfläche sind lokale Modellaufrufe deaktiviert.')
+    return result
+
+
+def provider_environment(selected, environment):
+    """Pass only the chosen provider credential while keeping runtime context.
+
+    The caller supplies a validated transport selection. Unknown environment
+    variables remain functional context; this is not a general secret scanner.
+    """
+    provider = selected.get('provider')
+    if provider not in PROVIDERS:
+        raise ValueError('Unbekannter KI-Anbieter für den Kindprozess.')
+    variable = selected.get('api_key_env')
+    if not isinstance(variable, str) or not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*', variable):
+        raise ValueError('Ungültiger Name der Schlüssel-Umgebungsvariable.')
+    canonical = str.upper if os.name == 'nt' else str
+    names = {canonical(key) for key in KEY_ENVS | {variable}}
+    result = {key: value for key, value in environment.items() if canonical(key) not in names}
+    if provider != 'ollama_local':
+        matches = [value for key, value in environment.items() if canonical(key) == canonical(variable)]
+        if len(set(matches)) > 1:
+            raise ValueError('Mehrdeutige Schlüssel-Umgebungsvariable; Schreibweise vereinheitlichen.')
+        if matches:
+            result[variable] = matches[0]
     return result
 
 

@@ -289,6 +289,15 @@ def _confirmed_supervision(log, identity, parent):
     return receipt
 
 
+def _child_environment(config):
+    from llm_providers import provider_environment, transport_selection
+    selected = transport_selection(config['llm'], config['llm']['model'])
+    env = provider_environment(selected, os.environ)
+    env = {key: value for key, value in env.items() if not key.startswith('WORKFLOW_')}
+    env['PYTHONUTF8'] = '1'
+    return env
+
+
 def execute_repetitions(plan, directory, *, resume=False, pause_file=None, progress=None, inner_progress=None):
     """Run samples sequentially; stop on first failure/pause, preserving all outputs.
 
@@ -338,8 +347,7 @@ def execute_repetitions(plan, directory, *, resume=False, pause_file=None, progr
         result = {'schema_version': 1, 'status': 'running', 'plan_fingerprint': plan['plan_fingerprint'],
                   'execution_fingerprint': identity, 'samples': [],
                   'parameter_status': 'configured_not_runtime_verified'}
-        env = {k: v for k, v in os.environ.items() if not k.startswith('WORKFLOW_')}
-        env['PYTHONUTF8'] = '1'
+        env = _child_environment(first_config)
         observed_by_model = {}
         for sample_index, sample in enumerate(plan['samples'], 1):
             if progress:

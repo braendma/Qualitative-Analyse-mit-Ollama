@@ -6,7 +6,7 @@ import yaml
 
 from diagnostic_sources import STAGES
 from llm_providers import transport_selection
-from provider_keys import reject_secret_settings
+from provider_keys import reject_config_secrets
 from runtime_support import file_hash, fingerprint
 
 ANALYSES = set(STAGES) | {'code_verification', 'blind_coding', 'coding_agreement', 'review_queue'}
@@ -58,11 +58,8 @@ def prepare_repetitions(config_path, module_ids, *, repetitions=3):
     if any(not isinstance(config.get(key), dict) for key in ('llm', 'paths', 'pipeline')):
         raise ValueError('Wiederholung benötigt gültige llm-, paths- und pipeline-Zuordnungen.')
     child = copy.deepcopy(config)
-    # Reuse the UI snapshot guard; an environment-variable NAME is not a credential.
-    guarded = copy.deepcopy(child)
     llm = child.get('llm', {})
-    guarded.get('llm', {}).pop('api_key_env', None)
-    reject_secret_settings(guarded)
+    reject_config_secrets(child)
     selected = transport_selection(llm, llm.get('model', ''))
     if llm.get('partial_checkpoint_dir'):
         raise ValueError('Gemeinsame partial_checkpoint_dir entfernen; Wiederholungen benötigen eigene Lauf-Checkpoints.')

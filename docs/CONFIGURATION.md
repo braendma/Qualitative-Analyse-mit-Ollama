@@ -1,5 +1,40 @@
 # Konfigurationsreferenz der wissenschaftlichen Diagnosen
 
+## Datenfreigabe und Schlüssel in vorhandenen Konfigurationen
+
+| Feld | Vorgabe / gültiger Inhalt | Verhalten |
+|---|---|---|
+| `llm.gdpr_relevant` | Ohne Angabe grundsätzlich `true` | Cloud benötigt eine ausdrückliche Freigabe; ein Cloud-Anbieter oder geerbter Umgebungshost ersetzt sie nicht. |
+| `llm.provider` | Beispielsweise `ollama_local` | Neue Dateien nennen Anbieter und Datenfreigabe ausdrücklich. |
+| `llm.api_key_env` | Name einer Umgebungsvariable, etwa `OLLAMA_API_KEY` | Nur der Name, niemals der Schlüsselwert. Er beginnt mit `A–Z`, `a–z` oder `_`, enthält danach zusätzlich Ziffern und hat höchstens 200 Zeichen. |
+
+Die dokumentierte Ausnahme für alte Ollama-Cloud-Dateien gilt nur bei ausdrücklich
+in der YAML gesetztem `https://ollama.com` und effektivem Anbieter Ollama Cloud;
+ein abschließender `/` beziehungsweise Port `443` ist zulässig. Andere URL-Bestandteile
+begründen keine Freigabe. Ein explizites `gdpr_relevant: true` hat immer Vorrang.
+`OLLAMA_HOST` allein aktiviert diese Ausnahme nicht. Einzelheiten:
+[KI-Anbieter und Datenfreigabe](KI_ANBIETER.md#kommandozeile).
+
+Schlüssel gehören ins separate Feld der Oberfläche oder für CLI-Aufrufe in die
+gewählte Umgebungsvariable. Die gemeinsame Konfigurationsprüfung lehnt
+Credential-Felder auch verschachtelt ab, bevor der Runner neue Ausgaben anlegt
+oder Provenienz und Konfigurationssnapshot erstellt. Sie gilt ebenso für
+`--validate-only` und Wiederholungspläne. Nur `llm.api_key_env` ist als
+Schlüsselquellenname ausgenommen; gleichnamige Felder an anderer Stelle sind
+keine Ausnahme. `max_tokens` und normale Analyseparameter bleiben zulässig.
+Dateien werden nicht still bereinigt oder umgeschrieben. Beliebige Textwerte
+werden dabei nicht auf sämtliche denkbaren Geheimnisse untersucht.
+
+Alte YAMLs mit den 15 Basismodulen brauchen keine neuen Diagnoseabschnitte oder
+Aufwandfelder. Die Normalisierung ergänzt Anzeigevorgaben im Arbeitsspeicher,
+aber keine zusätzlichen aktivierten Module und keine Wiederholungen.
+Vorhandene Projekte behalten beim Öffnen ihre Modulauswahl, bestätigte
+Personenzuordnung und gespeicherten Berichte. Erst ausdrückliches Speichern
+erstellt eine neue Revision mit der aktuellen Vorlage; neue Diagnosen bleiben
+ohne Auswahl ausgeschaltet. Frühere Revisionen und Berichte bleiben erhalten.
+Lesbarkeit alter Ergebnisse ist keine Freigabe zum Fortsetzen mit verändertem
+Code oder anderen Eingaben: Die bisherige Fingerprintprüfung bleibt bestehen.
+
 ## Sensitivität: interner Entwicklungsvertrag
 
 **Sensitivität ist jetzt optional in Oberfläche, Runner und Gesamtbericht integriert.**
