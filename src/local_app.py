@@ -1,5 +1,6 @@
 """Loopback-only desktop companion for the existing, independently usable runner."""
 import argparse
+import job_storage
 import thematic_pipeline
 import base64
 import copy
@@ -23,7 +24,7 @@ import uuid
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from project_paths import DEFAULT_CONFIG, DEMO_DIR, default_data_dir
+from project_paths import DEFAULT_CONFIG, DEMO_DIR, default_data_dir, resolve_output_parent
 import yaml
 from runtime_support import atomic_json, atomic_text
 from review_workspace import ReviewWorkspace, decisions_xlsx
@@ -138,6 +139,18 @@ class App(ReviewWorkspace):
             raise ValueError('Projekt wurde nicht gefunden.')
         return directory
 
+    def job_config(self, pid, jid):
+        folder=safe_child(self.project_dir(pid)/'jobs',identifier(jid))
+        job=read_json(folder/'job.json')
+        if not job: raise ValueError('Lauf nicht gefunden.')
+        return job_storage.config_path(folder,job)
+
+    def review_root(self, pid, jid):
+        folder=safe_child(self.project_dir(pid)/'jobs',identifier(jid))
+        job=read_json(folder/'job.json')
+        if not job: raise ValueError('Lauf nicht gefunden.')
+        return job_storage.review_root(folder,job)
+
     def projects(self):
         return sorted([read_json(p) for p in self.projects_dir.glob('*/project.json')], key=lambda p:p['created'], reverse=True)
 
@@ -218,8 +231,7 @@ class App(ReviewWorkspace):
             folder=safe_child(directory/'jobs',identifier(jid))
             job=read_json(folder/'job.json')
             if not job:raise ValueError('Lauf wurde nicht gefunden.')
-            path=Path(job['config']).resolve()
-            if not path.is_relative_to(directory.resolve()):raise ValueError('Konfiguration gehört nicht zu diesem Projekt.')
+            path=self.job_config(pid,jid)
             config=yaml.safe_load(path.read_text(encoding='utf-8'))
             source='Gespeicherte Konfiguration dieses Laufs. Spätere Projekteinstellungen werden hier nicht verwendet.'
         else:
@@ -376,8 +388,16 @@ class App(ReviewWorkspace):
 
     def save(self, pid, settings):
         with self.lock:
-            cfg, book = self.config(pid,settings)
             directory = self.project_dir(pid)
+            settings=copy.deepcopy(settings)
+            if 'output_dir' not in settings:
+                previous=read_json(directory/'settings.json',{})
+                if 'output_dir' in previous: settings['output_dir']=previous['output_dir']
+            if 'output_dir' in settings:
+                value=settings['output_dir']
+                if not isinstance(value,str): raise ValueError('Speicherort für Analyseergebnisse muss ein Ordnerpfad sein.')
+                settings['output_dir']=str(resolve_output_parent(output_dir=value)) if value.strip() else ''
+            cfg, book = self.config(pid,settings)
             revision = directory/'revisions'/uuid.uuid4().hex[:20]
             revision.mkdir(parents=True)
             from person_identity import apply
@@ -447,60 +467,70 @@ class App(ReviewWorkspace):
         for folder in sorted((directory/'jobs').glob('*'),reverse=True):
             job=read_json(folder/'job.json')
             if not job: continue
-            manifests=list((folder/'runs').glob('*/workflow_manifest.json'))
-            if manifests:
-                manifest=read_json(manifests[0])
-                process_alive = pid_alive(job.get('pid'))
-                stored_status, stored_error = job['status'], job.get('error', '')
-                status = manifest['status']
-                if stored_status == 'running' and process_alive:
-                    status = 'running'
-                elif stored_status == 'failed':
-                    status = 'failed'
-                elif stored_status == 'running' and status == 'running':
-                    status = 'interrupted'
-                job.update(status=status,completed=manifest.get('completed_steps',[]),
-                           current=manifest.get('current_module'),
-                           error=stored_error if stored_status == 'failed' else manifest.get('error',''))
-                job['run']=manifests[0].parent.name
-                job['module_status']=manifest.get('module_status',{})
-                job['module_errors']=manifest.get('module_errors',{})
-                job['blocked_by']=manifest.get('blocked_by',{})
-                detail=read_json(manifests[0].parent/'progress.json',{})
-                if detail.get('module')==job.get('current'):
-                    job['progress_detail']=detail
-                if job['status']=='running' and not pid_alive(job.get('pid')):
-                    job['status']='interrupted'
-                cfg=yaml.safe_load(Path(job['config']).read_text(encoding='utf-8'))
-                job['review_provenance']=cfg.get('review_provenance')
-                outputs={f for m in cfg['pipeline']['modules'] if m.get('enabled',True) for f in m.get('outputs',[])}
-                outputs.update(('gesamtbericht.md','gesamtbericht.html'))
-                if any(m['id']=='clusterer' and m.get('enabled',True) for m in cfg['pipeline']['modules']):
-                    for suffix in ('*.png','*.svg'):
-                        outputs.update(str(p.relative_to(manifests[0].parent)).replace('\\','/') for p in (manifests[0].parent/'plots').glob(suffix))
-                from html_report import IMAGE, local_file
-                for module in cfg['pipeline']['modules']:
-                    if not module.get('enabled',True):continue
-                    report=module.get('report',{}).get('markdown')
-                    if not report:continue
-                    try:
-                        report_path=local_file(manifests[0].parent,report)
-                        if not report_path.is_file():continue
-                        for match in IMAGE.finditer(report_path.read_text(encoding='utf-8-sig')):
-                            try:
-                                image_path=local_file(manifests[0].parent,str(report_path.parent.relative_to(manifests[0].parent)/match[2].replace('\\','/')))
-                                if image_path.suffix.lower() in ('.png','.svg'):
-                                    outputs.add(str(image_path.relative_to(manifests[0].parent)))
-                            except ValueError:continue
-                    except (ValueError,OSError):continue
-                outputs.update(str(Path(name).with_suffix('.svg')) for name in list(outputs) if name.endswith('.png'))
-                outputs={f.replace('\\','/') for f in outputs}
-                job['files']=[f for f in sorted(outputs) if safe_child(manifests[0].parent,f).is_file() and not f.endswith('.log')]
-            else:
-                job.setdefault('completed',[])
+            try:
+                run=job_storage.run_path(folder,job)
+                manifests=[run/'workflow_manifest.json'] if run else []
+                if manifests:
+                    manifest=read_json(manifests[0])
+                    process_alive = pid_alive(job.get('pid'))
+                    stored_status, stored_error = job['status'], job.get('error', '')
+                    status = manifest['status']
+                    if stored_status == 'running' and process_alive:
+                        status = 'running'
+                    elif stored_status == 'failed':
+                        status = 'failed'
+                    elif stored_status == 'running' and status == 'running':
+                        status = 'interrupted'
+                    job.update(status=status,completed=manifest.get('completed_steps',[]),
+                               current=manifest.get('current_module'),
+                               error=stored_error if stored_status == 'failed' else manifest.get('error',''))
+                    job['run']=manifests[0].parent.name
+                    job['module_status']=manifest.get('module_status',{})
+                    job['module_errors']=manifest.get('module_errors',{})
+                    job['blocked_by']=manifest.get('blocked_by',{})
+                    detail=read_json(manifests[0].parent/'progress.json',{})
+                    if detail.get('module')==job.get('current'):
+                        job['progress_detail']=detail
+                    if job['status']=='running' and not pid_alive(job.get('pid')):
+                        job['status']='interrupted'
+                    cfg=yaml.safe_load(job_storage.config_path(folder,job).read_text(encoding='utf-8'))
+                    job['review_provenance']=cfg.get('review_provenance')
+                    outputs={f for m in cfg['pipeline']['modules'] if m.get('enabled',True) for f in m.get('outputs',[])}
+                    outputs.update(('gesamtbericht.md','gesamtbericht.html'))
+                    if any(m['id']=='clusterer' and m.get('enabled',True) for m in cfg['pipeline']['modules']):
+                        for suffix in ('*.png','*.svg'):
+                            outputs.update(str(p.relative_to(manifests[0].parent)).replace('\\','/') for p in (manifests[0].parent/'plots').glob(suffix))
+                    from html_report import IMAGE, local_file
+                    for module in cfg['pipeline']['modules']:
+                        if not module.get('enabled',True):continue
+                        report=module.get('report',{}).get('markdown')
+                        if not report:continue
+                        try:
+                            report_path=local_file(manifests[0].parent,report)
+                            if not report_path.is_file():continue
+                            for match in IMAGE.finditer(report_path.read_text(encoding='utf-8-sig')):
+                                try:
+                                    image_path=local_file(manifests[0].parent,str(report_path.parent.relative_to(manifests[0].parent)/match[2].replace('\\','/')))
+                                    if image_path.suffix.lower() in ('.png','.svg'):
+                                        outputs.add(str(image_path.relative_to(manifests[0].parent)))
+                                except ValueError:continue
+                        except (ValueError,OSError):continue
+                    outputs.update(str(Path(name).with_suffix('.svg')) for name in list(outputs) if name.endswith('.png'))
+                    outputs={f.replace('\\','/') for f in outputs}
+                    job['files']=[f for f in sorted(outputs) if safe_child(manifests[0].parent,f).is_file() and not f.endswith('.log')]
+                else:
+                    job.setdefault('completed',[])
+                    job['files']=[]
+                    if job['status']=='running' and not pid_alive(job.get('pid')):
+                        job['status']='interrupted'
+                research=job_storage.research_root(folder,job)
+                job['research_path']=str(research) if research else (str(run) if run else '')
+            except (ValueError,OSError,KeyError,TypeError) as exc:
                 job['files']=[]
-                if job['status']=='running' and not pid_alive(job.get('pid')):
+                job['output_error']='Ergebnisse sind nicht zugänglich: '+str(exc)
+                if job.get('status')=='running' and not pid_alive(job.get('pid')):
                     job['status']='interrupted'
+            job.pop('storage',None)
             job['pause_requested']=(folder/'pause.request').exists() and job['status']=='running'
             job.pop('pid',None)
             job.pop('config',None)
@@ -509,7 +539,6 @@ class App(ReviewWorkspace):
 
     def start(self, pid, resume=None, prepared_config=None):
         with self.lock:
-            # One analysis at a time across all projects, including after browser/server restart.
             if self.active is not None or any(j['status']=='running' for p in self.projects() for j in self.jobs(p['id'])):
                 raise ValueError('Es läuft bereits eine Analyse. Zuerst deren Abschluss oder Pause abwarten.')
             directory=self.project_dir(pid)
@@ -518,39 +547,53 @@ class App(ReviewWorkspace):
                 folder=safe_child(directory/'jobs',jid)
                 job=read_json(folder/'job.json')
                 if not job: raise ValueError('Lauf nicht gefunden.')
-                manifests=list((folder/'runs').glob('*/workflow_manifest.json'))
-                if not manifests: raise ValueError('Dieser Lauf hat keinen wiederaufnehmbaren Zwischenstand. Neuen Lauf starten.')
-                if read_json(manifests[0])['status']=='success': raise ValueError('Dieser Lauf ist bereits abgeschlossen.')
-                config=Path(job['config'])
+                config=job_storage.config_path(folder,job)
+                run=job_storage.run_path(folder,job)
+                if run is None: raise ValueError('Dieser Lauf hat keinen wiederaufnehmbaren Zwischenstand. Neuen Lauf starten.')
+                if read_json(run/'workflow_manifest.json')['status']=='success':
+                    raise ValueError('Dieser Lauf ist bereits abgeschlossen.')
+                resolve_output_parent(output_dir=job_storage.runs_root(folder,job),check_write=True)
             else:
                 project=read_json(directory/'project.json')
                 if not prepared_config and not project['revision']: raise ValueError('Einstellungen zuerst speichern und Eingaben prüfen.')
-                config=prepared_config or directory/'revisions'/identifier(project['revision'])/'config.yaml'
+                setting=read_json(directory/'settings.json',{})
+                if not setting.get('output_dir'):
+                    raise ValueError('Speicherort für Analyseergebnisse auswählen. Ein Browserupload enthält keinen ursprünglichen Dateiordner.')
+                parent=resolve_output_parent(output_dir=setting['output_dir'],check_write=True)
+                config=Path(prepared_config or directory/'revisions'/identifier(project['revision'])/'config.yaml')
                 jid=uuid.uuid4().hex[:20]
                 folder=directory/'jobs'/jid
                 folder.mkdir(parents=True)
                 job={'id':jid,'created':time.time(),'config':str(config),'status':'starting'}
+                config=job_storage.config_path(folder,job)
             checked=self.validate_config(config)
-            llm = yaml.safe_load(config.read_text(encoding='utf-8'))['llm']
-            needs_model = any(m.get('requires_model', True) for m in checked['modules'])
-            selected = self.authorize_llm(pid, llm) if needs_model else {'provider':'not_required','model':''}
+            llm=yaml.safe_load(config.read_text(encoding='utf-8'))['llm']
+            needs_model=any(m.get('requires_model',True) for m in checked['modules'])
+            selected=self.authorize_llm(pid,llm) if needs_model else {'provider':'not_required','model':''}
             from managed_ollama import preflight
-            if needs_model:
-                preflight(llm)
+            if needs_model: preflight(llm)
+            if not resume:
+                job['storage']=job_storage.create_binding(folder,config,parent)
             pause=folder/'pause.request'
             pause.unlink(missing_ok=True)
-            command=[sys.executable,str(ROOT/'00_WORKFLOW_RUNNER.py'),'--config',str(config),'--output-dir',str(folder/'runs'),'--pause-file',str(pause)]
-            if resume: command.extend(['--resume',str(manifests[0].parent)])
+            command=[sys.executable,str(ROOT/'00_WORKFLOW_RUNNER.py'),'--config',str(config),
+                     '--output-dir',str(job_storage.runs_root(folder,job)),'--pause-file',str(pause)]
+            if resume: command.extend(['--resume',str(run)])
             env={k:v for k,v in os.environ.items() if k not in KEY_ENVS and not k.startswith('WORKFLOW_') and k not in ('QUALITATIVE_MANAGED_OLLAMA_HOST','OLLAMA_API_KEY','OLLAMA_HOST')}
-            if needs_model and selected['provider'] != 'ollama_local':
-                env[selected['api_key_env']] = self.provider_keys.keys[selected['provider']]
+            if needs_model and selected['provider']!='ollama_local':
+                env[selected['api_key_env']]=self.provider_keys.keys[selected['provider']]
             env.update(PYTHONUTF8='1',PYTHONIOENCODING='utf-8',MPLBACKEND='Agg')
+            job.update(modules=checked['modules'],error='',provider=selected['provider'],model=selected['model'])
+            atomic_json(folder/'job.json',job)
             log=open(folder/'console.log','ab')
             try:
                 process=subprocess.Popen(command,cwd=str(ROOT),env=env,stdout=log,stderr=subprocess.STDOUT,
                                          creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
-            finally:
-                log.close()
+            except OSError:
+                job.update(status='failed',error='Analyseprozess konnte nicht gestartet werden. Lokale Installation prüfen.')
+                atomic_json(folder/'job.json',job)
+                raise
+            finally: log.close()
             job.update(status='running',pid=process.pid,modules=checked['modules'],error='',provider=selected['provider'],model=selected['model'])
             atomic_json(folder/'job.json',job)
             self.active=jid
@@ -613,15 +656,15 @@ class App(ReviewWorkspace):
         try:
             self.telegram.send('start')
             while process.poll() is None:
-                manifests=list((folder/'runs').glob('*/workflow_manifest.json'))
-                if manifests:
-                    try:
-                        manifest=read_json(manifests[0], {})
-                        detail=read_json(manifests[0].parent/'progress.json',{})
-                    except (OSError, ValueError):
-                        # A status read failure must not release the active-run guard.
-                        time.sleep(1)
-                        continue
+                try:
+                    run=job_storage.run_path(folder,read_json(folder/'job.json'))
+                    manifest=read_json(run/'workflow_manifest.json',{}) if run else {}
+                    detail=read_json(run/'progress.json',{}) if run else {}
+                except (OSError,ValueError,KeyError,TypeError):
+                    # Offline storage must not release the guard for a live process.
+                    time.sleep(1)
+                    continue
+                if run is not None:
                     if not isinstance(manifest, dict):
                         time.sleep(1)
                         continue
@@ -658,11 +701,15 @@ class App(ReviewWorkspace):
                         last_detail,last_detail_sent=marker,tick
                         last_count=count
                 time.sleep(1)
-            manifests=list((folder/'runs').glob('*/workflow_manifest.json'))
-            manifest=read_json(manifests[0],{}) if manifests else {}
-            status=manifest.get('status','failed')
-            if process.returncode or status not in ('success','paused'): status='failed'
             job=read_json(folder/'job.json')
+            try:
+                run=job_storage.run_path(folder,job)
+                manifest=read_json(run/'workflow_manifest.json',{}) if run else {}
+                status=manifest.get('status','failed')
+                if process.returncode or status not in ('success','paused'): status='failed'
+            except (OSError,ValueError,KeyError,TypeError) as exc:
+                manifest={'error':'Ergebnisse derzeit nicht lesbar. Ergebnisordner erneut verbinden: '+str(exc)}
+                status='interrupted'
             job.update(status=status,error=manifest.get('error','') or ('Lauf fehlgeschlagen. Details im lokalen Laufprotokoll.' if status == 'failed' else ''))
             atomic_json(folder/'job.json',job)
             self.telegram.send(status)
@@ -682,7 +729,10 @@ class App(ReviewWorkspace):
         if not job: raise ValueError('Lauf nicht gefunden.')
         if name=='console.log': return folder/'console.log'
         if name not in job['files']: raise ValueError('Diese Datei ist kein freigegebenes Ergebnis.')
-        return safe_child(folder/'runs'/job['run'],name)
+        saved=read_json(folder/'job.json')
+        run=job_storage.run_path(folder,saved)
+        if run is None: raise ValueError('Für diesen Lauf sind noch keine Ergebnisse vorhanden.')
+        return safe_child(run,name)
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -793,6 +843,10 @@ class Handler(BaseHTTPRequestHandler):
                 elif path=='/api/upload': result=app.upload(data['project'],data['kind'],data['name'],data['data'],data.get('sheet'))
                 elif path=='/api/privacy': result=app.privacy(data['project'],data['gdpr_relevant'])
                 elif path=='/api/provider-key': result=app.save_provider_key(data['project'],data)
+                elif path=='/api/output-check':
+                    app.project_dir(data['project'])
+                    target=resolve_output_parent(output_dir=data.get('output_dir',''),check_write=True)
+                    result={'output_dir':str(target),'message':'Ordner ist verfügbar und beschreibbar. Beim Start wird erneut geprüft.'}
                 elif path=='/api/save': result=app.save(data['project'],data['settings'])
                 elif path=='/api/person-preview': result=app.person_preview(data['project'],data['columns'])
                 elif path=='/api/passage-preview': result=app.passage_preview(data['project'],data['columns'])

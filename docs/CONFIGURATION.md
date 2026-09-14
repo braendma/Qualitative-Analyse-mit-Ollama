@@ -1,6 +1,6 @@
 # Konfigurationsreferenz der wissenschaftlichen Diagnosen
 
-## Ergebnisordner und technische Appdaten (P01a)
+## Ergebnisordner und technische Appdaten (P01b)
 
 Ohne `--output-dir` erstellt die CLI neben der tatsächlich verwendeten Eingabedatei einen neuen Ordner `QualitativeAnalyse_<Lauf-ID>`. Maßgeblich ist `--csv`, falls angegeben, sonst `paths.input_csv` aus der Konfiguration; relative Konfigurations-Eingaben werden gegen deren Ordner aufgelöst. Ein explizites `--output-dir` bleibt relativ zum aktuellen Arbeitsordner, wird bei Bedarf angelegt und enthält wie bisher Unterordner `<Lauf-ID>`. Vor dem neuen Lauf wird die Beschreibbarkeit geprüft. Bei einem ungültigen oder nicht beschreibbaren Ziel erfolgt eine Fehlermeldung, kein Ausweichen in AppData oder einen temporären Ordner. `--validate-only` prüft die Analysedaten, noch nicht die spätere Schreibbarkeit des Ergebnisziels. Resume verwendet unverändert den ausdrücklich angegebenen bestehenden Laufordner und prüft dessen Herkunft.
 
@@ -20,7 +20,11 @@ neben ihre tatsächliche Eingabe in `demo/`, nicht automatisch in den Projektroo
 
 Neue technische Appdaten liegen unter Windows in `%LOCALAPPDATA%\QualitativeAnalyse`, unter macOS in `~/Library/Application Support/QualitativeAnalyse`, unter Linux bei absolut gesetztem `XDG_DATA_HOME` in `$XDG_DATA_HOME/QualitativeAnalyse`, sonst in `~/.local/share/QualitativeAnalyse`. Ein eindeutig vorhandener alter `QualitativeOllama`-Ordner wird weiterverwendet; es wird nichts verschoben. Werden mehrere bestehende Ablagen gefunden, mit `--data-dir` ausdrücklich die gewünschte auswählen.
 
-**Entwicklungsstand P01a:** Die externe Ergebniswahl ist bisher nur für die CLI umgesetzt. In der Oberfläche liegen Eingabekopien, Revisionen, Forschungsresultate und Prüfentscheidungen weiterhin im technischen Projektordner. Ein Browserupload verrät den ursprünglichen Dateiordner nicht. Eine gesonderte Ergebniszielwahl in der Oberfläche folgt erst mit P01b; diese Beschreibung ist keine Freigabe neuer Windows-/macOS-Installationspakete.
+**Entwicklungsstand P01b – Ergebnisziel in der Oberfläche:** Vor einem neuen Analyselauf unter **Projekt & Dateien → Speicherort für Analyseergebnisse** den vollständigen Pfad zu einem vorhandenen Ordner eintragen. Dafür den Ordnerpfad aus der Explorer-Adressleiste oder über „Pfadname kopieren“ im Finder kopieren und **Ordner prüfen** wählen. Der Browser kennt den ursprünglichen Ordner einer hochgeladenen Datei nicht. Ein nativer Ordnerauswahldialog ist noch nicht vorhanden; die neue Ablage ist noch keine Freigabe fertiger Windows-/macOS-Installationspakete.
+
+Jeder neue App-Lauf bekommt im gewählten Ziel einen eigenen Ordner `QualitativeAnalyse_<Datum>_<Job-ID>/`. Analyseberichte und Moduldateien liegen darunter in `runs/<Lauf-ID>/`; Prüfentscheidungen und deren Versionen in `review/`. Geprüfte Folgeeingaben werden zusätzlich unter `review/followups/<Revision-ID>/` mit `segments.csv`, `codebook.csv`, `review_snapshot.json` und einem Inhaltsnachweis abgelegt. Eine Zieländerung gilt nur für neue Läufe. Wiederaufnahme, Berichtsaufruf und Prüfung bestehender Läufe bleiben an deren ursprünglichen Ordner gebunden. Ist er nicht verfügbar oder passt seine gespeicherte Zuordnung nicht mehr, erscheint ein Hinweis; es gibt keinen Ersatzordner in AppData. Alte Läufe behalten ihre bisherige Ablage und bleiben dort lesbar.
+
+Die technische Projektverwaltung, Einstellungen und unveränderlichen Eingabe-/Konfigurationskopien bleiben im App-Datenordner. Für eine vollständige Sicherung nach Abschluss aller Läufe sowohl diesen Datenordner als auch die gewählten Forschungsordner sichern.
 
 ## Datenfreigabe und Schlüssel in vorhandenen Konfigurationen
 

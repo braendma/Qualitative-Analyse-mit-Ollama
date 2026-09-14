@@ -24,11 +24,84 @@ function setup(){
     fetch(url,options){return new Promise(resolve=>requests.push({url,options,reply(data){resolve({ok:true,json:async()=>data,blob:async()=>data});}}));}
   });
   vm.runInContext(fs.readFileSync(path.join(__dirname,'../src/local_app.js'),'utf8'),context);
-  vm.runInContext("state={defaults:{llm:{},context:{},columns:{}},modules:[],projects:[]};project={id:'first',settings:{},uploads:{}};",context);
+  vm.runInContext("state={defaults:{llm:{},context:{},columns:{}},modules:[],projects:[]};project={id:'first',settings:{output_dir:'/synthetic/results'},uploads:{}};document.getElementById('output-dir').value=project.settings.output_dir;",context);
   return {node,requests,run:code=>vm.runInContext(code,context),loadIdentity:()=>vm.runInContext(fs.readFileSync(path.join(__dirname,'../src/person_identity_ui.js'),'utf8'),context)};
 }
 const checkResult={segments:2,passages:1,persons:1,codes:1,modules:[]};
 const settle=()=>new Promise(resolve=>setImmediate(resolve));
+
+test('an empty research destination blocks otherwise ready inputs and explicit selection clears that gate',()=>{
+  const app=setup();
+  app.run("project.uploads={segments:{headers:['Segment','Person','Code'],rows:[]},codebook:{headers:['Code','Definition'],rows:[]}};renderFiles();");
+  app.node('segment-columns-segment').value='Segment';app.node('segment-columns-person').value='Person';app.node('segment-columns-code').value='Code';
+  app.node('book-columns-code').value='Code';app.node('book-columns-definition').value='Definition';
+  app.run('updateStartGate()');assert.equal(app.node('start').disabled,false);
+  app.node('output-dir').value='   ';
+  app.node('output-dir').listeners.input();
+  assert.equal(app.node('start').disabled,true);
+  assert.match(app.node('start-requirements').textContent,/Speicherort für Analyseergebnisse/);
+  app.node('output-status').textContent='Previous check';
+  app.node('output-dir').value='/synthetic/selected-folder';
+  app.node('output-dir').listeners.input();
+  assert.equal(app.node('output-status').textContent,'');
+  assert.equal(app.node('start').disabled,false);
+});
+
+test('research destination is trimmed, saved and restored per project without a legacy default',async()=>{
+  const app=setup();app.node('output-dir').value='  /synthetic/study results  ';
+  const pending=app.run('saveAndValidate()');
+  const request=app.requests.find(r=>r.url==='/api/save');
+  assert.equal(JSON.parse(request.options.body).settings.output_dir,'/synthetic/study results');
+  request.reply(checkResult);await pending;
+  assert.equal(app.run('project.settings.output_dir'),'/synthetic/study results');
+  app.run('loadFields()');assert.equal(app.node('output-dir').value,'/synthetic/study results');
+  app.run("project={id:'legacy',settings:{},uploads:{}};loadFields();");
+  assert.equal(app.node('output-dir').value,'');assert.equal(app.node('start').disabled,true);
+  assert.equal(app.run('project.settings.output_dir'),undefined);
+});
+
+test('explicit folder check displays the verified path but does not save or start analysis',async()=>{
+  const app=setup();app.node('output-dir').value=' /synthetic/chosen ';
+  app.run("message('Ordner nicht vorhanden.',true)");
+  const pending=app.node('output-check').click();
+  const request=app.requests.find(r=>r.url==='/api/output-check');
+  assert.deepEqual(JSON.parse(request.options.body),{project:'first',output_dir:'/synthetic/chosen'});
+  request.reply({output_dir:'/synthetic/chosen-normalized',message:'Ordner ist beschreibbar.'});await pending;
+  assert.equal(app.node('output-dir').value,'/synthetic/chosen-normalized');
+  assert.equal(app.node('output-status').textContent,'Ordner ist beschreibbar.');
+  assert.equal(app.node('message').textContent,'Ordner ist beschreibbar.');
+  assert.equal(app.node('message').className,'');
+  assert.equal(app.requests.some(r=>['/api/save','/api/start'].includes(r.url)),false);
+  assert.equal(app.run('project.settings.output_dir'),'/synthetic/results');
+});
+
+test('late folder check cannot replace a newer path or another project choice',async()=>{
+  for(const switchProject of [false,true]){
+    const app=setup(),pending=app.node('output-check').click();
+    if(switchProject)app.run("project={id:'second',settings:{output_dir:'/synthetic/second'},uploads:{}};loadFields();");
+    else {app.node('output-dir').value='/synthetic/changed';app.node('output-dir').listeners.input();}
+    const current=app.node('output-dir').value;app.node('output-status').textContent='Current choice';
+    app.requests.find(r=>r.url==='/api/output-check').reply({output_dir:'/synthetic/stale-normalized',message:'Stale result'});
+    await pending;
+    assert.equal(app.node('output-dir').value,current);
+    assert.equal(app.node('output-status').textContent,'Current choice');
+    assert.equal(app.requests.some(r=>['/api/save','/api/start'].includes(r.url)),false);
+  }
+});
+
+test('unavailable research storage explains recovery and hides resume until the folder returns',()=>{
+  const app=setup();
+  const allText=n=>[n,...n.children.flatMap(function visit(c){return [c,...c.children.flatMap(visit)];})].map(c=>c.textContent||'').join(' ');
+  for(const status of ['paused','failed','interrupted']){
+    const job={created:0,status,modules:[],research_path:'/synthetic/<img src=x>',output_error:'Ordner nicht verfügbar.'};
+    const unavailable=app.run(`runCard(${JSON.stringify(job)})`),text=allText(unavailable);
+    assert.match(text,/Ergebnisordner: \/synthetic\/<img src=x>/);
+    assert.match(text,/ursprünglichen Ordner wieder/);
+    assert.doesNotMatch(text,/Diesen Lauf fortsetzen/);
+    delete job.output_error;
+    assert.match(allText(app.run(`runCard(${JSON.stringify(job)})`)),/Diesen Lauf fortsetzen/);
+  }
+});
 
 test('stability estimate counts fresh prerequisites and rejects invalid selection',()=>{
   const app=setup();

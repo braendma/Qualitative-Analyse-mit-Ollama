@@ -4,6 +4,7 @@ import copy
 import csv
 import io
 import json
+import os
 import time
 import uuid
 from pathlib import Path
@@ -75,6 +76,39 @@ def decisions_xlsx(queue, payload):
 
 
 class ReviewWorkspace:
+    def _review_path(self, pid, jid, name):
+        from local_app import safe_child
+        # Revalidate the immutable job binding for every read/write. Child paths
+        # must not escape it through a junction or symlink added after startup.
+        return safe_child(self.review_root(pid,jid), name)
+
+    def _export_followup(self, pid, jid, revision, cfg, queue, draft):
+        from job_storage import research_root
+        folder=self.project_dir(pid)/'jobs'/jid
+        if research_root(folder,read(folder/'job.json')) is None:
+            return  # Legacy jobs retain their original local review layout.
+        relative='followups/'+revision.name
+        self._review_path(pid,jid,relative).mkdir(parents=True,exist_ok=False)
+        files={}
+        for name in ('segments.csv','codebook.csv','review_snapshot.json'):
+            source=revision/name
+            target=self._review_path(pid,jid,relative+'/'+name)
+            raw=source.read_bytes()
+            with target.open('xb') as handle:
+                handle.write(raw);handle.flush();os.fsync(handle.fileno())
+            if file_hash(target)!=file_hash(source):
+                raise ValueError('Die Folgeeingaben konnten nicht vollständig im Forschungsordner gespeichert werden. Speicherziel prüfen und erneut vorbereiten.')
+            files[name]={'sha256':file_hash(target),'bytes':len(raw)}
+        # The final receipt publishes a complete export. Partial directories
+        # without this receipt never become the project's active input version.
+        receipt={'schema_version':1,'kind':'reviewed_followup_export',
+                 'parent_job':jid,'revision_id':revision.name,
+                 'review_revision':draft['revision'],'review_fingerprint':fingerprint(draft),
+                 'queue_source_fingerprint':queue['source_fingerprint'],'files':files,
+                 'columns':cfg['columns'],'person_identity':cfg.get('person_identity'),
+                 'review_provenance':cfg['review_provenance']}
+        atomic_json(self._review_path(pid,jid,relative+'/followup_manifest.json'),receipt)
+
     def review_source(self, pid, jid):
         # artifact applies project/job identifiers, output allowlist and containment.
         path=self.artifact(pid,jid,'review_queue.json')
@@ -86,7 +120,7 @@ class ReviewWorkspace:
 
     def review(self, pid, jid):
         folder,queue=self.review_source(pid,jid)
-        current=read(folder/'review/current.json')
+        current=read(self._review_path(pid,jid,'current.json'))
         if current is None:
             current={'schema_version':1,'source_fingerprint':queue['source_fingerprint'],'revision':0,'decisions':[]}
         validate_decisions(queue,current,draft=True)
@@ -101,10 +135,9 @@ class ReviewWorkspace:
             new=checked['decisions'][0]
             rows={r['case_id']:r for r in current['decisions']};rows[new['case_id']]=new
             payload={**checked,'decisions':list(rows.values()),'revision':current['revision']+1,'saved_at':time.time()}
-            directory=self.project_dir(pid)/'jobs'/jid/'review'
             # A single atomic pointer names an immutable whole draft version.
-            atomic_json(directory/'versions'/(uuid.uuid4().hex+'.json'),payload)
-            atomic_json(directory/'current.json',payload)
+            atomic_json(self._review_path(pid,jid,'versions/'+uuid.uuid4().hex+'.json'),payload)
+            atomic_json(self._review_path(pid,jid,'current.json'),payload)
             return {'revision':payload['revision'],'summary':review_summary(queue,payload),'saved_at':payload['saved_at']}
 
     def followup_preview(self, pid, jid):
@@ -125,8 +158,8 @@ class ReviewWorkspace:
             if preview['uncoded'] and accept_exclusions is not True:
                 raise ValueError('Den Ausschluss der Fälle ohne finale Codes ausdrücklich bestätigen.')
             loaded=self.review(pid,jid);queue=loaded['queue'];draft=loaded['draft']
-            directory=self.project_dir(pid);job=read(directory/'jobs'/jid/'job.json')
-            oldcfg=yaml.safe_load(Path(job['config']).read_text(encoding='utf-8'))
+            directory=self.project_dir(pid);source_config=self.job_config(pid,jid)
+            oldcfg=yaml.safe_load(source_config.read_text(encoding='utf-8'))
             from person_identity import verify, preview as identity_preview, apply as identity_apply
             verify(Path(oldcfg['paths']['input_csv']).read_bytes(),oldcfg['columns'],oldcfg.get('person_identity'))
             segments=load_segments(oldcfg['paths']['input_csv'],oldcfg['columns'])
@@ -148,7 +181,7 @@ class ReviewWorkspace:
                     writer.writerow([f'R{count:07d}',c.get('unit_id') or c['case_id'],c['person'],code,c['text'],' | '.join(c['segment_ids'])])
             if not count:raise ValueError('Keine codierten Fälle für einen Folgelauf vorhanden.')
             # Reuse the source run's study context, codebook and model, not later unrelated uploads.
-            source_settings=read(Path(job['config']).parent/'settings.json')
+            source_settings=read(source_config.parent/'settings.json')
             if source_settings is None:
                 source_settings={'model':oldcfg['llm']['model'],'context':oldcfg['context'],
                                  'modules':[m['id'] for m in oldcfg['pipeline']['modules'] if m.get('enabled',True)]}
@@ -157,7 +190,13 @@ class ReviewWorkspace:
             if not settings.get('provider'):
                 settings['provider']='ollama_cloud' if oldcfg['llm'].get('host')=='https://ollama.com' else 'ollama_local'
             # Preparing a historical review must never revoke the current project's privacy choice.
-            current_private=self.project(pid)['settings'].get('gdpr_relevant',True)
+            current_settings=self.project(pid)['settings']
+            current_private=current_settings.get('gdpr_relevant',True)
+            # Destination is a current project choice, never inherited from a
+            # historical run. Absence also must not resurrect an old path.
+            settings.pop('output_dir',None)
+            if 'output_dir' in current_settings:
+                settings['output_dir']=current_settings['output_dir']
             settings['gdpr_relevant']=current_private
             if current_private:
                 settings['provider']='ollama_local'
@@ -195,6 +234,7 @@ class ReviewWorkspace:
             atomic_text(rev/'config.yaml',yaml.safe_dump(cfg,allow_unicode=True,sort_keys=False))
             self.validate_config(rev/'config.yaml')
             atomic_json(rev/'review_snapshot.json',draft);atomic_json(rev/'settings.json',settings)
+            self._export_followup(pid,jid,rev,cfg,queue,draft)
             from local_app import csv_info
             uploads={}
             for kind,name in [('segments','segments.csv'),('codebook','codebook.csv')]:
@@ -202,6 +242,10 @@ class ReviewWorkspace:
                 path=directory/'inputs'/(fid+'.csv');path.parent.mkdir(exist_ok=True);path.write_bytes(raw)
                 uploads[kind]={'id':fid,'name':'Geprüfte Codierungen.csv' if kind=='segments' else 'Kategoriensystem des Ursprungslaufs.csv','format':'csv',**csv_info(raw)}
             data=read(directory/'project.json');data.update(revision=rev.name,last_valid_revision=rev.name,review_provenance=source)
+            # An external drive disappearing during staging must not silently
+            # publish a local-only follow-up as the new research input version.
+            self.job_config(pid,jid)
+            self._review_path(pid,jid,'current.json')
             atomic_json(directory/'uploads.json',uploads);atomic_json(directory/'settings.json',settings);atomic_json(directory/'project.json',data)
             return {'project':self.project(pid),'preview':preview,'model_calls':0}
 
@@ -212,8 +256,12 @@ class ReviewWorkspace:
         # current revision and job sources, while excluding failed validation drafts.
         valid={data.get('revision'),data.get('last_valid_revision')}
         for job in (directory/'jobs').glob('*/job.json'):
-            config=read(job).get('config')
-            if config:valid.add(Path(config).parent.name)
+            try:
+                valid.add(self.job_config(pid,job.parent.name).parent.name)
+            except (ValueError,OSError):
+                # An unavailable historical research drive must not prevent
+                # comparison of independently saved local category versions.
+                continue
         for path in (directory/'revisions').glob('*/config.yaml'):
             if not (path.parent/'codebook.csv').is_file():continue
             if not (path.parent/'settings.json').exists() and path.parent.name not in valid:continue
@@ -241,8 +289,7 @@ class ReviewWorkspace:
             if loaded['summary']['critical_open']:raise ValueError('Zuerst die kritischen Fälle vollständig prüfen.')
             if type(expected_revision) is not int or draft['revision']!=expected_revision:raise ValueError('Prüfung geändert. Prüfliste erneut öffnen.')
             if not any(complete(r) for r in draft['decisions']):raise ValueError('Noch keine abgeschlossenen Prüfentscheidungen vorhanden.')
-            source=read(self.project_dir(pid)/'jobs'/jid/'job.json')
-            cfg=yaml.safe_load(Path(source['config']).read_text(encoding='utf-8'))
+            cfg=yaml.safe_load(self.job_config(pid,jid).read_text(encoding='utf-8'))
             rev=self.project_dir(pid)/'revisions'/uuid.uuid4().hex[:20];rev.mkdir(parents=True)
             atomic_json(rev/'review.json',draft);atomic_json(rev/'queue.json',queue)
             cfg['refinement']={'queue':str(rev/'queue.json'),'decisions':str(rev/'review.json'),'batch_size':6}
@@ -253,4 +300,5 @@ class ReviewWorkspace:
             cfg['review_provenance']={'kind':'codebook_proposals','parent_job':jid,'review_revision':draft['revision'],
                                      'note':'Vorschläge aus manueller Prüfung. Nicht automatisch übernommen.'}
             atomic_text(rev/'config.yaml',yaml.safe_dump(cfg,allow_unicode=True,sort_keys=False))
+            self.job_config(pid,jid)
             return self.start(pid,prepared_config=rev/'config.yaml')

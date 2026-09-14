@@ -1,3 +1,31 @@
+# Externe App-Ergebnisordner / P01b · 14. September 2026
+
+Die vollständige Python-Regression führte **811 Tests in 397,005 Sekunden** aus:
+809 bestanden, ein Windows-Symlinktest wurde wegen fehlender Berechtigung
+übersprungen und ein Test scheiterte an einer veralteten Fehlermeldungserwartung
+der Promptansicht. Dieser Test verwendet nach der Korrektur eine tatsächlich
+vorhandene Konfiguration aus einem fremden Projekt und prüft ihre Ablehnung vor
+dem Aufbau des Promptkatalogs. Die zugehörige gezielte Wiederholung bestand
+anschließend mit **vier Tests in 1,280 Sekunden**. Eine erneut vollständig grüne
+811-Test-Regression wird damit nicht behauptet. Für die übersprungene reale
+Symlinkprüfung bestand zusätzlich ein deterministischer Test der aufgelösten
+Pfadumleitung ohne erforderliche Windows-Symlinkberechtigung.
+
+**57 JavaScript-Tests bestanden in 158,1 Millisekunden.** Im Browser wurde die
+Ergebnisordnerprüfung mit einem ungültigen und anschließend einem gültigen Ziel
+kontrolliert; eine vorherige Fehlermeldung bleibt nach erfolgreicher Prüfung
+nicht stehen. **217 lokale Dokumentationslinks wurden ohne fehlende Ziele
+geprüft.** Die künstlichen Python-Fälle decken unter anderem gebundene externe
+Ergebnis- und Reviewordner, Folgeeingaben mit Inhaltsnachweis, unveränderte
+Projektverweise bei Speicherfehlern sowie die bisherige Ablage alter Jobs ab.
+
+Dies ist ein Entwicklungsnachweis der Quellversion mit manueller Pfadeingabe.
+Ein nativer Ordnerauswahldialog und gebaute Windows-/macOS-Installationspakete
+sind damit weder geprüft noch freigegeben. Frühere Testzahlen bleiben unten als
+getrennte historische Nachweise erhalten.
+
+---
+
 # Pfadgrundlage für die Distribution / P01a · 14. September 2026
 
 34 gezielte Python-Tests bestanden. Geprüft wurden die CLI-Ausgabe neben der

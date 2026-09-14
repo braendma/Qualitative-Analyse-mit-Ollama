@@ -20,13 +20,19 @@ from telegram_notifications import Telegram
 
 
 def settings(app):
+    # Choosing an existing target is an explicit user action for every new run.
+    # Keep the synthetic target inside the test's temporary directory so that
+    # cleanup remains complete, but separate from project and legacy job data.
+    output_dir=app.directory/'chosen-results'
+    output_dir.mkdir(exist_ok=True)
     columns=copy.deepcopy(app.template['columns'])
     info=app.person_preview(app.projects()[0]['id'],columns)
     return {'columns':columns,'person_identity':{'confirmed':True,'fingerprint':info['fingerprint'],
             'mapping':{d['document']:d['document'] for d in info['documents']}},
             'book_columns':dict(zip(('kategorie','unterkategorie','auspraegung','facette','definition','ankerbeispiel'),
                                    ('Kategorie','Unterkategorie','Ausprägung','Facette','Definition','Ankerbeispiel'))),
-            'modules':['summarizer'],'model':'mock','label_mode':'multi_label','context':{}}
+            'modules':['summarizer'],'model':'mock','label_mode':'multi_label','context':{},
+            'output_dir':str(output_dir)}
 
 
 class DesktopTests(unittest.TestCase):
@@ -182,12 +188,18 @@ class DesktopTests(unittest.TestCase):
             with patch.object(app,'models',return_value={'models':['mock']}),patch('local_app.subprocess.Popen',side_effect=launch):
                 started=app.start(pid);settle()
                 job=app.jobs(pid)[0];self.assertEqual(job['status'],'paused')
+                research_path=Path(job['research_path'])
+                self.assertTrue(research_path.is_relative_to(Path(opts['output_dir'])))
+                first_config=app.job_config(pid,started['id'])
                 app.start(pid,started['id']);settle()
                 job=app.jobs(pid)[0]
                 if job['status']!='success':
                     self.fail(app.artifact(pid,started['id'],'console.log').read_text(encoding='utf-8')[-5000:])
                 self.assertEqual(job['completed'],['clusterer','summarizer'])
                 self.assertIn('gesamtbericht.md',job['files'])
+                self.assertEqual(Path(job['research_path']),research_path)
+                self.assertTrue(app.artifact(pid,started['id'],'gesamtbericht.md').is_relative_to(research_path))
+                self.assertEqual(app.job_config(pid,started['id']),first_config)
                 with self.assertRaises(ValueError):app.artifact(pid,started['id'],'../../telegram.private.json')
                 with self.assertRaisesRegex(ValueError,'bereits abgeschlossen'):app.start(pid,started['id'])
 

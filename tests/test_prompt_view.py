@@ -6,6 +6,7 @@ from pathlib import Path
 import tempfile
 import threading
 import unittest
+from unittest.mock import patch
 
 from test_local_app import App, settings, make_server
 from local_app import RUNNER
@@ -59,8 +60,15 @@ class PromptViewTests(unittest.TestCase):
             self.assertEqual(current['modules'][0]['templates'][0]['system'],'NEW_TEMPLATE')
             self.assertEqual(before,{str(p):p.read_bytes() for p in folder.rglob('*') if p.is_file()})
             other=app.create('Other', True)['id']
-            atomic_json(folder/'jobs'/jid/'job.json', {'config':str(app.project_dir(other)/'config.yaml')})
-            with self.assertRaisesRegex(ValueError,'gehört nicht'):app.prompt_templates(pid,jid)
+            other_config=app.project_dir(other)/'config.yaml'
+            other_config.write_bytes(cfg.read_bytes())
+            atomic_json(folder/'jobs'/jid/'job.json', {'config':str(other_config)})
+            # A real and valid file in a different project must be rejected by
+            # ownership, rather than merely because its path does not exist.
+            with patch('prompt_catalog.catalog') as render:
+                with self.assertRaisesRegex(ValueError,'innerhalb des eigenen Projekts'):
+                    app.prompt_templates(pid,jid)
+                render.assert_not_called()
 
     def test_prompt_endpoint_requires_session_and_returns_templates(self):
         with tempfile.TemporaryDirectory() as tmp:

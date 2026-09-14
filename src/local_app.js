@@ -314,6 +314,7 @@ function renderModuleFields(selected){
 }
 function loadFields(){
   const s=project.settings||{}, llm=state.defaults.llm;
+  $('output-dir').value=s.output_dir||'';$('output-status').textContent='';
   $('preset-status').hidden=true;
   $('parallel-workers').value=String(s.parallel_workers??1);
   $('model').value=s.model??llm.model;$('num-ctx').value=s.num_ctx??llm.num_ctx;$('max-tokens').value=s.max_tokens??llm.max_tokens;
@@ -348,7 +349,7 @@ function settings(){
   const columns={},book_columns={};Object.keys(columnLabels).forEach(k=>columns[k]=$('segment-columns-'+k).value);
   Object.keys(bookLabels).forEach(k=>book_columns[k]=$('book-columns-'+k).value);
   const think=$('think').value;
-  return {...(typeof providerSelection==='function'?providerSelection():{}),columns,book_columns,person_identity:typeof personIdentitySettings==='function'?personIdentitySettings():null,parallel_workers:$('provider').value==='ollama_local'?Number($('parallel-workers').value):1,model:$('model').value,num_ctx:Number($('num-ctx').value),max_tokens:Number($('max-tokens').value),synthesis_max_calls:Number($('synthesis-max-calls').value),temperature:Number($('temperature').value),
+  return {output_dir:$('output-dir').value.trim(),...(typeof providerSelection==='function'?providerSelection():{}),columns,book_columns,person_identity:typeof personIdentitySettings==='function'?personIdentitySettings():null,parallel_workers:$('provider').value==='ollama_local'?Number($('parallel-workers').value):1,model:$('model').value,num_ctx:Number($('num-ctx').value),max_tokens:Number($('max-tokens').value),synthesis_max_calls:Number($('synthesis-max-calls').value),temperature:Number($('temperature').value),
     think:think==='true'?true:think==='false'?false:think,label_mode:$('label-mode').value,
     context:{project_description:$('context-project').value,participants:$('context-persons').value,methodology:$('context-method').value},
     analysis_perspectives:perspectiveSettings(),stability:stabilitySettings(),...([...document.querySelectorAll('[name=module]:checked')].some(n=>n.value==='sensitivity')?{sensitivity:sensitivitySettings()}:{}),modules:[...document.querySelectorAll('[name=module]:checked')].map(n=>n.value)};
@@ -433,6 +434,8 @@ function runCard(job,results=false){
   if(job.review_provenance)card.append(el('p',job.review_provenance.note,'selection-summary'));
   if(job.progress_detail&&['running','failed','interrupted'].includes(job.status))renderProgressDetails(card,job.progress_detail,job.status);
   if(job.pause_requested)card.append(el('p','Pause angefordert. Das laufende Modul wird noch abgeschlossen.','hint'));
+  if(job.research_path)card.append(el('p','Ergebnisordner: '+job.research_path,'hint'));
+  if(job.output_error)card.append(el('p',job.output_error+' Verbinde den ursprünglichen Ordner wieder; die Anzeige wird automatisch erneut geprüft.','error'));
   if(job.error)card.append(el('p',job.error));
   for(const [id,help] of Object.entries(job.module_errors||{})){
     const box=el('div',undefined,'error');
@@ -446,7 +449,7 @@ function runCard(job,results=false){
     blocked.forEach(([id,deps])=>box.append(el('p',title(id)+': benötigt '+deps.map(title).join(', '))));card.append(box);}
   const actions=el('div',undefined,'actions');
   if(job.status==='running'&&!job.pause_requested){const b=el('button','Nach diesem Modul pausieren','secondary');action(b,async()=>{const r=await api('pause',{project:project.id,job:job.id});message(r.message);await refreshJobs();});actions.append(b);}
-  if(['failed','paused','interrupted'].includes(job.status)){const b=el('button','Diesen Lauf fortsetzen');action(b,async()=>{await api('start',{project:project.id,resume:job.id});message('Wiederaufnahme mit der ursprünglichen Dateiversion und den ursprünglichen Einstellungen gestartet.');await refreshJobs();});actions.append(b);}
+  if(!job.output_error&&['failed','paused','interrupted'].includes(job.status)){const b=el('button','Diesen Lauf fortsetzen');action(b,async()=>{await api('start',{project:project.id,resume:job.id});message('Wiederaufnahme mit der ursprünglichen Dateiversion und den ursprünglichen Einstellungen gestartet.');await refreshJobs();});actions.append(b);}
   const prompts=el('button','Prompt-Vorlagen dieses Laufs','small secondary');prompts.type='button';prompts.addEventListener('click',()=>showModulePrompts(job.current||job.modules?.[0]?.id,job.id));actions.append(prompts);
   const log=el('button','Laufprotokoll herunterladen','small secondary');action(log,()=>artifact(job,'console.log',false));actions.append(log);card.append(actions);
   if(results){
@@ -572,13 +575,26 @@ function mappingProblems(){
   return issues;
 }
 function updateStartGate(){
-  const issues=mappingProblems();if(stabilityIssue)issues.push(stabilityIssue);if(sensitivityIssue)issues.push(sensitivityIssue);if(perspectiveIssue)issues.push(perspectiveIssue);$('start').disabled=issues.length>0;
+  const issues=mappingProblems();if(!$('output-dir').value.trim())issues.push('Speicherort für Analyseergebnisse unter Projekt & Dateien eintragen.');if(stabilityIssue)issues.push(stabilityIssue);if(sensitivityIssue)issues.push(sensitivityIssue);if(perspectiveIssue)issues.push(perspectiveIssue);$('start').disabled=issues.length>0;
   $('start-requirements').textContent=issues.length?'Start gesperrt: '+issues.join(' '):'Spalten zugeordnet. Beim Start werden alle Eingaben erneut geprüft.';
   $('mapping-requirements').textContent=$('start-requirements').textContent;
 }
 function invalidateCheck(event){if(event.target.closest('#view-project, #view-check, #view-analysis')){$('validation-result').hidden=true;if(state&&project)updateModuleSelection();updateStartGate();}}
 document.addEventListener('input',invalidateCheck);
 document.addEventListener('change',invalidateCheck);
+action($('output-check'),async()=>{
+  const pid=needProject(),value=$('output-dir').value.trim();
+  $('output-status').textContent='Ordner wird geprüft …';
+  try{
+    const result=await api('output-check',{project:pid,output_dir:value});
+    if(project?.id!==pid||$('output-dir').value.trim()!==value)return;
+    $('output-dir').value=result.output_dir;$('output-status').textContent=result.message;message(result.message);updateStartGate();
+  }catch(error){
+    if(project?.id===pid&&$('output-dir').value.trim()===value)$('output-status').textContent=error.message;
+    throw error;
+  }
+});
+$('output-dir').addEventListener('input',()=>{$('output-status').textContent='';updateStartGate();});
 action($('setup-check'),async()=>{const r=await api('setup-check',{project:needProject(),model:$('model').value,selection:providerSelection()});$('setup-result').replaceChildren();r.checks.forEach(c=>$('setup-result').append(el('p',(c.ok?'✓ ':'✗ ')+c.name+': '+c.detail)));$('setup-result').append(el('p',r.note,'hint'));});
 let pendingModelTest=null;
 action($('model-test'),async()=>{pendingModelTest={project:needProject(),selection:providerSelection()};$('model-test-dialog').showModal();});

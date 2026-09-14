@@ -55,6 +55,7 @@ class OptionalDiagnosticsTests(unittest.TestCase):
             jobs=app.jobs(pid)
             self.assertEqual(jobs[0]['status'],'success',jobs)
             path=app.artifact(pid,job['id'],'coverage.json')
+            self.assertTrue(path.is_relative_to(Path(app.project(pid)['settings']['output_dir'])))
             result=json.loads(path.read_text(encoding='utf-8'))
             self.assertEqual(result['model_calls'],0)
             self.assertEqual(result['material']['material_units'],43)
