@@ -58,6 +58,19 @@ def attach_supervision(app,folder,process):
 
 
 class DesktopTests(unittest.TestCase):
+    def test_loopback_server_starts_without_dns_resolution(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            app = App(tmp)
+            with patch('socket.getfqdn', side_effect=AssertionError('DNS must not be needed for loopback')):
+                server = make_server(app)
+            try:
+                self.assertEqual(server.server_address[0], '127.0.0.1')
+                self.assertEqual(server.server_name, '127.0.0.1')
+                self.assertEqual(server.server_port, server.socket.getsockname()[1])
+                self.assertGreater(server.server_port, 0)
+            finally:
+                server.server_close()
+
     def test_json_read_retries_short_file_lock_but_preserves_errors(self):
         path=MagicMock()
         path.read_text.side_effect=[PermissionError('busy'), '{"status":"success"}']

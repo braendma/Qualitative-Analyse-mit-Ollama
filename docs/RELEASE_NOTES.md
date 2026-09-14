@@ -15,6 +15,9 @@ Python-Laufzeit und neue Prüfungen für wissenschaftliche Auswertungen.
 - Das Windows-Paket enthält Python, kontrolliertes Beenden, Instanzschutz,
   begrenzte technische Protokolle und eine Prüfung der Paketidentität. Ollama
   und Modelle werden weiterhin separat eingerichtet.
+- Der ausschließlich lokale Webserver startet ohne DNS-Namensauflösung.
+  Eine langsame oder nicht verfügbare Namensauflösung verzögert diesen
+  Startschritt damit nicht.
 - Standardmodule trennen den Windows-Prozessordner von ihrer Ergebnisablage.
   Ein- und Ausgaben, Logs sowie Zwischenstände verwenden ausdrückliche Pfade;
   Berichtslinks bleiben relativ. Unterschiedliche Windows-Pfadschreibweisen

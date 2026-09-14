@@ -1,5 +1,15 @@
 # Abschlussprüfung für 0.5.0-beta.1 · 14. September 2026
 
+Nachtrag zum Oberflächenstart: 16 lokale App-/Instanztests bestanden nach dem
+Entfernen einer unnötigen DNS-Namensauflösung beim Binden an `127.0.0.1`.
+Ein gezielter Test verbietet `socket.getfqdn` und prüft den tatsächlich
+gebundenen Loopback-Port; vor der Änderung schlug er an genau diesem Aufruf fehl.
+Die GitHub-Mac-Quellprüfung auf `bc69aa7` meldete zuvor zwei Startzeitüberschreitungen
+bei 946 Tests (18 plattformabhängige Skips). Deren genaue Ursache war aus dem
+leeren Startprotokoll nicht ablesbar; die erneute GitHub-Prüfung muss zeigen,
+ob diese Verzögerung damit behoben ist. Die folgenden Gesamt- und Paketnachweise
+beziehen sich weiterhin auf ihre ausdrücklich genannten früheren Quellstände.
+
 Am Quellstand `36dfe0d` liefen **946 Python-Tests in 433,075 Sekunden**:
 944 bestanden; zwei Tests mit echten Windows-Symlinks wurden wegen fehlender
 Erstellungsrechte übersprungen. Die übrigen Prüfungen für umgeleitete Pfade

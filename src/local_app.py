@@ -23,6 +23,7 @@ import urllib.parse
 import uuid
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from socketserver import TCPServer
 
 from project_paths import DEFAULT_CONFIG, DEMO_DIR, default_data_dir, resolve_output_parent
 from filesystem_paths import canonical_path
@@ -1160,6 +1161,12 @@ class Handler(BaseHTTPRequestHandler):
 class LocalHTTPServer(ThreadingHTTPServer):
     # A handbook loads several images in parallel; keep their connections queued.
     request_queue_size = 64
+
+    def server_bind(self):
+        # This server uses a numeric loopback address only. HTTPServer's reverse
+        # DNS lookup adds a network-dependent wait before the local UI is ready.
+        TCPServer.server_bind(self)
+        self.server_name, self.server_port = self.server_address[:2]
 
 
 def make_server(app,port=0):
