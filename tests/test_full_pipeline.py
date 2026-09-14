@@ -102,6 +102,13 @@ class FullPipelineTests(unittest.TestCase):
             self.assertTrue(all(s['status']=='available' for s in sources.values()), sources)
             snapshot = make_snapshot(load_segments(temp/'input.csv', cfg['columns']), sources)
             self.assertTrue(all(r['valid'] for s in snapshot['stages'].values() for r in s['records']))
+            from coverage_analysis import main as coverage_main
+            coverage_main(['--config', str(config), '--input-csv', str(temp/'input.csv'),
+                           '--run-dir', str(run), '--out-json', str(temp/'coverage.json'),
+                           '--out-md', str(temp/'coverage.md')])
+            coverage = json.loads((temp/'coverage.json').read_text(encoding='utf-8'))
+            self.assertEqual(coverage['material']['material_units'], 3 if multi else 4)
+            self.assertEqual(coverage['stages']['clusterer']['scopes']['input_association']['distribution']['unit_coverage'], 1)
             if multi:
                 agreement=json.loads((run/'coding_agreement_v1.json').read_text(encoding='utf-8'))
                 self.assertEqual(agreement['n_units'],3)
@@ -113,5 +120,8 @@ class FullPipelineTests(unittest.TestCase):
             bad=subprocess.run(base+['--resume',str(run)],capture_output=True,text=True,encoding='utf-8',env=env)
             self.assertNotEqual(bad.returncode,0)
             self.assertIn('Wiederaufnahme abgelehnt',bad.stderr)
+            from diagnostic_sources import load_snapshot
+            with self.assertRaisesRegex(ValueError, 'Diagnose abgelehnt'):
+                load_snapshot(run, config, temp/'input.csv')
 
 if __name__=='__main__': unittest.main()

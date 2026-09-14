@@ -215,3 +215,17 @@ def make_snapshot(segments, sources):
             row['valid'] = not (row['unknown_segment_ids'] or row['unknown_persons'] or row['unresolved'])
     return {'schema_version': 1, 'inputs': inputs, 'input_fingerprint': fingerprint(inputs), 'stages': sources,
             'note': 'Referenzen und Herkunft werden geprüft, nicht die semantische Richtigkeit. Keine Modellaufrufe.'}
+
+
+def load_snapshot(directory, config_path, input_path):
+    """Bind the diagnostic to the original input and exact saved configuration."""
+    import yaml
+    from coding_validation_common import load_segments
+    directory = Path(directory).resolve()
+    manifest = json.loads((directory / 'workflow_manifest.json').read_text(encoding='utf-8'))
+    provenance = manifest.get('provenance', {})
+    for key, path in (('config_sha256', config_path), ('input_sha256', input_path)):
+        if not provenance.get(key) or file_hash(path) != provenance[key]:
+            raise ValueError('Diagnose abgelehnt: Eingabe oder Konfiguration fehlt im Herkunftsnachweis oder wurde verändert.')
+    config = yaml.safe_load(Path(config_path).read_text(encoding='utf-8'))
+    return make_snapshot(load_segments(input_path, config['columns']), load_sources(directory, config))
