@@ -15,6 +15,11 @@ Python-Laufzeit und neue Prüfungen für wissenschaftliche Auswertungen.
 - Das Windows-Paket enthält Python, kontrolliertes Beenden, Instanzschutz,
   begrenzte technische Protokolle und eine Prüfung der Paketidentität. Ollama
   und Modelle werden weiterhin separat eingerichtet.
+- Standardmodule trennen den Windows-Prozessordner von ihrer Ergebnisablage.
+  Ein- und Ausgaben, Logs sowie Zwischenstände verwenden ausdrückliche Pfade;
+  Berichtslinks bleiben relativ. Unterschiedliche Windows-Pfadschreibweisen
+  dürfen den Schutz von Originaldateien und Laufbindungen nicht umgehen.
+  Sehr lange Kategorien erhalten begrenzte Grafikdateinamen mit Hashkennung.
 
 **Prüfstand:** [Testbericht](TEST_REPORT.md). Die abschließende Windows-Paketabnahme
 läuft noch. Eine neue native Mac-Distribution ist zurückgestellt; vorhandene

@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import sys
 import tempfile
+from filesystem_paths import canonical_path, io_path
 
 
 def resource_root():
@@ -69,13 +70,13 @@ def _path(value, label):
     parts = str(value).replace('\\', '/').casefold().split('/')
     if 'fakepath' in parts:
         raise ValueError('Der Browser übermittelt keinen tatsächlichen Eingabepfad. Speicherort für Analyseergebnisse auswählen.')
-    return Path(value).expanduser().resolve()
+    return canonical_path(value)
 
 
 def validate_output_location(output_dir):
     """Canonicalize and protect bundled resources before any directory creation."""
     parent = _path(output_dir, 'Speicherort für Analyseergebnisse')
-    if getattr(sys, 'frozen', False) and parent.is_relative_to(resource_root()):
+    if getattr(sys, 'frozen', False) and parent.is_relative_to(canonical_path(resource_root())):
         raise ValueError('Gebündelte Programmressourcen sind kein Speicherort für Analyseergebnisse. '
                          'Bitte einen vorhandenen Ordner außerhalb der Programmressourcen auswählen.')
     return parent
@@ -93,15 +94,15 @@ def resolve_output_parent(input_path=None, output_dir=None, check_write=False):
         parent = validate_output_location(output_dir)
     else:
         source = _path(input_path, 'Tatsächlicher Eingabepfad')
-        if not source.is_file():
+        if not io_path(source).is_file():
             raise ValueError('Eingabedatei nicht gefunden. Datei erneut auswählen oder Speicherort für Analyseergebnisse festlegen.')
         parent = validate_output_location(source.parent)
-    if not parent.is_dir():
+    if not io_path(parent).is_dir():
         raise ValueError('Speicherort für Analyseergebnisse ist nicht als Ordner verfügbar: '
                          + str(parent) + '. Bitte einen vorhandenen Ordner auswählen.')
     if check_write:
         try:
-            with tempfile.NamedTemporaryFile(prefix='.qualitativeanalyse-write-', suffix='.tmp', dir=parent) as probe:
+            with tempfile.NamedTemporaryFile(prefix='.qualitativeanalyse-write-', suffix='.tmp', dir=io_path(parent)) as probe:
                 probe.write(b'write-check')
                 probe.flush()
         except OSError as exc:

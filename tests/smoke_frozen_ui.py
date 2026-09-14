@@ -19,6 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--package', type=Path, default=ROOT/'dist/QualitativeAnalyse')
+    parser.add_argument('--long-output', action='store_true', help='Use a Windows result path longer than 300 characters')
     opts = parser.parse_args()
     summary = {'checks': [], 'model_calls': 0, 'real_executable': True,
                'limitation': 'Isolated extracted copy with Python absent from PATH; not a clean Windows VM.'}
@@ -64,6 +65,7 @@ def main():
 
         data = area/'Technische Ablage'
         processes = []
+        results = None
         try:
             def start(label):
                 trace = area/(label+'.log')
@@ -127,7 +129,16 @@ def main():
             assert project['id']
             person = api(address, '/api/person-preview', {
                 'project': project['id'], 'columns': state['defaults']['columns']})
-            results = area/'Synthetische Ergebnisse ä'; results.mkdir()
+            results = area/'Synthetische Ergebnisse ä'
+            if opts.long_output:
+                while len(str(results)) < 310:
+                    results /= 'Tiefe synthetische Ablage ä mit Leerzeichen'
+            visible_results = str(results)
+            if opts.long_output:
+                # Test the ordinary path submitted by a user; use independent
+                # Windows IO syntax only for this harness's own assertions.
+                results = Path('\\\\?\\' + visible_results)
+            results.mkdir(parents=True)
             settings = {'columns': state['defaults']['columns'],
                 'person_identity': {'confirmed': True, 'fingerprint': person['fingerprint'],
                     'mapping': {d['document']: d['document'] for d in person['documents']}},
@@ -136,7 +147,7 @@ def main():
                     ('Kategorie','Unterkategorie','Ausprägung','Facette','Definition','Ankerbeispiel'))),
                 'modules': ['coverage', 'information_loss', 'codebook_diagnostics'],
                 'model': 'synthetic-no-model', 'label_mode': 'multi_label',
-                'context': {}, 'output_dir': str(results)}
+                'context': {}, 'output_dir': visible_results}
             api(address, '/api/save', {'project': project['id'], 'settings': settings})
             job = api(address, '/api/start', {'project': project['id']})
             deadline = time.monotonic()+90
@@ -155,6 +166,8 @@ def main():
             assert saved_job['cleanup_confirmed'] is True, saved_job
             assert api(address, '/api/runtime')['active'] is None
             summary['checks'].append('packaged App supervisor and three model-free analysis children complete')
+            if opts.long_output:
+                summary['checks'].append('ordinary user output path over 300 characters completes without registry changes')
             summary['checks'].extend(['UI and manual resources served without system Python',
                                       'API token required', 'duplicate instance refused', 'synthetic demo created'])
             close(process, address)
@@ -173,9 +186,16 @@ def main():
                     process.terminate()
                     try: process.wait(timeout=15)
                     except subprocess.TimeoutExpired: process.kill(); process.wait(timeout=10)
+            if opts.long_output and results is not None and results.is_dir():
+                # This exact synthetic child belongs to the temporary test area.
+                # Use extended IO for its cleanup too, after owned children exit.
+                ordinary = Path(str(results).removeprefix('\\\\?\\')).resolve()
+                assert ordinary.is_relative_to(area), 'Refusing cleanup outside the test area'
+                shutil.rmtree(results)
     assert not area.exists(), 'Temporary extracted installation was not removed'
     summary['temporary_install_removed'] = True
-    (ROOT/'build/frozen-ui-smoke.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
+    evidence = 'frozen-ui-long-path-smoke.json' if opts.long_output else 'frozen-ui-smoke.json'
+    (ROOT/'build'/evidence).write_text(json.dumps(summary, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
     print(json.dumps({'ok': True, 'checks': len(summary['checks']), 'temporary_install_removed': True}))
 
 

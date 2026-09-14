@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, patch
 from local_app import App, read_json
 from test_local_app import settings,attach_supervision
 from runtime_support import file_hash
+from filesystem_paths import canonical_path
 
 
 class ExternalAppTests(unittest.TestCase):
@@ -34,7 +35,7 @@ class ExternalAppTests(unittest.TestCase):
             research=Path(listed['research_path'])
             self.assertEqual(research.parent,target.resolve())
             report=app.artifact(pid,job['id'],'gesamtbericht.html')
-            self.assertTrue(report.is_relative_to(research))
+            self.assertTrue(canonical_path(report).is_relative_to(canonical_path(research)))
             self.assertIn('Codebook-Diagnostik',report.read_text(encoding='utf-8'))
             restarted=App(root/'appdata')
             self.assertEqual(restarted.artifact(pid,job['id'],'gesamtbericht.html'),report)
@@ -42,7 +43,7 @@ class ExternalAppTests(unittest.TestCase):
             restarted.save(pid,{**opts,'output_dir':str(target2)})
             second=restarted.start(pid);self.wait(restarted)
             self.assertEqual(restarted.artifact(pid,job['id'],'gesamtbericht.html'),report)
-            self.assertTrue(restarted.artifact(pid,second['id'],'gesamtbericht.html').is_relative_to(target2))
+            self.assertTrue(canonical_path(restarted.artifact(pid,second['id'],'gesamtbericht.html')).is_relative_to(canonical_path(target2)))
             self.assertEqual({p:file_hash(p) for p in inputs},inputs)
             self.assertFalse((app.project_dir(pid)/'jobs'/job['id']/'runs').exists())
             with self.assertRaises(ValueError):restarted.artifact(pid,job['id'],'../../outside.txt')

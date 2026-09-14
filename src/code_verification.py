@@ -8,7 +8,7 @@ import logging
 from pathlib import Path
 
 import yaml
-from runtime_support import atomic_json, atomic_text
+from runtime_support import atomic_json, atomic_text, run_artifact_path
 
 from code_verification_core import verify_segments
 from coding_validation_common import MockLLM, load_codebook, load_segments, resolve_config_path
@@ -22,7 +22,7 @@ def configure_logging(log_file: str) -> None:
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
         handlers=[
-            logging.FileHandler(log_file, encoding="utf-8"),
+            logging.FileHandler(run_artifact_path(log_file), encoding="utf-8"),
             logging.StreamHandler(),
         ],
         force=True,
@@ -56,7 +56,7 @@ def main(argv=None):
     raw_enabled = bool(
         config.get("coding_validation", {}).get("log_raw_llm_output", False)
     )
-    raw_log_path = "code_verification_raw.jsonl" if raw_enabled else None
+    raw_log_path = run_artifact_path("code_verification_raw.jsonl") if raw_enabled else None
     LOGGER.info(
         "LLM-Raw-Audit: %s%s",
         "aktiv" if raw_enabled else "deaktiviert",
@@ -88,7 +88,8 @@ def main(argv=None):
     markdown, output = verify_segments(
         segments, codebook, config.get("prompts", {}), config.get("context", {}), params,
         idmap_reference=args.idmap_json or str(input_path), raw_log_path=raw_log_path,
-        checkpoint_path=args.checkpoint or ("code_verification_checkpoint.json" if config.get("coding_validation", {}).get("checkpoint", True) else None),
+        checkpoint_path=(run_artifact_path(args.checkpoint or "code_verification_checkpoint.json")
+                         if args.checkpoint or config.get("coding_validation", {}).get("checkpoint", True) else None),
         **({"llm": llm} if llm else {})
     )
     atomic_text(args.out_md, markdown)

@@ -6,6 +6,8 @@
 from __future__ import annotations
 
 import json
+import os
+from runtime_support import artifact_reference
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
@@ -250,7 +252,8 @@ def calculate_agreement(
             {"human_code": pair[0], "predicted_code": pair[1], "count": count}
             for pair, count in sorted(confusion_pairs.items(), key=lambda item: (-item[1], item[0]))
         ],
-        "confusion_png": Path(confusion_png).name if png_created else None,
+        "confusion_png": (artifact_reference(confusion_png) if os.environ.get("WORKFLOW_RUN_DIR")
+                          else Path(confusion_png).name) if png_created else None,
         "cases": cases,
     }
     return render_markdown(output), output

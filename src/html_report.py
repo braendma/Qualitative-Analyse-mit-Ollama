@@ -7,6 +7,7 @@ from pathlib import Path
 import re
 import yaml
 from runtime_support import atomic_text
+from filesystem_paths import io_path
 
 ROOT = Path(__file__).resolve().parent
 MAX_IMAGE = 20 * 1024 * 1024
@@ -59,7 +60,7 @@ def image_data(path):
 
 
 def build_html_report(directory, modules, created_at, *, filename='gesamtbericht.html', config=None):
-    directory=Path(directory).resolve()
+    directory=io_path(directory).resolve()
     if config is None:
         path=directory/'config_snapshot.yaml'
         config=yaml.safe_load(path.read_text(encoding='utf-8')) if path.is_file() else {}

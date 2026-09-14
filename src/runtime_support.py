@@ -10,6 +10,25 @@ import logging
 from contextlib import contextmanager
 from dataclasses import asdict, is_dataclass
 from pathlib import Path
+from filesystem_paths import absolute_path, canonical_path, io_path
+
+
+def run_artifact_path(path):
+    """Preserve standalone cwd semantics; managed modules have an explicit root."""
+    root = os.environ.get('WORKFLOW_RUN_DIR')
+    if not root:
+        return Path(path)
+    return io_path(absolute_path(root) / path)
+
+
+def artifact_reference(path):
+    """Keep report links portable when execution uses absolute IO arguments."""
+    root = os.environ.get('WORKFLOW_RUN_DIR')
+    if root:
+        actual, base = canonical_path(run_artifact_path(path)), canonical_path(root)
+        if actual.is_relative_to(base):
+            return actual.relative_to(base).as_posix()
+    return str(path)
 
 
 def fingerprint(value):
@@ -20,11 +39,11 @@ def fingerprint(value):
 
 
 def file_hash(path):
-    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+    return hashlib.sha256(io_path(path).read_bytes()).hexdigest()
 
 
 def atomic_text(path, text):
-    path = Path(path)
+    path = io_path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, temporary = tempfile.mkstemp(prefix=path.name + '.', suffix='.tmp', dir=path.parent)
     try:
@@ -45,7 +64,7 @@ def atomic_json(path, value):
 @contextmanager
 def exclusive_file_lock(path):
     """Nonblocking process lock; keep the inode/file after releasing the OS lock."""
-    with open(path, 'a+b') as handle:
+    with open(io_path(path), 'a+b') as handle:
         if handle.seek(0, os.SEEK_END) == 0:
             handle.write(b'\0')
             handle.flush()
@@ -72,7 +91,7 @@ def exclusive_file_lock(path):
 class Checkpoint:
     """Only completed, validated results are reusable; mismatches fail closed."""
     def __init__(self, path, identity):
-        self.path = Path(path) if path else None
+        self.path = io_path(run_artifact_path(path)) if path else None
         self.identity = fingerprint(identity)
         self.results = {}
         if self.path and self.path.exists():
@@ -120,7 +139,7 @@ class PartCheckpoint:
         from package_identity import current_package_identity
         package = current_package_identity()
         directory = params.get('partial_checkpoint_dir') or os.environ.get('WORKFLOW_CHECKPOINT_DIR')
-        self.directory = Path(directory) / module if directory and params.get('partial_checkpoints', True) else None
+        self.directory = io_path(run_artifact_path(directory)) / module if directory and params.get('partial_checkpoints', True) else None
         self.hits = 0
         self.saved = 0
         self.identity = None

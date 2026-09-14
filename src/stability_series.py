@@ -3,6 +3,7 @@ from collections import Counter
 import math
 from pathlib import Path
 import re
+from filesystem_paths import io_path
 
 from coding_validation_common import load_codebook, load_segments
 from diagnostic_series import (_check_plan, _confirmed_supervision, _identity, _inside,
@@ -130,7 +131,7 @@ def _load_series(directory, *, kind):
     Busy/unconfirmed processes and corrupted provenance raise instead of reading
     a moving target. Failed or never-started samples remain explicit exclusions.
     """
-    root = Path(directory).resolve()
+    root = io_path(directory)
     if not root.is_dir():
         raise ValueError('Wiederholungsordner nicht gefunden.')
     lock = root / '.series.lock'

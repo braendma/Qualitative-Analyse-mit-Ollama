@@ -131,6 +131,8 @@
     "src/person_identity.py",
     "src/plot_core.py",
     "src/process_commands.py",
+    "src/builtin_module_paths.py",
+    "src/filesystem_paths.py",
     "src/progress_events.py",
     "src/progress_presentation.py",
     "src/project_paths.py",

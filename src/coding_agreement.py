@@ -4,7 +4,7 @@
 from project_paths import DEFAULT_CONFIG
 import argparse
 import json
-from runtime_support import atomic_json, atomic_text
+from runtime_support import atomic_json, atomic_text, run_artifact_path
 import logging
 from pathlib import Path
 
@@ -22,7 +22,7 @@ def configure_logging(log_file: str) -> None:
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
         handlers=[
-            logging.FileHandler(log_file, encoding="utf-8"),
+            logging.FileHandler(run_artifact_path(log_file), encoding="utf-8"),
             logging.StreamHandler(),
         ],
         force=True,

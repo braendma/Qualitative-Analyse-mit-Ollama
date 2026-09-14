@@ -8,6 +8,7 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
 import job_storage as storage
+from filesystem_paths import canonical_path
 from runtime_support import atomic_json, file_hash, exclusive_file_lock
 
 
@@ -39,7 +40,7 @@ class JobStorageTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             folder, config, parent, job = bound_workspace(Path(temp))
             root = storage.research_root(folder, job)
-            self.assertEqual(root.parent, parent.resolve())
+            self.assertEqual(canonical_path(root.parent), parent.resolve())
             self.assertTrue(root.name.startswith('QualitativeAnalyse_'))
             self.assertEqual(storage.config_path(folder, job), config.resolve())
             self.assertEqual(storage.runs_root(folder, job), root / 'runs')
@@ -66,8 +67,8 @@ class JobStorageTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             folder, config, _, job = workspace(Path(temp)); before = set(Path(temp).rglob('*'))
             self.assertIsNone(storage.research_root(folder, job))
-            self.assertEqual(storage.runs_root(folder, job), folder / 'runs')
-            self.assertEqual(storage.review_root(folder, job), folder / 'review')
+            self.assertEqual(canonical_path(storage.runs_root(folder, job)), folder / 'runs')
+            self.assertEqual(canonical_path(storage.review_root(folder, job)), folder / 'review')
             self.assertIsNone(storage.run_path(folder, job))
             self.assertEqual(storage.config_path(folder, job), config.resolve())
             self.assertEqual(set(Path(temp).rglob('*')), before)
@@ -150,7 +151,7 @@ class JobStorageTests(unittest.TestCase):
             path = folder / 'runs/synthetic-run'; path.mkdir(parents=True)
             atomic_json(path / 'workflow_manifest.json', {'status': 'running'})
             self.assertIsNone(storage.research_root(folder, {}))
-            self.assertEqual(storage.run_path(folder, {}), path.resolve())
+            self.assertEqual(canonical_path(storage.run_path(folder, {})), path.resolve())
             with self.assertRaises(ValueError): storage.config_path(folder, {})
             with self.assertRaises(ValueError): storage.research_root(folder, {'storage': {}})
             with self.assertRaises(ValueError): storage.create_binding(folder, 'unused.yaml', Path(temp))

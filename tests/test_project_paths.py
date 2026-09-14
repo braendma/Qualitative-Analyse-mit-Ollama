@@ -143,7 +143,7 @@ class ProjectPathsTests(unittest.TestCase):
             with patch('project_paths.tempfile.NamedTemporaryFile', side_effect=PermissionError('synthetic denied')) as probe:
                 with self.assertRaisesRegex(ValueError, 'nicht beschreibbar'):
                     paths.resolve_output_parent(source, check_write=True)
-                self.assertEqual(probe.call_args.kwargs['dir'], root.resolve())
+                self.assertTrue(os.path.samefile(probe.call_args.kwargs['dir'], root))
             self.assertEqual(list(root.iterdir()), [source])
             self.assertEqual(source.read_bytes(), b'original')
 

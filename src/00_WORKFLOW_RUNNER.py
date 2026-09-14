@@ -9,6 +9,8 @@ Neue Analysemodule werden ausschließlich in config_v2.yaml unter
 
 from project_paths import DEFAULT_CONFIG, resolve_output_parent, validate_output_location
 from process_commands import python_command, validate_script
+from builtin_module_paths import prepare_builtin_arguments
+from filesystem_paths import canonical_path, io_path, process_directory
 from cost_profiles import normalize_cost_profile
 from provider_keys import reject_config_secrets
 from contextvars import ContextVar
@@ -31,6 +33,7 @@ import yaml
 LOGGER = logging.getLogger("workflow")
 TOKEN_RE = re.compile(r"\{([A-Za-z_][A-Za-z0-9_]*)\}")
 STEP_TRANSPORT = ContextVar('workflow_step_transport', default=None)
+STEP_PROCESS_CWD = ContextVar('workflow_step_process_cwd', default=None)
 
 
 class ModulePaused(RuntimeError):
@@ -158,7 +161,7 @@ def run_step(module: dict, command: list[str], cwd: Path):
                  'WORKFLOW_MODULE':module['id'],'WORKFLOW_PROGRESS_FILE':str(progress_path)}
     execution_path = cwd / ('execution_' + module['id'] + '.log')
     with execution_path.open('ab') as execution_log:
-        result = subprocess.run(command, cwd=str(cwd), env=child_env,
+        result = subprocess.run(command, cwd=str(STEP_PROCESS_CWD.get() or process_directory(cwd)), env=child_env,
                                 stdout=execution_log, stderr=subprocess.STDOUT)
     if result.returncode == 75 and module.get('starts_child_runs'):
         raise ModulePaused('Modul hat seine Wiederholungen sicher pausiert.')
@@ -311,7 +314,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     script_dir = Path(__file__).resolve().parent
-    config_path = resolve_path(Path.cwd(), args.config)
+    config_path = io_path(resolve_path(Path.cwd(), args.config))
     if not config_path.is_file():
         raise FileNotFoundError(f"Config nicht gefunden: {config_path}")
 
@@ -385,7 +388,7 @@ def main(argv=None):
     # Commit is descriptive; code content is the authoritative resume identity.
     identity = fingerprint({k: v for k, v in provenance.items() if k != "commit"})
     if args.resume:
-        output_dir = Path(args.resume).resolve()
+        output_dir = io_path(args.resume)
         manifest = json.loads((output_dir / "workflow_manifest.json").read_text(encoding="utf-8"))
         if manifest.get("fingerprint") != identity:
             raise ValueError("Wiederaufnahme abgelehnt: Eingaben, Konfiguration, Code oder Abhängigkeiten geändert.")
@@ -401,12 +404,12 @@ def main(argv=None):
         explicit_root = validate_output_location(args.output_dir) if args.output_dir is not None else None
         if explicit_root is not None:
             try:
-                explicit_root.mkdir(parents=True, exist_ok=True)
+                io_path(explicit_root).mkdir(parents=True, exist_ok=True)
             except OSError as exc:
                 raise ValueError("Der angegebene Ergebnisordner ist nicht verfügbar oder nicht beschreibbar. Anderes Ziel wählen.") from exc
         output_parent = resolve_output_parent(csv_path, explicit_root, check_write=True)
         folder_name = run_id if explicit_root is not None else "QualitativeAnalyse_" + run_id
-        output_dir = output_parent / folder_name
+        output_dir = io_path(output_parent / folder_name)
         output_dir.mkdir(exist_ok=False)
         completed_steps = []
         manifest = {"run_id": run_id, "started_at": datetime.now().isoformat(),
@@ -432,7 +435,7 @@ def main(argv=None):
         handlers=[logging.FileHandler(output_dir / "workflow.log", encoding="utf-8"), logging.StreamHandler()], force=True)
     runtime = {"config": str(config_path), "input_csv": str(csv_path), "output_dir": str(output_dir),
                "python": sys.executable, "log_raw_flag": "--log-raw" if args.log_raw else ""}
-    manifest.update(status="running", output_dir=str(output_dir))
+    manifest.update(status="running", output_dir=str(canonical_path(output_dir)))
     if "error" in manifest:
         manifest.setdefault("failure_history", []).append({"failed_at": manifest.pop("failed_at", None), "error": manifest.pop("error")})
     manifest.pop("finished_at", None)
@@ -444,6 +447,17 @@ def main(argv=None):
     try:
         manifest["ollama_runtime"] = {'managed': False, 'model_required': needs_model, 'started': False}
         atomic_json(output_dir / "workflow_manifest.json", manifest)
+        commands = {}
+        for module in modules:
+            script_path = resolve_path(script_dir, module['script'])
+            if not script_path.is_file():
+                raise FileNotFoundError(script_path)
+            rendered = [render_arg(value, runtime).strip() for value in module.get('args', [])]
+            arguments = [value for value in rendered if value]
+            adapted = prepare_builtin_arguments(script_path, arguments, output_dir)
+            command = python_command(script_path, arguments if adapted is None else adapted)
+            cwd = process_directory(output_dir if adapted is None else script_dir)
+            commands[module['id']] = (command, cwd)
         failures=[]
         for module in modules:
             if module["id"] in completed_steps:
@@ -475,17 +489,15 @@ def main(argv=None):
                     manifest.setdefault('ollama_runtime_sessions', []).append(manifest['ollama_runtime'])
                     managed_started = True
                 atomic_json(output_dir / 'workflow_manifest.json', manifest)
-                script_path = resolve_path(script_dir, module["script"])
-                if not script_path.is_file():
-                    raise FileNotFoundError(script_path)
-                rendered = [render_arg(value, runtime).strip() for value in module.get("args", [])]
-                command = python_command(script_path, [v for v in rendered if v])
+                command, cwd = commands[module['id']]
                 # Preserve the established module-call interface and isolate per-run credentials.
                 token = STEP_TRANSPORT.set(selected_transport if module['requires_model'] else
                     {'provider':'ollama_local','api_key_env':selected_transport['api_key_env']})
+                cwd_token = STEP_PROCESS_CWD.set(cwd)
                 try:
                     run_step(module, command, output_dir)
                 finally:
+                    STEP_PROCESS_CWD.reset(cwd_token)
                     STEP_TRANSPORT.reset(token)
             except ModulePaused:
                 manifest['module_status'][module['id']] = 'paused'

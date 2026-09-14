@@ -6,7 +6,7 @@ import logging
 from project_paths import DEFAULT_CONFIG
 import argparse
 import json
-from runtime_support import atomic_json, atomic_text
+from runtime_support import atomic_json, atomic_text, run_artifact_path
 
 from summarizer_core import summarize_clusters
 from thematic_pipeline import prepare as prepare_perspective, finish as finish_perspective
@@ -15,7 +15,7 @@ logging.basicConfig(
     level=logging.DEBUG,
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[
-        logging.FileHandler("summarizer_debug.log", encoding="utf-8"),
+        logging.FileHandler(run_artifact_path("summarizer_debug.log"), encoding="utf-8"),
         logging.StreamHandler()
     ]
 )

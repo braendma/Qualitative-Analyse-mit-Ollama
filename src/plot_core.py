@@ -5,12 +5,44 @@ import numpy as np
 import os
 import logging
 import json
+import hashlib
+from runtime_support import artifact_reference
 
 logger = logging.getLogger("clusterer")
 
 
 def _safe_filename(s: str) -> str:
     return "".join(c if c.isalnum() or c in ("-", "_") else "_" for c in s)
+
+
+def _plot_filename(cat, subcat, facet=None):
+    """Bound the final component, retaining existing short artifact names.
+
+    Counts refer to Windows UTF-16 units and encoded UTF-8 bytes, not Python
+    character length. This does not promise that the complete output path fits.
+    A shortened name binds the full unsanitized hierarchy, including absent vs
+    empty facets, so equal prefixes do not silently select the same artifact.
+    """
+    original = [str(cat), str(subcat), None if facet is None else str(facet)]
+    stem = '_'.join(_safe_filename(value) for value in original if value is not None)
+    ending = '_clusterdiagramm.png'
+    filename = stem + ending
+    max_units, max_bytes = 120, 240
+    if len(filename.encode('utf-16-le')) // 2 <= max_units and len(filename.encode('utf-8')) <= max_bytes:
+        return filename
+    digest = hashlib.sha256(json.dumps(original, ensure_ascii=True, separators=(',', ':')).encode('utf-8')).hexdigest()[:16]
+    suffix = '__' + digest + ending
+    remaining_units = max_units - len(suffix.encode('utf-16-le')) // 2
+    remaining_bytes = max_bytes - len(suffix.encode('utf-8'))
+    prefix = []
+    for character in stem:
+        units, encoded = len(character.encode('utf-16-le')) // 2, len(character.encode('utf-8'))
+        if units > remaining_units or encoded > remaining_bytes:
+            break
+        prefix.append(character)
+        remaining_units -= units
+        remaining_bytes -= encoded
+    return ''.join(prefix) + suffix
 
 
 def _extract_person_from_segment_id(sid: str) -> str:
@@ -176,14 +208,7 @@ def plot_clusters(cat,
     fig.text(.045,.18/height,'\n'.join(textwrap.wrap(note,125)),fontsize=9,color=muted,va='bottom')
 
     # 4) Dateiname sicher erzeugen
-    safe_cat = _safe_filename(str(cat))
-    safe_sub = _safe_filename(str(subcat))
-
-    if facet is not None:
-        safe_facet = _safe_filename(str(facet))
-        filename = f"{safe_cat}_{safe_sub}_{safe_facet}_clusterdiagramm.png"
-    else:
-        filename = f"{safe_cat}_{safe_sub}_clusterdiagramm.png"
+    filename = _plot_filename(cat, subcat, facet)
     filepath = os.path.join(out_dir, filename)
 
     try:
@@ -199,5 +224,4 @@ def plot_clusters(cat,
             pass
         return None
 
-    return filepath
-
+    return artifact_reference(filepath)

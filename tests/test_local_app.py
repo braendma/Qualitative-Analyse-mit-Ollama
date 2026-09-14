@@ -18,6 +18,7 @@ ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'src'))
 from local_app import App, make_server, safe_child, csv_info, read_json
 from telegram_notifications import Telegram
+from filesystem_paths import canonical_path
 
 
 def settings(app):
@@ -218,7 +219,7 @@ class DesktopTests(unittest.TestCase):
                 started=app.start(pid);settle()
                 job=app.jobs(pid)[0];self.assertEqual(job['status'],'paused')
                 research_path=Path(job['research_path'])
-                self.assertTrue(research_path.is_relative_to(Path(opts['output_dir'])))
+                self.assertTrue(canonical_path(research_path).is_relative_to(canonical_path(opts['output_dir'])))
                 first_config=app.job_config(pid,started['id'])
                 app.start(pid,started['id']);settle()
                 job=app.jobs(pid)[0]
@@ -227,7 +228,7 @@ class DesktopTests(unittest.TestCase):
                 self.assertEqual(job['completed'],['clusterer','summarizer'])
                 self.assertIn('gesamtbericht.md',job['files'])
                 self.assertEqual(Path(job['research_path']),research_path)
-                self.assertTrue(app.artifact(pid,started['id'],'gesamtbericht.md').is_relative_to(research_path))
+            self.assertTrue(canonical_path(app.artifact(pid,started['id'],'gesamtbericht.md')).is_relative_to(canonical_path(research_path)))
                 self.assertEqual(app.job_config(pid,started['id']),first_config)
                 with self.assertRaises(ValueError):app.artifact(pid,started['id'],'../../telegram.private.json')
                 with self.assertRaisesRegex(ValueError,'bereits abgeschlossen'):app.start(pid,started['id'])

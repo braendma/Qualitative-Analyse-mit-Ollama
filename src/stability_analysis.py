@@ -1,6 +1,5 @@
 """Optional runner module: controlled repetitions followed by a verified diagnosis."""
 import os
-from pathlib import Path
 import sys
 
 import yaml
@@ -13,6 +12,7 @@ from progress_events import begin_phase, update_progress
 from failure_help import repetition_failure_marker
 from stability_report import render_stability
 from stability_series import load_stability_series
+from filesystem_paths import canonical_path, io_path
 
 SERIES_DIRECTORY = '_stability_repetitions'
 PAUSED_EXIT_CODE = 75
@@ -35,7 +35,7 @@ def configured_plan(config_path, *, kind='stability'):
     if kind not in ('stability', 'sensitivity'):
         raise ValueError('Unbekannte Wiederholungsdiagnose.')
     name = 'Stabilität' if kind == 'stability' else 'Sensitivität'
-    config = yaml.safe_load(Path(config_path).read_text(encoding='utf-8'))
+    config = yaml.safe_load(io_path(config_path).read_text(encoding='utf-8'))
     enabled = [m for m in config.get('pipeline', {}).get('modules', [])
                if m.get('id') == kind and m.get('enabled', True)]
     if not enabled:
@@ -58,7 +58,7 @@ def configured_plan(config_path, *, kind='stability'):
 
 
 def _load_context(directory, config_path, input_path, *, kind='stability'):
-    root = Path(directory).resolve()
+    root = io_path(canonical_path(directory))
     config, manifest, book_path = load_input_context(root, config_path, input_path, require_codebook=True)
     if (os.environ.get('WORKFLOW_RUN_ID') != manifest.get('run_id') or
             os.environ.get('WORKFLOW_FINGERPRINT') != manifest.get('fingerprint') or
@@ -70,7 +70,8 @@ def _load_context(directory, config_path, input_path, *, kind='stability'):
         raise ValueError('Wiederholungsdiagnose ist nicht aktiviert.')
     series = root / ('_' + kind + '_repetitions')
     _inside(series, root)
-    if any(Path(path).resolve().is_relative_to(series) for path in (config_path, input_path, book_path)):
+    series_identity = canonical_path(series)
+    if any(canonical_path(path).is_relative_to(series_identity) for path in (config_path, input_path, book_path)):
         raise ValueError('Originaleingaben dürfen nicht im internen Wiederholungsverzeichnis liegen.')
     return {'plan': plan, 'directory': series, 'stages': {}}
 

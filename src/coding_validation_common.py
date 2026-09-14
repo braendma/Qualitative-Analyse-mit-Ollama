@@ -434,15 +434,15 @@ class RawJsonlWriter:
 
 
 def resolve_config_path(config_path: str | Path, explicit: str | None, configured: str | None) -> Path:
+    from filesystem_paths import canonical_path, io_path
     value = explicit or configured
     if not value:
         raise ValueError("Kein Pfad zum Kategoriesystem konfiguriert (paths.category_system_csv).")
     path = Path(value)
     if not path.is_absolute():
-        path = Path(config_path).resolve().parent / path
-    return path.resolve()
+        path = canonical_path(config_path).parent / path
+    return io_path(path).resolve()
 
 
 def markdown_escape(value: Any) -> str:
     return str(value or "").replace("|", "\\|").replace("\n", " ")
-

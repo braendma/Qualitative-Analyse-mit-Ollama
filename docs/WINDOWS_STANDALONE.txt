@@ -22,6 +22,14 @@ Ordnerrechte und Meldungen des Virenschutzes prüfen. Eine Schreibsperre kann
 auch eine bereits gestartete EXE betreffen. Freigaben nur für das überprüfte
 Programmpaket setzen; anschließend denselben Vorgang erneut ausführen.
 
+Die Standardmodule verwenden den gewählten Ergebnisordner auch bei langen
+Windows-Pfaden. Programmstart und Ergebnisablage sind dafür getrennt; Daten
+werden nicht in einen Ersatzordner verschoben. Das vollständige Programmpaket
+selbst in einen kurzen Ordner entpacken, falls Windows den Startpfad ablehnt.
+Sehr lange Kategorien erhalten begrenzte, eindeutig gekennzeichnete Grafiknamen.
+Eigene Source-Skripte behalten ihren bisherigen Arbeitsordnervertrag und können
+einen kürzeren Ergebnisordner benötigen. Vollständige CLI-Optionsnamen verwenden.
+
 Technische Projektablage: %LOCALAPPDATA%\QualitativeAnalyse (vorhandene ältere
 Ablagen werden erkannt). Ergebnisordner vor der Analyse auswählen; bei Auswahl
 über den lokalen Dateidialog wird der Ordner der Eingabedatei vorgeschlagen.

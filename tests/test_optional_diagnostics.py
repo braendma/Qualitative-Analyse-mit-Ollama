@@ -3,6 +3,7 @@ import json
 import time
 import tempfile
 from pathlib import Path
+from filesystem_paths import canonical_path
 from unittest.mock import patch
 import unittest
 
@@ -55,7 +56,7 @@ class OptionalDiagnosticsTests(unittest.TestCase):
             jobs=app.jobs(pid)
             self.assertEqual(jobs[0]['status'],'success',jobs)
             path=app.artifact(pid,job['id'],'coverage.json')
-            self.assertTrue(path.is_relative_to(Path(app.project(pid)['settings']['output_dir'])))
+            self.assertTrue(canonical_path(path).is_relative_to(canonical_path(app.project(pid)['settings']['output_dir'])))
             result=json.loads(path.read_text(encoding='utf-8'))
             self.assertEqual(result['model_calls'],0)
             self.assertEqual(result['material']['material_units'],43)

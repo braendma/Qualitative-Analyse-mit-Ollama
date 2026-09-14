@@ -7,6 +7,7 @@ import re
 import secrets
 
 from project_paths import resolve_output_parent
+from filesystem_paths import absolute_path, canonical_path, io_path
 from runtime_support import atomic_json, exclusive_file_lock, file_hash, fingerprint
 
 ROOT_MARKER = '.qualitativeanalyse-job.json'
@@ -32,8 +33,8 @@ def _folder(folder, *, strict=False):
 
 
 def _child(root, name):
-    expected = root / name
-    _require(expected.resolve() == expected, 'Gebundener Pfad wurde umgeleitet. Ursprünglichen Forschungsordner wiederherstellen.')
+    expected = io_path(root / name)
+    _require(canonical_path(expected) == absolute_path(expected), 'Gebundener Pfad wurde umgeleitet. Ursprünglichen Forschungsordner wiederherstellen.')
     return expected
 
 
@@ -80,10 +81,10 @@ def create_binding(folder, config, parent):
     lock = _child(folder, LOCK)
     with _binding_lock(lock):
         _require(not (folder / LOCAL_MARKER).exists(), 'Dieser Job besitzt bereits einen Forschungsordner.')
-        root = parent / ('QualitativeAnalyse_' + datetime.now().strftime('%Y%m%d_%H%M%S') + '_' + folder.name)
+        root = io_path(parent / ('QualitativeAnalyse_' + datetime.now().strftime('%Y%m%d_%H%M%S') + '_' + folder.name))
         root.mkdir(exist_ok=False)
         storage = {'schema_version': 1, 'kind': 'external', 'project_id': folder.parent.parent.name,
-                   'job_id': folder.name, 'job_folder': str(folder), 'research_root': str(root),
+                   'job_id': folder.name, 'job_folder': str(folder), 'research_root': str(canonical_path(root)),
                    'root_identity': _identity(root), 'config_path': str(config), 'config_sha256': file_hash(config),
                    'nonce': secrets.token_hex(32)}
         (root / 'runs').mkdir()
@@ -106,8 +107,9 @@ def _storage(folder, job):
              and storage.get('project_id') == folder.parent.parent.name)
     _require(fingerprint(_read(_child(folder, LOCAL_MARKER))) == fingerprint(storage))
     _require(isinstance(storage.get('research_root'), str))
-    root = Path(storage['research_root'])
-    _require(root.is_absolute() and root.resolve() == root and root.is_dir(),
+    declared = Path(storage['research_root'])
+    root = io_path(declared)
+    _require(declared.is_absolute() and canonical_path(root) == absolute_path(declared) and root.is_dir(),
              'Gebundener Forschungsordner ist nicht verfügbar oder wurde umgeleitet.')
     _require(fingerprint(_identity(root)) == fingerprint(storage.get('root_identity')),
              'Forschungsordner wurde ausgetauscht; ursprünglichen Ordner wiederherstellen.')
@@ -127,7 +129,7 @@ def config_path(folder, job):
 def research_root(folder, job):
     folder = _folder(folder)
     storage = _storage(folder, job)
-    return Path(storage['research_root']) if storage is not None else None
+    return io_path(storage['research_root']) if storage is not None else None
 
 
 def runs_root(folder, job):
@@ -146,7 +148,7 @@ def review_root(folder, job):
 
 
 def _manifest_run(root, path, storage):
-    _require(path.parent == root and path.resolve() == path and path.is_dir(), 'Laufpfad wurde umgeleitet.')
+    _require(path.parent == root and canonical_path(path) == absolute_path(path) and path.is_dir(), 'Laufpfad wurde umgeleitet.')
     manifest = _read(_child(path, 'workflow_manifest.json'))
     if storage is not None:
         _require(manifest.get('run_id') == path.name
@@ -154,7 +156,7 @@ def _manifest_run(root, path, storage):
                  and manifest['provenance'].get('config_sha256') == storage['config_sha256'],
                  'Laufherkunft passt nicht zur gebundenen Jobkonfiguration.')
         if 'output_dir' in manifest:
-            _require(isinstance(manifest['output_dir'], str) and Path(manifest['output_dir']).resolve() == path,
+            _require(isinstance(manifest['output_dir'], str) and canonical_path(manifest['output_dir']) == canonical_path(path),
                      'Laufmanifest verweist auf einen anderen Ergebnisordner.')
     return manifest
 

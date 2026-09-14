@@ -10,6 +10,7 @@ import json
 import os
 import re
 from pathlib import Path
+from filesystem_paths import canonical_path, process_directory, io_path
 import subprocess
 import sys
 import uuid
@@ -68,7 +69,8 @@ def _read_json(path):
 
 
 def _inside(path, root):
-    if not path.resolve().is_relative_to(root.resolve()) or path.is_symlink():
+    if (not canonical_path(path).is_relative_to(canonical_path(root))
+            or io_path(path).is_symlink()):
         raise ValueError('Serienpfad verweist außerhalb des zugehörigen Laufordners.')
 
 
@@ -247,7 +249,7 @@ def _execute(command, directory, log, env):
     supervised = python_command(Path(__file__).with_name('managed_ollama.py'),
                   ['--command', str(receipt_path), ticket, *command])
     with open(log, 'ab') as output:
-        process = subprocess.Popen(supervised, cwd=directory, env=env, stdin=subprocess.PIPE,
+        process = subprocess.Popen(supervised, cwd=process_directory(Path(__file__).parent), env=env, stdin=subprocess.PIPE,
             stdout=output, stderr=subprocess.STDOUT, start_new_session=os.name != 'nt',
             creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
         try:
@@ -281,7 +283,18 @@ def _confirmed_supervision(log, identity, parent):
     for path in (request_path, receipt_path):
         _inside(path, log.parent)
     request, receipt = _read_json(request_path), _read_json(receipt_path)
-    if request.get('execution_fingerprint') != identity or request.get('run_parent') != parent:
+    stored_parent = request.get('run_parent')
+    try:
+        same_parent = stored_parent is None if parent is None else (
+            isinstance(stored_parent, str) and bool(stored_parent)
+            and isinstance(parent, str) and bool(parent)
+            and Path(stored_parent).is_absolute() and Path(parent).is_absolute()
+            and canonical_path(stored_parent) == canonical_path(parent))
+    except (OSError, RuntimeError, TypeError, ValueError):
+        same_parent = False
+    # Compare only path identity across normal/extended IO spelling. The saved
+    # request, command hash and ticket remain byte-for-byte authoritative.
+    if request.get('execution_fingerprint') != identity or not same_parent:
         raise ValueError(UNCONFIRMED)
     return validate_receipt(receipt, ticket=request.get('ticket'), command_sha256=request.get('command_sha256'))
 
@@ -305,7 +318,7 @@ def execute_repetitions(plan, directory, *, resume=False, pause_file=None, progr
     _check_plan(plan)
     if os.environ.get('QUALITATIVE_MANAGED_OLLAMA_HOST'):
         raise ValueError('Verwaltete Ollama-Instanz des übergeordneten Laufs zuerst freigeben; keine zweite Instanz starten.')
-    root = Path(directory).resolve()
+    root = io_path(directory)
     if resume:
         if not root.is_dir():
             raise ValueError('Serienordner für Wiederaufnahme nicht gefunden.')

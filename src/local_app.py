@@ -25,6 +25,7 @@ import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from project_paths import DEFAULT_CONFIG, DEMO_DIR, default_data_dir, resolve_output_parent
+from filesystem_paths import canonical_path
 from process_commands import python_command, validate_script
 import yaml
 from runtime_support import atomic_json, atomic_text, exclusive_file_lock, fingerprint, file_hash
@@ -732,7 +733,7 @@ class App(ReviewWorkspace):
                     if job['status']=='running' and not pid_alive(job.get('pid')):
                         job['status']='interrupted'
                 research=job_storage.research_root(folder,job)
-                job['research_path']=str(research) if research else (str(run) if run else '')
+                job['research_path']=str(canonical_path(research)) if research else (str(canonical_path(run)) if run else '')
             except (ValueError,OSError,KeyError,TypeError) as exc:
                 job['files']=[]
                 job['output_error']='Ergebnisse sind nicht zugänglich: '+str(exc)

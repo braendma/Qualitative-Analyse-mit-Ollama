@@ -4,6 +4,7 @@ Labels are presentation names, never module identities. File integrity and sourc
 schema checks belong to the caller; this helper performs no reads or model calls.
 """
 from pathlib import Path
+from filesystem_paths import canonical_path
 
 
 LEGACY_SOURCES = (
@@ -78,7 +79,7 @@ def bind_source_modules(sources, modules, directory):
     from diagnostic_sources import declared_json
     if not isinstance(sources, dict) or not sources:
         raise ValueError('Geprüfte Synthese benötigt eine eindeutige analytische Quellenauswahl.')
-    directory = Path(directory).resolve()
+    directory = canonical_path(directory)
     declarations = {}
     seen = set()
     for module in modules:
@@ -89,13 +90,13 @@ def bind_source_modules(sources, modules, directory):
         if mid not in SOURCE_MODULES:
             continue
         artifact = declared_json(module)
-        path = (directory / artifact).resolve()
+        path = canonical_path(directory / artifact)
         declarations.setdefault(path, []).append(module)
     result = {}
     for label, name in sources.items():
         if not isinstance(label, str) or not label.strip() or not isinstance(name, str) or not name.strip():
             raise ValueError('Synthesequellen benötigen nichtleere Bezeichnungen und Dateipfade.')
-        path = (directory / name).resolve()
+        path = canonical_path(directory / name)
         matches = declarations.get(path, [])
         if len(matches) != 1:
             raise ValueError('Synthesequelle ist keinem eindeutigen Analysemodul zugeordnet: ' + label)

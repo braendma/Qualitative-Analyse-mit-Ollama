@@ -6,7 +6,7 @@ import logging
 from project_paths import DEFAULT_CONFIG
 import argparse
 import json
-from runtime_support import atomic_json, atomic_text
+from runtime_support import atomic_json, atomic_text, run_artifact_path
 
 from meta_swot_core import build_meta_swot
 from thematic_pipeline import prepare, finish
@@ -20,7 +20,7 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[
         logging.FileHandler(
-            "meta_swot_debug.log",
+            run_artifact_path("meta_swot_debug.log"),
             encoding="utf-8"
         ),
         logging.StreamHandler()

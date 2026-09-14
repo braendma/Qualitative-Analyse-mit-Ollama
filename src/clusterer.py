@@ -6,7 +6,7 @@ import logging
 from project_paths import DEFAULT_CONFIG
 import argparse
 import json
-from runtime_support import atomic_json, atomic_text
+from runtime_support import atomic_json, atomic_text, run_artifact_path
 import pandas as pd
 
 from clusterer_core import run_clustering
@@ -18,7 +18,7 @@ logging.basicConfig(
     level=logging.DEBUG,
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[
-        logging.FileHandler("clusterer_debug.log", encoding="utf-8"),
+        logging.FileHandler(run_artifact_path("clusterer_debug.log"), encoding="utf-8"),
         logging.StreamHandler()
     ]
 )

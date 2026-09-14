@@ -5,6 +5,8 @@ import os
 from pathlib import Path
 
 import yaml
+from runtime_support import run_artifact_path
+from filesystem_paths import canonical_path, io_path
 
 from analysis_perspectives import normalize_analysis_perspectives, perspective_capabilities, perspective_effort
 
@@ -60,7 +62,7 @@ def _relation_receipt_needed(config, selected):
     synthesis = next((m for m in modules if m['id'] == 'overall_synthesis' and m.get('enabled', True)), None)
     if synthesis is None:
         return False
-    bindings = bind_source_modules(sources_from_module(synthesis), modules, Path.cwd())
+    bindings = bind_source_modules(sources_from_module(synthesis), modules, run_artifact_path("."))
     return any(binding['module_id'] == 'relation_analysis' for binding in bindings.values())
 
 
@@ -92,20 +94,22 @@ def prepare(module, config_path, *, input_path=None, cluster_path=None, idmap_pa
     files = {str(p): file_hash(p) for p in (config_path, actual_input, book)}
     manifest = None
     if in_runner:
-        manifest = json.loads((Path(run_path) / 'workflow_manifest.json').read_text(encoding='utf-8'))
+        manifest = json.loads(io_path(Path(run_path) / 'workflow_manifest.json').read_text(encoding='utf-8'))
         if manifest.get('fingerprint') != os.environ['WORKFLOW_FINGERPRINT']:
             raise ValueError('Perspektivprüfung gehört nicht zum aktuellen Runner-Lauf.')
 
     def source(path, source_module=None):
-        path = Path(path).resolve()
+        # Declared upstream filenames are relative to the scientific run, while
+        # the managed process can have an unrelated short working directory.
+        path = canonical_path(run_artifact_path(path))
         if manifest is not None:
             from diagnostic_sources import load_declared_artifact
             try:
-                relative = path.relative_to(Path(run_path).resolve()).as_posix()
+                relative = path.relative_to(canonical_path(run_path)).as_posix()
             except ValueError:
                 raise ValueError('Analysevorstufe liegt außerhalb des geprüften Laufs.') from None
             matching = [digest for name, digest in manifest.get('output_hashes', {}).items()
-                        if Path(run_path, name).resolve() == path]
+                        if canonical_path(Path(run_path, name)) == path]
             if len(matching) != 1 or file_hash(path) != matching[0]:
                 raise ValueError('Analysevorstufe hat keinen passenden Output-Prüfnachweis.')
             if source_module:
@@ -113,10 +117,10 @@ def prepare(module, config_path, *, input_path=None, cluster_path=None, idmap_pa
                 if declared is None:
                     raise ValueError('Benötigte Analysevorstufe fehlt im Modulvertrag.')
                 verified = load_declared_artifact(run_path, declared, manifest)
-                if verified['status'] != 'available' or Path(run_path, verified['artifact']).resolve() != path:
+                if verified['status'] != 'available' or canonical_path(Path(run_path, verified['artifact'])) != path:
                     raise ValueError('Analysevorstufe ist nicht vollständig und unverändert nachgewiesen.')
         digest = file_hash(path)
-        payload = json.loads(path.read_text(encoding='utf-8'))
+        payload = json.loads(io_path(path).read_text(encoding='utf-8'))
         if file_hash(path) != digest:
             raise ValueError('Analysevorstufe wurde während des Einlesens verändert.')
         files[str(path)] = digest
@@ -167,8 +171,8 @@ def prepare(module, config_path, *, input_path=None, cluster_path=None, idmap_pa
         if declared is None or not isinstance(source_paths, dict) or not source_paths:
             raise ValueError('Syntheseperspektive benötigt die tatsächliche Quellenauswahl und ihren gespeicherten Modulvertrag.')
         actual_sources = {label: str(path) for label, path in source_paths.items()}
-        bindings = bind_source_modules(actual_sources, modules, Path.cwd())
-        expected_bindings = bind_source_modules(sources_from_module(declared), modules, Path.cwd())
+        bindings = bind_source_modules(actual_sources, modules, run_artifact_path("."))
+        expected_bindings = bind_source_modules(sources_from_module(declared), modules, run_artifact_path("."))
         if bindings != expected_bindings:
             raise ValueError('Synthesequellenauswahl weicht vom gespeicherten Modulvertrag ab. Quellenargumente in der Konfiguration anpassen.')
         by_id = {m['id']: m for m in modules}
