@@ -8,11 +8,12 @@ const vm=require('node:vm');
 function setup(){
   const nodes=new Map(), requests=[];
   function element(){return {
-    value:'',hidden:false,checked:false,disabled:false,textContent:'',children:[],listeners:{},
+    value:'',hidden:false,checked:false,disabled:false,open:false,textContent:'',children:[],listeners:{},
     addEventListener(type,fn){this.listeners[type]=fn;},
     append(...children){this.children.push(...children);},
     replaceChildren(...children){this.children=children;},add(child){this.children.push(child);},
     removeAttribute(){},setAttribute(){},classList:{toggle(){}},scrollIntoView(){},
+    showModal(){this.open=true;},close(){this.open=false;this.listeners.close?.();},
     async click(){await this.listeners.click({preventDefault(){}});}
   };}
   function node(id){if(!nodes.has(id)){const n=element();n.id=id;nodes.set(id,n);}return nodes.get(id);}
@@ -21,10 +22,10 @@ function setup(){
     location:{port:'1234',hash:''},sessionStorage:{getItem:()=>''},history:{},
     Option:function(text,value){this.text=text;this.value=value;},
     setInterval(){},setTimeout(){},URL,URLSearchParams,
-    fetch(url,options){return new Promise(resolve=>requests.push({url,options,reply(data){resolve({ok:true,json:async()=>data,blob:async()=>data});}}));}
+    fetch(url,options){return new Promise(resolve=>requests.push({url,options,reply(data,ok=true){resolve({ok,json:async()=>data,blob:async()=>data});}}));}
   });
   vm.runInContext(fs.readFileSync(path.join(__dirname,'../src/local_app.js'),'utf8'),context);
-  vm.runInContext("state={defaults:{llm:{},context:{},columns:{}},modules:[],projects:[]};project={id:'first',settings:{output_dir:'/synthetic/results'},uploads:{}};document.getElementById('output-dir').value=project.settings.output_dir;",context);
+  vm.runInContext("state={defaults:{llm:{},context:{},columns:{}},modules:[],projects:[]};project={id:'first',settings:{output_dir:'/synthetic/results'},uploads:{}};document.getElementById('output-dir').value=project.settings.output_dir;outputDirMode='explicit';",context);
   return {node,requests,run:code=>vm.runInContext(code,context),loadIdentity:()=>vm.runInContext(fs.readFileSync(path.join(__dirname,'../src/person_identity_ui.js'),'utf8'),context)};
 }
 const checkResult={segments:2,passages:1,persons:1,codes:1,modules:[]};
@@ -385,4 +386,151 @@ test('changing the preset during preflight cannot start an outdated expensive se
   assert.equal(app.node('validation-result').hidden,true);
   assert.equal(app.node('start').disabled,true);
   assert.equal(app.run("document.querySelectorAll('[name=module]:checked').length"),7);
+});
+const folderReply=(path='/synthetic',more={})=>({path,parent:'/',roots:[{name:'Synthetic root',path:'/'}],directories:[],files:[],truncated:false,...more});
+const lastRequest=(app,url)=>app.requests.filter(r=>r.url===url).at(-1);
+async function openPicker(app,kind='directory',listing=folderReply()){
+  const pending=app.run(`openLocalPicker(${JSON.stringify(kind)})`);
+  lastRequest(app,'/api/local-browse').reply(listing);await pending;
+}
+const syntheticUpload=(name='Synthetic.csv')=>({name,count:1,headers:['Person','Segment','Code'],rows:[['P01','Synthetic statement','A']]});
+
+test('local folder browsing navigates separately and only explicit acceptance changes the output',async()=>{
+  const app=setup();await openPicker(app,'directory',folderReply('/synthetic',{directories:[{name:'Studie ä <img src=x>',path:'/synthetic/study'}]}));
+  assert.equal(app.node('local-picker-dialog').open,true);
+  assert.equal(app.node('output-dir').value,'/synthetic/results');
+  assert.match(app.node('local-picker-list').children[0].children[0].textContent,/<img src=x>/);
+  const navigate=app.node('local-picker-list').children[0].children[0].click();
+  assert.equal(JSON.parse(lastRequest(app,'/api/local-browse').options.body).path,'/synthetic/study');
+  lastRequest(app,'/api/local-browse').reply(folderReply('/synthetic/study'));await navigate;
+  const choose=app.node('local-picker-choose').click();
+  assert.deepEqual(JSON.parse(lastRequest(app,'/api/output-check').options.body),{project:'first',output_dir:'/synthetic/study'});
+  lastRequest(app,'/api/output-check').reply({output_dir:'/synthetic/study',message:'Verified'});await choose;
+  assert.equal(app.node('output-dir').value,'/synthetic/study');
+  assert.equal(app.run('settings().output_dir_mode'),'explicit');
+  assert.equal(app.node('local-picker-dialog').open,false);
+  assert.equal(app.requests.some(r=>['/api/save','/api/start','/api/local-import'].includes(r.url)),false);
+});
+
+test('local picker ignores stale navigation, project changes, cancel and Escape including errors',async()=>{
+  const app=setup();await openPicker(app);
+  const old=app.run("browseLocal('/old')"),oldRequest=lastRequest(app,'/api/local-browse');
+  const current=app.run("browseLocal('/new')");
+  lastRequest(app,'/api/local-browse').reply(folderReply('/new',{truncated:true}));await current;
+  oldRequest.reply(folderReply('/old',{directories:[{name:'OLD',path:'/old/sub'}]}));await old;
+  assert.equal(app.node('local-picker-path').value,'/new');assert.equal(app.node('local-picker-list').children.length,0);
+  assert.match(app.node('local-picker-status').textContent,/begrenzt/);
+  for(const finish of ['cancel','escape','project']){
+    await openPicker(app);
+    const pending=app.run("browseLocal('/delayed')");
+    if(finish==='cancel')await app.node('local-picker-cancel').click();
+    if(finish==='escape'){app.node('local-picker-dialog').listeners.cancel();app.node('local-picker-dialog').close();}
+    if(finish==='project')app.run("project={id:'second',settings:{},uploads:{}};");
+    app.node('local-picker-status').textContent='Current';app.node('message').textContent='Unchanged';
+    lastRequest(app,'/api/local-browse').reply({error:'STALE ERROR'},false);await pending;
+    assert.equal(app.node('local-picker-status').textContent,'Current');assert.equal(app.node('message').textContent,'Unchanged');
+    assert.equal(app.node('output-dir').value,'/synthetic/results');
+  }
+});
+
+test('typing another path invalidates pending navigation and unavailable folders cannot be accepted',async()=>{
+  const app=setup();await openPicker(app);
+  const pending=app.run("browseLocal('/old')");app.node('local-picker-path').value='/typed';app.node('local-picker-path').listeners.input();
+  lastRequest(app,'/api/local-browse').reply(folderReply('/old'));await pending;
+  assert.equal(app.node('local-picker-path').value,'/typed');assert.equal(app.node('local-picker-choose').disabled,true);
+  const newer=app.node('local-picker-open').click();lastRequest(app,'/api/local-browse').reply({error:'Kein Zugriff auf diesen Ordner'},false);await newer;
+  assert.match(app.node('local-picker-status').textContent,/Kein Zugriff/);assert.equal(app.node('local-picker-choose').disabled,true);
+  await app.node('local-picker-choose').click();assert.equal(app.requests.some(r=>r.url==='/api/output-check'),false);
+});
+
+test('local file selection imports only on confirmation and supplies the original folder as an automatic default',async()=>{
+  const app=setup();app.node('output-dir').value='';
+  await openPicker(app,'segments',folderReply('/synthetic/input',{files:[{name:'Datei ä <svg>.csv',path:'/synthetic/input/data.csv'}]}));
+  await app.node('local-picker-list').children[0].children[0].click();
+  assert.match(app.node('local-picker-selection').textContent,/<svg>/);assert.equal(app.requests.some(r=>r.url==='/api/local-import'),false);
+  const choose=app.node('local-picker-choose').click();
+  assert.equal(app.node('local-picker-cancel').disabled,true);await app.node('local-picker-cancel').click();
+  let prevented=false;app.node('local-picker-dialog').listeners.cancel({preventDefault(){prevented=true;}});
+  assert.equal(prevented,true);assert.equal(app.node('local-picker-dialog').open,true);
+  assert.deepEqual(JSON.parse(lastRequest(app,'/api/local-import').options.body),{project:'first',kind:'segments',path:'/synthetic/input/data.csv'});
+  lastRequest(app,'/api/local-import').reply({uploads:{segments:{...syntheticUpload(),source_path:'/synthetic/input/data.csv',source_directory:'/synthetic/input'}},source_path:'/synthetic/input/data.csv',suggested_output_dir:'/synthetic/input'});await choose;
+  assert.equal(app.node('output-dir').value,'/synthetic/input');assert.equal(app.run('settings().output_dir_mode'),'input');
+  assert.equal(app.run('project.uploads.segments.name'),'Synthetic.csv');assert.equal(app.node('preview-details').open,true);
+  assert.equal(app.node('output-input-folder').disabled,false);assert.equal(app.node('local-picker-dialog').open,false);
+  assert.equal(app.requests.some(r=>['/api/start','/api/save'].includes(r.url)),false);
+});
+
+test('local sheet selection reuses the dialog with canonical source and receipt without publishing client markers',async()=>{
+  const app=setup();await openPicker(app,'codebook',folderReply('/synthetic',{files:[{name:'book.xlsx',path:'/synthetic/book.xlsx'}]}));
+  await app.node('local-picker-list').children[0].children[0].click();const choose=app.node('local-picker-choose').click();
+  lastRequest(app,'/api/local-import').reply({requires_sheet:true,sheets:['Categories','Other'],receipt:'synthetic-receipt',name:'book.xlsx',source_path:'/canonical/book.xlsx'});await choose;
+  assert.equal(app.node('sheet-dialog').open,true);assert.equal(app.node('codebook-file').disabled,true);
+  app.node('sheet-choice').value='Categories';const sheet=app.node('sheet-import').click();
+  assert.deepEqual(JSON.parse(lastRequest(app,'/api/local-import').options.body),{project:'first',kind:'codebook',path:'/canonical/book.xlsx',receipt:'synthetic-receipt',sheet:'Categories'});
+  lastRequest(app,'/api/local-import').reply({uploads:{codebook:syntheticUpload('book.xlsx')},source_path:'/canonical/book.xlsx',suggested_output_dir:'/canonical'});await sheet;
+  assert.equal(app.run('project.uploads.codebook.name'),'book.xlsx');assert.equal(app.node('output-dir').value,'/synthetic/results');
+  assert.equal(app.node('sheet-dialog').open,false);assert.equal(app.node('codebook-file').disabled,false);
+});
+
+test('sheet commit blocks cancellation and late failed import does not modify the next project or global message',async()=>{
+  const app=setup();await openPicker(app,'segments',folderReply('/synthetic',{files:[{name:'data.xlsx',path:'/synthetic/data.xlsx'}]}));
+  await app.node('local-picker-list').children[0].children[0].click();const choose=app.node('local-picker-choose').click();
+  lastRequest(app,'/api/local-import').reply({requires_sheet:true,sheets:['One','Two'],receipt:'receipt',source_path:'/synthetic/data.xlsx'});await choose;
+  const sheet=app.node('sheet-import').click();assert.equal(app.node('sheet-cancel').disabled,true);await app.node('sheet-cancel').click();
+  let prevented=false;app.node('sheet-dialog').listeners.cancel({preventDefault(){prevented=true;}});assert.equal(prevented,true);assert.equal(app.node('sheet-dialog').open,true);
+  app.run("project={id:'next',settings:{marker:'unchanged'},uploads:{}};");
+  app.node('message').textContent='Current';lastRequest(app,'/api/local-import').reply({error:'OLD import failure'},false);await sheet;
+  assert.equal(app.node('message').textContent,'Current');assert.equal(app.run('project.settings.marker'),'unchanged');
+  assert.equal(app.run('Object.keys(project.uploads).length'),0);
+});
+
+test('automatic input folders track replacement local segments while explicit choices and browser uploads stay honest',()=>{
+  const app=setup();app.node('output-dir').value='';
+  const result=dir=>JSON.stringify({uploads:{segments:{...syntheticUpload(),source_directory:dir}},suggested_output_dir:dir});
+  app.run(`acceptLocalUpload(${result('/one')},{project:'first',kind:'segments'})`);
+  app.run(`acceptLocalUpload(${result('/two')},{project:'first',kind:'segments'})`);assert.equal(app.node('output-dir').value,'/two');
+  app.node('output-dir').value='/chosen';app.node('output-dir').listeners.input();
+  app.run(`acceptLocalUpload(${result('/three')},{project:'first',kind:'segments'})`);assert.equal(app.node('output-dir').value,'/chosen');
+  app.run(`acceptBrowserUpload({segments:${JSON.stringify(syntheticUpload())}},'first','segments')`);assert.equal(app.node('output-dir').value,'/chosen');
+  app.node('output-dir').value='';app.run(`acceptLocalUpload(${result('/four')},{project:'first',kind:'segments'})`);
+  app.run(`acceptBrowserUpload({segments:${JSON.stringify(syntheticUpload())}},'first','segments')`);
+  assert.equal(app.node('output-dir').value,'');assert.equal(app.run('settings().output_dir_mode'),'explicit');
+  assert.equal(app.node('output-input-folder').disabled,true);assert.match(app.node('output-status').textContent,/ursprüngliche Ordner unbekannt/);
+});
+
+test('returning to the input folder checks availability and ignores a superseded source',async()=>{
+  const app=setup();app.run(`project.uploads.segments=${JSON.stringify({...syntheticUpload(),source_directory:'/source'})};renderFiles();`);
+  const first=app.node('output-input-folder').click();lastRequest(app,'/api/output-check').reply({output_dir:'/source',message:'Verified'});await first;
+  assert.equal(app.node('output-dir').value,'/source');assert.equal(app.run('settings().output_dir_mode'),'input');
+  const late=app.node('output-input-folder').click();app.run("project.uploads.segments.source_directory='/new-source';");
+  app.node('message').textContent='Current';lastRequest(app,'/api/output-check').reply({error:'STALE'},false);await late;
+  assert.equal(app.node('message').textContent,'Current');assert.equal(app.node('output-dir').value,'/source');
+});
+
+test('local roots, parent and home navigation use only the browse endpoint',async()=>{
+  const app=setup();await openPicker(app);
+  app.node('local-picker-roots').value='/drive';const root=app.node('local-picker-roots').listeners.change();
+  assert.equal(JSON.parse(lastRequest(app,'/api/local-browse').options.body).path,'/drive');
+  lastRequest(app,'/api/local-browse').reply(folderReply('/drive',{parent:null}));await root;
+  assert.equal(app.node('local-picker-parent').disabled,true);
+  const home=app.node('local-picker-home').click();assert.equal(JSON.parse(lastRequest(app,'/api/local-browse').options.body).path,'');
+  lastRequest(app,'/api/local-browse').reply(folderReply('/home/example',{parent:'/home'}));await home;
+  const parent=app.node('local-picker-parent').click();assert.equal(JSON.parse(lastRequest(app,'/api/local-browse').options.body).path,'/home');
+  lastRequest(app,'/api/local-browse').reply(folderReply('/home'));await parent;
+  assert.equal(app.requests.some(r=>['/api/local-import','/api/output-check','/api/save','/api/start'].includes(r.url)),false);
+});
+
+test('cancelling sheet selection before commit leaves uploads and selected destination unchanged',async()=>{
+  const app=setup();await openPicker(app,'segments',folderReply('/synthetic',{files:[{name:'data.xlsx',path:'/synthetic/data.xlsx'}]}));
+  await app.node('local-picker-list').children[0].children[0].click();const choose=app.node('local-picker-choose').click();
+  lastRequest(app,'/api/local-import').reply({requires_sheet:true,sheets:['One','Two'],receipt:'receipt',source_path:'/synthetic/data.xlsx'});await choose;
+  const before=app.requests.length;await app.node('sheet-cancel').click();
+  assert.equal(app.requests.length,before);assert.equal(app.run('pendingUpload'),null);assert.equal(app.run('Object.keys(project.uploads).length'),0);
+  assert.equal(app.node('output-dir').value,'/synthetic/results');assert.equal(app.node('segments-file').disabled,false);
+});
+
+test('late folder-check failures remain silent after the user chooses another destination',async()=>{
+  const app=setup(),pending=app.node('output-check').click();app.node('output-dir').value='/new';app.node('message').textContent='Current';
+  lastRequest(app,'/api/output-check').reply({error:'Stale folder failure'},false);await pending;
+  assert.equal(app.node('message').textContent,'Current');assert.equal(app.node('output-dir').value,'/new');
 });

@@ -4,6 +4,7 @@ const tokenKey = 'qualitative-session-' + location.port;
 const token = location.hash.slice(1) || sessionStorage.getItem(tokenKey) || '';
 if (location.hash) { sessionStorage.setItem(tokenKey, token); history.replaceState(null, '', '/'); }
 let settingsRevision=0;
+let outputDirMode='input';
 let state, project, jobs = [], viewing = 'project', objectUrl = null, polling = false, projectRequest = 0, artifactRequest = 0;
 const names = {project:'Projekt & Dateien',check:'Eingaben prüfen',analysis:'Analyse',results:'Ergebnisse',telegram:'Telegram-Updates'};
 const moduleHelp = {
@@ -297,6 +298,7 @@ function table(info, title) {
 function renderFiles(){
   if(typeof resetPersonIdentity==='function')resetPersonIdentity();
   const uploads=project.uploads||{};$('previews').replaceChildren();
+  $('output-input-folder').disabled=!uploads.segments?.source_directory;
   for(const kind of ['segments','codebook']){
     const info=uploads[kind];$(kind+'-info').textContent=info?`${info.name}${info.sheet?' · Blatt '+info.sheet:''} · ${info.count} ${kind==='segments'?'Codierzeilen':'Kategoriezeilen'}`:'Noch keine Datei ausgewählt';
     if(info)$('previews').append(table(info,kind==='segments'?'Interviewdatei · erste fünf Zeilen':'Kategoriensystem · erste fünf Zeilen'));
@@ -315,6 +317,7 @@ function renderModuleFields(selected){
 function loadFields(){
   const s=project.settings||{}, llm=state.defaults.llm;
   $('output-dir').value=s.output_dir||'';$('output-status').textContent='';
+  outputDirMode=s.output_dir_mode||(s.output_dir?'explicit':'input');
   $('preset-status').hidden=true;
   $('parallel-workers').value=String(s.parallel_workers??1);
   $('model').value=s.model??llm.model;$('num-ctx').value=s.num_ctx??llm.num_ctx;$('max-tokens').value=s.max_tokens??llm.max_tokens;
@@ -339,6 +342,7 @@ async function openProject(id){
   if(request!==projectRequest)return;
   if(typeof closeFailureGuide==='function')closeFailureGuide();
   if(typeof closePromptView==='function')closePromptView();
+  closeLocalPicker();if(pendingUpload){pendingUpload=null;$('sheet-dialog').close();uploadBusy(false);}
   project=loaded;closeViewer();jobs=null;$('projects').value=id;$('welcome').hidden=true;
   document.querySelectorAll('.project-content').forEach(n=>n.hidden=false);
   $('project-subtitle').textContent=project.name+(project.demo?' · Künstliche Beispieldaten':' · Lokales Projekt');
@@ -349,7 +353,7 @@ function settings(){
   const columns={},book_columns={};Object.keys(columnLabels).forEach(k=>columns[k]=$('segment-columns-'+k).value);
   Object.keys(bookLabels).forEach(k=>book_columns[k]=$('book-columns-'+k).value);
   const think=$('think').value;
-  return {output_dir:$('output-dir').value.trim(),...(typeof providerSelection==='function'?providerSelection():{}),columns,book_columns,person_identity:typeof personIdentitySettings==='function'?personIdentitySettings():null,parallel_workers:$('provider').value==='ollama_local'?Number($('parallel-workers').value):1,model:$('model').value,num_ctx:Number($('num-ctx').value),max_tokens:Number($('max-tokens').value),synthesis_max_calls:Number($('synthesis-max-calls').value),temperature:Number($('temperature').value),
+  return {output_dir:$('output-dir').value.trim(),output_dir_mode:outputDirMode,...(typeof providerSelection==='function'?providerSelection():{}),columns,book_columns,person_identity:typeof personIdentitySettings==='function'?personIdentitySettings():null,parallel_workers:$('provider').value==='ollama_local'?Number($('parallel-workers').value):1,model:$('model').value,num_ctx:Number($('num-ctx').value),max_tokens:Number($('max-tokens').value),synthesis_max_calls:Number($('synthesis-max-calls').value),temperature:Number($('temperature').value),
     think:think==='true'?true:think==='false'?false:think,label_mode:$('label-mode').value,
     context:{project_description:$('context-project').value,participants:$('context-persons').value,methodology:$('context-method').value},
     analysis_perspectives:perspectiveSettings(),stability:stabilitySettings(),...([...document.querySelectorAll('[name=module]:checked')].some(n=>n.value==='sensitivity')?{sensitivity:sensitivitySettings()}:{}),modules:[...document.querySelectorAll('[name=module]:checked')].map(n=>n.value)};
@@ -513,22 +517,50 @@ action($('save-telegram'),async()=>{const result=await api('telegram',telegramVa
 action($('remove-token'),async()=>{const result=await api('telegram',telegramValues(true));$('bot-token').value='';$('token-file').value='';renderTelegram(result);message('Token entfernt und Benachrichtigungen deaktiviert.');});
 action($('test-telegram'),async()=>{if($('bot-token').value)throw new Error('Den neuen Token zuerst speichern.');await api('telegram-test',{});message('Testnachricht an den gespeicherten Telegram-Chat gesendet.');});
 $('token-file').addEventListener('change',async()=>{try{const f=$('token-file').files[0];if(!f)return;if(f.size>4096)throw new Error('Token-Datei ist zu groß. Eine Textdatei nur mit dem Bot-Token verwenden.');$('bot-token').value=(await f.text()).trim();message('Token aus Datei geladen. Zum Übernehmen Einstellungen speichern.');}catch(e){message(e.message,true);}finally{$('token-file').value='';}});
-let pendingUpload=null, uploading=false;
-function uploadBusy(value){uploading=value;for(const kind of ['segments','codebook'])$(kind+'-file').disabled=value;}
+let pendingUpload=null, uploading=false, sheetCommit=null;
+function uploadBusy(value){uploading=value;for(const kind of ['segments','codebook']){ $(kind+'-file').disabled=value;$(kind+'-local').disabled=value;}}
 function acceptUpload(uploads, pid, kind){
   if(project.id!==pid)return;
   project.uploads=uploads;delete project.settings[kind==='segments'?'columns':'book_columns'];renderFiles();$('validation-result').hidden=true;
   $('preview-details').open=true;
   message('Datei eingelesen. Prüfe die Vorschau und ordne unter Eingaben prüfen die vorhandenen Spalten zu.');
 }
+function acceptBrowserUpload(uploads,pid,kind){
+  if(project?.id!==pid)return;
+  if(kind==='segments'&&outputDirMode==='input'){
+    $('output-dir').value='';outputDirMode='explicit';project.settings.output_dir='';project.settings.output_dir_mode='explicit';
+    $('output-status').textContent='Beim Browserupload ist der ursprüngliche Ordner unbekannt. Bitte einen Ergebnisordner auswählen.';
+  }
+  acceptUpload(uploads,pid,kind);updateStartGate();
+}
+function showSheetChoice(payload,result){
+  pendingUpload=payload;$('sheet-error').textContent='';$('sheet-choice').replaceChildren();
+  result.sheets.forEach(s=>$('sheet-choice').add(new Option(s,s)));$('sheet-dialog').showModal();
+}
+function acceptLocalUpload(result,payload){
+  project.settings=settings();
+  if(payload.kind==='segments'&&result.suggested_output_dir&&(!$('output-dir').value.trim()||outputDirMode==='input')){
+    $('output-dir').value=result.suggested_output_dir;outputDirMode='input';
+    project.settings.output_dir=result.suggested_output_dir;project.settings.output_dir_mode='input';
+    $('output-status').textContent='Ergebnisse werden neben der ausgewählten Interviewdatei abgelegt. Ein anderes Ziel kannst du auswählen.';
+  }
+  acceptUpload(result.uploads,payload.project,payload.kind);updateModuleSelection();updateStartGate();
+}
 action($('sheet-import'),async()=>{
   if(!pendingUpload)return;
-  const payload={...pendingUpload,sheet:$('sheet-choice').value};
-  const result=await api('upload',payload);acceptUpload(result,payload.project,payload.kind);
-  pendingUpload=null;$('sheet-dialog').close();
+  const selected=pendingUpload,{local,...input}=selected,payload={...input,sheet:$('sheet-choice').value};
+  const current=()=>pendingUpload===selected&&project?.id===payload.project&&$('sheet-dialog').open;
+  sheetCommit=selected;$('sheet-cancel').disabled=true;
+  try{
+    const result=await api(local?'local-import':'upload',payload);if(!current())return;
+    if(local)acceptLocalUpload(result,payload);else acceptBrowserUpload(result,payload.project,payload.kind);
+    pendingUpload=null;$('sheet-dialog').close();
+  }catch(error){if(current())throw error;}
+  finally{if(sheetCommit===selected){sheetCommit=null;$('sheet-cancel').disabled=false;}}
 });
-$('sheet-cancel').addEventListener('click',()=>{$('sheet-dialog').close();});
-$('sheet-dialog').addEventListener('close',()=>{pendingUpload=null;uploadBusy(false);});
+$('sheet-cancel').addEventListener('click',()=>{if(!sheetCommit)$('sheet-dialog').close();});
+$('sheet-dialog').addEventListener('cancel',event=>{if(sheetCommit)event.preventDefault();});
+$('sheet-dialog').addEventListener('close',()=>{if(!$('sheet-dialog').open){pendingUpload=null;uploadBusy(false);}});
 for(const kind of ['segments','codebook'])$(kind+'-file').addEventListener('change',async()=>{try{
   const pid=needProject(),file=$(kind+'-file').files[0];if(!file)return;
   if(uploading)throw new Error('Bitte den laufenden Dateiimport zuerst abschließen.');
@@ -538,9 +570,108 @@ for(const kind of ['segments','codebook'])$(kind+'-file').addEventListener('chan
   if(project?.id!==pid)return;
   project.settings=capturedSettings;const payload={project:pid,kind,name:file.name,data:btoa(binary)}, result=await api('upload',payload);
   if(project?.id!==pid)return;
-  if(result.requires_sheet){pendingUpload=payload;$('sheet-error').textContent='';$('sheet-choice').replaceChildren();result.sheets.forEach(s=>$('sheet-choice').add(new Option(s,s)));$('sheet-dialog').showModal();}
-  else acceptUpload(result,pid,kind);
+  if(result.requires_sheet){showSheetChoice(payload,result);}
+  else acceptBrowserUpload(result,pid,kind);
 }catch(e){message(e.message,true);}finally{$(kind+'-file').value='';if(!pendingUpload)uploadBusy(false);}});
+
+// Browsing is read-only. Importing a selected file or accepting a directory is
+// a separate user action; stale replies cannot alter another selection.
+let localPicker=null;
+function localPickerCurrent(picker,request=picker?.request){
+  return Boolean(picker&&localPicker===picker&&project?.id===picker.project&&$('local-picker-dialog').open&&picker.request===request);
+}
+function closeLocalPicker(){
+  localPicker=null;if($('local-picker-dialog').open)$('local-picker-dialog').close();
+}
+function localPickerError(picker,request,error){
+  if(localPickerCurrent(picker,request))$('local-picker-status').textContent=error.message;
+}
+async function browseLocal(path){
+  const picker=localPicker;if(!localPickerCurrent(picker)||picker.busy)return;
+  const request=++picker.request;picker.selected=null;picker.path=null;
+  $('local-picker-choose').disabled=true;$('local-picker-parent').disabled=true;
+  $('local-picker-list').replaceChildren();$('local-picker-selection').textContent='';$('local-picker-status').textContent='Ordner wird geöffnet …';
+  try{
+    const result=await api('local-browse',{project:picker.project,kind:picker.kind,path});
+    if(!localPickerCurrent(picker,request))return;
+    picker.path=result.path;picker.parent=result.parent;$('local-picker-path').value=result.path;
+    $('local-picker-parent').disabled=!result.parent;
+    $('local-picker-choose').disabled=picker.kind!=='directory';
+    $('local-picker-roots').replaceChildren(new Option('Startpunkt auswählen …',''));
+    for(const root of result.roots||[])$('local-picker-roots').add(new Option(root.name,root.path));
+    const list=$('local-picker-list');
+    for(const dir of result.directories){
+      const row=el('li'),button=el('button','Ordner: '+dir.name,'secondary');button.type='button';
+      button.addEventListener('click',()=>{if(localPickerCurrent(picker,request))return browseLocal(dir.path);});row.append(button);list.append(row);
+    }
+    for(const file of result.files){
+      const row=el('li'),button=el('button','Datei: '+file.name,'secondary');button.type='button';
+      button.addEventListener('click',()=>{
+        if(!localPickerCurrent(picker,request)||picker.busy)return;
+        picker.selected=file.path;$('local-picker-selection').textContent='Ausgewählt: '+file.name;
+        $('local-picker-choose').disabled=false;
+      });row.append(button);list.append(row);
+    }
+    $('local-picker-status').textContent=result.truncated?'Die Liste ist begrenzt. Öffne einen Unterordner oder trage einen genaueren Pfad ein.':
+      list.children.length?'Ordner öffnen oder Datei auswählen. Übernehmen erst mit der Schaltfläche unten.':'Keine passenden Einträge in diesem Ordner.';
+  }catch(error){localPickerError(picker,request,error);}
+}
+async function openLocalPicker(kind){
+  const pid=needProject();if(uploading)throw new Error('Bitte den laufenden Dateiimport zuerst abschließen.');
+  closeLocalPicker();localPicker={project:pid,kind,request:0,path:null,selected:null,busy:false};
+  $('local-picker-title').textContent=kind==='directory'?'Ergebnisordner auswählen':kind==='segments'?'Interviewdatei auf diesem Rechner auswählen':'Kategoriensystem auf diesem Rechner auswählen';
+  $('local-picker-choose').textContent=kind==='directory'?'Diesen Ordner übernehmen':'Ausgewählte Datei einlesen';
+  $('local-picker-path').value='';$('local-picker-path').disabled=false;$('local-picker-cancel').disabled=false;$('local-picker-dialog').showModal();
+  await browseLocal(kind==='directory'?$('output-dir').value.trim():'');
+}
+async function chooseLocal(){
+  const picker=localPicker;if(!localPickerCurrent(picker)||picker.busy||!picker.path)return;
+  if(picker.kind!=='directory'&&!picker.selected)return;
+  const request=picker.request;picker.busy=true;$('local-picker-choose').disabled=true;$('local-picker-path').disabled=true;$('local-picker-cancel').disabled=true;
+  $('local-picker-status').textContent=picker.kind==='directory'?'Schreibrechte werden geprüft …':'Ausgewählte Datei wird eingelesen …';
+  try{
+    if(picker.kind==='directory'){
+      const result=await api('output-check',{project:picker.project,output_dir:picker.path});
+      if(!localPickerCurrent(picker,request))return;
+      $('output-dir').value=result.output_dir;outputDirMode='explicit';$('output-status').textContent=result.message;
+      closeLocalPicker();updateModuleSelection();updateStartGate();message(result.message);
+    }else{
+      uploadBusy(true);const payload={project:picker.project,kind:picker.kind,path:picker.selected};
+      const result=await api('local-import',payload);if(!localPickerCurrent(picker,request))return;
+      closeLocalPicker();
+      if(result.requires_sheet)showSheetChoice({...payload,path:result.source_path||payload.path,local:true,receipt:result.receipt},result);
+      else acceptLocalUpload(result,payload);
+    }
+  }catch(error){localPickerError(picker,request,error);}
+  finally{
+    picker.busy=false;if(localPickerCurrent(picker,request)){$('local-picker-choose').disabled=false;$('local-picker-path').disabled=false;$('local-picker-cancel').disabled=false;}
+    if(!pendingUpload)uploadBusy(false);
+  }
+}
+action($('output-browse'),()=>openLocalPicker('directory'));
+for(const kind of ['segments','codebook'])action($(kind+'-local'),()=>openLocalPicker(kind));
+$('local-picker-home').addEventListener('click',()=>browseLocal(''));
+$('local-picker-parent').addEventListener('click',()=>{if(localPicker?.parent)return browseLocal(localPicker.parent);});
+$('local-picker-roots').addEventListener('change',()=>{if($('local-picker-roots').value)return browseLocal($('local-picker-roots').value);});
+$('local-picker-open').addEventListener('click',()=>browseLocal($('local-picker-path').value.trim()));
+$('local-picker-path').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();return browseLocal($('local-picker-path').value.trim());}});
+$('local-picker-path').addEventListener('input',()=>{
+  if(!localPicker||localPicker.busy)return;localPicker.request++;localPicker.path=null;localPicker.selected=null;
+  $('local-picker-list').replaceChildren();$('local-picker-selection').textContent='';$('local-picker-status').textContent='Pfad mit „Ordner öffnen“ bestätigen.';$('local-picker-choose').disabled=true;
+});
+$('local-picker-choose').addEventListener('click',chooseLocal);
+$('local-picker-cancel').addEventListener('click',()=>{if(!localPicker?.busy)closeLocalPicker();});
+$('local-picker-dialog').addEventListener('cancel',event=>{if(localPicker?.busy)event.preventDefault();else localPicker=null;});
+$('local-picker-dialog').addEventListener('close',()=>{if(!$('local-picker-dialog').open)localPicker=null;});
+action($('output-input-folder'),async()=>{
+  const pid=needProject(),source=project.uploads?.segments?.source_directory,value=$('output-dir').value.trim();if(!source)return;
+  const current=()=>project?.id===pid&&project.uploads?.segments?.source_directory===source&&$('output-dir').value.trim()===value;
+  try{
+    const result=await api('output-check',{project:pid,output_dir:source});if(!current())return;
+    $('output-dir').value=result.output_dir;outputDirMode='input';$('output-status').textContent=result.message;
+    updateModuleSelection();updateStartGate();message(result.message);
+  }catch(error){if(current())throw error;}
+});
 action($('validate'),async()=>{const pid=needProject(),r=await saveAndValidate(pid);if(project?.id!==pid)return;message(`Prüfung bestanden: ${r.segments} Codierzeilen, ${r.codes} Codepfade. Kein Modellaufruf.`);});
 action($('start'),async()=>{const pid=needProject();await saveAndValidate(pid);if(project?.id!==pid)throw new Error('Projekt wurde während der Prüfung gewechselt. Bitte im gewünschten Projekt erneut starten.');await api('start',{project:pid});message('Analyse gestartet. Den Fortschritt findest du unten.');await refreshJobs();});
 action($('check-ollama'),async()=>{const r=await api('models');$('model-list').replaceChildren();r.models.forEach(m=>$('model-list').append(new Option(m,m)));$('ollama-status').textContent=r.models.length?`${r.models.length} lokale Modelle gefunden. Im Modellfeld auswählen oder Namen eingeben.`:'Ollama ist erreichbar, aber kein lokales Modell installiert.';});
@@ -590,11 +721,10 @@ action($('output-check'),async()=>{
     if(project?.id!==pid||$('output-dir').value.trim()!==value)return;
     $('output-dir').value=result.output_dir;$('output-status').textContent=result.message;message(result.message);updateStartGate();
   }catch(error){
-    if(project?.id===pid&&$('output-dir').value.trim()===value)$('output-status').textContent=error.message;
-    throw error;
+    if(project?.id===pid&&$('output-dir').value.trim()===value){$('output-status').textContent=error.message;throw error;}
   }
 });
-$('output-dir').addEventListener('input',()=>{$('output-status').textContent='';updateStartGate();});
+$('output-dir').addEventListener('input',()=>{outputDirMode='explicit';$('output-status').textContent='';updateStartGate();});
 action($('setup-check'),async()=>{const r=await api('setup-check',{project:needProject(),model:$('model').value,selection:providerSelection()});$('setup-result').replaceChildren();r.checks.forEach(c=>$('setup-result').append(el('p',(c.ok?'✓ ':'✗ ')+c.name+': '+c.detail)));$('setup-result').append(el('p',r.note,'hint'));});
 let pendingModelTest=null;
 action($('model-test'),async()=>{pendingModelTest={project:needProject(),selection:providerSelection()};$('model-test-dialog').showModal();});

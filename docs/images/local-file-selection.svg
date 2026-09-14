@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 710" role="img" aria-labelledby="title desc">
+  <title id="title">Dateiauswahl und Ergebnisordner – schematisches Beispiel</title>
+  <desc id="desc">Zwei Wege zum Ergebnisordner: Auf diesem Rechner auswählen übernimmt den Ordner der Interviewdatei, sofern kein eigenes Ziel gewählt wurde. Beim Browserupload ist der ursprüngliche Ordner unbekannt; das Ergebnisziel wird selbst ausgewählt. Ein ausdrücklich gewähltes anderes Ziel bleibt erhalten. Beide Wege erzeugen für jeden Lauf einen eigenen Unterordner. Der gezeigte Windows-Pfad ist erfunden; das Prinzip gilt auch auf macOS.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 Z" fill="#326e67"/>
+    </marker>
+  </defs>
+  <rect width="960" height="710" rx="18" fill="#f3f7f5"/>
+  <g font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" fill="#203c36">
+    <text x="36" y="44" font-size="19" fill="#536e65">SCHEMATISCHES BEISPIEL</text>
+    <text x="36" y="86" font-size="31" font-weight="700">Wo werden meine Ergebnisse gespeichert?</text>
+
+    <rect x="36" y="119" width="412" height="148" rx="12" fill="#fff" stroke="#b6ccc3"/>
+    <text x="58" y="158" font-size="25" font-weight="650">Auf diesem Rechner auswählen</text>
+    <text x="58" y="194" font-size="22">Interviewdatei in der App auswählen</text>
+    <text x="58" y="230" font-size="22" fill="#536e65">Der Originalordner ist bekannt.</text>
+    <path d="M 462 192 H 510" fill="none" stroke="#326e67" stroke-width="3" marker-end="url(#arrow)"/>
+    <rect x="531" y="119" width="393" height="148" rx="12" fill="#e6f0e9" stroke="#a7c5b6"/>
+    <text x="554" y="158" font-size="25" font-weight="650">Eingabeordner als Ziel</text>
+    <text x="554" y="194" font-size="21">C:\Forschung\Beispielstudie</text>
+    <text x="554" y="230" font-size="22" fill="#536e65">Wenn kein eigenes Ziel gewählt ist.</text>
+
+    <rect x="36" y="293" width="412" height="148" rx="12" fill="#fff" stroke="#b6ccc3"/>
+    <text x="58" y="332" font-size="25" font-weight="650">Browserupload</text>
+    <text x="58" y="368" font-size="22">Datei wie bisher im Browser laden</text>
+    <text x="58" y="404" font-size="22" fill="#536e65">Der Originalordner ist unbekannt.</text>
+    <path d="M 462 366 H 510" fill="none" stroke="#326e67" stroke-width="3" marker-end="url(#arrow)"/>
+    <rect x="531" y="293" width="393" height="148" rx="12" fill="#e6f0e9" stroke="#a7c5b6"/>
+    <text x="554" y="332" font-size="25" font-weight="650">Ergebnisordner selbst wählen</text>
+    <text x="554" y="368" font-size="22">Mit „Ordner auswählen“</text>
+    <text x="554" y="404" font-size="22" fill="#536e65">oder vollständigen Pfad eintragen.</text>
+
+    <rect x="36" y="472" width="888" height="86" rx="12" fill="#fff" stroke="#b6ccc3"/>
+    <text x="58" y="507" font-size="23" font-weight="650">Ein ausdrücklich gewähltes anderes Ziel bleibt erhalten.</text>
+    <text x="58" y="539" font-size="21">Zurücksetzen: „Ordner der Eingabedatei verwenden“ – wenn dieser bekannt ist.</text>
+
+    <rect x="36" y="587" width="888" height="86" rx="12" fill="#215d4e"/>
+    <text x="58" y="623" font-size="26" font-weight="650" fill="#fff">Beide Wege: Jeder Lauf erhält einen eigenen Unterordner.</text>
+    <text x="58" y="654" font-size="21" fill="#e7f1eb">Originaldateien bleiben unverändert. Das Ziel wird vor dem Start geprüft.</text>
+  </g>
+</svg>

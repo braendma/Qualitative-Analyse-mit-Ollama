@@ -1,3 +1,27 @@
+# Lokale Datei-/Ordnerauswahl / P01c · 14. September 2026
+
+**834 Python-Tests ausgeführt: 833 bestanden, ein Windows-Symlinktest übersprungen;
+keine Fehler** (403,670 Sekunden). **68 JavaScript-Tests bestanden.** Die vollständige
+Regression umfasst die externe Ergebnisablage und die neue Auswahl innerhalb der
+Oberfläche. Alle Analysedaten und Modelltransporte waren künstlich.
+
+Geprüft wurden CSV-/XLSX-Import, Mehrblatt-Auswahl mit erneuter Quellenprüfung,
+Originaldateischutz, Ausgabe neben der Eingabedatei, ausdrücklich gewählte andere
+Ziele, Browserupload-Wechsel, Prüf-Folgeläufe und Zugriffsschutz. Ein Windowsfehler
+beim Vergleich unterschiedlicher Dateizeitangaben wurde vor dieser Vollprüfung
+behoben; frische XLSX-Dateien werden korrekt eingelesen.
+
+Im Browser zusätzlich bestätigt: CSV-Import, Excel-Blattauswahl, Ordnernavigation,
+alternatives Ziel und Rückkehr zum Eingabedateiordner. Anschließend wurden nur die
+Dialogbreite und die Auslieferung der schematischen Handbuchgrafik ergänzt; dafür
+bestanden 24 gezielte Python-Tests, und beide Darstellungen wurden visuell geprüft.
+Die Grafik erklärt die beiden Importwege mit erfundenen Pfaden. Die vorangehende
+Vollprüfung wird durch diese gezielte Ergänzung nicht nachträglich hochgezählt.
+
+Dies ist weiterhin ein Source-Entwicklungsnachweis. Gebaute Windows-/macOS-Pakete,
+deren frische Installation und Start-/Beenden-Verhalten werden separat geprüft.
+
+---
 # Externe App-Ergebnisordner / P01b · 14. September 2026
 
 Die vollständige Python-Regression führte **811 Tests in 397,005 Sekunden** aus:

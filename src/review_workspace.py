@@ -197,6 +197,8 @@ class ReviewWorkspace:
             settings.pop('output_dir',None)
             if 'output_dir' in current_settings:
                 settings['output_dir']=current_settings['output_dir']
+            # Derived review inputs have no newly selected original file folder.
+            settings['output_dir_mode']='explicit'
             settings['gdpr_relevant']=current_private
             if current_private:
                 settings['provider']='ollama_local'

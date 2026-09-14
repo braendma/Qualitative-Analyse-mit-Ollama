@@ -44,13 +44,23 @@ Auf der Startseite **Künstliche Beispieldaten laden** wählen. Das erzeugt ein 
 
 Für eine überschaubare erste Analyse unter **Analyse → Auswahl leeren** nur **Clusteranalyse** auswählen. Module mit Abhängigkeiten können weitere Vorstufen hinzufügen; die Zusammenfassung unter den Häkchen zeigt die tatsächlich ausgeführten Schritte. Erst **Prüfen & neuen Lauf starten** führt die Modellauswertung aus.
 
-Auch für die Demo vorher unter **Projekt & Dateien → Speicherort für Analyseergebnisse** einen vorhandenen Ordnerpfad eintragen und **Ordner prüfen** wählen. Ohne Ergebnisziel kann kein neuer Lauf starten.
+Auch für die Demo vorher unter **Projekt & Dateien → Speicherort für Analyseergebnisse** über **Ordner auswählen** ein vorhandenes Ziel wählen und **Ordner prüfen** anklicken. Ohne Ergebnisziel kann kein neuer Lauf starten.
 
 ## 3. Eigenes Projekt und MAXQDA-Dateien
 
 **＋ Neues Projekt** wählen, benennen und zwei Dateien laden: Interviewdatei sowie Kategoriensystem. Du kannst `.xlsx` und `.csv` mischen. Jede Datei darf maximal 20 MB groß sein. Das Programm legt Arbeitskopien an und verändert die ausgewählten Originaldateien nicht.
 
-Unter **Speicherort für Analyseergebnisse** den vollständigen Ordnerpfad der MAXQDA-Datei oder eines anderen vorhandenen Forschungsordners eintragen. Kopiere dafür den Pfad aus der Explorer-Adressleiste oder über „Pfadname kopieren“ im Finder. **Ordner prüfen** kontrolliert Verfügbarkeit und Schreibrechte; beim Start wird erneut geprüft. Der Browser kann den ursprünglichen Ordner beim Datei-Upload nicht selbst erkennen.
+Mit **Auf diesem Rechner auswählen** öffnest du bei Interviewdatei oder Kategoriensystem die Dateiauswahl innerhalb der Anwendung. Öffne den gewünschten Ordner, markiere eine CSV- oder XLSX-Datei und bestätige mit **Ausgewählte Datei einlesen**. Die Auswahl beginnt im persönlichen Ordner; über die Pfadzeile und **Ordner öffnen** kannst du einen anderen vollständigen Ordnerpfad direkt öffnen. Angezeigt werden nur unmittelbare Einträge. Bei sehr großen Ordnern ist die Anzeige begrenzt; gehe dann gezielt in einen Unterordner. Versteckte Dateien und Verknüpfungen werden nicht angeboten. **Abbrechen** lässt die bisherige Auswahl unverändert.
+
+Bei einer so eingelesenen Interviewdatei wird ihr Ordner automatisch als Ergebnisziel übernommen, sofern kein eigenes Ziel festgelegt ist. Unter **Speicherort für Analyseergebnisse** wählst du mit **Ordner auswählen** einen anderen vorhandenen Forschungsordner und bestätigst mit **Diesen Ordner übernehmen**; alternativ kannst du seinen Pfad eintragen. **Ordner der Eingabedatei verwenden** setzt das Ziel wieder auf den bekannten Eingabeordner. **Ordner prüfen** kontrolliert Verfügbarkeit und Schreibrechte; beim Start wird erneut geprüft.
+
+Der bisherige Browserupload bleibt möglich. Er kennt den ursprünglichen Dateiordner nicht. Ersetzt du damit eine lokal ausgewählte Interviewdatei, wird ein automatisch abgeleitetes Ergebnisziel entfernt; ein selbst gewähltes Ziel bleibt erhalten. Wähle gegebenenfalls ein neues Ziel. Die Dateiauswahl arbeitet immer auf dem Rechner, auf dem die Anwendung läuft, nicht auf dem Dateisystem eines anderen verbundenen Geräts.
+
+Bei mehreren XLSX-Blättern wähle anschließend das passende Blatt. Wird die Originaldatei zwischen Vorschau und Blattauswahl verändert oder ist die Auswahl abgelaufen, wähle die Datei erneut aus. Das Programm speichert den geprüften Originalpfad und einen Inhaltsnachweis nur in den lokalen Projektmetadaten. Analysen verwenden weiter unveränderliche Arbeitskopien; Originaldateien werden nicht überschrieben.
+
+![Schematisches Beispiel: Lokale Dateiauswahl übernimmt den Eingabeordner, Browserupload benötigt eine Zielauswahl. Ein eigenes Ziel bleibt erhalten; jeder Lauf bekommt einen eigenen Unterordner.](images/local-file-selection.svg)
+
+*Schematisches Beispiel, keine Bildschirmaufnahme. Der gezeigte Windows-Pfad ist erfunden; auf macOS gilt dasselbe Prinzip.*
 
 ![Dateiauswahl und MAXQDA-Hilfe](screenshots/01-projekt-dateien.jpg)
 
@@ -264,7 +274,7 @@ Ein leeres Tokenfeld behält den gespeicherten Token. Eine neue Eingabe ersetzt 
 
 Neue technische Appdaten liegen unter Windows in `%LOCALAPPDATA%\QualitativeAnalyse`, unter macOS in `~/Library/Application Support/QualitativeAnalyse`, unter Linux bei absolut gesetztem `XDG_DATA_HOME` in `$XDG_DATA_HOME/QualitativeAnalyse`, sonst in `~/.local/share/QualitativeAnalyse`. Ein eindeutig vorhandener alter `QualitativeOllama`-Ordner wird weiterverwendet; es wird nichts verschoben. Werden mehrere bestehende Ablagen gefunden, mit `--data-dir` ausdrücklich die gewünschte auswählen.
 
-**Entwicklungsstand P01b – Ergebnisziel in der Oberfläche:** Vor einem neuen Analyselauf unter **Projekt & Dateien → Speicherort für Analyseergebnisse** den vollständigen Pfad zu einem vorhandenen Ordner eintragen. Dafür den Ordnerpfad aus der Explorer-Adressleiste oder über „Pfadname kopieren“ im Finder kopieren und **Ordner prüfen** wählen. Der Browser kennt den ursprünglichen Ordner einer hochgeladenen Datei nicht. Ein nativer Ordnerauswahldialog ist noch nicht vorhanden; die neue Ablage ist noch keine Freigabe fertiger Windows-/macOS-Installationspakete.
+**Entwicklungsstand P01c – Datei- und Ordnerauswahl:** Über **Auf diesem Rechner auswählen** lädst du Interviewdatei oder Kategoriensystem aus der Dateiauswahl innerhalb der Oberfläche. Bei einer so gewählten Interviewdatei wird deren Ordner als Ergebnisziel übernommen, sofern du kein eigenes Ziel festgelegt hast. Mit **Ordner auswählen** wählst du ein anderes vorhandenes Ziel; **Ordner der Eingabedatei verwenden** wechselt zurück zum bekannten Eingabeordner. **Ordner prüfen** kontrolliert Verfügbarkeit und Schreibrechte. Die Auswahl zeigt Dateien auf dem Rechner der laufenden Anwendung, nicht auf einem anderen Gerät, mit dem du den Browser bedienst. Der bisherige Browserupload und das manuelle Pfadfeld bleiben verfügbar; beim Browserupload ist der ursprüngliche Dateiordner unbekannt und muss als Ziel ausdrücklich ausgewählt werden. Noch keine Freigabe neuer Windows-/macOS-Installationspakete.
 
 Jeder neue App-Lauf bekommt im gewählten Ziel einen eigenen Ordner `QualitativeAnalyse_<Datum>_<Job-ID>/`. Analyseberichte und Moduldateien liegen darunter in `runs/<Lauf-ID>/`; Prüfentscheidungen und deren Versionen in `review/`. Geprüfte Folgeeingaben werden zusätzlich unter `review/followups/<Revision-ID>/` mit `segments.csv`, `codebook.csv`, `review_snapshot.json` und einem Inhaltsnachweis abgelegt. Eine Zieländerung gilt nur für neue Läufe. Wiederaufnahme, Berichtsaufruf und Prüfung bestehender Läufe bleiben an deren ursprünglichen Ordner gebunden. Ist er nicht verfügbar oder passt seine gespeicherte Zuordnung nicht mehr, erscheint ein Hinweis; es gibt keinen Ersatzordner in AppData. Alte Läufe behalten ihre bisherige Ablage und bleiben dort lesbar.
 

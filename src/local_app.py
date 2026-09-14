@@ -132,6 +132,7 @@ class App(ReviewWorkspace):
         self.provider_keys = ProviderKeys(self.directory)
         self.lock = threading.RLock()
         self.active = None
+        self.local_imports = {}
 
     def project_dir(self, pid):
         directory = safe_child(self.projects_dir, identifier(pid))
@@ -214,6 +215,8 @@ class App(ReviewWorkspace):
         atomic_json(directory/'uploads.json', uploads)
         settings = read_json(directory/'settings.json', {})
         settings.pop('columns' if kind == 'segments' else 'book_columns', None)
+        if kind == 'segments' and settings.get('output_dir_mode') == 'input':
+            settings.update(output_dir='', output_dir_mode='explicit')
         atomic_json(directory/'settings.json', settings)
         project = read_json(directory/'project.json')
         if project.get('revision'): project['last_valid_revision']=project['revision']
@@ -222,6 +225,58 @@ class App(ReviewWorkspace):
         project.pop('review_provenance',None)
         atomic_json(directory/'project.json', project)
         return uploads
+
+    def local_browse(self, pid, path='', kind='directory'):
+        from local_file_browser import browse
+        self.project_dir(pid)
+        return browse(path, kind)
+
+    def local_import(self, pid, kind, path, sheet=None, receipt=None):
+        """Read a selected local source through the existing immutable import path."""
+        from local_file_browser import read_input
+        if kind not in ('segments', 'codebook'):
+            raise ValueError('Unbekannter Dateityp.')
+        with self.lock:
+            project = self.project(pid)
+            now = time.monotonic()
+            self.local_imports = {k:v for k,v in self.local_imports.items() if now-v['created'] < 600}
+            previous_id = project['uploads'].get(kind, {}).get('id')
+            pending = None
+            if receipt is not None:
+                pending = self.local_imports.get(receipt) if isinstance(receipt,str) else None
+                if not pending or (pending['project'],pending['kind'],pending['path'],pending['previous_id']) != (pid,kind,path,previous_id):
+                    raise ValueError('Die Dateiauswahl ist nicht mehr gültig. Bitte die Datei erneut auswählen.')
+                if not isinstance(sheet,str) or not sheet:
+                    raise ValueError('Bitte ein Tabellenblatt auswählen.')
+            elif sheet is not None:
+                raise ValueError('Bitte zuerst die Datei und anschließend ein Tabellenblatt auswählen.')
+            source, raw = read_input(path, MAX_UPLOAD)
+            digest = hashlib.sha256(raw).hexdigest()
+            if pending and digest != pending['sha256']:
+                raise ValueError('Die Originaldatei wurde seit der Vorschau geändert. Bitte erneut auswählen.')
+            previous_settings = project['settings']
+            result = self.upload(pid,kind,source.name,base64.b64encode(raw).decode('ascii'),sheet)
+            if result.get('requires_sheet'):
+                while len(self.local_imports) >= 16:
+                    self.local_imports.pop(next(iter(self.local_imports)))
+                token = secrets.token_urlsafe(24)
+                self.local_imports[token] = {'created':now,'project':pid,'kind':kind,'path':str(source),
+                                            'sha256':digest,'previous_id':previous_id}
+                return {**result,'receipt':token,'name':source.name,'source_path':str(source)}
+            if receipt is not None:
+                self.local_imports.pop(receipt,None)
+            result[kind].update(source_path=str(source), source_directory=str(source.parent), source_sha256=digest)
+            directory = self.project_dir(pid)
+            atomic_json(directory/'uploads.json',result)
+            response = {'uploads':result,'source_path':str(source)}
+            if kind == 'segments':
+                target = str(source.parent)
+                response['suggested_output_dir'] = target
+                if not previous_settings.get('output_dir') or previous_settings.get('output_dir_mode') == 'input':
+                    updated = read_json(directory/'settings.json',{})
+                    updated.update(output_dir=target,output_dir_mode='input')
+                    atomic_json(directory/'settings.json',updated)
+            return response
 
     def prompt_templates(self, pid, jid=None):
         from prompt_catalog import catalog
@@ -277,6 +332,8 @@ class App(ReviewWorkspace):
             atomic_json(directory/'inputs'/(fid+'.ids.json'), provenance)
             project['uploads']['segments'] = {'id':fid, 'name':Path(upload['name']).stem+' · mit IDs.csv',
                                               'format':'csv', **info, 'id_preparation':provenance}
+            for key in ('source_path','source_directory','source_sha256'):
+                if key in upload: project['uploads']['segments'][key]=upload[key]
             atomic_json(directory/'uploads.json',project['uploads'])
             updated = copy.deepcopy(settings)
             updated.update(columns=mapped, label_mode='multi_label')
@@ -397,6 +454,14 @@ class App(ReviewWorkspace):
                 value=settings['output_dir']
                 if not isinstance(value,str): raise ValueError('Speicherort für Analyseergebnisse muss ein Ordnerpfad sein.')
                 settings['output_dir']=str(resolve_output_parent(output_dir=value)) if value.strip() else ''
+            mode=settings.get('output_dir_mode','explicit')
+            if mode not in ('input','explicit'):
+                raise ValueError('Bitte den Speicherort aus der Eingabedatei oder ein eigenes Verzeichnis wählen.')
+            if mode == 'input':
+                source=self.project(pid)['uploads'].get('segments',{}).get('source_path')
+                if not source or str(Path(source).parent) != settings.get('output_dir'):
+                    raise ValueError('Der Ordner der Eingabedatei ist nicht bekannt oder wurde geändert. Bitte die Datei lokal erneut auswählen oder ein eigenes Ziel wählen.')
+            settings['output_dir_mode']=mode
             cfg, book = self.config(pid,settings)
             revision = directory/'revisions'/uuid.uuid4().hex[:20]
             revision.mkdir(parents=True)
@@ -774,6 +839,7 @@ class Handler(BaseHTTPRequestHandler):
                 '/BEISPIELE.html':'../docs/BEISPIELE.html',
                 '/capacity.js':'capacity_ui.js','/providers.js':'providers_ui.js','/passage-ids.js':'passage_ids_ui.js','/person-identity.js':'person_identity_ui.js','/logo.jpg':'brand.jpg','/favicon.ico':'brand.jpg',
                 '/handbuch':'../docs/HANDBUCH.html','/HANDBUCH.html':'../docs/HANDBUCH.html','/manual.css':'../docs/manual.css',
+                '/images/local-file-selection.svg':'../docs/images/local-file-selection.svg',
                 '/BEDIENOBERFLAECHE.md':'../docs/BEDIENOBERFLAECHE.md',
                 '/DIAGNOSTICS.md':'../docs/DIAGNOSTICS.md','/CONFIGURATION.md':'../docs/CONFIGURATION.md',
                 '/METHODOLOGY.md':'../docs/METHODOLOGY.md','/ROBUSTNESS.md':'../docs/ROBUSTNESS.md',
@@ -784,7 +850,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if parsed.path in assets:
                 p=ROOT/assets[parsed.path]
-                return self.send_bytes(p.read_bytes(),{'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.jpg':'image/jpeg','.md':'text/plain; charset=utf-8'}[p.suffix])
+                return self.send_bytes(p.read_bytes(),{'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.jpg':'image/jpeg','.svg':'image/svg+xml','.md':'text/plain; charset=utf-8'}[p.suffix])
             query=urllib.parse.parse_qs(parsed.query)
             get=lambda key:query.get(key,[''])[0]
             app=self.server.app
@@ -838,9 +904,12 @@ class Handler(BaseHTTPRequestHandler):
             if path=='/api/ollama-capacity':
                 from ollama_capacity import check
                 return self.json(check(data['selection']))
+            if path=='/api/local-browse':
+                return self.json(app.local_browse(data['project'],data.get('path',''),data.get('kind','directory')))
             with app.lock:
                 if path=='/api/create': result=app.create(data.get('name',''),data.get('demo',False))
                 elif path=='/api/upload': result=app.upload(data['project'],data['kind'],data['name'],data['data'],data.get('sheet'))
+                elif path=='/api/local-import': result=app.local_import(data['project'],data['kind'],data['path'],data.get('sheet'),data.get('receipt'))
                 elif path=='/api/privacy': result=app.privacy(data['project'],data['gdpr_relevant'])
                 elif path=='/api/provider-key': result=app.save_provider_key(data['project'],data)
                 elif path=='/api/output-check':
