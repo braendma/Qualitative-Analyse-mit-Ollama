@@ -351,6 +351,13 @@ nachgelagertes Modul darf gewichteten Text nicht still an die Stelle von
 Dadurch wird eine bereits gewichtete Interpretation nicht als angeblich
 ungewichtete Vergleichsbasis weitergereicht.
 
+Kontrastanalyse und Gesamtsynthese schließen deshalb gespeicherte
+`analysis_perspective`-Erweiterungen ihrer Eingaben ausdrücklich aus ihrer
+Kandidaten- und Verdichtungsbasis aus. Die vollständigen Quelldateien und ihre
+zusätzlichen Ergebnisse bleiben unverändert gespeichert. Die ausführbaren
+Vergleichstests prüfen identische ursprüngliche Anfrageinhalte mit und ohne
+solche Erweiterungen; diese erzeugen keine zusätzliche Kontextverdichtung.
+
 `thematic_pipeline.prepare` prüft vor dem bisherigen Modulablauf die bestätigte
 Materialbasis. Für abhängige Module werden Cluster, Originaltext-Zuordnung und
 gegebenenfalls Clusterzusammenfassungen gegen Material und im Runner gegen die

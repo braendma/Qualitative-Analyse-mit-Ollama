@@ -156,6 +156,11 @@ def build_contrast_analysis(
     with open(person_comparison_json_path, "r", encoding="utf-8") as f:
         comparison_data = json.load(f)
 
+    # Additional perspectives are separate results, never replacements for
+    # this module's common qualitative candidate basis (including reduction).
+    person_data = {key:value for key,value in person_data.items() if key != 'analysis_perspective'}
+    comparison_data = {key:value for key,value in comparison_data.items() if key != 'analysis_perspective'}
+
     persons = person_data.get("persons", {})
     source_people = sorted(persons.keys()) if isinstance(persons, dict) else []
     type_names = [
@@ -254,4 +259,3 @@ def build_contrast_analysis(
         md.append("_Keine zusätzlichen Relativierungen._\n")
 
     return "\n".join(md), json_output
-

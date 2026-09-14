@@ -13,9 +13,9 @@ logger = logging.getLogger("overall_synthesis")
 
 
 def project_synthesis_source(value):
-    """Keep analytical findings and reference IDs; omit repeated raw-text expansions."""
+    """Keep original analytical findings; omit extra interpretations and raw expansions."""
     redundant = {"finding_registry", "segment_metadata", "belege", "belege_a", "belege_b",
-                 "belegbeispiele", "plots", "created_at"}
+                 "belegbeispiele", "plots", "created_at", "analysis_perspective"}
     if isinstance(value, dict):
         return {key: project_synthesis_source(item) for key, item in value.items()
                 if key not in redundant and not (key.startswith("source_") and key.endswith("_created_at"))}
@@ -222,7 +222,7 @@ def build_overall_synthesis(
     update_progress(completed=1)
     json_output = {
         "hierarchical_reduction": reduction,
-        "input_projection": "Analytische Befunde, Statusfelder und Referenz-IDs; wiederholte Rohtextbelege und Register ausgelassen.",
+        "input_projection": "Ursprüngliche qualitative Befunde, Statusfelder und Referenz-IDs; zusätzliche Häufigkeitsinterpretationen, wiederholte Rohtextbelege und Register ausgelassen.",
         "created_at": datetime.now().isoformat(),
         "source_labels": source_labels,
         "source_created_at": source_created_at,
