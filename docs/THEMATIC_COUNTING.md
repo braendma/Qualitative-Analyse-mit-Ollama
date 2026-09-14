@@ -1,12 +1,13 @@
 # Thematische Zählung – Entwicklervertrag des gemeinsamen Kerns
 
-**Entwicklungsstand S13a:** Materialbasis, Modusvalidierung, vorhandene
-Clusterzuordnungen und deterministische Zählung sind als gemeinsame
-Bibliotheksfunktionen implementiert. Das ist noch keine Freischaltung neuer
-Analyseperspektiven in Oberfläche oder Workflow-CLI. Die generative
-Themenzuordnung, häufigkeitsinformierte Interpretation und deren Einbindung
-in die einzelnen Module folgen gesondert. Die bisherige qualitative
-Arbeitsweise bleibt unverändert.
+**Interner Entwicklungsstand S13b:** Der gemeinsame Kern besitzt jetzt eine
+ausführbare Themenzuordnung, deterministische Zählung, häufigkeitsinformierte
+Interpretation und drei Adapter für Cluster, Clusterzusammenfassungen und SWOT.
+`execute_perspective` verbindet diese Funktionen intern; die Abläufe lassen
+sich mit künstlichen Modellantworten testen. **Oberfläche und Workflow-CLI
+schalten die neuen Perspektiven noch nicht frei.** Die vorhandene
+Verfügbarkeitsprüfung bleibt gesperrt, bis der jeweilige Einstieg vollständig
+integriert ist. Die bisherige qualitative Arbeitsweise bleibt unverändert.
 
 Methodische Einordnung und Literatur stehen im
 [Handbuch: Aussagen und Personen zählen](HANDBUCH.md#aussagen-und-personen-zählen-methodische-einordnung)
@@ -154,6 +155,36 @@ counts = count_topics(material, membership["topics"], membership["assignments"])
 
 Das ist ein Aufrufbeispiel für Entwickler, keine neue Workflow-CLI-Anweisung.
 
+`thematic_adapters.build_cluster_topics` ergänzt diese Mitgliedschaften um
+stabile `source_links` und eine unveränderte Kopie der qualitativen Quelle.
+`build_summary_topics(material, cluster_payload, summary_payload)` verwendet
+dieselbe Zuordnung nur dann, wenn jede Zusammenfassung eindeutig anhand von
+Codepfad, Clustername, Definition und Segmentmenge zu einem Originalcluster
+passt. Eine Zuordnung nur nach ähnlichem Titel ist ausgeschlossen. Die freie
+`final_summary` bleibt `unassigned_context`; ihre einzelnen Aussagen werden
+nicht automatisch als vollständig zugeordnete Themen gezählt.
+
+### SWOT-Themen für eine vollständige Zuordnung vorbereiten
+
+`thematic_adapters.build_swot_topics(material, payload)` erzeugt feste Themen
+aus den bestehenden qualitativen SWOT-Befunden. Der Scope umfasst jeweils
+alle Materialeinheiten des tatsächlichen Codepfads. Ausgewählte
+`segment_ids` bleiben ausgewählte Belege in `source_links` und werden nicht
+als positive Zuordnungen oder als vollständige Materialmenge übernommen.
+Der Adapter liefert daher zunächst `assignments: null`.
+
+Codepfade, erwartete Dimensionen, Segmentmetadaten, Verweise und gegebenenfalls
+gespeicherte Originalzitate werden geprüft. Identische doppelte Befunde werden
+abgewiesen. Codepfad, Dimension, Thema und Analyse bestimmen die stabile
+Themen-ID; eine bloß andere Auswahl von Beispielzitaten verändert das Thema
+nicht. Sehr lange Definitionen werden nicht gekürzt.
+
+Das bestehende SWOT-Schema bescheinigt keine wörtliche Äußerung einer
+SWOT-Ableitung. Deshalb kennzeichnet der Adapter alle diese Themen konservativ
+als `derived`, auch bei Stärken und Schwächen. Die spätere Matrix zählt
+stützende und entgegenstehende Materialbasis. Sie behauptet nicht, Personen
+hätten den analytischen SWOT-Befund selbst ausdrücklich formuliert.
+
 ## 6. Exakte Themenunion
 
 `union_topics(material, results, *, topic_id, member_topic_ids, definition,
@@ -180,7 +211,7 @@ von `count_topics`; eine bereits aggregierte Union ist nicht automatisch ein
 neues Quellresultat. Weitere Aggregation muss auf den benannten ursprünglichen
 Themen beruhen oder einen gesonderten geprüften Vertrag erhalten.
 
-## 7. Perspektiven, Identität und noch offene Integration
+## 7. Perspektiven und Identität
 
 `analysis_perspectives` validiert die Modi `qualitative`, `frequency` und `both`.
 Fehlende oder `null` gesetzte Abschnitte bleiben qualitativ. Methodische Eignung
@@ -194,10 +225,116 @@ und getrennte Interpretationen liefern. Vor Themen- und Blockplanung bleiben
 zusätzliche Matrixzellen und Modellanfragen unbekannt; eine logische gemeinsame
 Basis ist keine Zusage über eine einzelne oder kostenlose Modellanfrage.
 Mode-Metadaten, Material-, Themen- und Resultatfingerprints stehen für die
-spätere Einbindung in bestehende Lauf-/Checkpointidentitäten bereit. Kein
-Fingerprint beweist die fachliche Richtigkeit einer Zuordnung.
+Einbindung in bestehende Lauf-/Checkpointidentitäten bereit. Die internen
+Zuordnungs- und Interpretationsphasen verwenden die vorhandenen
+Teil-Checkpoints; die vollständige Aufnahme der Moduswahl in die öffentlichen
+Runner-/UI-Einstiege und Diagnoseprojektionen folgt noch. Kein Fingerprint
+beweist die fachliche Richtigkeit einer Zuordnung.
 
-Noch erforderlich sind Moduladapter, vollständige LLM-Zuordnung bei neu
-gebildeten Themen, Interpretationsprompts, Berichte, Diagnoseprojektionen,
-Aufwand-/Fortschrittsanzeige und UI-Auswahl. Erst ihre getestete Integration
-darf die betreffende Perspektive zur normalen Nutzung freischalten.
+## 8. Vollständige Matrix intern ausführen
+
+`thematic_assignment.execute_assignments(material, topics, params, *, module, llm=None)`
+plant jede erforderliche Thema-Einheit-Zelle des vorgegebenen Scopes.
+Themenregister, Materialinhalt und ursprüngliche Materialidentität werden
+gebunden. Die Originaltexte bleiben vollständig. Das Antwortbudget und die
+Eingabegröße bestimmen die Modellblöcke; auch der mögliche Korrekturaufruf
+wird vor der ersten Anfrage auf Kontextverträglichkeit geprüft.
+
+Die Ausführung verwendet `bounded_batches`, `require_messages` und den
+vorhandenen `analysis_work.analyze_items`-Koordinator mit dessen
+Teil-Checkpoints. Es entsteht kein zusätzlicher Worker-Pool. Der aufrufende
+Moduladapter darf diese Phase deshalb nicht wiederum innerhalb eines bereits
+laufenden parallelen Einzelitems starten. Große Matrizen werden in
+Modellanfrageblöcke geteilt; die gesamte Zuordnungsplanung ist dadurch nicht
+automatisch speicherunbegrenzt skalierbar.
+
+Die interne Fortschrittsmeldung verwendet die vorhandenen Phasen und
+Arbeitseinheiten: Zuordnungsblöcke in `analysis`/`batches`,
+Interpretationen in `synthesis`/`summaries`. Diese Zähler beschreiben
+abgeschlossene Arbeitseinheiten, keinen Zeitanteil.
+
+Jede Modellantwort muss genau die angeforderten Zellen einmal enthalten.
+Nur `supported`, `opposed`, `both`, `no_evidence` und `unclear` sind
+Modellentscheidungen. Doppelte JSON-Felder, fehlende oder zusätzliche Zellen,
+fremde IDs und zusätzliche Zählerfelder werden abgewiesen. Bei einer ungültigen
+Antwort gibt es höchstens einen erneuten Formatversuch auf Grundlage der
+ursprünglichen vollständigen Eingabe. Auch aus Checkpoints geladene Blöcke
+werden gegen ihre genauen erwarteten Zellen geprüft.
+
+Ein technischer Fehler beendet die Phase; erfolgreiche Blöcke bleiben über
+die bestehende Wiederaufnahmelogik verfügbar. Das ist etwas anderes als
+`unclear`: Diese gültige inhaltliche Enthaltung lässt die technische
+Ausführung zu Ende laufen, aber exakte Themenzahlen bleiben entsprechend
+unbestimmt. Fehlende Antworten werden nicht als negative Evidenz fortgeschrieben.
+Passt schon eine einzelne Originaleinheit mit ihrem Thema nicht in den
+Kontext, folgt ein Kontextfehler statt einer stillen Textkürzung.
+
+## 9. Zahlen interpretieren, ohne Zähler zu ersetzen
+
+`thematic_interpretation.interpret_counts(material, counted, qualitative_by_topic,
+params, *, module, llm=None)` prüft zunächst, ob die übergebene Zählung aus
+derselben Materialbasis und Zuordnung reproduzierbar ist. Zu jedem Thema
+muss genau ein qualitativer Ausgangstext vorhanden sein.
+
+Eine Interpretationsanfrage enthält das betreffende Thema, diesen
+unveränderten Ausgangstext, ein vollständiges Register der berechneten
+Themenkennzahlen und die vorhandenen entgegenstehenden Originaleinheiten.
+Das Register unterscheidet Scope, Abdeckung, Personen, Passagen und
+Codierzeilen; ein Scope-Fingerprint kennzeichnet dieselbe Bezugsmenge.
+Es enthält keine ungeprüften, vom Modell geschätzten Zähler. Sehr große
+Register oder Gegenbelegsammlungen können die Kontextprüfung scheitern
+lassen; sie werden derzeit nicht still gekürzt oder durch eine beliebige
+Teilmenge ersetzt.
+
+Das Modell liefert genau `topic_id`, `interpretation`, `counterpositions`
+und `limitations`. Die Themen-ID muss passen und alle Textfelder müssen
+nicht leer sein. Zusätzliche Kennzahlfelder werden nicht übernommen.
+Die Antwort wird bei Bedarf einmal mit einer festen Korrekturanweisung
+wiederholt und auch nach Wiederverwendung eines Checkpoints validiert.
+
+Die berechneten Zahlen bleiben in einem getrennten Ergebnisobjekt. Diese
+Trennung verhindert, dass ein vom Modell geliefertes Zahlenfeld die
+deterministische Zählung ersetzt. Sie ist keine semantische Garantie:
+Auch ein formal gültiger Interpretationstext kann Zahlen falsch beschreiben
+oder unzutreffende Schlussfolgerungen ziehen. Gegenpositionen, Grenzen und
+die danebenstehenden berechneten Werte müssen fachlich geprüft werden.
+
+## 10. Interne Orchestrierung und getrennte Ausgaben
+
+`thematic_execution.execute_perspective(module, mode, material, payload, params,
+*, cluster_payload=None, llm=None)` unterstützt intern `clusterer`,
+`summarizer` und `swot`:
+
+1. Bei `qualitative` liefert die Funktion `None` und startet keine neue
+   Materialprüfung oder Modellanfrage; der bestehende Standardpfad bleibt.
+2. Der passende Adapter bereitet gemeinsame ungewichtete Themen vor.
+   Cluster und Summarizer verwenden ihre vollständige Mitgliedschaft,
+   SWOT führt die zusätzliche vollständige Matrixphase aus.
+3. Der Kern zählt die gemeinsame Zuordnung einmal und führt anschließend
+   häufigkeitsinformierte Interpretationen pro Thema aus.
+4. `frequency` enthält die benannte häufigkeitsinformierte Ausgabe;
+   `both` ergänzt die getrennte ursprüngliche qualitative Ausgabe. Beide
+   Perspektiven teilen dieselbe Matrix. Es wird keine zweite
+   Zuordnungsrunde nur für den qualitativen Vergleich gestartet.
+
+Das Ergebnis enthält unter anderem `selected_mode`, `counting`,
+`source_links`, `candidate_source_fingerprint`, `assignment_origin`,
+`interpretations` und gegebenenfalls `unassigned_context`.
+`perspective_markdown` stellt die berechneten Zähler/Nenner und
+Verfügbarkeit getrennt von den Modellinterpretationen dar. Der vorhandene
+qualitative Payload wird nicht überschrieben.
+
+**Nachgelagerter Vertrag:** Die ursprünglichen strukturierten Befunde und
+Quellen bleiben die gemeinsame ungewichtete Kandidatenbasis. Benannte
+Interpretationen sind zusätzliche Ergebnisse dieses Moduls. Ein
+nachgelagertes Modul darf gewichteten Text nicht still an die Stelle von
+`summary`, `analyse` oder anderen bisherigen Quellfeldern setzen.
+Dadurch wird eine bereits gewichtete Interpretation nicht als angeblich
+ungewichtete Vergleichsbasis weitergereicht.
+
+Diese interne Ausführung umgeht nicht die öffentliche Verfügbarkeitsprüfung.
+Die Auswahl muss erst in den regulären Modulaufrufen, Konfigurations- und
+Projektgrenzen, Promptansichten, Berichten sowie Aufwand-/Fortschrittsanzeigen
+verdrahtet werden. Weitere geeignete Module und die neuen
+Diagnose-/Wiederholungsprojektionen stehen ebenfalls noch aus. Erst ihre
+getestete Integration darf neue Modi in der normalen Anwendung freischalten.
