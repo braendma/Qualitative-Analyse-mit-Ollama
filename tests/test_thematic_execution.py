@@ -5,7 +5,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from thematic_execution import execute_perspective, perspective_markdown
+from thematic_execution import ADAPTER_MODULES, execute_perspective, perspective_markdown
 from thematic_material import load_counting_material
 from test_thematic_material import workspace
 from test_thematic_memberships import fixture
@@ -48,7 +48,7 @@ class ThematicExecutionTests(unittest.TestCase):
 
     def test_qualitative_default_needs_no_new_material_or_calls(self):
         llm = SyntheticBackend()
-        for module in ('clusterer', 'summarizer', 'swot'):
+        for module in ADAPTER_MODULES:
             self.assertIsNone(execute_perspective(module, 'qualitative', None, {}, self.params, llm=llm))
         self.assertEqual(llm.assignment_calls + llm.interpretation_calls, 0)
         self.assertEqual(perspective_markdown(None), '')

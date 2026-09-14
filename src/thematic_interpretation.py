@@ -23,6 +23,11 @@ Berücksichtige Personenbreite und Materialeinheiten getrennt. Viele Aussagen ei
 entsprechen nicht vielen Personen. Vergleiche Anteile nur bei identischer Bezugsmenge;
 scope_fingerprint bezeichnet diese Menge. Der Export enthält nur das codierte Material,
 nicht notwendig die vollständigen Interviews oder alle angesprochenen Themen.
+Bei einer Bezugsmenge von einer Person beschreibe die Materialbreite innerhalb dieses
+Falles. Eine Quote von 1/1 ist keine Mehrheit der Untersuchungsgruppe. Gleich benannte
+Themen verschiedener Personen dürfen ohne gemeinsame Definition und Bezugsmenge nicht
+zusammengezählt werden. Ambivalenzseiten A und B sind unabhängige Aussagen, keine
+automatischen logischen Negationen. both gilt gegenüber der jeweils geprüften Seite.
 null bedeutet nicht bestimmbar, niemals null Nennungen. observed_* sind beobachtete
 Zuordnungen; exact_* sind nur bei vollständiger entschiedener Matrix verfügbar.
 Auch vollständige Modellzuordnungen sind nicht menschlich validiert oder als wahr bewiesen.

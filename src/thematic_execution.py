@@ -13,10 +13,12 @@ from thematic_counts import count_topics
 from thematic_interpretation import interpret_counts
 
 
-ADAPTER_MODULES = ('clusterer', 'summarizer', 'swot')
+ADAPTER_MODULES = ('clusterer', 'summarizer', 'swot', 'meta_swot',
+                   'person_analysis', 'ambiguity_analysis')
 
 
-def execute_perspective(module, mode, material, payload, params, *, cluster_payload=None, llm=None):
+def execute_perspective(module, mode, material, payload, params, *, cluster_payload=None,
+                        swot_payload=None, person_payload=None, llm=None):
     """Build one shared matrix and named interpretations; leave inputs untouched.
 
 This is an internal adapter boundary, not a user-configurable capability bypass.
@@ -31,8 +33,17 @@ The qualitative default has no new material, model or output requirements.
         prepared = build_cluster_topics(material, payload)
     elif module == 'summarizer':
         prepared = build_summary_topics(material, cluster_payload, payload)
-    else:
+    elif module == 'swot':
         prepared = build_swot_topics(material, payload)
+    elif module == 'meta_swot':
+        from thematic_meta_adapter import build_meta_swot_topics
+        prepared = build_meta_swot_topics(material, payload, swot_payload)
+    elif module == 'person_analysis':
+        from thematic_person_adapters import build_person_topics
+        prepared = build_person_topics(material, payload)
+    else:
+        from thematic_person_adapters import build_ambiguity_topics
+        prepared = build_ambiguity_topics(material, payload, person_payload)
     assignments = prepared['assignments']
     origin = prepared['assignment_origin']
     if assignments is None:
@@ -56,7 +67,8 @@ The qualitative default has no new material, model or output requirements.
         'unassigned_context': deepcopy(prepared.get('unassigned_context', {})),
         'methodological_note': 'Gezählt werden Zuordnungen im exportierten codierten Material. '
             'Eine vollständige technische Matrix ist keine menschliche Bestätigung. '
-            'Personen, Passagen und Codierzeilen bleiben getrennt; seltene Gegenpositionen bleiben relevant.',
+            'Personen, Passagen und Codierzeilen bleiben getrennt; seltene Gegenpositionen bleiben relevant. '
+            + prepared.get('methodological_note', ''),
     }
 
 
@@ -69,7 +81,7 @@ def perspective_markdown(result):
     outputs = result['interpretations']
     frequency = {r['topic_id']: r for r in outputs['frequency']}
     qualitative = {r['topic_id']: r for r in outputs.get('qualitative', [])}
-    lines = ['\n\n## Häufigkeitsinformierte Analyseperspektive\n', result['methodological_note'],
+    lines = ['\n\n## Häufigkeitsinformierte Analyseperspektive\n', escape(result['methodological_note']),
              '\nDie folgenden Zahlen werden aus den Zuordnungen berechnet. Die Interpretation darunter ist ein Modellvorschlag.']
     meanings = {'explicit': 'Äußerungsbezogene Themenzuordnung', 'derived': 'Materialbasis einer analytischen Ableitung',
                 'membership': 'Clusterzuordnung; keine Zählung jeder Zusammenfassungsaussage'}
@@ -94,6 +106,17 @@ def perspective_markdown(result):
                          f"{c['observed_unit_count']} | {value(c['exact_unit_count'])} |")
         lines.append('\n„Beide Positionen“ bei Personen umfasst auch gegensätzliche Aussagen in verschiedenen Passagen. '
                      'Bei unvollständiger Zuordnung sind beobachtete Werte lediglich Untergrenzen der Modellzuordnung.')
+        if scope['person_count'] == 1:
+            lines.append('\nDiese Bezugsmenge enthält eine einzelne Person. Die Zahlen beschreiben die '
+                         'Materialbreite innerhalb dieses Falles; eine Personenquote von 1/1 wäre keine '
+                         'Mehrheit in der Untersuchungsgruppe.')
+        link = result['source_links'][tid]
+        if link.get('counting_note'):
+            lines.append('\n' + escape(link['counting_note']))
+        if result['module_id'] == 'ambiguity_analysis':
+            lines.append('\nDie Seiten A und B werden unabhängig geprüft. „Beide Positionen“ in dieser '
+                         'Tabelle bedeutet Stützung und Widerspruch zu dieser einen Seite, nicht die '
+                         'gemeinsame Nennung von A und B. Die andere Seite ist nicht automatisch ihre Negation.')
         if tid in qualitative:
             lines += ['\n**Qualitative Perspektive**\n', escape(qualitative[tid]['interpretation'])]
         lines += ['\n**Häufigkeitsinformierte Perspektive**\n', escape(frequency[tid]['interpretation']),

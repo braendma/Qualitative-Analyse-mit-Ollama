@@ -366,3 +366,45 @@ Bedienung, sichere Fehlerbehebung und Beispiele:
 [Analyseperspektiven im Handbuch](HANDBUCH.md#analyseperspektiven-je-modul).
 YAML-Vertrag und CLI-Voraussetzungen:
 [Konfigurationsreferenz](CONFIGURATION.md#analyseperspektiven-je-modul).
+
+## 11. Weitere interne Adapter: Meta-SWOT und Einzelfälle
+
+Die interne Ausführung unterstützt zusätzlich `meta_swot`, `person_analysis`
+und `ambiguity_analysis`. Diese drei Erweiterungen sind noch nicht in der
+öffentlichen Modusauswahl freigeschaltet. Dazu müssen ihre CLI-Quellenprüfung
+und Diagnoseprojektion vollständig angeschlossen werden. Die vorhandenen
+qualitativen Module können weiterhin wie bisher verwendet werden.
+
+Meta-SWOT erhält mit `swot_payload` die ursprüngliche SWOT-Vorstufe. Der Adapter
+baut deren Befundregister erneut auf und prüft alle Meta-Verweise einschließlich
+Quellbereichen und Originalbelegen. Jedes neu verdichtete Meta-Thema wird gegen
+das gesamte ursprüngliche SWOT-Material geprüft. Bereits ermittelte Häufigkeiten
+werden weder addiert noch durch eine unterstellte Themenunion übernommen.
+Eine vollständige Zuordnung zu gefundenen Themen beweist nicht, dass die
+Kandidatenphase alle möglichen, insbesondere blockübergreifenden Themen entdeckt hat.
+
+Die Personenanalyse prüft ihre vollständige Personen- und Segmentmenge gegen
+das bestätigte Material. Die vier strukturierten Befundabschnitte liefern
+analytisch abgeleitete Themen; freie Gesamtverdichtungen bleiben Kontext.
+Ein Thema wird gegen alle Originaleinheiten dieser einen Person geprüft.
+Mehrere Dokumentteile bleiben ein Fall, mehrfach codierte identische Passagen
+eine Materialeinheit. Ein Personennenner von eins bezeichnet einen Einzelfall,
+keine Mehrheit der Untersuchungsgruppe. Gleichnamige Themen verschiedener Fälle
+dürfen deshalb nicht ohne eine gemeinsame Definition zusammengezählt werden.
+
+Die Ambivalenzanalyse benötigt zusätzlich die originale Personenanalyse als
+`person_payload`. Jedes gültige Paar erzeugt zwei unabhängige Seitenthemen A und B
+mit gemeinsamer Paaridentität und jeweils dem vollständigen Einzelfall als
+Bezugsmenge. B ist nicht automatisch die logische Negation von A. Eine Passage
+kann beide Seiten stützen; Seitenzahlen werden nicht voneinander abgezogen.
+`both` innerhalb einer Seitenthemenzuordnung bedeutet Stützung und Widerspruch
+zu dieser Seite, nicht die gemeinsame Nennung der beiden Seiten. Der Bericht
+macht diese Unterscheidung ausdrücklich sichtbar. Freie Gesamteinordnungen
+erhalten keine erfundenen Häufigkeiten.
+
+Alle drei Adapter verwenden dieselbe flache Zuordnungs-, Zähl- und
+Interpretationsphase sowie vorhandene Teil-Checkpoints. Ein technischer Abbruch
+wird nicht als inhaltlich unklare Antwort umgedeutet. Die ursprünglichen
+qualitativen Kandidaten bleiben getrennt von den zusätzlichen Interpretationen;
+bereits vorhandene `analysis_perspective`-Erweiterungen einer Vorstufe verändern
+ihre ungewichtete Kandidatenbasis nicht.
