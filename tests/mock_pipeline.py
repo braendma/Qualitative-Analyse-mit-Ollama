@@ -29,6 +29,10 @@ def fake_chat(messages, **kwargs):
             trace.write(json.dumps({'module':logical_module,'prompt_sha256':hashlib.sha256(json.dumps(messages,sort_keys=True).encode()).hexdigest()})+'\n')
     if os.environ.get('MOCK_FAIL_MODULE')==logical_module and call_counts[logical_module]>int(os.environ.get('MOCK_FAIL_AFTER','0')):
         raise RuntimeError('Simulated interruption')
+    if module.startswith('Klassifiziere die Art genau des vollständigen vorhandenen Synthesebefunds'):
+        data = json.loads(text)
+        return json.dumps({'candidate_id': data['candidate']['candidate_id'],
+                           'classification': 'material_assertion', 'reason': 'Festgelegter synthetischer Testbefund.'})
     if module.startswith('Ordne jede angeforderte Zelle'):
         data, _ = json.JSONDecoder().raw_decode(text)
         return json.dumps({'assignments':[{**cell, 'status':'supported'} for cell in data['cells']]})

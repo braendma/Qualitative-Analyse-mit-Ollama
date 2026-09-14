@@ -1,6 +1,6 @@
 # Wissenschaftliche Diagnosen – technische Grundlage
 
-Sensitivität, interner Teilstand: Ein reiner Variantenplaner prüft tatsächlich
+Sensitivität im integrierten Entwicklungsstand: Ein reiner Variantenplaner prüft tatsächlich
 verdrahtete Parameter, unveränderte Datenbasis und Kontextgrenzen. Der gemeinsame
 Serienexecutor kann getrennte Konfigurationen mit eigenen Wiederholungen ausführen,
 unter derselben Prozessaufsicht und Wiederaufnahmelogik. Ein geprüfter Reader,
@@ -622,8 +622,10 @@ aufgefächert. Quellengruppen bleiben als Kontext gekennzeichnet.
 
 Dies ist ein Vergleich der gespeicherten Quellenauswahl, keine vollständige Zählung
 thematischer Nennungen, kein Maß wissenschaftlicher Bedeutung und keine automatische
-Änderung der Gewichtung des LLM. Die gesondert geplanten Analyseperspektiven aus S13
-werden dadurch nicht vorweggenommen. Im Markdown erscheinen geänderte Personen- und
+Änderung der Gewichtung des LLM. Die separat integrierten Analyseperspektiven
+der zehn geeigneten Standardmodule verwenden dagegen geprüfte vollständige
+Zuordnungen und eigene benannte Interpretationen; Quellenverteilungen ersetzen
+diese Themenzählung nicht. [Scopes und Grenzen](THEMATIC_COUNTING.md). Im Markdown erscheinen geänderte Personen- und
 Kategoriezeilen (je höchstens 50 mit expliziter Restzahl); das JSON enthält auch die
 unveränderten Verteilungen vollständig.
 

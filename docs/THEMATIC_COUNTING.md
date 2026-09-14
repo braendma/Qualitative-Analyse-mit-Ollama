@@ -1,14 +1,12 @@
 # Thematische Zählung – Entwicklervertrag des gemeinsamen Kerns
 
-**Entwicklungsstand S13h2:** Clusteranalyse (`clusterer`), Clusterzusammenfassungen
+**Entwicklungsstand S13i2:** Clusteranalyse (`clusterer`), Clusterzusammenfassungen
 (`summarizer`), SWOT (`swot`), Meta-SWOT (`meta_swot`), Personenanalyse
 (`person_analysis`), Personenvergleich (`person_comparison`), Kontrastanalyse
-(`contrast_analysis`), Zusammenhangsanalyse (`relation_analysis`) und Ambivalenzanalyse (`ambiguity_analysis`) sind über ihre regulären Module in
+(`contrast_analysis`), Zusammenhangsanalyse (`relation_analysis`), Ambivalenzanalyse (`ambiguity_analysis`) und Gesamtsynthese (`overall_synthesis`) sind über ihre regulären Module in
 Workflow-CLI und Oberfläche mit den Perspektiven `qualitative`, `frequency` und
 `both` verbunden. Die Auswahl gilt unabhängig je Modul; fehlende Einstellungen
-bleiben qualitativ. Das weitere geeignete Modul
-Gesamtsynthese hat noch keine
-zusätzlichen Perspektiven. Dies beschreibt den aktuellen Entwicklungsstand, keine neue
+bleiben qualitativ. Dies beschreibt den aktuellen Entwicklungsstand, keine neue
 veröffentlichte Version. Der gemeinsame Kern verbindet vollständige
 Themenzuordnung, deterministische Zählung und häufigkeitsinformierte Interpretation.
 
@@ -220,7 +218,7 @@ Themen beruhen oder einen gesonderten geprüften Vertrag erhalten.
 Fehlende oder `null` gesetzte Abschnitte bleiben qualitativ. Methodische Eignung
 ist von implementierter Verfügbarkeit getrennt: Nichtqualitative Modi werden
 ohne ausdrücklich freigegebenen Adapter als „noch nicht integriert“ abgewiesen.
-Die zentrale Grenze `thematic_pipeline` gibt nur die neun integrierten
+Die zentrale Grenze `thematic_pipeline` gibt nur die zehn integrierten
 Standardmodule frei. Ein eigenes Skript mit derselben Modul-ID erbt keine
 zusätzliche Verfügbarkeit. Die Oberfläche liest diese Freigabe vom Server.
 Ungültige gespeicherte Modi werden angezeigt und abgewiesen, auch bei gerade
@@ -322,13 +320,13 @@ die danebenstehenden berechneten Werte müssen fachlich geprüft werden.
 `thematic_execution.execute_perspective` erhält Modul, Modus, Material,
 Originalergebnis, Modellparameter und die tatsächlich benötigten geprüften Vorstufen. Die Funktion
 unterstützt `clusterer`, `summarizer`, `swot`, `meta_swot`, `person_analysis`,
-`person_comparison`, `contrast_analysis`, `relation_analysis` und `ambiguity_analysis`:
+`person_comparison`, `contrast_analysis`, `relation_analysis`, `ambiguity_analysis` und `overall_synthesis`:
 
 1. Bei `qualitative` liefert die Funktion `None` und startet keine neue
    Materialprüfung oder Modellanfrage; der bestehende Standardpfad bleibt.
 2. Der passende Adapter bereitet gemeinsame ungewichtete Themen vor.
    Cluster und Summarizer verwenden ihre vollständige Mitgliedschaft,
-   SWOT, Meta-SWOT, Personenanalyse, Personenvergleich, Kontrastanalyse, Zusammenhangsanalyse und Ambivalenzanalyse führen eine zusätzliche
+   SWOT, Meta-SWOT, Personenanalyse, Personenvergleich, Kontrastanalyse, Zusammenhangsanalyse, Ambivalenzanalyse und Gesamtsynthese führen eine zusätzliche
    vollständige Matrixphase in ihrem ausdrücklich definierten Scope aus.
 3. Der Kern zählt die gemeinsame Zuordnung einmal und führt anschließend
    häufigkeitsinformierte Interpretationen pro Thema aus.
@@ -371,7 +369,7 @@ JSON-Datei des Moduls.
 
 Die Promptansicht ergänzt bei gespeichertem `frequency`/`both` die festen
 Systemanweisungen für Häufigkeitsinterpretation und bei SWOT, Meta-SWOT,
-Personenanalyse, Personenvergleich, Kontrastanalyse, Zusammenhangsanalyse und Ambivalenzanalyse für vollständige Themenzuordnung.
+Personenanalyse, Personenvergleich, Kontrastanalyse, Zusammenhangsanalyse, Ambivalenzanalyse und Gesamtsynthese für vollständige Themenzuordnung.
 Sie beschreibt die dynamischen Eingaben, zeigt aber weder das vollständige
 Anfrageprotokoll noch automatisch Interviewmaterial. Stabilitäts-/Sensitivitätsansichten
 berücksichtigen die entsprechenden Zielmodule. Weitere Moduladapter bleiben
@@ -612,11 +610,11 @@ Gleich benannte Themen bleiben dadurch inhaltlich unterscheidbar. Das erhöht de
 Kontextbedarf; der bestehende Preflight lehnt zu große Anfragen vor dem ersten
 Modellaufruf ab, statt Definitionen still zu kürzen.
 
-## Gesamtsynthese: interne Vorbereitung, noch keine UI-Freigabe
+## Gesamtsynthese: Auswahl, vollständige Originalmatrix und Herkunftsprüfung
 
-Die Gesamtsynthese bleibt in der Oberfläche vorerst auf `qualitative` beschränkt.
-Die folgenden Bausteine sind implementiert und synthetisch geprüft, müssen aber
-noch mit Ausführung, Diagnosen, Fortschritt und Bericht verbunden werden:
+Die Gesamtsynthese ist im Entwicklungsstand als zehntes Perspektivmodul in
+Workflow-CLI und Oberfläche integriert. `qualitative` bleibt der Standard.
+Die zusätzliche Perspektive verwendet folgende getrennte Bausteine:
 
 - `synthesis_inputs`: dieselbe explizite CLI-Quellenauswahl und eindeutige
   Zuordnung frei benannter Quellen zu deklarierten Moduldateien. Doppelte Labels
@@ -644,6 +642,33 @@ Die Auswahl ist ausdrücklich eine **Modellentscheidung ohne menschliche Prüfun
 Ein formal gültiger Auswahlbeleg beweist nicht, dass das Modell die Aussage richtig
 klassifiziert hat. Eine vollständige anschließende Matrix bestätigt weder allgemeine
 Kausalität noch Gruppenverteilungen oder die semantische Wahrheit der Synthese.
-Vor Aktivierung sind Quellenprüfung vor der Klassifikation, sichtbare Auswahlgründe,
-unveränderliche Laufbindung und die qualitative Relationsquelle mit ihrem benötigten
-Herkunftsnachweis durchgängig zu integrieren.
+Die Anwendung prüft Quellen und Verdichtungsweg vor der Klassifikation. Frei
+benannte Quellen werden über den tatsächlichen CLI-Argumentvertrag an deklarierte
+Standardmoduldateien gebunden; die benötigten transitiven Vorstufen gehören zum
+gleichen unveränderten Lauf. Eine als Synthesequelle benötigte qualitative Relation
+erhält einen modellfreien Auswahl-/Herkunftsnachweis, keine automatische eigene
+Häufigkeitsmatrix. Fehlende oder veränderte Quellen stoppen die Zusatzperspektive.
+
+Jeder ausgewählte vollständige Befund erhält eine neue Zuordnungsmatrix über alle
+Originaleinheiten aller bestätigten Personen. Die deterministische Zählung übernimmt
+keine Zähler oder ausgewählten Zitate aus Quellen. Das vollständige globale
+Vergleichsregister enthält alle ausgewählten Synthesethemen, Definitionen und Regeln.
+Die Auswahl entdeckt keine zuvor übersehenen Themen und repariert keine falschen
+Prämissen des Ausgangsbefunds.
+
+`frequency` und `both` verwenden dieselbe einmalige Auswahl und Matrix. Der
+Aufwandvertrag nennt zusätzlich `additional_countability_selection_phases`; die
+Anfragezahl bleibt vorab unbekannt. Auswahl, Matrix und Interpretation verwenden
+den bestehenden Checkpointvertrag. Die feste Promptansicht enthält auch den
+Klassifikationsprompt und dessen einmalige Korrektur; die Kontextvorprüfung kann
+zunächst nur feste Untergrenzen prüfen. Vollständige Kandidaten und Register werden
+zur Laufzeit erneut geprüft, nicht gekürzt. Das Verdichtungs-Aufrufbudget der
+ursprünglichen Synthese ist kein Gesamtbudget dieser zusätzlichen Phasen.
+
+Markdown und HTML zeigen Auswahlentscheidungen, Begründungen und sämtliche
+ungezählten Originalbefunde getrennt von berechneten Kennzahlen. Ein formal
+ungültiger Modelloutput stoppt nach höchstens einer Reparatur und wird nicht als
+inhaltlicher Ausschluss umgedeutet. Diagnosen reproduzieren Auswahl und Themen
+aus den gebundenen tatsächlichen Quellen; Quellgruppen sind Herkunft, keine
+Zählbelege. Vollständige strukturierte Receipts stehen im Modul-JSON, das bei
+Detailprüfungen zusätzlich zum eigenständig nutzbaren HTML aufzubewahren ist.

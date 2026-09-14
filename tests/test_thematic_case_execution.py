@@ -79,8 +79,8 @@ class ThematicCaseExecutionTests(unittest.TestCase):
             self.assertEqual(calls, (llm.assignment_calls, llm.interpretation_calls))
             self.assertEqual(result, repeated)
 
-    def test_remaining_internal_adapters_do_not_bypass_application_release_gate(self):
-        for module in ('overall_synthesis',):
+    def test_ineligible_modules_do_not_gain_artificial_perspectives(self):
+        for module in ('evidence_audit', 'coverage'):
             with self.subTest(module=module):
                 cap = capability({'id': module, 'script': module + '.py'})
                 self.assertFalse(cap['implemented'])

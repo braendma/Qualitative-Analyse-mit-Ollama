@@ -1,3 +1,33 @@
+# Entwicklungsprüfung v7 / S13i2 · 14. September 2026
+
+**767 Python-Tests und 52 JavaScript-Tests bestanden.** Die vollständige
+Python-Regression lief mit eingefrorenen Programmquellen; die Frontendprüfung
+enthält unter anderem Modusauswahl, gespeicherte Einstellungen, Fehlermeldungen,
+Aufwand und getrennte Fortschrittsanzeigen. Die synthetischen Integrationstests
+prüfen reale CLI-/Runner-Einstiege, zehn zusätzliche Analyseperspektiven,
+Quellenbindung, Personen-/Passagenzuordnung, Berichtsausgabe und Wiederaufnahme
+mit simuliertem Modelltransport. Dies ist ein technischer Entwicklungsnachweis,
+kein unabhängiger Benchmark der inhaltlichen Analysequalität.
+
+**210 lokale Dokumentationslinks geprüft; keine fehlenden Ziele.** Das ist eine
+Prüfung lokaler Verweisziele, keine Zusage über die Verfügbarkeit externer Seiten,
+die Aktualität jedes historischen Screenshots oder die visuelle Darstellung auf
+jeder Bildschirmgröße. Die bisherigen datierten Prüfberichte stehen unverändert
+darunter und werden nicht dem neuen Entwicklungsstand zugerechnet.
+
+Ergänzend wurde der vorhandene Integrationstest auf einen gemeinsamen Hauptlauf
+mit allen fünf Diagnosen erweitert und erneut bestanden (ein gezielter Test,
+19,927 Sekunden). Geprüft wurden alle Ergebnisprüfsummen, die Markdown-/HTML-
+Abschnitte, sechs getrennte Kindläufe, unveränderte Eingaben und die Wiederaufnahme
+ohne zusätzliche Modellanfragen. Dieser ergänzende Nachweis folgt auf die obige
+Vollregression; deren Testzahl wird deshalb nicht nachträglich erhöht. Die
+wissenschaftliche Phase ist damit einschließlich Dokumentationsabgleich geprüft. Neue
+Windows-/macOS-Pakete, frische Installation dieser Pakete, deren Ressourcenpfade
+und native Start-/Schließabläufe sind anschließend gesonderte Phase-2-Prüfungen.
+Diese Testzahlen sind keine Veröffentlichung oder Freigabe fertiger Installationspakete.
+
+---
+
 # Prüfung 0.3.4 · 11. September 2026
 
 119 Python-Tests und zehn JavaScript-Tests bestanden. Zusätzliche Prüfungen: tatsächlich überlappende Arbeitseinheiten, unveränderte Passage-Gruppen und Ergebnisreihenfolge, geordnete Diagrammerzeugung im Hauptthread, Wiederaufnahme fertiger Einheiten, Abbruch ohne neue Aufträge, frische Speicherprüfung, Cloud-Sperre, eigene Serverkonfiguration und Bereinigung bei Startfehlern, korrekte Zählung laufender und fehlgeschlagener Anfragen. Browserprüfung für gespeicherte Auswahl, simulierte Speicherschätzung, verspätete Antworten und Anbieterwechsel. Handbuchbild mit ausdrücklich simulierten Hardwarewerten.

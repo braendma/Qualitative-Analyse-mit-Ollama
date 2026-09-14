@@ -1,4 +1,4 @@
-"""Nine real thematic entrypoints; synthetic inputs and model transport only."""
+"""Ten real thematic entrypoints; synthetic inputs and model transport only."""
 import copy
 import csv
 import io
@@ -49,8 +49,14 @@ def extended_setup(root):
     cfg['analysis_perspectives'] = {mid: 'both' for mid in IMPLEMENTED}
     for module in cfg['pipeline']['modules']:
         module['enabled'] = module['id'] in IMPLEMENTED
+        if module['id'] == 'overall_synthesis':
+            # This test covers perspective modules; the old full-pipeline test
+            # separately covers the non-perspective Evidence-Audit source.
+            module['depends_on'] = [mid for mid in module['depends_on'] if mid != 'evidence_audit']
+            index = module['args'].index('Evidence-Audit=evidence_audit_v1.json')
+            del module['args'][index-1:index+1]
     for key, placeholder in {'meta_swot': '{clusters}', 'person_analysis': '{persons}',
-                             'ambiguity_analysis': '{data}', 'person_comparison': '{persons}', 'contrast_analysis': '{data}', 'relation_analysis': '{data}'}.items():
+                             'ambiguity_analysis': '{data}', 'person_comparison': '{persons}', 'contrast_analysis': '{data}', 'relation_analysis': '{data}', 'overall_synthesis': '{data}'}.items():
         cfg['prompts'][key] = {'system': key, 'user': placeholder}
     path.write_text(yaml.safe_dump(cfg, allow_unicode=True), encoding='utf-8')
     material = load_counting_material(path)
@@ -95,9 +101,9 @@ class ExtendedThematicBoundaryTests(unittest.TestCase):
                 with patch.dict(os.environ,partial), self.assertRaisesRegex(ValueError,'vollständigen Eingabe- und Laufnachweis'):
                     prepare('meta_swot',path,swot_path=root/'swot_v1.json')
 
-    def test_nine_builtins_have_capabilities_but_custom_scripts_do_not(self):
+    def test_ten_builtins_have_capabilities_but_custom_scripts_do_not(self):
         self.assertEqual(set(IMPLEMENTED), {'clusterer', 'summarizer', 'swot', 'meta_swot',
-                                           'person_analysis', 'ambiguity_analysis', 'person_comparison', 'contrast_analysis', 'relation_analysis'})
+                                           'person_analysis', 'ambiguity_analysis', 'person_comparison', 'contrast_analysis', 'relation_analysis', 'overall_synthesis'})
         for mid in IMPLEMENTED:
             self.assertTrue(capability({'id': mid, 'script': mid+'.py'})['implemented'])
             self.assertFalse(capability({'id': mid, 'script': 'replacement.py'})['implemented'])
@@ -188,13 +194,13 @@ class ExtendedThematicProcessTests(unittest.TestCase):
                              ('ambiguity_analysis','ambiguity_analysis_v1.json'),
                              ('person_comparison','person_comparison_v1.json'),
                              ('contrast_analysis','contrast_analysis_v1.json'),
-                             ('relation_analysis','relation_analysis_v1.json')]:
+                             ('relation_analysis','relation_analysis_v1.json'), ('overall_synthesis','overall_synthesis_v1.json')]:
                 payload=json.loads((run/name).read_text(encoding='utf-8'))
                 counted=payload['analysis_perspective']['counting']
                 self.assertTrue(counted['topics'])
                 for topic in counted['topics']:
                     link=payload['analysis_perspective']['source_links'][topic['topic_id']]
-                    expected=12 if mid in ('meta_swot','person_comparison','relation_analysis') or link.get('scope_kind')=='global_pattern' else 1
+                    expected=12 if mid in ('meta_swot','person_comparison','relation_analysis','overall_synthesis') or link.get('scope_kind')=='global_pattern' else 1
                     self.assertEqual(topic['counts']['mentioned']['exact_person_count'],expected)
                     self.assertEqual(topic['scope']['person_count'],expected)
             relation=json.loads((run/'relation_analysis_v1.json').read_text(encoding='utf-8'))

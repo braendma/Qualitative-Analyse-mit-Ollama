@@ -10,8 +10,8 @@ from analysis_perspectives import normalize_analysis_perspectives, perspective_c
 
 
 IMPLEMENTED = ('clusterer', 'summarizer', 'swot', 'meta_swot',
-               'person_analysis', 'ambiguity_analysis', 'person_comparison', 'contrast_analysis', 'relation_analysis')
-FULL_ASSIGNMENT_MODULES = ('swot', 'meta_swot', 'person_analysis', 'ambiguity_analysis', 'person_comparison', 'contrast_analysis', 'relation_analysis')
+               'person_analysis', 'ambiguity_analysis', 'person_comparison', 'contrast_analysis', 'relation_analysis', 'overall_synthesis')
+FULL_ASSIGNMENT_MODULES = ('swot', 'meta_swot', 'person_analysis', 'ambiguity_analysis', 'person_comparison', 'contrast_analysis', 'relation_analysis', 'overall_synthesis')
 
 
 def modes(config):
@@ -51,8 +51,21 @@ def validate_material(config_path, config, modules, input_path=None):
     return None
 
 
+def _relation_receipt_needed(config, selected):
+    """A qualitative relation may supply provenance to a counted synthesis."""
+    if selected.get('overall_synthesis', 'qualitative') == 'qualitative':
+        return False
+    from synthesis_inputs import sources_from_module, bind_source_modules
+    modules = config.get('pipeline', {}).get('modules', [])
+    synthesis = next((m for m in modules if m['id'] == 'overall_synthesis' and m.get('enabled', True)), None)
+    if synthesis is None:
+        return False
+    bindings = bind_source_modules(sources_from_module(synthesis), modules, Path.cwd())
+    return any(binding['module_id'] == 'relation_analysis' for binding in bindings.values())
+
+
 def prepare(module, config_path, *, input_path=None, cluster_path=None, idmap_path=None,
-            summary_path=None, swot_path=None, person_path=None, comparison_path=None):
+            summary_path=None, swot_path=None, person_path=None, comparison_path=None, source_paths=None):
     """Verify inputs and source files before the existing core makes any call."""
     from coding_validation_common import resolve_config_path
     from runtime_support import file_hash
@@ -60,8 +73,10 @@ def prepare(module, config_path, *, input_path=None, cluster_path=None, idmap_pa
     from thematic_adapters import build_cluster_topics, build_summary_topics, build_swot_topics
     config_path = Path(config_path).resolve()
     config = yaml.safe_load(config_path.read_text(encoding='utf-8-sig'))
-    mode = modes(config)[module]
-    if mode == 'qualitative':
+    selected = modes(config)
+    mode = selected[module]
+    provenance_only = module == 'relation_analysis' and mode == 'qualitative' and _relation_receipt_needed(config, selected)
+    if mode == 'qualitative' and not provenance_only:
         return None
     run_path = os.environ.get('WORKFLOW_RUN_DIR')
     runner_input = os.environ.get('WORKFLOW_INPUT_CSV')
@@ -142,8 +157,38 @@ def prepare(module, config_path, *, input_path=None, cluster_path=None, idmap_pa
             raise ValueError('Geprüfter originaler Personenvergleich fehlt für die Kontrastperspektive.')
         comparison = source(comparison_path, 'person_comparison')
         build_person_comparison_topics(material, comparison, persons)
+    sources = bindings = upstreams = None
+    if module == 'overall_synthesis':
+        from synthesis_inputs import sources_from_module, bind_source_modules
+        from synthesis_material import UPSTREAMS, validate_source_material
+        from diagnostic_sources import declared_json
+        modules = config.get('pipeline', {}).get('modules', [])
+        declared = next((m for m in modules if m['id'] == module), None)
+        if declared is None or not isinstance(source_paths, dict) or not source_paths:
+            raise ValueError('Syntheseperspektive benötigt die tatsächliche Quellenauswahl und ihren gespeicherten Modulvertrag.')
+        actual_sources = {label: str(path) for label, path in source_paths.items()}
+        bindings = bind_source_modules(actual_sources, modules, Path.cwd())
+        expected_bindings = bind_source_modules(sources_from_module(declared), modules, Path.cwd())
+        if bindings != expected_bindings:
+            raise ValueError('Synthesequellenauswahl weicht vom gespeicherten Modulvertrag ab. Quellenargumente in der Konfiguration anpassen.')
+        by_id = {m['id']: m for m in modules}
+        upstreams = {}
+        def load_upstream(mid):
+            if mid in upstreams:
+                return
+            declaration = by_id.get(mid)
+            if declaration is None or not declaration.get('enabled', True) or declaration.get('script') != mid + '.py':
+                raise ValueError('Geprüfte Standardvorstufe fehlt für die Syntheseperspektive: ' + mid)
+            for required in UPSTREAMS.get(mid, ()):
+                load_upstream(required)
+            upstreams[mid] = source(declared_json(declaration), mid)
+        for binding in bindings.values():
+            load_upstream(binding['module_id'])
+        sources = {label: upstreams[binding['module_id']] for label, binding in bindings.items()}
+        validate_source_material(material, sources, bindings, upstreams)
     return {'module_id': module, 'mode': mode, 'material': material, 'clusters': clusters,
-            'swot': swot, 'persons': persons, 'comparison': comparison, 'summaries': summaries, 'files': files}
+            'swot': swot, 'persons': persons, 'comparison': comparison, 'summaries': summaries, 'files': files,
+            'source_payloads': sources, 'source_bindings': bindings, 'source_upstreams': upstreams}
 
 
 def finish(prepared, payload, markdown, params, *, llm=None):
@@ -155,10 +200,14 @@ def finish(prepared, payload, markdown, params, *, llm=None):
         if any(file_hash(path) != expected for path, expected in prepared['files'].items()):
             raise ValueError('Eingaben oder Vorstufen wurden während der Analyse verändert; neuen Lauf mit geprüften Daten starten.')
     unchanged()
+    if prepared['mode'] == 'qualitative':
+        # Provenance-only preparation must not activate a frequency perspective.
+        return markdown, payload
     result = execute_perspective(prepared['module_id'], prepared['mode'], prepared['material'], payload, params,
                                  cluster_payload=prepared['clusters'], swot_payload=prepared.get('swot'),
                                  person_payload=prepared.get('persons'), comparison_payload=prepared.get('comparison'),
-                                 summary_payload=prepared.get('summaries'), llm=llm)
+                                 summary_payload=prepared.get('summaries'), source_payloads=prepared.get('source_payloads'),
+                                 source_bindings=prepared.get('source_bindings'), source_upstreams=prepared.get('source_upstreams'), llm=llm)
     unchanged()
     output = deepcopy(payload)
     output['analysis_perspective'] = result

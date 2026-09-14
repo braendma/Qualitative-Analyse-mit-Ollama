@@ -59,6 +59,10 @@ def validate_source_material(material, source_payloads_by_label, bindings, upstr
         elif mid == 'contrast_analysis':
             build_contrast_topics(material, original, upstream_payloads['person_analysis'], upstream_payloads['person_comparison'])
         elif mid == 'relation_analysis':
+            if not isinstance(original.get('selection_provenance'), dict):
+                raise ValueError('Der älteren Zusammenhangsanalyse fehlt der Auswahl- und Herkunftsnachweis. '
+                                 'Einen neuen Lauf einschließlich Zusammenhangsanalyse mit aktivierter Syntheseperspektive erstellen; '
+                                 'die Zusammenhangsanalyse selbst darf qualitativ bleiben.')
             build_relation_topics(material, original, upstream_payloads['clusterer'], upstream_payloads['summarizer'])
         elif mid == 'ambiguity_analysis':
             build_ambiguity_topics(material, original, upstream_payloads['person_analysis'])

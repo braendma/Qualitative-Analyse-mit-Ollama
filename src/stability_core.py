@@ -137,7 +137,8 @@ def analyze_stage_repetitions(segments, module_id, samples):
 
     def project(payload, sample):
         projected = project_stage(module_id, payload, segments=segments,
-                                  upstream_payloads=sample.get('upstream_payloads'))
+                                  upstream_payloads=sample.get('upstream_payloads'),
+                                  source_contract=sample.get('source_contract'))
         projected['status'] = 'available'
         snapshot = make_snapshot(segments, {module_id: projected})
         checked = snapshot['stages'][module_id]

@@ -166,7 +166,7 @@ def select_countable_findings(payload, params, *, llm=None):
     original = _original(payload)
     registry = finding_registry(original)
     settings = {'max_tokens': 4000, 'num_ctx': 32768, **params}
-    begin_phase('preparation', unit='summaries')
+    begin_phase('countability_selection', len(registry['candidates']), unit='summaries')
     binding = {key: registry[key] for key in ('source_fingerprint', 'candidate_registry_fingerprint')}
     items = []
     for candidate in registry['candidates']:

@@ -48,7 +48,7 @@ def unknown_work_lines(module):
 # Status projections contain only built-in states and bounded numeric counters.
 # They are display hints, not evidence of completed or verified analysis outputs.
 SERIES_STATES = {'starting', 'running', 'finishing', 'paused', 'failed', 'unavailable'}
-PROGRESS_PHASES = {'preparation', 'analysis', 'person_reduction', 'comparison',
+PROGRESS_PHASES = {'preparation', 'countability_selection', 'analysis', 'person_reduction', 'comparison',
     'synthesis', 'reduction_level', 'finished', 'cluster_summaries', 'overall_summary',
     'repetitions', 'paused'}
 PROGRESS_UNITS = {'passages', 'rows', 'batches', 'categories', 'persons', 'summaries',

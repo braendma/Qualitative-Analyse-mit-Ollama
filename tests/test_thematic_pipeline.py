@@ -58,7 +58,7 @@ class ThematicPipelineBoundaryTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             modes({'analysis_perspectives':{'swot':'both'}, 'pipeline':{'modules':[{'id':'swot','script':'custom.py'}]}})
         with self.assertRaises(ValueError):
-            modes({'analysis_perspectives':{'overall_synthesis':'both'}, 'implemented_modules':['overall_synthesis']})
+            modes({'analysis_perspectives':{'evidence_audit':'both'}, 'implemented_modules':['evidence_audit']})
 
     def test_default_does_not_require_new_person_receipt(self):
         with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ,clean_environment(),clear=True):
@@ -120,7 +120,7 @@ class ThematicPipelineBoundaryTests(unittest.TestCase):
             cfg=yaml.safe_load((app.project_dir(pid)/'revisions'/project['revision']/'config.yaml').read_text(encoding='utf-8'))
             self.assertEqual(cfg['analysis_perspectives'],opts['analysis_perspectives'])
             self.assertEqual(checked['effort']['analysis_perspectives']['shared_assignment_bases'],1)
-            bad=copy.deepcopy(opts);bad['analysis_perspectives']['overall_synthesis']='both'
+            bad=copy.deepcopy(opts);bad['analysis_perspectives']['evidence_audit']='both'
             with self.assertRaises(ValueError):app.save(pid,bad)
             self.assertEqual(app.project(pid)['revision'],project['revision'])
 

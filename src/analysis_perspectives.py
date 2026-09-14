@@ -21,7 +21,7 @@ _CAPABILITIES = (
     ('contrast_analysis', True, 'Globale Muster im gesamten Material und eindeutig gebundene Gegenfälle innerhalb ihrer Person prüfen. Nenner getrennt halten; unaufgelöste Bezüge und Typenspannungen bleiben qualitativ.'),
     ('relation_analysis', True, 'Vollständige konkrete Relationszuordnung und getrennte Codeüberschneidungen; keine automatische Kausalität oder gemeinsame Passage.'),
     ('ambiguity_analysis', True, 'Beide Positionen und ihre Personenüberschneidung erhalten; Gegenpositionen nicht verrechnen.'),
-    ('overall_synthesis', True, 'Aussagen benötigen eigene Themenzuordnung; transitive Quellen allein sind keine vollständige Nennungshäufigkeit.'),
+    ('overall_synthesis', True, 'Vollständige materialbezogene Synthesebefunde werden vom Modell ausgewählt und unabhängig im gesamten Originalmaterial geprüft. Die Auswahl ist menschlich unbestätigt; Mengen-, Gruppen- und Methodenbehauptungen bleiben Kontext. Quellenzahlen sind keine Personenzahlen.'),
     ('code_verification', False, 'Codierüberprüfung prüft Passung und Alternativen; keine zusätzliche Häufigkeitsgewichtung der Entscheidung.'),
     ('blind_coding', False, 'Unabhängige Codierung ordnet Material zu; Häufigkeiten sollen diese Codierentscheidung nicht vorwegnehmen.'),
     ('coding_agreement', False, 'Codierübereinstimmung besitzt eigene definierte Kennzahlen und keinen zweiten Interpretationsmodus.'),
@@ -115,6 +115,7 @@ def perspective_effort(config, module_ids, *, implemented_modules=()):
             'interpretation_outputs': ['qualitative', 'frequency'] if mode == 'both' else [mode],
             'shared_assignment_bases': 1 if counted else 0,
             'additional_frequency_interpretation_phases': 1 if counted else 0,
+            'additional_countability_selection_phases': 1 if counted and mid == 'overall_synthesis' else 0,
             'additional_assignment_cells': None if counted else 0,
             'additional_model_calls': None if counted else 0})
     counted_rows = [row for row in rows if row['mode'] != 'qualitative']
@@ -122,7 +123,9 @@ def perspective_effort(config, module_ids, *, implemented_modules=()):
             'additional_work_required': bool(counted_rows),
             'shared_assignment_bases': len(counted_rows),
             'additional_frequency_interpretation_phases': len(counted_rows),
+            'additional_countability_selection_phases': sum(row['additional_countability_selection_phases'] for row in rows),
             'additional_model_calls': None if counted_rows else 0,
             'limits': ['Zusätzliche Zuordnungen und Interpretationsanfragen sind erst nach der Modul- und Blockplanung bezifferbar.',
+                       'Die Gesamtsynthese benötigt zusätzlich eine modellseitige Auswahl vollständiger materialbezogener Befunde. Beide Perspektiven teilen diese Auswahl; Zahl der Kandidaten und Reparaturen sind vorab unbekannt.',
                        'Beide Perspektiven teilen je Modul dieselbe geprüfte Zuordnungsbasis; Modellanfragen werden dadurch nicht als doppelt oder kostenfrei unterstellt.',
                        'Diese Angaben betreffen nur Zusatzarbeit der Perspektive im frischen Lauf, nicht den Gesamtaufwand, Restzeit oder Kosten.']}

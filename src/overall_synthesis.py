@@ -11,6 +11,7 @@ import yaml
 
 from overall_synthesis_core import build_overall_synthesis
 from synthesis_inputs import parse_source, resolve_sources
+from thematic_pipeline import prepare, finish
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -50,6 +51,7 @@ def main(argv=None):
     parser.add_argument("--meta-swot-json", default=None)
     parser.add_argument("--comparison-json", default=None)
     parser.add_argument("--contrast-json", default=None)
+    parser.add_argument("--csv", default=None, help="Originalmaterial für die optionale Häufigkeitsperspektive")
 
     parser.add_argument("--out-md", "-o", default="overall_synthesis_v1.md")
     parser.add_argument("--out-json", "-x", default="overall_synthesis_v1.json")
@@ -71,6 +73,7 @@ def main(argv=None):
         "log_thinking": bool(llm_cfg.get("log_thinking", False)),
     }
 
+    prepared = prepare('overall_synthesis', args.config, input_path=args.csv, source_paths=sources)
     md, json_output = build_overall_synthesis(
         source_json_paths=sources,
         ollama_params=ollama_params,
@@ -78,6 +81,7 @@ def main(argv=None):
         context=config.get("context", {}),
     )
 
+    md, json_output = finish(prepared, json_output, md, ollama_params)
     atomic_text(args.out_md, md)
     atomic_json(args.out_json, json_output)
 

@@ -56,6 +56,10 @@ def check_context(config, segments, codebook, modules):
     extra = {mid for mid, mode in thematic_modes(config).items() if mid in enabled and mode != 'qualitative'}
     if extra:
         from thematic_interpretation import SYSTEM as interpretation_system, CORRECTION as interpretation_correction
+        if 'overall_synthesis' in extra:
+            from synthesis_countability import SYSTEM as selection_system, CORRECTION as selection_correction
+            # Only the fixed lower bound is available until synthesis findings exist.
+            record('overall_synthesis', [{'content': selection_system}, {'content': '{}'}, {'content': selection_correction}])
         for mid in extra:
             record(mid, [{'content': interpretation_system}, {'content': '{}'}, {'content': interpretation_correction}])
         for mid in sorted(extra.intersection(FULL_ASSIGNMENT_MODULES)):
@@ -70,6 +74,8 @@ def check_context(config, segments, codebook, modules):
         warnings.append('Zusätzliche Analyseperspektiven benötigen berechnete Themenzuordnungen und Interpretationen. '
                         'Themenzahl und Vergleichsregister sind vorab unbekannt; die Laufzeitprüfung kann deshalb '
                         'weiteren Kontext verlangen. Originaltexte und Zählregister werden dabei nicht gekürzt.')
+        if 'overall_synthesis' in extra:
+            warnings.append('Die Gesamtsynthese klassifiziert zuvor vollständige vorhandene Befunde. Diese zusätzliche Auswahlphase benötigt Modellanfragen; Kandidatenumfang und Reparaturbedarf sind erst zur Laufzeit bekannt. Die feste Vorprüfung ersetzt nicht die Prüfung jedes vollständigen Kandidaten.')
     for module in ('code_verification','blind_coding'):
         if module in maxima and maxima[module]+4*answer+1024>context:
             warnings.append(f'{module}: Für eine längere Antwortreparatur könnte der Kontext zu knapp sein. Mehr Kontext wählen oder das Antwortlimit passend verringern.')

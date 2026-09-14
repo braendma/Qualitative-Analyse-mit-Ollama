@@ -44,7 +44,42 @@ def mapping(value, key):
     return result
 
 
-def _thematic_projection(module_id, payload, segments, upstream_payloads=None):
+def synthesis_contract_bindings(source_contract):
+    """Resolve aliases from the caller's actual configuration, never an artifact."""
+    from synthesis_inputs import sources_from_module, bind_source_modules
+    if not isinstance(source_contract, dict):
+        raise ValueError('Synthesediagnose benötigt den tatsächlichen Quellenvertrag der Konfiguration.')
+    module = source_contract.get('module')
+    modules = source_contract.get('modules')
+    directory = source_contract.get('directory')
+    if (not isinstance(module, dict) or module.get('id') != 'overall_synthesis'
+            or module.get('script') != 'overall_synthesis.py' or not module.get('enabled', True)
+            or not isinstance(modules, list) or not isinstance(directory, (str, Path))
+            or not str(directory).strip()):
+        raise ValueError('Ungültiger tatsächlicher Synthesequellenvertrag.')
+    matches = [item for item in modules if isinstance(item, dict) and item.get('id') == 'overall_synthesis']
+    if len(matches) != 1 or fingerprint(matches[0]) != fingerprint(module):
+        raise ValueError('Synthesemodul stimmt nicht mit der tatsächlichen Konfiguration überein.')
+    bindings = bind_source_modules(sources_from_module(module), modules, directory)
+    from synthesis_material import UPSTREAMS
+    by_id = {item['id']: item for item in modules}
+    checked = set()
+    def check(mid):
+        if mid in checked:
+            return
+        declaration = by_id.get(mid)
+        if (declaration is None or not declaration.get('enabled', True)
+                or declaration.get('script') != mid + '.py'):
+            raise ValueError('Synthesediagnose benötigt eine aktivierte Standardvorstufe: ' + mid)
+        checked.add(mid)
+        for upstream in UPSTREAMS.get(mid, ()):
+            check(upstream)
+    for binding in bindings.values():
+        check(binding['module_id'])
+    return bindings
+
+
+def _thematic_projection(module_id, payload, segments, upstream_payloads=None, source_contract=None):
     """Reproduce metrics from original units; project no matrix/scope as evidence."""
     from thematic_material import build_material
     from thematic_counts import count_topics
@@ -55,7 +90,7 @@ def _thematic_projection(module_id, payload, segments, upstream_payloads=None):
             raise ValueError('Analyseperspektive passt nicht zu Modul, Originalmaterial oder Themenquelle.')
 
     extension = payload['analysis_perspective']
-    require(module_id in ('clusterer', 'summarizer', 'swot', 'meta_swot', 'person_analysis', 'ambiguity_analysis', 'person_comparison', 'contrast_analysis', 'relation_analysis')
+    require(module_id in ('clusterer', 'summarizer', 'swot', 'meta_swot', 'person_analysis', 'ambiguity_analysis', 'person_comparison', 'contrast_analysis', 'relation_analysis', 'overall_synthesis')
             and isinstance(extension, dict))
     upstream_payloads = {} if upstream_payloads is None else upstream_payloads
     require(isinstance(upstream_payloads, dict))
@@ -73,7 +108,17 @@ def _thematic_projection(module_id, payload, segments, upstream_payloads=None):
     material['basis_fingerprint'] = counted.get('basis_fingerprint')
     require(count_topics(material, counted.get('definitions'), counted.get('assignments')) == counted)
     original = {key: value for key, value in payload.items() if key != 'analysis_perspective'}
-    if module_id == 'clusterer':
+    if module_id == 'overall_synthesis':
+        from thematic_synthesis_adapter import build_overall_synthesis_topics
+        bindings = synthesis_contract_bindings(source_contract)
+        require(fingerprint(extension.get('synthesis_source_bindings')) == fingerprint(bindings))
+        require(all(isinstance(upstream_payloads.get(item['module_id']), dict) for item in bindings.values()))
+        sources = {label: upstream_payloads[item['module_id']] for label, item in bindings.items()}
+        prepared = build_overall_synthesis_topics(material, original, sources,
+            extension.get('synthesis_selection'), bindings=bindings, upstream_payloads=upstream_payloads)
+        require(fingerprint(extension.get('synthesis_source_provenance')) == fingerprint(prepared['source_provenance']))
+        require(fingerprint(extension.get('synthesis_checked_modules')) == fingerprint(prepared['checked_source_modules']))
+    elif module_id == 'clusterer':
         prepared = build_cluster_topics(material, original)
     elif module_id == 'swot':
         prepared = build_swot_topics(material, original)
@@ -157,6 +202,11 @@ def _thematic_projection(module_id, payload, segments, upstream_payloads=None):
                  'assignment_review_status': counted['assignment_review_status'],
                  'person_basis': counted['person_basis']}
         add(row['topic_id'], 'counts', 'thematic_counts', json.dumps(value, ensure_ascii=False, sort_keys=True))
+    if module_id == 'overall_synthesis':
+        for decision in prepared['selection']['decisions']:
+            add(decision['candidate_id'], 'countability', 'thematic_selection',
+                json.dumps({**decision, 'selection_origin': 'model_classification',
+                            'human_review_status': 'not_reviewed'}, ensure_ascii=False, sort_keys=True))
     if module_id == 'relation_analysis':
         cooccurrence = prepared['code_cooccurrence']
         require(fingerprint(extension.get('code_cooccurrence')) == fingerprint(cooccurrence))
@@ -175,7 +225,7 @@ def _thematic_projection(module_id, payload, segments, upstream_payloads=None):
     return result
 
 
-def project_stage(module_id, payload, *, segments=None, upstream_payloads=None):
+def project_stage(module_id, payload, *, segments=None, upstream_payloads=None, source_contract=None):
     """Project one validated artifact. No source registers are traversed wholesale."""
     if not isinstance(payload, dict):
         raise ValueError('Diagnosequelle muss ein JSON-Objekt sein.')
@@ -289,7 +339,7 @@ def project_stage(module_id, payload, *, segments=None, upstream_payloads=None):
     else:
         raise ValueError(f'Kein Diagnoseadapter für Modul {module_id}.')
     if 'analysis_perspective' in payload:
-        thematic = _thematic_projection(module_id, payload, segments, upstream_payloads)
+        thematic = _thematic_projection(module_id, payload, segments, upstream_payloads, source_contract)
         for row in out:
             row['comparison_context'] = ['candidate_basis', *row['comparison_context']]
         out.extend(thematic)
@@ -369,7 +419,12 @@ def load_sources(directory, config, *, segments=None):
         if item['status'] != 'available':
             continue
         try:
-            item.update(project_stage(mid, payloads[mid], segments=segments, upstream_payloads=payloads))
+            contract = None
+            if mid == 'overall_synthesis' and 'analysis_perspective' in payloads[mid]:
+                contract = {'module': next(module for module in modules if module['id'] == mid),
+                            'modules': modules, 'directory': directory}
+            item.update(project_stage(mid, payloads[mid], segments=segments, upstream_payloads=payloads,
+                                      source_contract=contract))
         except (OSError, ValueError, TypeError, KeyError, AttributeError, RecursionError) as exc:
             item.update(status='invalid', reason=str(exc))
     return result

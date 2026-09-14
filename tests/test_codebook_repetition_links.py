@@ -121,22 +121,51 @@ class RepetitionLinkIntegrationTests(unittest.TestCase):
     def test_both_series_finish_before_codebook_without_extra_model_runs(self):
         with tempfile.TemporaryDirectory() as tmp:
             w=Workspace(Path(tmp))
-            selected={'clusterer','blind_coding','stability','sensitivity','codebook_diagnostics'}
+            diagnostics={'coverage','information_loss','stability','sensitivity','codebook_diagnostics'}
+            selected={'clusterer','blind_coding',*diagnostics}
             for m in w.config['pipeline']['modules']:m['enabled']=m['id'] in selected
             w.config['diagnostics']={'stability':{'modules':['blind_coding'],'repetitions':2},
                 'sensitivity':{'modules':['blind_coding'],'repetitions':2,'variants':[{'id':'warm','llm':{'temperature':.2}}]}}
             w.save();output=w.root/'runs'
-            done=subprocess.run([sys.executable,str(ROOT/'tests/mock_pipeline.py'),'--config',str(w.path),'--output-dir',str(output)],
+            input_hashes={name:file_hash(w.root/name) for name in ('input.csv','book.csv','base.yaml')}
+            command=[sys.executable,str(ROOT/'tests/mock_pipeline.py'),'--config',str(w.path),'--output-dir',str(output)]
+            trace=w.root/'requests.jsonl'
+            env={**os.environ,'PYTHONUTF8':'1','MOCK_RUNTIME_EVIDENCE':'1','MOCK_TRACE_PATH':str(trace)}
+            done=subprocess.run(command,
                 capture_output=True,text=True,encoding='utf-8',timeout=70,
-                env={**os.environ,'PYTHONUTF8':'1','MOCK_RUNTIME_EVIDENCE':'1'})
+                env=env)
             self.assertEqual(done.returncode,0,done.stderr[-3000:])
             run=next(output.iterdir());result=json.loads((run/'codebook_diagnostics.json').read_text(encoding='utf-8'))
             self.assertEqual(result['processing_status'],'completed')
             for kind in ('stability','sensitivity'):self.assertEqual(result['repetition_diagnostics'][kind]['status'],'available')
             manifest=json.loads((run/'workflow_manifest.json').read_text(encoding='utf-8'))
+            self.assertEqual(manifest['status'],'success')
+            self.assertEqual(set(manifest['completed_steps']),selected)
             self.assertEqual(manifest['completed_steps'][-1],'codebook_diagnostics')
             self.assertEqual(result['model_calls'],0)
-            self.assertIn('Hinweise aus kontrollierten Wiederholungen',(run/'gesamtbericht.html').read_text(encoding='utf-8'))
+            html=(run/'gesamtbericht.html').read_text(encoding='utf-8')
+            self.assertIn('Hinweise aus kontrollierten Wiederholungen',html)
+            for mid in diagnostics:
+                module=w.module(mid)
+                self.assertEqual(manifest['module_status'][mid],'success')
+                for name in module['outputs']:
+                    self.assertEqual(file_hash(run/name),manifest['output_hashes'][name])
+                    if name.endswith('.json'):
+                        self.assertEqual(json.loads((run/name).read_text(encoding='utf-8'))['processing_status'],'completed')
+                self.assertIn(module['report']['title'],html)
+                self.assertIn(module['report']['title'],(run/'gesamtbericht.md').read_text(encoding='utf-8'))
+            child_manifests=list(run.glob('_*repetitions/*/*/workflow_manifest.json'))
+            self.assertEqual(len(child_manifests),6)
+            self.assertEqual(len({json.loads(p.read_text(encoding='utf-8'))['run_id'] for p in child_manifests}),6)
+            self.assertTrue((run/'_stability_repetitions').is_dir())
+            self.assertTrue((run/'_sensitivity_repetitions').is_dir())
+            requests=trace.read_bytes()
+            resumed=subprocess.run(command+['--resume',str(run)],capture_output=True,text=True,
+                encoding='utf-8',timeout=70,env=env)
+            self.assertEqual(resumed.returncode,0,resumed.stderr[-3000:])
+            self.assertEqual(trace.read_bytes(),requests,'Resume repeated completed model work')
+            self.assertEqual({name:file_hash(w.root/name) for name in input_hashes},input_hashes)
+            self.assertEqual(json.loads((run/'workflow_manifest.json').read_text(encoding='utf-8'))['status'],'success')
 
 
 if __name__=='__main__':unittest.main()

@@ -306,10 +306,10 @@ in diesem Fall ist `total_module_executions: null`. Keine Zeit-/Preisprognose.
 ## Analyseperspektiven je Modul
 
 Der aktuelle Entwicklungsstand erlaubt zusätzliche Perspektiven für die
-neun unveränderten Standardmodule `clusterer`, `summarizer`, `swot`,
-`meta_swot`, `person_analysis`, `person_comparison`, `contrast_analysis`, `relation_analysis` und `ambiguity_analysis`. Die Modi werden unabhängig
+zehn unveränderten Standardmodule `clusterer`, `summarizer`, `swot`,
+`meta_swot`, `person_analysis`, `person_comparison`, `contrast_analysis`, `relation_analysis`, `ambiguity_analysis` und `overall_synthesis`. Die Modi werden unabhängig
 je Modul gewählt; die folgende Auswahl ist ein Beispiel, keine automatische
-Aktivierung aller neun Module:
+Aktivierung aller zehn Module:
 
 ```yaml
 analysis_perspectives:
@@ -322,6 +322,7 @@ analysis_perspectives:
   contrast_analysis: both
   relation_analysis: both
   ambiguity_analysis: both
+  overall_synthesis: both
 ```
 
 Dieser optionale Abschnitt ergänzt eine vorhandene Konfiguration; er aktiviert
@@ -338,13 +339,26 @@ dieselbe Zuordnung. Abgewählte Module behalten gespeicherte Modi.
 
 Ein fehlender oder `null` gesetzter gesamter Abschnitt bedeutet qualitativ.
 Null-Einzelwerte, Listen, unbekannte Modi und unbekannte Modul-IDs werden
-abgewiesen. Das übrige geeignete Modul
-`overall_synthesis` bleibt für
-`frequency`/`both` gesperrt. Seine methodische Eignung bedeutet keine
-Ausführungsfreigabe. Codiervergleich, Review und Diagnosen erhalten
+abgewiesen. Die zehn genannten unveränderten Standardmodule sind integriert. Codiervergleich, Review und Diagnosen erhalten
 keine künstlichen Interpretationsmodi. Eigene Skripte können keine Freigabe durch
 Wiederverwendung einer Standard-ID erlangen. Alle gespeicherten Einträge werden
 geprüft, auch bei gerade abgewählten Modulen; ungültige Werte bewusst korrigieren.
+
+Bei `overall_synthesis: frequency` oder `both` kommt vor der neuen vollständigen
+Originalmatrix eine modellseitige Auswahl vollständiger materialbezogener
+Synthesebefunde hinzu. `both` teilt Auswahl und Matrix; andere Quellenmodule
+werden dadurch nicht automatisch auf Häufigkeiten umgestellt. Die Auswahl ist
+menschlich unbestätigt und mit Begründung sichtbar. Mengen-, Gruppen-, Methoden-
+und allgemeine Beziehungsbehauptungen sowie unklare Aussagen bleiben Kontext;
+es werden keine Teilbehauptungen herausgelöst. Quellen und deren vollständiger
+Verdichtungsweg müssen zum Originalmaterial und zu deklarierten Dateien des
+gleichen Laufs passen. Alte Synthesen ohne `source_projection_fingerprints`
+benötigen dafür einen neuen Lauf mit den Vorstufen. Die zusätzliche Auswahlphase
+steht als `additional_countability_selection_phases` in der Aufwandvorschau;
+Kandidatenzahl, Anfragen und mögliche API-Kosten sind vorab unbekannt. Das
+Aufrufbudget der hierarchischen Verdichtung begrenzt diese Zusatzphasen nicht.
+Vollständige Kandidaten und Vergleichsregister werden zur Laufzeit auf Kontext
+geprüft und nicht still gekürzt. Details: [Handbuch](HANDBUCH.md#analyseperspektiven-je-modul).
 
 Für `frequency`/`both` muss `person_identity` einen zur unveränderten CSV passenden
 Bestätigungsnachweis enthalten. Die Oberfläche erstellt ihn nach Prüfung und
@@ -404,8 +418,8 @@ oder beschädigte Vorstufen liefern keine vermeintlich gültigen Nullwerte.
 Der Vergleichsraum der Häufigkeitsinterpretation ist fachlich festgelegt, kein
 zusätzliches Feld in der YAML: Personen- und Ambivalenzanalyse übergeben sämtliche
 Themen desselben vollständigen Einzelfalls (`comparison_basis: same_person_scope`),
-einschließlich aller A-/B-Seiten. Cluster, Zusammenfassungen, SWOT, Meta-SWOT und Personenvergleich
-verwenden sämtliche gezählten Modulthemen (`all_fixed_topics`). Das Anfrageobjekt benennt
+einschließlich aller A-/B-Seiten. Cluster, Zusammenfassungen, SWOT, Meta-SWOT, Personenvergleich, Zusammenhangsanalyse
+und Gesamtsynthese verwenden sämtliche gezählten Modulthemen (`all_fixed_topics`). Das Anfrageobjekt benennt
 `module_topic_count` und `comparison_topic_count` getrennt. Themen anderer Personen
 werden nicht in die Einzelfallinterpretation eingeschleust; alle Fälle und ihre
 Zähler bleiben im Gesamtergebnis. Auch das vollständige Einzelfallregister kann

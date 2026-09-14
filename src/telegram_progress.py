@@ -15,6 +15,7 @@ UNITS={'passages':'Passagen','rows':'Codierzeilen','batches':'Prüfblöcke',
        'categories':'Kategorien','persons':'Personen','summaries':'Zusammenfassungen','dimensions':'SWOT-Dimensionen',
        'pairs':'Paare','steps':'Schritte','repetitions':'Wiederholungen'}
 PHASES={'preparation':'Vorbereitung','analysis':'Analyse','person_reduction':'Vorbereitung je Person',
+        'countability_selection':'Synthesebefunde auf Zählbarkeit prüfen (Modellvorschlag)',
         'comparison':'Vergleich','synthesis':'Abschließende Synthese','reduction_level':'Verdichtungsebene',
         'finished':'Abgeschlossen','cluster_summaries':'Clusterzusammenfassungen','overall_summary':'Gesamtzusammenfassung',
         'repetitions':'Kontrollierte Wiederholungen','paused':'Pausiert'}
@@ -67,7 +68,8 @@ def _series_lines(current, now):
         lines.extend(phase_lines(detail, PHASES))
         done, total = counter(detail.get('completed')), counter(detail.get('total'))
         if done is not None and total and done <= total:
-            lines.append(f'{done}/{total} {UNITS.get(detail.get("unit"), "Einheiten")} in dieser Phase')
+            unit = 'Synthesebefunde' if detail.get('phase') == 'countability_selection' else UNITS.get(detail.get('unit'), 'Einheiten')
+            lines.append(f'{done}/{total} {unit} in dieser Phase')
         elif done == 0 and total == 0:
             lines.append('Keine Arbeitseinheiten in dieser Phase.')
         else:
@@ -96,6 +98,7 @@ def format_progress(completed,total,detail=None,now=None):
         unit=UNITS.get(unit,'Einheiten') if isinstance(unit,str) else 'Einheiten'
         lines.extend(['',label])
         phase=detail.get('phase')
+        if phase == 'countability_selection':unit='Synthesebefunde'
         lines.extend(phase_lines(detail,PHASES))
         done,amount=counter(detail.get('completed')),counter(detail.get('total'))
         if done is not None and amount and done<=amount:

@@ -78,12 +78,20 @@ def catalog(config, modules):
             from thematic_assignment import SYSTEM as assignment_system
             from thematic_pipeline import FULL_ASSIGNMENT_MODULES
             for target in extra_targets:
+                if target == 'overall_synthesis':
+                    from synthesis_countability import SYSTEM as selection_system, CORRECTION as selection_correction
+                    templates.append({'key':target+' / countability_selection', 'system':selection_system,
+                                      'user':'Zur Laufzeit: vollständiger vorhandener Synthesebefund, Herkunftsreferenzen und Bindungsfingerprints. Keine Rohmaterialtexte; keine Umformulierung des Befunds.', 'placeholders':[]})
+                    templates.append({'key':target+' / countability_selection_repair', 'system':selection_correction,
+                                      'user':'Bei ungültiger Antwort: derselbe vollständige Kandidat und dasselbe Antwortschema, höchstens eine Korrektur.', 'placeholders':[]})
                 if target in FULL_ASSIGNMENT_MODULES:
                     templates.append({'key':target+' / thematic_assignment', 'system':assignment_system,
                                       'user':'Zur Laufzeit: feste Themen, vollständige Originaleinheiten und angeforderte Matrixzellen.', 'placeholders':[]})
                 templates.append({'key':target+' / frequency_interpretation', 'system':frequency_system,
                                   'user':'Zur Laufzeit: Thema, qualitativer Ausgangsbefund, berechnete Kennzahlen und Gegenpositionsmaterial.', 'placeholders':[]})
             note += ' Zusätzliche Perspektiven verwenden diese festen Programmanweisungen; beide Perspektiven teilen eine Zuordnungsmatrix.'
+            if 'overall_synthesis' in extra_targets:
+                note += ' Die Gesamtsynthese teilt zusätzlich eine modellseitige Auswahlphase. Diese Klassifikation ist menschlich unbestätigt; Quellenreferenzen werden nicht als Nennungen gezählt.'
         result.append({'id':mid,'name':module['name'],'templates':templates,'note':note})
     # Referenced shared strings are shown separately and never expanded into research material.
     referenced=set(p for m in result for t in m['templates'] for p in t['placeholders'])

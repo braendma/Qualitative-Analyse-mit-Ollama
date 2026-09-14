@@ -181,7 +181,7 @@ nicht allgemein als erfolgreiche oder leere Ergebnisse umgedeutet.
 
 Der Entwicklungsstand kann Wiederholungen mit identischen konfigurierten
 Bedingungen planen und über die interne API `execute_repetitions` seriell an den
-vorhandenen Runner übergeben. Eine auswählbare UI-Diagnose ist noch nicht enthalten. Die
+vorhandenen Runner übergeben. Stabilität und Sensitivität verwenden diese Ausführung auch als optionale UI-/CLI-Diagnosen. Die
 Planung verwendet dieselbe Modulsortierung und denselben Schutz vor gespeicherten
 Schlüsselwerten wie die bestehende Anwendung. Sie lehnt rekursive Diagnosen,
 gemeinsame Checkpointordner und Ausgabeziele außerhalb eines Unterlaufs ab.

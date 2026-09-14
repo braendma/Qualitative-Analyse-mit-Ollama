@@ -14,11 +14,12 @@ from thematic_interpretation import interpret_counts, comparison_basis
 
 
 ADAPTER_MODULES = ('clusterer', 'summarizer', 'swot', 'meta_swot',
-                   'person_analysis', 'ambiguity_analysis', 'person_comparison', 'contrast_analysis', 'relation_analysis')
+                   'person_analysis', 'ambiguity_analysis', 'person_comparison', 'contrast_analysis', 'relation_analysis', 'overall_synthesis')
 
 
 def execute_perspective(module, mode, material, payload, params, *, cluster_payload=None,
-                        swot_payload=None, person_payload=None, comparison_payload=None, summary_payload=None, llm=None):
+                        swot_payload=None, person_payload=None, comparison_payload=None, summary_payload=None,
+                        source_payloads=None, source_bindings=None, source_upstreams=None, llm=None):
     """Build one shared matrix and named interpretations; leave inputs untouched.
 
 This is an internal adapter boundary, not a user-configurable capability bypass.
@@ -50,6 +51,19 @@ The qualitative default has no new material, model or output requirements.
     elif module == 'relation_analysis':
         from thematic_relation_adapter import build_relation_topics
         prepared = build_relation_topics(material, payload, cluster_payload, summary_payload)
+    elif module == 'overall_synthesis':
+        from synthesis_material import validate_source_material
+        from synthesis_provenance import validate_synthesis_provenance
+        from synthesis_countability import select_countable_findings
+        from thematic_synthesis_adapter import build_overall_synthesis_topics
+        if 'source_projection_fingerprints' not in payload:
+            raise ValueError('Ältere Synthese ohne Quellinhaltsnachweis: für die Häufigkeitsperspektive neuen Lauf erstellen.')
+        # No classification call may precede complete original-source validation.
+        validate_source_material(material, source_payloads, source_bindings, source_upstreams)
+        validate_synthesis_provenance(payload, source_payloads)
+        selection = select_countable_findings(payload, params, llm=llm)
+        prepared = build_overall_synthesis_topics(material, payload, source_payloads, selection,
+                                                 bindings=source_bindings, upstream_payloads=source_upstreams)
     else:
         from thematic_person_adapters import build_ambiguity_topics
         prepared = build_ambiguity_topics(material, payload, person_payload)
@@ -83,6 +97,11 @@ The qualitative default has no new material, model or output requirements.
     }
     if module == 'relation_analysis':
         result['code_cooccurrence'] = deepcopy(prepared['code_cooccurrence'])
+    if module == 'overall_synthesis':
+        result.update(synthesis_selection=deepcopy(prepared['selection']),
+                      synthesis_source_bindings=deepcopy(source_bindings),
+                      synthesis_source_provenance=deepcopy(prepared['source_provenance']),
+                      synthesis_checked_modules=deepcopy(prepared['checked_source_modules']))
     return result
 
 
@@ -97,6 +116,11 @@ def perspective_markdown(result):
     qualitative = {r['topic_id']: r for r in outputs.get('qualitative', [])}
     lines = ['\n\n## Häufigkeitsinformierte Analyseperspektive\n', escape(result['methodological_note']),
              '\nDie folgenden Zahlen werden aus den Zuordnungen berechnet. Die Interpretation darunter ist ein Modellvorschlag.']
+    if result['module_id'] == 'overall_synthesis':
+        context = result['unassigned_context']
+        lines.append(f"\nAuswahl: {context['selected_count']} von {context['candidate_count']} vollständigen Synthesebefunden "
+                     'wurden vom Modell als unmittelbar materialbezogen eingestuft. '
+                     'Nicht ausgewählte Befunde bleiben unten mit Begründung erhalten; sie sind keine nachgewiesenen Nullnennungen.')
     if result.get('interpretation_comparison_basis') == 'same_person_scope':
         lines.append('\nDie Interpretation vergleicht sämtliche festen Themen innerhalb derselben Einzelperson. '
                      'Themen anderer Personen sind kein Teil dieses Vergleichs; ein Personenvergleich ist eine eigene Analyse.')
@@ -132,6 +156,12 @@ def perspective_markdown(result):
                          'Materialbreite innerhalb dieses Falles; eine Personenquote von 1/1 wäre keine '
                          'Mehrheit in der Untersuchungsgruppe.')
         link = result['source_links'][tid]
+        if result['module_id'] == 'overall_synthesis':
+            lines += ['\n**Auswahl dieses Befunds: Modellvorschlag, nicht menschlich bestätigt**\n',
+                      escape(link['classification_reason'])]
+            labels = sorted({path['source'] for path in link['verified_source_paths']})
+            lines.append('\nAnalytische Herkunft: ' + ', '.join(escape(label) for label in labels) +
+                         '. Diese Quellenbezeichnungen sind keine Belegzitate oder Personenzahlen.')
         if link.get('counting_note'):
             lines.append('\n' + escape(link['counting_note']))
         if result['module_id'] == 'contrast_analysis':
@@ -167,6 +197,24 @@ def perspective_markdown(result):
             for item in result['unassigned_context']['records']:
                 lines.append(escape(reasons.get(item['reason'], item['reason'])) + ': ' +
                              escape(json.dumps(item['record'], ensure_ascii=False, sort_keys=True)))
+        if result['module_id'] == 'overall_synthesis':
+            classes = {'quantity_or_prevalence': 'Mengen- oder Häufigkeitsbehauptung',
+                       'group_comparison': 'Personen- oder Gruppenvergleich', 'method_or_source': 'Methoden- oder Quellenaussage',
+                       'relational_or_causal': 'Übergreifende Beziehungs- oder Kausalbehauptung',
+                       'mixed_or_unclear': 'Gemischte oder unklare Aussage'}
+            reasons = {'incomplete_candidate': 'Unvollständig definierter Befund',
+                       'methodical_context': 'Methodische Einordnung', 'composed_summary_context': 'Zusammengesetzte Gesamtverdichtung; nicht erneut gezählt'}
+            lines.append('\n### Nicht thematisch gezählte Synthesebefunde\n')
+            for item in result['unassigned_context']['records']:
+                record = item['original_record']
+                text = (item['definition'] if isinstance(record, dict) else record)
+                if not text.strip():
+                    continue
+                classification = item.get('classification')
+                title = classes.get(classification, reasons.get(item['reason'], 'Qualitativer Kontext'))
+                lines += ['\n**' + escape(title) + '**\n', escape(text)]
+                if classification:
+                    lines.append('Modellentscheidung, nicht menschlich bestätigt: ' + escape(item['reason']))
     if result['module_id'] == 'relation_analysis':
         from relation_cooccurrence import code_path_cooccurrences_markdown
         lines.append('\nDie folgenden Codeüberschneidungen sind eine getrennte Berechnung vorhandener '

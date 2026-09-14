@@ -110,3 +110,27 @@ test('verified effort displays shared bases without inventing a number of model 
  app.requests.find(r=>r.url.includes('/api/save')).reply({segments:1,persons:1,codes:1,modules:[],effort:{main_module_executions:1,additional_module_executions:0,total_module_executions:1,series:[],modules:[],unplanned_child_modules:[],analysis_perspectives:{additional_work_required:true,shared_assignment_bases:1,additional_frequency_interpretation_phases:1,additional_model_calls:null}}});await pending;
  assert.match(app.read(app.node('validation-result')),/1 gemeinsame Zählbasis/);assert.match(app.read(app.node('validation-result')),/zusätzlichen Modellanfragen ist vorab nicht verlässlich bekannt/);
 });
+
+test('synthesis opt-in keeps one selection phase visible and unconfirmed',async()=>{
+ const app=setup();load(app,[moduleRow('overall_synthesis')],{modules:['overall_synthesis'],analysis_perspectives:{overall_synthesis:'both'}});
+ assert.equal(app.selectors()[0].value,'both');assert.equal(snapshot(app).overall_synthesis,'both');
+ app.run('updatePerspectivePlan(new Set(["overall_synthesis"]))');
+ assert.match(app.read(app.node('perspective-status')),/menschlich unbestätigte Befundauswahl/);
+ const pending=app.run("saveAndValidate('first')");await settle();
+ app.requests.find(r=>r.url.includes('/api/save')).reply({segments:1,persons:1,codes:1,modules:[],effort:{main_module_executions:1,additional_module_executions:0,total_module_executions:1,series:[],modules:[],unplanned_child_modules:[],analysis_perspectives:{additional_work_required:true,shared_assignment_bases:1,additional_frequency_interpretation_phases:1,additional_countability_selection_phases:1,additional_model_calls:null}}});await pending;
+ assert.match(app.read(app.node('validation-result')),/1 zusätzliche Auswahlphase/);
+ const html=fs.readFileSync(path.join(__dirname,'../src/local_app.html'),'utf8');
+ assert.match(html,/Quellenzahlen sind keine Personenzahlen/);
+ assert.match(html,/nicht still umformuliert/);
+});
+
+test('synthesis classification progress survives direct and nested status rendering',()=>{
+ const app=setup();
+ app.run("renderProgressDetails(document.getElementById('direct'), {module:'overall_synthesis',phase:'countability_selection',unit:'summaries',completed:2,total:5},'running','Synthese')");
+ app.run("renderProgressDetails(document.getElementById('nested'), {module:'stability',phase:'repetitions',unit:'repetitions',completed:0,total:2,series_current:{state:'running',module:'overall_synthesis',detail:{phase:'countability_selection',unit:'summaries',completed:2,total:5,private_text:'SYNTHETIC_HIDDEN'}}},'running','Serie')");
+ for(const id of ['direct','nested']){
+   const text=app.read(app.node(id));assert.match(text,/Synthesebefunde auf Zählbarkeit prüfen \(Modellvorschlag\)/);
+   assert.match(text,/2 von 5 Synthesebefunde/);assert.match(text,/Arbeitseinheiten dieser Phase, nicht auf die benötigte Zeit/);
+   assert.doesNotMatch(text,/SYNTHETIC_HIDDEN/);
+ }
+});

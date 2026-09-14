@@ -7,7 +7,7 @@ import re
 from coding_validation_common import load_codebook, load_segments
 from diagnostic_series import (_check_plan, _confirmed_supervision, _identity, _inside,
                                _read_json, _runner, _sample_run, _sensitivity_records)
-from diagnostic_sources import STAGES, load_declared_artifact
+from diagnostic_sources import STAGES, load_declared_artifact, synthesis_contract_bindings
 from runtime_evidence import _canonical, _name
 from runtime_support import exclusive_file_lock, file_hash, fingerprint
 from failure_help import child_failure_guidance
@@ -22,6 +22,20 @@ def _thematic_upstreams(run, module_id, payload, by_id, manifest):
                 'person_comparison': ('person_analysis',),
                 'contrast_analysis': ('person_analysis', 'person_comparison'),
                 'relation_analysis': ('clusterer', 'summarizer')}.get(module_id, ())
+    if module_id == 'overall_synthesis':
+        from synthesis_material import UPSTREAMS
+        contract = {'module': by_id.get(module_id), 'modules': list(by_id.values()), 'directory': run}
+        bindings = synthesis_contract_bindings(contract)
+        required = set()
+        def include(mid):
+            if mid in required:
+                return
+            required.add(mid)
+            for upstream in UPSTREAMS.get(mid, ()):
+                include(upstream)
+        for binding in bindings.values():
+            include(binding['module_id'])
+        required = sorted(required)
     result = {}
     for mid in required:
         if mid not in by_id:
@@ -192,6 +206,9 @@ def _load_series(directory, *, kind):
                     upstreams = _thematic_upstreams(run, mid, item['payload'], by_id, manifest)
                     if upstreams:
                         item['upstream_payloads'] = upstreams
+                    if mid == 'overall_synthesis' and 'analysis_perspective' in item['payload']:
+                        item['source_contract'] = {'module': by_id[mid], 'modules': list(by_id.values()),
+                                                   'directory': run}
                 samples[mid].append(item)
         if any(len(digests) > 1 for digests in model_digests.values()):
             raise ValueError('Verschiedene lokale Modellgewichte: keine gemeinsame Stabilitätsbewertung.')
