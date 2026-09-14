@@ -40,6 +40,11 @@ class ThematicCaseProjectionTests(unittest.TestCase):
     def fixture(self,module,mode='both',weighted_upstream=False):
         if module=='meta_swot':
             material,source,payload=meta_fixture(); upstream={'swot':source}; kwargs={'swot_payload':source}
+        elif module=='relation_analysis':
+            from test_thematic_relation_adapter import relation_fixture
+            material,clusters,summaries,payload=relation_fixture()
+            upstream={'clusterer':clusters,'summarizer':summaries}
+            kwargs={'cluster_payload':clusters,'summary_payload':summaries}
         elif module=='contrast_analysis':
             from test_thematic_contrast_adapter import contrast_fixture
             material,persons,comparison,payload=contrast_fixture()
@@ -56,14 +61,15 @@ class ThematicCaseProjectionTests(unittest.TestCase):
         if weighted_upstream:
             for mid,source in upstream.items():
                 source['analysis_perspective']=execute_perspective(mid,'both',material,source,self.params,llm=SyntheticBackend(),
-                    **({'person_payload':upstream['person_analysis']} if mid=='person_comparison' else {}))
+                    **({'person_payload':upstream['person_analysis']} if mid=='person_comparison' else
+                       {'cluster_payload':upstream['clusterer']} if mid=='summarizer' else {}))
         extension=execute_perspective(module,mode,material,payload,self.params,llm=SyntheticBackend(),**kwargs)
         return material,{**payload,'analysis_perspective':extension},upstream
 
     def test_comparison_basis_must_match_actual_module_and_is_required_for_new_case_results(self):
-        for module in ('meta_swot','person_analysis','ambiguity_analysis','person_comparison','contrast_analysis'):
+        for module in ('meta_swot','person_analysis','ambiguity_analysis','person_comparison','contrast_analysis','relation_analysis'):
             material,payload,upstream=self.fixture(module)
-            expected='contrast_scoped' if module=='contrast_analysis' else 'all_fixed_topics' if module in ('meta_swot','person_comparison') else 'same_person_scope'
+            expected='contrast_scoped' if module=='contrast_analysis' else 'all_fixed_topics' if module in ('meta_swot','person_comparison','relation_analysis') else 'same_person_scope'
             self.assertEqual(payload['analysis_perspective']['interpretation_comparison_basis'],expected)
             for wrong in (None,'wrong','all_fixed_topics' if expected=='same_person_scope' else 'same_person_scope'):
                 value=copy.deepcopy(payload)
@@ -86,8 +92,8 @@ class ThematicCaseProjectionTests(unittest.TestCase):
             current['analysis_perspective']['interpretation_comparison_basis']='same_person_scope'
             with self.assertRaises(ValueError):project_stage(module,current,segments=original_segments(material))
 
-    def test_all_three_project_named_interpretations_and_recomputed_counts(self):
-        for module in ('meta_swot','person_analysis','ambiguity_analysis','person_comparison','contrast_analysis'):
+    def test_all_extended_modules_project_named_interpretations_and_recomputed_counts(self):
+        for module in ('meta_swot','person_analysis','ambiguity_analysis','person_comparison','contrast_analysis','relation_analysis'):
             for mode in ('frequency','both'):
                 material,payload,upstream=self.fixture(module,mode)
                 before=copy.deepcopy((material,payload,upstream))
@@ -95,30 +101,49 @@ class ThematicCaseProjectionTests(unittest.TestCase):
                 thematic=[row for row in stage['records'] if row['scope']=='thematic_result']
                 self.assertTrue(thematic)
                 self.assertEqual({r['comparison_context'][-1] for r in thematic},
-                                 {'frequency','counts'} | ({'qualitative'} if mode=='both' else set()))
+                                 {'frequency','counts'} | ({'qualitative'} if mode=='both' else set())
+                                 | ({'code_cooccurrence'} if module=='relation_analysis' else set()))
                 for row in thematic:
                     self.assertEqual(row['segment_ids'],[])
                     self.assertEqual(row['persons'],[])
                     self.assertNotIn('unit_ids',row['text'])
-                    self.assertNotIn('assignments',row['text'])
+                    self.assertNotIn('"assignments":',row['text'])
                 self.assertEqual(before,(material,payload,upstream))
 
+    def test_relation_code_cooccurrence_cannot_be_replaced_by_semantic_counts(self):
+        material,payload,upstream=self.fixture('relation_analysis')
+        from relation_cooccurrence import count_code_path_cooccurrences
+        self.assertEqual(payload['analysis_perspective']['code_cooccurrence'],count_code_path_cooccurrences(material))
+        baseline=project_stage('relation_analysis',payload,segments=original_segments(material),upstream_payloads=upstream)
+        self.assertTrue(any(row['kind']=='thematic_counts' for row in baseline['records']))
+        code_records=[row for row in baseline['records'] if row['kind']=='code_cooccurrence_counts']
+        self.assertEqual(len(code_records),1+len(payload['analysis_perspective']['code_cooccurrence']['pairs']))
+        self.assertTrue(all(row['comparison_context'][-1]=='code_cooccurrence' for row in code_records))
+        for change in ('missing','person_count','passage_count'):
+            wrong=copy.deepcopy(payload)
+            if change=='missing':wrong['analysis_perspective'].pop('code_cooccurrence')
+            elif change=='person_count':wrong['analysis_perspective']['code_cooccurrence']['pairs'][0]['persons']['intersection']['count']=999
+            else:wrong['analysis_perspective']['code_cooccurrence']['pairs'][0]['passages']['intersection']['exact_passage_count']=999
+            with self.subTest(change=change),self.assertRaises(ValueError):
+                project_stage('relation_analysis',wrong,segments=original_segments(material),upstream_payloads=upstream)
+
     def test_missing_original_sources_cannot_be_rebuilt_from_selected_registry(self):
-        for module in ('meta_swot','ambiguity_analysis','person_comparison','contrast_analysis'):
+        for module in ('meta_swot','ambiguity_analysis','person_comparison','contrast_analysis','relation_analysis'):
             material,payload,_=self.fixture(module)
             with self.subTest(module=module),self.assertRaises(ValueError):
                 project_stage(module,payload,segments=original_segments(material))
 
     def test_changed_upstream_text_and_person_scopes_are_rejected(self):
-        for module in ('meta_swot','ambiguity_analysis','person_comparison','contrast_analysis'):
+        for module in ('meta_swot','ambiguity_analysis','person_comparison','contrast_analysis','relation_analysis'):
             material,payload,upstream=self.fixture(module)
             if module=='meta_swot':upstream['swot']['swot']['A']['Chancen'][0]['analyse']='Changed original'
+            elif module=='relation_analysis':upstream['summarizer']['cluster_summaries'][0]['summary']='Changed original summary'
             else:upstream['person_analysis']['persons']['P01']['segment_ids'].pop()
             with self.subTest(module=module),self.assertRaises(ValueError):
                 project_stage(module,payload,segments=original_segments(material),upstream_payloads=upstream)
 
     def test_weighted_upstream_fields_do_not_replace_original_candidate_basis(self):
-        for module in ('meta_swot','ambiguity_analysis','person_comparison','contrast_analysis'):
+        for module in ('meta_swot','ambiguity_analysis','person_comparison','contrast_analysis','relation_analysis'):
             material,payload,upstream=self.fixture(module,weighted_upstream=True)
             baseline=project_stage(module,payload,segments=original_segments(material),upstream_payloads=upstream)
             for source in upstream.values():
@@ -127,7 +152,7 @@ class ThematicCaseProjectionTests(unittest.TestCase):
             self.assertEqual(baseline,again)
 
     def test_two_pass_loading_is_independent_of_declared_module_order(self):
-        for module in ('meta_swot','ambiguity_analysis','person_comparison','contrast_analysis'):
+        for module in ('meta_swot','ambiguity_analysis','person_comparison','contrast_analysis','relation_analysis'):
             material,payload,upstream=self.fixture(module,weighted_upstream=True)
             with tempfile.TemporaryDirectory() as tmp:
                 root=Path(tmp); modules=[]; hashes={}
@@ -145,7 +170,7 @@ class ThematicCaseProjectionTests(unittest.TestCase):
                 self.assertTrue(all(r['valid'] for stage in snap['stages'].values() for r in stage['records']))
 
     def test_child_run_manifest_hash_and_completion_are_required_for_upstream(self):
-        for module in ('meta_swot','ambiguity_analysis','person_comparison','contrast_analysis'):
+        for module in ('meta_swot','ambiguity_analysis','person_comparison','contrast_analysis','relation_analysis'):
             material,payload,upstream=self.fixture(module)
             mid=next(iter(upstream));source=upstream[mid]
             with tempfile.TemporaryDirectory() as tmp:
@@ -183,7 +208,7 @@ class ThematicCaseProjectionTests(unittest.TestCase):
             self.assertEqual(result['meta_swot']['records'],[])
 
     def test_stability_uses_each_samples_own_original_sources(self):
-        for module in ('meta_swot','person_analysis','ambiguity_analysis','person_comparison','contrast_analysis'):
+        for module in ('meta_swot','person_analysis','ambiguity_analysis','person_comparison','contrast_analysis','relation_analysis'):
             material,payload,upstream=self.fixture(module)
             changed=copy.deepcopy(payload)
             changed['analysis_perspective']['interpretations']['frequency'][0]['interpretation']='Different frequency text'

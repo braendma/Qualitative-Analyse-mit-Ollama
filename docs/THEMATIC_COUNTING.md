@@ -1,13 +1,13 @@
 # Thematische Zählung – Entwicklervertrag des gemeinsamen Kerns
 
-**Entwicklungsstand S13g:** Clusteranalyse (`clusterer`), Clusterzusammenfassungen
+**Entwicklungsstand S13h2:** Clusteranalyse (`clusterer`), Clusterzusammenfassungen
 (`summarizer`), SWOT (`swot`), Meta-SWOT (`meta_swot`), Personenanalyse
 (`person_analysis`), Personenvergleich (`person_comparison`), Kontrastanalyse
-(`contrast_analysis`) und Ambivalenzanalyse (`ambiguity_analysis`) sind über ihre regulären Module in
+(`contrast_analysis`), Zusammenhangsanalyse (`relation_analysis`) und Ambivalenzanalyse (`ambiguity_analysis`) sind über ihre regulären Module in
 Workflow-CLI und Oberfläche mit den Perspektiven `qualitative`, `frequency` und
 `both` verbunden. Die Auswahl gilt unabhängig je Modul; fehlende Einstellungen
-bleiben qualitativ. Die zwei weiteren geeigneten Module
-Zusammenhangsanalyse und Gesamtsynthese haben noch keine
+bleiben qualitativ. Das weitere geeignete Modul
+Gesamtsynthese hat noch keine
 zusätzlichen Perspektiven. Dies beschreibt den aktuellen Entwicklungsstand, keine neue
 veröffentlichte Version. Der gemeinsame Kern verbindet vollständige
 Themenzuordnung, deterministische Zählung und häufigkeitsinformierte Interpretation.
@@ -220,7 +220,7 @@ Themen beruhen oder einen gesonderten geprüften Vertrag erhalten.
 Fehlende oder `null` gesetzte Abschnitte bleiben qualitativ. Methodische Eignung
 ist von implementierter Verfügbarkeit getrennt: Nichtqualitative Modi werden
 ohne ausdrücklich freigegebenen Adapter als „noch nicht integriert“ abgewiesen.
-Die zentrale Grenze `thematic_pipeline` gibt nur die acht integrierten
+Die zentrale Grenze `thematic_pipeline` gibt nur die neun integrierten
 Standardmodule frei. Ein eigenes Skript mit derselben Modul-ID erbt keine
 zusätzliche Verfügbarkeit. Die Oberfläche liest diese Freigabe vom Server.
 Ungültige gespeicherte Modi werden angezeigt und abgewiesen, auch bei gerade
@@ -322,13 +322,13 @@ die danebenstehenden berechneten Werte müssen fachlich geprüft werden.
 `thematic_execution.execute_perspective` erhält Modul, Modus, Material,
 Originalergebnis, Modellparameter und die tatsächlich benötigten geprüften Vorstufen. Die Funktion
 unterstützt `clusterer`, `summarizer`, `swot`, `meta_swot`, `person_analysis`,
-`person_comparison`, `contrast_analysis` und `ambiguity_analysis`:
+`person_comparison`, `contrast_analysis`, `relation_analysis` und `ambiguity_analysis`:
 
 1. Bei `qualitative` liefert die Funktion `None` und startet keine neue
    Materialprüfung oder Modellanfrage; der bestehende Standardpfad bleibt.
 2. Der passende Adapter bereitet gemeinsame ungewichtete Themen vor.
    Cluster und Summarizer verwenden ihre vollständige Mitgliedschaft,
-   SWOT, Meta-SWOT, Personenanalyse, Personenvergleich, Kontrastanalyse und Ambivalenzanalyse führen eine zusätzliche
+   SWOT, Meta-SWOT, Personenanalyse, Personenvergleich, Kontrastanalyse, Zusammenhangsanalyse und Ambivalenzanalyse führen eine zusätzliche
    vollständige Matrixphase in ihrem ausdrücklich definierten Scope aus.
 3. Der Kern zählt die gemeinsame Zuordnung einmal und führt anschließend
    häufigkeitsinformierte Interpretationen pro Thema aus.
@@ -371,7 +371,7 @@ JSON-Datei des Moduls.
 
 Die Promptansicht ergänzt bei gespeichertem `frequency`/`both` die festen
 Systemanweisungen für Häufigkeitsinterpretation und bei SWOT, Meta-SWOT,
-Personenanalyse, Personenvergleich, Kontrastanalyse und Ambivalenzanalyse für vollständige Themenzuordnung.
+Personenanalyse, Personenvergleich, Kontrastanalyse, Zusammenhangsanalyse und Ambivalenzanalyse für vollständige Themenzuordnung.
 Sie beschreibt die dynamischen Eingaben, zeigt aber weder das vollständige
 Anfrageprotokoll noch automatisch Interviewmaterial. Stabilitäts-/Sensitivitätsansichten
 berücksichtigen die entsprechenden Zielmodule. Weitere Moduladapter bleiben
@@ -549,47 +549,51 @@ Interpretation verwenden den bestehenden gemeinsamen Executor. `both` teilt
 diese Matrix, löst keine zweite Zählung aus.
 
 
-## 14. Relationsauswahl und Code-Kovorkommen: interne Vorbereitung
+## 14. Zusammenhangsanalyse: verifizierte Auswahl und getrennte Zählungen
 
-Die zusätzlichen Relationsperspektiven sind weiterhin nicht freigegeben.
-Der folgende Stand beschreibt interne Bausteine für ihre vollständige Einbindung,
-keinen neuen auswählbaren Modus in der Oberfläche.
+`relation_analysis` ist in CLI, Runner und Oberfläche für `frequency`/`both`
+freigegeben. Der qualitative Default bleibt unverändert. `prepare` benötigt
+bestätigtes Originalmaterial, vollständige Cluster, Summary und Textzuordnung;
+der Core erhält das geprüfte `material`. Auswahlprovenienz entsteht vor den
+Modellaufrufen und wird nach dem Core erneut geprüft. Alte Ergebnisse ohne
+`selection_provenance` bleiben lesbar, reichen aber nicht als Grundlage einer
+neuen vollständigen Häufigkeitsperspektive: dafür einen neuen Lauf erstellen.
 
-`relation_selection.build_relation_selection(material, clusters, summaries,
-max_pairs=..., max_segments_per_path=...)` prüft die vollständige bestätigte
-Originalbasis und beide Vorstufen. Es verwendet die tatsächliche bestehende
-Auswahl: Codepfadpaare mit gemeinsamen Personen, absteigend nach deren Anzahl,
-danach nach Pfaden sortiert; je Paar personenweise gepaarte Beispiele im
-Round-Robin-Verfahren. Der vollständige Kandidatenindex benötigt keine
-Modelltexte für verworfene Paare. `0` bei `max_pairs` bedeutet alle zulässigen
-Paare, keine vollständige semantische Prüfung aller denkbaren Beziehungen.
+`relation_selection` speichert die tatsächlichen Parameter, vollständige
+Rangfolge der zulässigen Codepaare, Seiten-IDs und Personen sowie Fingerprints
+der Originalquellen und Paarinputs vor Kontextverdichtung. `0` bei `max_pairs`
+bedeutet alle zulässigen Paare mit mindestens einer gemeinsamen Person. Das
+ist keine vollständige Prüfung aller denkbaren semantischen Beziehungen.
+Replay prüft Statistiken, Pfade, ausgewählte Originalzitate, Personenbezug und
+Kontextverdichtungen. Namen allein bestimmen keine Clusteridentität;
+Definition und vollständige Segmentmenge gehören ebenfalls dazu.
 
-`selection_provenance` speichert Algorithmus, Parameter, vollständige Rangfolge,
-Pfadregister, gewählte Seiten-IDs und Personen sowie Fingerprints der Original-
-quellen und des tatsächlichen Paarinputs vor Kontextverdichtung. Der optionale
-Core-Parameter `material` aktiviert diese bestätigte Nachweisstufe. Ohne ihn
-bleibt der qualitative Altpfad erhalten; historische Ergebnisse erhalten keine
-rückwirkend erfundene Auswahlprovenienz.
+`thematic_relation_adapter.build_relation_topics(material, payload, clusters,
+summary)` übernimmt nur vollständig beschriebene Relationskandidaten mit
+innerhalb einer Person belegter Herkunft. Jedes Thema erhält alle Original-
+einheiten aller bestätigten Personen als Scope. Bloßes A/B-Kovorkommen ist
+kein semantischer Beleg. Die Einzelstellenmatrix erkennt nicht notwendig eine
+Relation, die erst aus mehreren getrennten Aussagen rekonstruiert werden
+müsste. Personenübergreifende Gegenüberstellungen, unvollständige Aussagen und
+Gesamteinordnung bleiben ausdrücklich ungezählter Kontext. `both` bedeutet
+Stützung und Widerspruch zur selben Relationsthese, nicht beide Codes gemeinsam.
+Die A/B-Pfadordnung begründet keine Wirkungsrichtung oder Kausalität.
 
-`validate_relation_selection` spielt den Nachweis mit den gespeicherten
-Parametern erneut ab. Statistiken, Seitenpfade, übermittelte Belege und ihre
-Originaltexte sowie die Personenüberschneidung des Belegsatzes müssen passen.
-Verdichtungsnachweise beziehen sich auf den ursprünglichen Clusterkontext;
-sie beweisen keine semantische Verlustfreiheit. Gleiche Clusternamen genügen
-nicht zur Zuordnung einer Zusammenfassung: Definition und vollständige
-Segmentmenge gehören ebenfalls zur Identität.
+Das vollständige Interpretationsregister enthält jede Relationsdefinition,
+auch wenn Titel identisch sind. Das Modell erhält die semantischen Themen-
+kennzahlen; Codeüberschneidungen sind keine stillen Gewichte dieser Aussagen.
+`relation_cooccurrence.count_code_path_cooccurrences(material)` berechnet
+zusätzlich alle bestehenden Codepaare, einschließlich Nullüberschneidungen.
+Die getrennte Ausgabe steht unter `analysis_perspective.code_cooccurrence`.
+Personen, gleiche ausdrücklich identifizierte Passagen und Codierzeilen bleiben
+verschieden. Bei gemischter Passagebasis sind exakte Passagezahlen und Anteile
+`null`; bekannte Passagen werden separat als beobachtete Untergrenze gezeigt.
+Der Nenner ist der vollständige bestätigte Exportumfang, nicht die Beispielauswahl.
 
-`relation_cooccurrence.count_code_path_cooccurrences(material)` zählt dagegen
-rein deterministisch bestehende Codezuordnungen für alle Codepfadpaare,
-einschließlich Nullüberschneidungen. Personen mit beiden Codes können diese
-an verschiedenen Stellen verwenden. Gemeinsame Passagen sind nur ausdrücklich
-identifizierte, mehrfach codierte Stellen. Bei fehlenden Passage-IDs bleiben
-exakte Passagezahlen und -anteile unbestimmt; bekannte Passagen werden separat
-als beobachtete Untergrenze ausgewiesen. Der Nenner ist der vollständige
-bestätigte Exportumfang, nicht die Zahl ausgewählter Beispielpersonen.
-
-Diese Codeüberschneidung ist keine Häufigkeit einer inhaltlich beschriebenen
-Relation und kein Kausalnachweis. Der spätere semantische Adapter benötigt
-zusätzlich eine eigene vollständige Themenzuordnung. Beide Bausteine führen
-selbst keine Modellanfragen aus. Vor einer Freischaltung fehlen noch
-Anwendungs-/Manifestbindung, Themenadapter und Diagnose-/Berichtsintegration.
+Diagnosen reproduzieren Themen und Codeüberschneidungen mit denselben tatsächlichen
+Cluster-/Summaryvorstufen. Separate `code_cooccurrence_counts`-Records enthalten
+nur Kennzahlen, Scope und Codepfade, keine ausgewählten Beleg-IDs. Wiederholungen
+benötigen die beiden eigenen geprüften Kindlaufquellen. In der ursprünglichen
+Gesamtsynthese-Kandidatenprojektion werden `selection_provenance`, zusätzliche
+`code_cooccurrence`-Felder und `analysis_perspective` ausgeschlossen: technische
+Register ersetzen keine qualitativen Ausgangsbefunde.

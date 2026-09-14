@@ -55,7 +55,7 @@ def _thematic_projection(module_id, payload, segments, upstream_payloads=None):
             raise ValueError('Analyseperspektive passt nicht zu Modul, Originalmaterial oder Themenquelle.')
 
     extension = payload['analysis_perspective']
-    require(module_id in ('clusterer', 'summarizer', 'swot', 'meta_swot', 'person_analysis', 'ambiguity_analysis', 'person_comparison', 'contrast_analysis')
+    require(module_id in ('clusterer', 'summarizer', 'swot', 'meta_swot', 'person_analysis', 'ambiguity_analysis', 'person_comparison', 'contrast_analysis', 'relation_analysis')
             and isinstance(extension, dict))
     upstream_payloads = {} if upstream_payloads is None else upstream_payloads
     require(isinstance(upstream_payloads, dict))
@@ -84,6 +84,10 @@ def _thematic_projection(module_id, payload, segments, upstream_payloads=None):
     elif module_id == 'person_analysis':
         from thematic_person_adapters import build_person_topics
         prepared = build_person_topics(material, original)
+    elif module_id == 'relation_analysis':
+        from thematic_relation_adapter import build_relation_topics
+        require(all(isinstance(upstream_payloads.get(mid), dict) for mid in ('clusterer', 'summarizer')))
+        prepared = build_relation_topics(material, original, upstream_payloads['clusterer'], upstream_payloads['summarizer'])
     elif module_id == 'contrast_analysis':
         from thematic_contrast_adapter import build_contrast_topics
         require(all(isinstance(upstream_payloads.get(mid), dict) for mid in ('person_analysis', 'person_comparison')))
@@ -153,6 +157,21 @@ def _thematic_projection(module_id, payload, segments, upstream_payloads=None):
                  'assignment_review_status': counted['assignment_review_status'],
                  'person_basis': counted['person_basis']}
         add(row['topic_id'], 'counts', 'thematic_counts', json.dumps(value, ensure_ascii=False, sort_keys=True))
+    if module_id == 'relation_analysis':
+        cooccurrence = prepared['code_cooccurrence']
+        require(fingerprint(extension.get('code_cooccurrence')) == fingerprint(cooccurrence))
+        def scalar_projection(value):
+            if isinstance(value, dict):
+                return {key: scalar_projection(item) for key, item in value.items() if not key.endswith('_ids')}
+            if isinstance(value, list):
+                return [scalar_projection(item) for item in value]
+            return value
+        scope = {key: cooccurrence[key] for key in ('scope', 'code_paths', 'count_basis')}
+        add('code_cooccurrence_scope', 'code_cooccurrence', 'code_cooccurrence_counts',
+            json.dumps(scalar_projection(scope), ensure_ascii=False, sort_keys=True))
+        for pair in cooccurrence['pairs']:
+            add(pair['pair_key'], 'code_cooccurrence', 'code_cooccurrence_counts',
+                json.dumps(scalar_projection({'pair': pair, 'scope': cooccurrence['scope']}), ensure_ascii=False, sort_keys=True))
     return result
 
 

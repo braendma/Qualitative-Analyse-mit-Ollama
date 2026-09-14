@@ -20,7 +20,8 @@ def _thematic_upstreams(run, module_id, payload, by_id, manifest):
         return {}
     required = {'meta_swot': ('swot',), 'ambiguity_analysis': ('person_analysis',),
                 'person_comparison': ('person_analysis',),
-                'contrast_analysis': ('person_analysis', 'person_comparison')}.get(module_id, ())
+                'contrast_analysis': ('person_analysis', 'person_comparison'),
+                'relation_analysis': ('clusterer', 'summarizer')}.get(module_id, ())
     result = {}
     for mid in required:
         if mid not in by_id:

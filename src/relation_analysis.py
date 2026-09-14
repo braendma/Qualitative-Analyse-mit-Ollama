@@ -10,6 +10,7 @@ import logging
 import yaml
 
 from relation_analysis_core import build_relation_analysis
+from thematic_pipeline import prepare, finish
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -33,6 +34,7 @@ def main(argv=None):
     parser.add_argument("--clusters-json", "-j", default="clusters_output.json")
     parser.add_argument("--idmap-json", "-m", default="id_to_text.json")
     parser.add_argument("--summary-json", "-s", default="summary_v1.json")
+    parser.add_argument("--csv", default=None, help="Originalmaterial für die optionale Häufigkeitsperspektive")
     parser.add_argument("--out-md", "-o", default="relation_analysis_v1.md")
     parser.add_argument("--out-json", "-x", default="relation_analysis_v1.json")
     args = parser.parse_args(argv)
@@ -52,6 +54,8 @@ def main(argv=None):
 
     settings = config.get("analysis_settings", {}).get("relation_analysis", {})
 
+    prepared = prepare('relation_analysis', args.config, input_path=args.csv, cluster_path=args.clusters_json,
+                       idmap_path=args.idmap_json, summary_path=args.summary_json)
     md, json_output = build_relation_analysis(
         clusters_json_path=args.clusters_json,
         id_to_text_path=args.idmap_json,
@@ -61,8 +65,10 @@ def main(argv=None):
         context=config.get("context", {}),
         max_pairs=settings.get("max_pairs", 80),
         max_segments_per_path=settings.get("max_segments_per_path", 6),
+        material=prepared['material'] if prepared else None,
     )
 
+    md, json_output = finish(prepared, json_output, md, ollama_params)
     atomic_text(args.out_md, md)
     atomic_json(args.out_json, json_output)
 

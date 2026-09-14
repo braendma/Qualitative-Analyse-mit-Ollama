@@ -24,6 +24,14 @@ class DownstreamBasisTests(unittest.TestCase):
         self.assertEqual(project_synthesis_source(source),original)
         self.assertEqual(source,before)
 
+    def test_relation_selection_and_code_counts_do_not_enter_synthesis_candidate_text(self):
+        original={'beziehungen':[{'thema':'Beibehaltene Relation','beschreibung':'Originaler qualitativer Befund.'}]}
+        enriched={**copy.deepcopy(original), 'selection_provenance':{'candidate_pairs':['SYNTHETIC_INTERNAL_ONLY']},
+                  'analysis_perspective':{'code_cooccurrence':{'count':100}}, 'code_cooccurrence':{'count':100}}
+        before=copy.deepcopy(enriched)
+        self.assertEqual(project_synthesis_source(enriched),project_synthesis_source(original))
+        self.assertEqual(enriched,before)
+
     def test_actual_contrast_requests_use_same_original_basis_for_both_upstream_modes(self):
         _,source,_=fixture(1)
         comparison={'typen':[],'gemeinsame_muster':[],'gesamtvergleich':'Künstlicher Vergleich.'}

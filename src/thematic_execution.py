@@ -14,11 +14,11 @@ from thematic_interpretation import interpret_counts, comparison_basis
 
 
 ADAPTER_MODULES = ('clusterer', 'summarizer', 'swot', 'meta_swot',
-                   'person_analysis', 'ambiguity_analysis', 'person_comparison', 'contrast_analysis')
+                   'person_analysis', 'ambiguity_analysis', 'person_comparison', 'contrast_analysis', 'relation_analysis')
 
 
 def execute_perspective(module, mode, material, payload, params, *, cluster_payload=None,
-                        swot_payload=None, person_payload=None, comparison_payload=None, llm=None):
+                        swot_payload=None, person_payload=None, comparison_payload=None, summary_payload=None, llm=None):
     """Build one shared matrix and named interpretations; leave inputs untouched.
 
 This is an internal adapter boundary, not a user-configurable capability bypass.
@@ -47,6 +47,9 @@ The qualitative default has no new material, model or output requirements.
     elif module == 'contrast_analysis':
         from thematic_contrast_adapter import build_contrast_topics
         prepared = build_contrast_topics(material, payload, person_payload, comparison_payload)
+    elif module == 'relation_analysis':
+        from thematic_relation_adapter import build_relation_topics
+        prepared = build_relation_topics(material, payload, cluster_payload, summary_payload)
     else:
         from thematic_person_adapters import build_ambiguity_topics
         prepared = build_ambiguity_topics(material, payload, person_payload)
@@ -63,7 +66,7 @@ The qualitative default has no new material, model or output requirements.
     outputs = {'frequency': frequency}
     if mode == 'both':
         outputs['qualitative'] = [{'topic_id': tid, 'interpretation': text} for tid, text in qualitative.items()]
-    return {
+    result = {
         'schema_version': 1, 'module_id': module, 'selected_mode': mode,
         'candidate_source_fingerprint': prepared['source_fingerprint'],
         'candidate_basis': 'original_unweighted_findings',
@@ -78,6 +81,9 @@ The qualitative default has no new material, model or output requirements.
             'Personen, Passagen und Codierzeilen bleiben getrennt; seltene Gegenpositionen bleiben relevant. '
             + prepared.get('methodological_note', ''),
     }
+    if module == 'relation_analysis':
+        result['code_cooccurrence'] = deepcopy(prepared['code_cooccurrence'])
+    return result
 
 
 def perspective_markdown(result):
@@ -148,16 +154,22 @@ def perspective_markdown(result):
     if result['unassigned_context']:
         note = result['unassigned_context'].get('counting_note')
         lines.append('\n' + escape(note or 'Eine freie Gesamtzusammenfassung bleibt qualitativer Kontext. Ihre einzelnen Aussagen erhalten dadurch keine eigenen Nennungshäufigkeiten.'))
-        if result['module_id'] == 'contrast_analysis' and result['unassigned_context'].get('records'):
+        if result['module_id'] in ('contrast_analysis', 'relation_analysis') and result['unassigned_context'].get('records'):
             import json
             reasons = {'unresolved_pattern_reference': 'Bezugsmuster nicht eindeutig im lokalen Musterregister gefunden',
                        'ambiguous_pattern_reference': 'Mehrere verschiedene Musterdefinitionen mit diesem Titel',
                        'incomplete_candidate': 'Unvollständig definierter Befund',
                        'ambiguous_type_reference': 'Typname mit mehreren verschiedenen Definitionen',
                        'uncounted_type_context': 'Typenspannung bleibt qualitativ',
-                       'uncounted_qualifier_context': 'Relativierung bleibt qualitativ'}
+                       'uncounted_qualifier_context': 'Relativierung bleibt qualitativ',
+                       'cross_person_evidence': 'Personenübergreifende Gegenüberstellung bleibt qualitativer Kontext'}
             lines.append('\n### Nicht thematisch gezählte Befunde\n')
             for item in result['unassigned_context']['records']:
                 lines.append(escape(reasons.get(item['reason'], item['reason'])) + ': ' +
                              escape(json.dumps(item['record'], ensure_ascii=False, sort_keys=True)))
+    if result['module_id'] == 'relation_analysis':
+        from relation_cooccurrence import code_path_cooccurrences_markdown
+        lines.append('\nDie folgenden Codeüberschneidungen sind eine getrennte Berechnung vorhandener '
+                     'Codierungen. Sie sind keine Nennungshäufigkeiten der oben geprüften Relationsthemen.\n')
+        lines.append(code_path_cooccurrences_markdown(result['code_cooccurrence']))
     return '\n\n'.join(lines) + '\n'

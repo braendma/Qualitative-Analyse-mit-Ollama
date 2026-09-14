@@ -1,5 +1,7 @@
-"""Eight real thematic entrypoints; synthetic inputs and model transport only."""
+"""Nine real thematic entrypoints; synthetic inputs and model transport only."""
 import copy
+import csv
+import io
 import json
 import os
 from pathlib import Path
@@ -24,14 +26,42 @@ from test_thematic_execution import SyntheticBackend
 
 def extended_setup(root):
     path, cfg, clusters = setup(root)
+    # Two actual code paths, twelve people, and two separate document passages
+    # per person. Rebuild confirmation rather than editing a bound CSV in place.
+    from person_identity import preview, apply
+    from test_thematic_adapters import summary
+    text = io.StringIO(); writer = csv.writer(text, delimiter=';', lineterminator='\n')
+    writer.writerow(['ID', 'Document', 'Passage', 'Code', 'Text'])
+    mapping = {}
+    for i in range(12):
+        for part, code in ((1, 'A'), (2, 'B')):
+            document = f'D{i}_Teil{part}'; mapping[document] = f'P{i}'
+            writer.writerow([f's{i}_{part}', document, f'u{i}_{part}', code,
+                             'Gleicher künstlicher Text; unverändert.'])
+    raw = text.getvalue().encode('utf-8')
+    columns = {'segment_id': 'ID', 'person': 'Document', 'unit_id': 'Passage', 'code': 'Code', 'segment': 'Text'}
+    info = preview(raw, columns)
+    normalized, columns, receipt = apply(raw, columns, {'confirmed': True,
+        'fingerprint': info['fingerprint'], 'mapping': mapping})
+    (root/'input.csv').write_bytes(normalized)
+    (root/'book.csv').write_text('Code;Definition;Ankerbeispiel\nA;Thema A;Künstlicher Text A\nB;Thema B;Künstlicher Text B\n', encoding='utf-8')
+    cfg.update(columns=columns, person_identity=receipt)
     cfg['analysis_perspectives'] = {mid: 'both' for mid in IMPLEMENTED}
     for module in cfg['pipeline']['modules']:
         module['enabled'] = module['id'] in IMPLEMENTED
     for key, placeholder in {'meta_swot': '{clusters}', 'person_analysis': '{persons}',
-                             'ambiguity_analysis': '{data}', 'person_comparison': '{persons}', 'contrast_analysis': '{data}'}.items():
+                             'ambiguity_analysis': '{data}', 'person_comparison': '{persons}', 'contrast_analysis': '{data}', 'relation_analysis': '{data}'}.items():
         cfg['prompts'][key] = {'system': key, 'user': placeholder}
     path.write_text(yaml.safe_dump(cfg, allow_unicode=True), encoding='utf-8')
     material = load_counting_material(path)
+    clusters = {'processing_status': 'completed', 'clusters': [
+        {'code_path': code, 'cluster_name': 'Synthetic ' + code, 'definition': 'Künstliche Gruppe ' + code,
+         'segments': sorted(sid for sid, row in material['segment_index'].items() if row['code_path'] == code)}
+        for code in ('A', 'B')], 'segment_metadata': {
+            sid: {'person': material['units'][row['unit_id']]['person'], 'unit_id': row['unit_id'][len('passage:'):]}
+            for sid, row in material['segment_index'].items()}}
+    atomic_json(root/'clusters_output.json', clusters)
+    atomic_json(root/'summary_v1.json', summary(clusters))
     source = swot(material, clusters)
     atomic_json(root/'swot_v1.json', source)
     texts = {sid: material['units'][row['unit_id']]['text'] for sid, row in material['segment_index'].items()}
@@ -65,9 +95,9 @@ class ExtendedThematicBoundaryTests(unittest.TestCase):
                 with patch.dict(os.environ,partial), self.assertRaisesRegex(ValueError,'vollständigen Eingabe- und Laufnachweis'):
                     prepare('meta_swot',path,swot_path=root/'swot_v1.json')
 
-    def test_eight_builtins_have_capabilities_but_custom_scripts_do_not(self):
+    def test_nine_builtins_have_capabilities_but_custom_scripts_do_not(self):
         self.assertEqual(set(IMPLEMENTED), {'clusterer', 'summarizer', 'swot', 'meta_swot',
-                                           'person_analysis', 'ambiguity_analysis', 'person_comparison', 'contrast_analysis'})
+                                           'person_analysis', 'ambiguity_analysis', 'person_comparison', 'contrast_analysis', 'relation_analysis'})
         for mid in IMPLEMENTED:
             self.assertTrue(capability({'id': mid, 'script': mid+'.py'})['implemented'])
             self.assertFalse(capability({'id': mid, 'script': 'replacement.py'})['implemented'])
@@ -75,7 +105,9 @@ class ExtendedThematicBoundaryTests(unittest.TestCase):
     def test_module_specific_sources_are_required_without_irrelevant_cluster_files(self):
         with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, clean_environment(), clear=True):
             root=Path(tmp); path, _, _, _, _=extended_setup(root)
-            cases = [('contrast_analysis', {'person_path': root/'person_analysis_v1.json',
+            cases = [('relation_analysis', {'cluster_path': root/'clusters_output.json',
+                        'idmap_path': root/'id_to_text.json', 'summary_path': root/'summary_v1.json'}),
+                     ('contrast_analysis', {'person_path': root/'person_analysis_v1.json',
                         'comparison_path': root/'person_comparison_v1.json'}),
                      ('person_comparison', {'person_path': root/'person_analysis_v1.json'}),
                      ('meta_swot', {'swot_path': root/'swot_v1.json'}),
@@ -118,7 +150,7 @@ class ExtendedThematicBoundaryTests(unittest.TestCase):
                 finish(prepared,meta_from_source(source),'# Original',cfg['llm'],llm=llm)
             self.assertEqual(llm.assignment_calls+llm.interpretation_calls,0)
 
-    def test_extra_assignment_prompts_and_context_bounds_cover_all_three_modules(self):
+    def test_extra_assignment_prompts_and_context_bounds_cover_all_full_matrix_modules(self):
         from prompt_catalog import catalog
         from context_preflight import check_context
         from coding_validation_common import Segment
@@ -126,16 +158,16 @@ class ExtendedThematicBoundaryTests(unittest.TestCase):
             path,cfg,_,_,_=extended_setup(Path(tmp))
             modules=[m for m in cfg['pipeline']['modules'] if m['enabled']]
             entries={r['id']:r for r in catalog(cfg,modules)['modules']}
-            for mid in ('meta_swot','person_analysis','ambiguity_analysis','person_comparison','contrast_analysis'):
+            for mid in ('meta_swot','person_analysis','ambiguity_analysis','person_comparison','contrast_analysis','relation_analysis'):
                 self.assertTrue(any(row['key']==mid+' / thematic_assignment' for row in entries[mid]['templates']))
                 self.assertTrue(any(row['key']==mid+' / frequency_interpretation' for row in entries[mid]['templates']))
             long=Segment('s','Synthetic long original ' * 4000,'A','P','u')
             report=check_context(cfg,[long],{},[m for m in modules if m['id']!='clusterer'])
-            self.assertTrue({'meta_swot','person_analysis','ambiguity_analysis','person_comparison','contrast_analysis'} <= {r['module'] for r in report['blocked']})
+            self.assertTrue({'meta_swot','person_analysis','ambiguity_analysis','person_comparison','contrast_analysis','relation_analysis'} <= {r['module'] for r in report['blocked']})
 
 
 class ExtendedThematicProcessTests(unittest.TestCase):
-    def test_eight_cli_modules_html_diagnostics_person_scopes_sources_and_resume(self):
+    def test_nine_cli_modules_html_diagnostics_person_scopes_sources_and_resume(self):
         from diagnostic_sources import load_sources
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);path,cfg,_,_,_=extended_setup(root)
@@ -155,18 +187,31 @@ class ExtendedThematicProcessTests(unittest.TestCase):
             for mid,name in [('meta_swot','meta_swot_v1.json'),('person_analysis','person_analysis_v1.json'),
                              ('ambiguity_analysis','ambiguity_analysis_v1.json'),
                              ('person_comparison','person_comparison_v1.json'),
-                             ('contrast_analysis','contrast_analysis_v1.json')]:
+                             ('contrast_analysis','contrast_analysis_v1.json'),
+                             ('relation_analysis','relation_analysis_v1.json')]:
                 payload=json.loads((run/name).read_text(encoding='utf-8'))
                 counted=payload['analysis_perspective']['counting']
                 self.assertTrue(counted['topics'])
                 for topic in counted['topics']:
                     link=payload['analysis_perspective']['source_links'][topic['topic_id']]
-                    expected=12 if mid in ('meta_swot','person_comparison') or link.get('scope_kind')=='global_pattern' else 1
+                    expected=12 if mid in ('meta_swot','person_comparison','relation_analysis') or link.get('scope_kind')=='global_pattern' else 1
                     self.assertEqual(topic['counts']['mentioned']['exact_person_count'],expected)
                     self.assertEqual(topic['scope']['person_count'],expected)
+            relation=json.loads((run/'relation_analysis_v1.json').read_text(encoding='utf-8'))
+            self.assertTrue(relation['beziehungen'])
+            cooccurrence=relation['analysis_perspective']['code_cooccurrence']
+            self.assertEqual(cooccurrence['scope']['person_count'],12)
+            self.assertEqual(cooccurrence['scope']['exact_passage_count'],24)
+            self.assertEqual(len(cooccurrence['pairs']),1)
+            code_pair=cooccurrence['pairs'][0]
+            self.assertEqual(code_pair['persons']['intersection']['count'],12)
+            self.assertEqual(code_pair['passages']['intersection']['exact_passage_count'],0)
+            self.assertEqual(cooccurrence['model_calls'],0)
+            self.assertEqual(relation['selection_provenance']['verification_level'],'confirmed_original_material')
             html=(run/'gesamtbericht.html').read_text(encoding='utf-8')
             self.assertIn('nicht die gemeinsame Nennung von A und B',html)
             self.assertIn('innerhalb dieses Falles',html)
+            self.assertIn('Gemeinsames Auftreten vorhandener Codepfade',html)
             segments=load_segments(root/'input.csv',cfg['columns'])
             sources=load_sources(run,cfg,segments=segments)
             for mid in IMPLEMENTED:
@@ -179,6 +224,9 @@ class ExtendedThematicProcessTests(unittest.TestCase):
             (run/'swot_v1.json').write_text('{}',encoding='utf-8')
             sources=load_sources(run,cfg,segments=segments)
             self.assertEqual(sources['meta_swot']['status'],'invalid')
+            (run/'summary_v1.json').write_text('{}',encoding='utf-8')
+            sources=load_sources(run,cfg,segments=segments)
+            self.assertEqual(sources['relation_analysis']['status'],'invalid')
 
 
 if __name__=='__main__': unittest.main()

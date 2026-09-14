@@ -15,7 +15,7 @@ logger = logging.getLogger("overall_synthesis")
 def project_synthesis_source(value):
     """Keep original analytical findings; omit extra interpretations and raw expansions."""
     redundant = {"finding_registry", "segment_metadata", "belege", "belege_a", "belege_b",
-                 "belegbeispiele", "plots", "created_at", "analysis_perspective"}
+                 "belegbeispiele", "plots", "created_at", "analysis_perspective", "selection_provenance", "code_cooccurrence"}
     if isinstance(value, dict):
         return {key: project_synthesis_source(item) for key, item in value.items()
                 if key not in redundant and not (key.startswith("source_") and key.endswith("_created_at"))}

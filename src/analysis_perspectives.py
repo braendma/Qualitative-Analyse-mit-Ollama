@@ -19,7 +19,7 @@ _CAPABILITIES = (
     ('person_analysis', True, 'Passagen innerhalb einer Person vergleichen; keine irreführende Personenquote im Einzelfall.'),
     ('person_comparison', True, 'Nur gemeinsame Muster über vollständiges Originalmaterial aller bestätigten Personen prüfen. Typen, Unterschiede, nicht zugeordnete Personen und Gesamtvergleich bleiben qualitativ.'),
     ('contrast_analysis', True, 'Globale Muster im gesamten Material und eindeutig gebundene Gegenfälle innerhalb ihrer Person prüfen. Nenner getrennt halten; unaufgelöste Bezüge und Typenspannungen bleiben qualitativ.'),
-    ('relation_analysis', True, 'Gemeinsames Auftreten mit Bezugsmenge beschreiben; daraus keine Kausalität ableiten.'),
+    ('relation_analysis', True, 'Vollständige konkrete Relationszuordnung und getrennte Codeüberschneidungen; keine automatische Kausalität oder gemeinsame Passage.'),
     ('ambiguity_analysis', True, 'Beide Positionen und ihre Personenüberschneidung erhalten; Gegenpositionen nicht verrechnen.'),
     ('overall_synthesis', True, 'Aussagen benötigen eigene Themenzuordnung; transitive Quellen allein sind keine vollständige Nennungshäufigkeit.'),
     ('code_verification', False, 'Codierüberprüfung prüft Passung und Alternativen; keine zusätzliche Häufigkeitsgewichtung der Entscheidung.'),

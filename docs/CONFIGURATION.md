@@ -306,10 +306,10 @@ in diesem Fall ist `total_module_executions: null`. Keine Zeit-/Preisprognose.
 ## Analyseperspektiven je Modul
 
 Der aktuelle Entwicklungsstand erlaubt zusätzliche Perspektiven für die
-acht unveränderten Standardmodule `clusterer`, `summarizer`, `swot`,
-`meta_swot`, `person_analysis`, `person_comparison`, `contrast_analysis` und `ambiguity_analysis`. Die Modi werden unabhängig
+neun unveränderten Standardmodule `clusterer`, `summarizer`, `swot`,
+`meta_swot`, `person_analysis`, `person_comparison`, `contrast_analysis`, `relation_analysis` und `ambiguity_analysis`. Die Modi werden unabhängig
 je Modul gewählt; die folgende Auswahl ist ein Beispiel, keine automatische
-Aktivierung aller acht Module:
+Aktivierung aller neun Module:
 
 ```yaml
 analysis_perspectives:
@@ -320,6 +320,7 @@ analysis_perspectives:
   person_analysis: frequency
   person_comparison: both
   contrast_analysis: both
+  relation_analysis: both
   ambiguity_analysis: both
 ```
 
@@ -337,9 +338,9 @@ dieselbe Zuordnung. Abgewählte Module behalten gespeicherte Modi.
 
 Ein fehlender oder `null` gesetzter gesamter Abschnitt bedeutet qualitativ.
 Null-Einzelwerte, Listen, unbekannte Modi und unbekannte Modul-IDs werden
-abgewiesen. Die zwei übrigen geeigneten Module
-`relation_analysis` und `overall_synthesis` bleiben für
-`frequency`/`both` gesperrt. Ihre methodische Eignung bedeutet keine
+abgewiesen. Das übrige geeignete Modul
+`overall_synthesis` bleibt für
+`frequency`/`both` gesperrt. Seine methodische Eignung bedeutet keine
 Ausführungsfreigabe. Codiervergleich, Review und Diagnosen erhalten
 keine künstlichen Interpretationsmodi. Eigene Skripte können keine Freigabe durch
 Wiederverwendung einer Standard-ID erlangen. Alle gespeicherten Einträge werden
@@ -462,3 +463,15 @@ Zahlen werden abgewiesen, auch wenn keine Kandidaten existieren. So bleibt
 eine ungültige Einstellung nicht unbemerkt. Diese Grenzen steuern die
 Beispielauswahl der bestehenden qualitativen Relationsanalyse; sie stellen
 keine vollständige thematische Häufigkeitsprüfung her.
+
+
+Die zusätzliche Perspektive der Zusammenhangsanalyse benötigt die bestätigte
+CSV, Cluster, Zusammenfassungen und vollständige Originaltext-Zuordnung aus
+demselben Lauf. `relation_analysis.py --csv` kann die Eingabe ausdrücklich
+setzen. Ein neuer Auswahlnachweis bindet Parameter, Reihenfolge und tatsächlich
+verwendete Seitenbelege. Alte JSON-Dateien ohne diesen Nachweis werden nicht
+mit heutigen Standardparametern als historisch vollständig ausgegeben.
+Inhaltliche Relationszuordnungen und deterministische Codeüberschneidungen
+erscheinen getrennt. Die inhaltliche Matrix und ihre Interpretation führen zusätzliche Modell-
+anfragen aus; Codeüberschneidungen werden ohne Modell berechnet. Die Zahl der
+Kandidaten ist keine vollständige Nennungshäufigkeit einer Relation.

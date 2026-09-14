@@ -10,8 +10,8 @@ from analysis_perspectives import normalize_analysis_perspectives, perspective_c
 
 
 IMPLEMENTED = ('clusterer', 'summarizer', 'swot', 'meta_swot',
-               'person_analysis', 'ambiguity_analysis', 'person_comparison', 'contrast_analysis')
-FULL_ASSIGNMENT_MODULES = ('swot', 'meta_swot', 'person_analysis', 'ambiguity_analysis', 'person_comparison', 'contrast_analysis')
+               'person_analysis', 'ambiguity_analysis', 'person_comparison', 'contrast_analysis', 'relation_analysis')
+FULL_ASSIGNMENT_MODULES = ('swot', 'meta_swot', 'person_analysis', 'ambiguity_analysis', 'person_comparison', 'contrast_analysis', 'relation_analysis')
 
 
 def modes(config):
@@ -107,23 +107,24 @@ def prepare(module, config_path, *, input_path=None, cluster_path=None, idmap_pa
         files[str(path)] = digest
         return payload
 
-    clusters = swot = persons = comparison = None
-    if module in ('summarizer', 'swot', 'person_analysis'):
+    clusters = swot = persons = comparison = summaries = None
+    if module in ('summarizer', 'swot', 'person_analysis', 'relation_analysis'):
         if cluster_path is None:
             raise ValueError('Cluster und Originaltext-Zuordnung werden für die Perspektivprüfung benötigt.')
         clusters = source(cluster_path, 'clusterer')
         build_cluster_topics(material, clusters)
-    if module in ('summarizer', 'swot', 'person_analysis', 'ambiguity_analysis'):
+    if module in ('summarizer', 'swot', 'person_analysis', 'ambiguity_analysis', 'relation_analysis'):
         if idmap_path is None:
             raise ValueError('Vollständige Originaltext-Zuordnung fehlt für die Perspektivprüfung.')
         mapping = source(idmap_path)
         expected = {sid: material['units'][row['unit_id']]['text'] for sid, row in material['segment_index'].items()}
         if mapping != expected:
             raise ValueError('Originaltext-Zuordnung stimmt nicht vollständig mit der bestätigten CSV überein. Clusterung neu ausführen.')
-        if module in ('swot', 'person_analysis'):
+        if module in ('swot', 'person_analysis', 'relation_analysis'):
             if summary_path is None:
                 raise ValueError('Geprüfte Clusterzusammenfassungen fehlen für die Analyseperspektive.')
-            build_summary_topics(material, clusters, source(summary_path, 'summarizer'))
+            summaries = source(summary_path, 'summarizer')
+            build_summary_topics(material, clusters, summaries)
     if module == 'meta_swot':
         if swot_path is None:
             raise ValueError('Geprüfte originale SWOT-Analyse fehlt für die Meta-SWOT-Perspektive.')
@@ -142,7 +143,7 @@ def prepare(module, config_path, *, input_path=None, cluster_path=None, idmap_pa
         comparison = source(comparison_path, 'person_comparison')
         build_person_comparison_topics(material, comparison, persons)
     return {'module_id': module, 'mode': mode, 'material': material, 'clusters': clusters,
-            'swot': swot, 'persons': persons, 'comparison': comparison, 'files': files}
+            'swot': swot, 'persons': persons, 'comparison': comparison, 'summaries': summaries, 'files': files}
 
 
 def finish(prepared, payload, markdown, params, *, llm=None):
@@ -156,7 +157,8 @@ def finish(prepared, payload, markdown, params, *, llm=None):
     unchanged()
     result = execute_perspective(prepared['module_id'], prepared['mode'], prepared['material'], payload, params,
                                  cluster_payload=prepared['clusters'], swot_payload=prepared.get('swot'),
-                                 person_payload=prepared.get('persons'), comparison_payload=prepared.get('comparison'), llm=llm)
+                                 person_payload=prepared.get('persons'), comparison_payload=prepared.get('comparison'),
+                                 summary_payload=prepared.get('summaries'), llm=llm)
     unchanged()
     output = deepcopy(payload)
     output['analysis_perspective'] = result
