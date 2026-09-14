@@ -1,3 +1,30 @@
+# Windows-Quellstand und Paketprüfung · 14. September 2026
+
+Die zusammengeführte Regression am Quellstand `ad553db` führte **895 Python-Tests
+in 434,437 Sekunden** aus: 894 bestanden, ein Windows-Symlinktest wurde
+übersprungen. **82 JavaScript-Tests** bestanden. Die Tests verwenden synthetische
+Daten und simulierte Modellantworten; sie belegen keine allgemeine Modellqualität.
+
+Der native Windows-Build verwendet Python 3.12.14 und PyInstaller 6.22.3. Die
+wirkliche EXE wurde zusätzlich mit CSV und echter XLSX, modellfreier Coverage,
+HTML-/Markdown-Export, unveränderten Originalen und geprüfter Wiederaufnahme
+getestet. Dabei befand sich kein Python im Suchpfad der gestarteten EXE. Die
+Paketprüfung bestätigt tatsächliche Quellenloader und den erfassten Bootstrap;
+eine Paketänderung verhindert die Wiederverwendung unpassender Checkpoints.
+Das ist eine isolierte Paketprüfung auf Windows, kein Test in einer frischen VM.
+
+**Paketfreigabe noch offen:** Die aus der Oberfläche gestartete Verarbeitung
+bestand mit drei modellfreien Modulen, HTML-/Markdown-Bericht und bestätigtem
+Ende der Kindprozesse. Eine zuvor beobachtete Schreibsperre wurde vom Anwender
+Avast zugeordnet; nach seiner Freigabe funktionierte unverändertes Speichern
+direkt und in einer frischen Paketkopie. Ein separater Fehler bei einem tiefen
+Ergebnispfad (temporäre Datei mit 272 Zeichen) wird noch geprüft. Das ist keine
+allgemeine Freigabe aller Pfadlängen oder Virenschutzkonfigurationen.
+Der vorbereitete GitHub-Buildworkflow ist kein
+bereits bestandener GitHub-Lauf. Die native Mac-Distribution ist zurückgestellt;
+bestehende Mac-Source-Dateien bleiben erhalten.
+
+Die folgenden Einträge dokumentieren ältere Zwischenstände.
 # Windows-Prozessverwaltung und Ollama-Status · 14. September 2026
 
 Die vollständige Regression führte **888 Python-Tests in 414,254 Sekunden**

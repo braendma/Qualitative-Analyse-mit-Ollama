@@ -1030,6 +1030,7 @@ class Handler(BaseHTTPRequestHandler):
                 '/handbuch':'../docs/HANDBUCH.html','/HANDBUCH.html':'../docs/HANDBUCH.html','/manual.css':'../docs/manual.css',
                 '/images/local-file-selection.svg':'../docs/images/local-file-selection.svg',
                 '/BEDIENOBERFLAECHE.md':'../docs/BEDIENOBERFLAECHE.md',
+                '/WINDOWS_STANDALONE.txt':'../docs/WINDOWS_STANDALONE.txt',
                 '/DIAGNOSTICS.md':'../docs/DIAGNOSTICS.md','/CONFIGURATION.md':'../docs/CONFIGURATION.md',
                 '/METHODOLOGY.md':'../docs/METHODOLOGY.md','/ROBUSTNESS.md':'../docs/ROBUSTNESS.md',
                 '/KI_ANBIETER.md':'../docs/KI_ANBIETER.md','/EXTENSIONS.md':'../docs/EXTENSIONS.md','/RELEASE_NOTES.md':'../docs/RELEASE_NOTES.md'}
@@ -1040,7 +1041,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if parsed.path in assets:
                 p=ROOT/assets[parsed.path]
-                return self.send_bytes(p.read_bytes(),{'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.jpg':'image/jpeg','.png':'image/png','.svg':'image/svg+xml','.md':'text/plain; charset=utf-8'}[p.suffix.lower()])
+                return self.send_bytes(p.read_bytes(),{'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.jpg':'image/jpeg','.png':'image/png','.svg':'image/svg+xml','.md':'text/plain; charset=utf-8','.txt':'text/plain; charset=utf-8'}[p.suffix.lower()])
             query=urllib.parse.parse_qs(parsed.query)
             get=lambda key:query.get(key,[''])[0]
             app=self.server.app
@@ -1143,6 +1144,11 @@ class Handler(BaseHTTPRequestHandler):
                 elif path=='/api/telegram-test': result={'sent':app.telegram.send('start',test=True)}
                 else: return self.json({'error':'Nicht gefunden.'},404)
             self.json(result)
+        except PermissionError:
+            self.json({'error':'Dateizugriff wurde vom Betriebssystem verweigert. '
+                'Betroffene Dateien in anderen Programmen schließen und die Schreibrechte des gewählten Ordners prüfen. '
+                'Auch der Virenschutz kann das Speichern blockieren: seine Meldungen und die Freigabe für dieses '
+                'geprüfte Programm kontrollieren. Danach den Vorgang erneut ausführen.'},400)
         except (ValueError,OSError,KeyError,TypeError) as exc:
             if self.path.startswith('/api/provider-key') and not isinstance(exc,ValueError):
                 return self.json({'error':'API-Schlüssel konnte nicht gespeichert werden.'},400)

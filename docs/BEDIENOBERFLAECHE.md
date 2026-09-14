@@ -2,17 +2,23 @@
 
 # Lokale Bedienoberfläche
 
+**Releasekandidat 0.5.0-beta.1 – noch nicht veröffentlicht.** Die abschließende Abnahme des Windows-Pakets läuft. Die folgenden Hinweise beschreiben den Kandidaten und sind keine abgeschlossene Installationsfreigabe.
+
 Die Oberfläche führt durch **Projekt → Eingaben prüfen → Analyse → Ergebnisse**. Sie startet den bestehenden Workflow-Runner und speichert unveränderliche Dateiversionen pro Lauf. Python- und YAML-Dateien müssen für die normale Bedienung nicht bearbeitet werden.
 
 Eine bebilderte Schritt-für-Schritt-Anleitung findest du am Anfang der [README](../README.md#einstieg). Die folgenden Abschnitte erläutern Details und Sonderfälle.
 
 ## Programmordner und Umstieg
 
-Die Startdateien bleiben im obersten Ordner. Programmcode und Oberfläche liegen unter `src/`, die YAML-Vorlage unter `config/`, künstliche Beispieldaten unter `demo/` und Anleitungen unter `docs/`. Die komplette Ordnerstruktur zusammenlassen.
+Im Windows-Paket liegen `QualitativeAnalyse.exe` und `_internal` zusammen im Programmordner. Die Ressourcen liegen unter `_internal/src`, `_internal/config`, `_internal/demo` und `_internal/docs`. In der Source-Version bleiben die Startdateien im obersten Ordner; dort liegen `src/`, `config/`, `demo/` und `docs/` direkt darunter. In beiden Fällen die komplette Struktur zusammenlassen.
 
 Ein neues Programmverzeichnis verschiebt bestehende Projekte nicht automatisch. Neue technische Appdaten liegen unter Windows in `%LOCALAPPDATA%\QualitativeAnalyse`, unter macOS in `~/Library/Application Support/QualitativeAnalyse`, unter Linux bei absolut gesetztem `XDG_DATA_HOME` in `$XDG_DATA_HOME/QualitativeAnalyse`, sonst in `~/.local/share/QualitativeAnalyse`. Ein eindeutig vorhandener alter `QualitativeOllama`-Ordner wird weiterverwendet; es wird nichts verschoben. Werden mehrere bestehende Ablagen gefunden, mit `--data-dir` ausdrücklich die gewünschte auswählen. Nach Änderungen am Programm einen neuen Lauf mit den geprüften Projekteinstellungen starten; frühere Ergebnisse aufbewahren.
 
 ## Einmalig einrichten und starten
+
+**Windows-Paket:** Den vollständigen Kandidaten in einen neuen Ordner entpacken und `QualitativeAnalyse.exe` starten. Python ist bereits enthalten; eine eigene Installation und `Einrichtung.cmd` sind dafür nicht nötig. Das Startfenster geöffnet lassen und später **Programm beenden** verwenden. [Windows-Kurzanleitung](WINDOWS_STANDALONE.txt) · [Build und Paketprüfung](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/blob/main/packaging/README.md). Die Installationsabnahme läuft noch. Eine native Mac-Distribution ist pausiert; die bisherigen [Mac-Source-Starter](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/blob/main/start/macos/README.md) bleiben verfügbar.
+
+**Alternative Source-Version:**
 
 1. Das gesamte GitHub-Projekt herunterladen und entpacken. Die Source-Version benötigt Python 3.10 oder neuer. Ollama wird zusätzlich für lokale Modellanalysen benötigt.
 2. Unter Windows `Einrichtung.cmd` doppelklicken. Dies legt eine `.venv` im Programmordner an und installiert die Pakete aus `requirements.txt` aus dem Internet. Es werden keine Modelle installiert oder gestartet.
@@ -21,11 +27,11 @@ Ein neues Programmverzeichnis verschiebt bestehende Projekte nicht automatisch. 
 
 Falls eine passende Python-Umgebung bereits eingerichtet ist, reicht `python -X utf8 src/local_app.py`. Auf anderen Betriebssystemen lässt sich die Oberfläche ebenfalls so starten; die Windows-Startdateien und die dauerhafte Windows-Tokenverschlüsselung sind dort nicht verfügbar.
 
-**Systemprüfung ohne Modellaufruf** prüft Programmabhängigkeiten und die gewählte Verbindung, ohne etwas zu installieren. Fehlende Abhängigkeiten führen in der Source-Version zum passenden Einrichtungsskript (`Einrichtung.cmd` bzw. `start/macos/Einrichtung.command`). Im vorbereiteten Windows-Paketbetrieb wird die enthaltene Python-Laufzeit kenntlich gemacht; dort lautet die Reparatur, das vollständige Paket erneut herunterzuladen und in einen neuen Ordner zu entpacken. Eine externe Python-Installation ist dafür nicht nötig. Diese Hinweise sind noch keine Abnahme einer fertigen EXE-Distribution.
+**Systemprüfung ohne Modellaufruf** prüft Programmabhängigkeiten und die gewählte Verbindung, ohne etwas zu installieren. Fehlende Abhängigkeiten führen in der Source-Version zum passenden Einrichtungsskript (`Einrichtung.cmd` bzw. `start/macos/Einrichtung.command`). Im Windows-Paketbetrieb wird die enthaltene Python-Laufzeit kenntlich gemacht; dort lautet die Reparatur, das vollständige Paket erneut herunterzuladen und in einen neuen Ordner zu entpacken. Eine externe Python-Installation ist dafür nicht nötig. Die vollständige Installationsabnahme des Releasekandidaten steht noch aus.
 
 Die Oberfläche ist nur an `127.0.0.1` gebunden und wird nicht veröffentlicht. Ein zufälliger Sitzungsschlüssel schützt ihre API. Die angezeigte Startadresse gehört ausschließlich auf diesen PC. Standardmäßig gilt die DSGVO-Sperre mit lokalem Ollama. Cloud-Anbieter sind nach ausdrücklicher Freigabe im Projekt verfügbar; siehe [Handbuch](HANDBUCH.md#datenfreigabe-anbieter-und-schlussel) und [Anbieterhinweise](KI_ANBIETER.md).
 
-## Ollama-Erreichbarkeit (Entwicklungsstand P03)
+## Ollama-Erreichbarkeit
 
 Die Oberfläche lässt sich ohne Ollama-Server starten. Beim lokalen Anbieter liest eine kurze Hintergrundabfrage nur die Modellliste; **Ollama erneut prüfen** wiederholt sie bewusst. **Ollama erreichbar** mit leerer Liste bedeutet, dass noch kein lokales Modell vorhanden ist. Bei **Ollama nicht erreichbar** werden alte Listenvorschläge entfernt, dein eingetragener Modellname bleibt jedoch erhalten. Ollama starten bzw. Modell bereitstellen und erneut prüfen.
 
@@ -99,7 +105,7 @@ Die [bebilderte Anleitung zu Prüfung und Folgelauf](PRUEFUNG_UND_FOLGELAUF.md) 
 
 Bestehende CLI-Läufe außerhalb der Projektverwaltung werden nicht automatisch importiert. Ein geschlossenes Browserfenster beendet die Anwendung nicht. Zum Beenden die folgende Funktion verwenden.
 
-### Programm beenden (Entwicklungsstand P02b)
+### Programm beenden
 
 In der Seitenleiste **Programm beenden** öffnen. Der Dialog prüft zunächst den aktuellen Programmstatus:
 
@@ -111,7 +117,11 @@ In der Seitenleiste **Programm beenden** öffnen. Der Dialog prüft zunächst de
 
 Solange das Programm beendet wird oder der Status ungeklärt ist, startet kein neuer Lauf. Bei einer blockierten Bereinigung bleibt die Oberfläche geöffnet und nennt den Fehler. Startfenster und Laufprotokoll prüfen; **Status erneut prüfen** liest eine neue Rückmeldung. Die Rückmeldung „Bereinigung bestätigt. Das Programm wird geschlossen.“ bestätigt die Bereinigung eigener Analyseprozesse; das Programm schließt anschließend. Eine verschwundene Verbindung allein beweist weder Erfolg noch abgeschlossene Bereinigung. Nach bestätigter Anforderung kann das Browserfenster geschlossen werden; die Oberfläche kennzeichnet, wenn sie den Abschluss nicht mehr überprüfen kann.
 
-Beim Source-Start der Oberfläche fordert **Strg+C** mit aktivem Lauf die Pause und anschließendes Beenden an. Wiederholtes Strg+C ist kein Sofortabbruch; dafür die bestätigte Aktion im Dialog verwenden. Ohne aktiven Lauf schließt das Programm geordnet. Andere Anwendungen werden nicht beendet. Neue eigenständige Installationspakete sind durch diesen Entwicklungsstand noch nicht freigegeben. [Ausführliche Anleitung](HANDBUCH.md#programm-kontrolliert-beenden).
+Beim Source-Start der Oberfläche fordert **Strg+C** mit aktivem Lauf die Pause und anschließendes Beenden an. Wiederholtes Strg+C ist kein Sofortabbruch; dafür die bestätigte Aktion im Dialog verwenden. Ohne aktiven Lauf schließt das Programm geordnet. Andere Anwendungen werden nicht beendet. [Ausführliche Anleitung](HANDBUCH.md#programm-kontrolliert-beenden).
+
+### Technisches App-Protokoll
+
+Das technische App-Protokoll liegt unter `logs/app.log` in der technischen Projektablage (`data_dir`), unter Windows standardmäßig `%LOCALAPPDATA%\QualitativeAnalyse\logs\app.log`. Es enthält Start, bestätigtes Programmende und bei unbehandelten Fehlern Fehlertyp sowie bereinigte Dateinamen, Funktionen und Zeilennummern. Argumente, Interviewtexte, Schlüssel und vollständige Fehlermeldungen werden dort nicht gespeichert. Die Datei rotiert bei etwa 1 MiB; bis zu drei ältere Dateien bleiben erhalten. Das sind höchstens vier Dateien, kein vollständiges wissenschaftliches Laufprotokoll. Die ausführlichen Analyseprotokolle liegen beim jeweiligen Lauf im Ergebnisordner. Ist das technische Protokoll nicht beschreibbar, erscheint ein Hinweis; die Anwendung läuft weiter.
 
 ## Telegram optional einrichten
 
@@ -132,7 +142,7 @@ Veränderte Zwischenstände innerhalb eines Moduls werden höchstens alle zwei M
 
 Neue technische Appdaten liegen unter Windows in `%LOCALAPPDATA%\QualitativeAnalyse`, unter macOS in `~/Library/Application Support/QualitativeAnalyse`, unter Linux bei absolut gesetztem `XDG_DATA_HOME` in `$XDG_DATA_HOME/QualitativeAnalyse`, sonst in `~/.local/share/QualitativeAnalyse`. Ein eindeutig vorhandener alter `QualitativeOllama`-Ordner wird weiterverwendet; es wird nichts verschoben. Werden mehrere bestehende Ablagen gefunden, mit `--data-dir` ausdrücklich die gewünschte auswählen.
 
-**Entwicklungsstand P01c – Datei- und Ordnerauswahl:** Über **Auf diesem Rechner auswählen** lädst du Interviewdatei oder Kategoriensystem aus der Dateiauswahl innerhalb der Oberfläche. Bei einer so gewählten Interviewdatei wird deren Ordner als Ergebnisziel übernommen, sofern du kein eigenes Ziel festgelegt hast. Mit **Ordner auswählen** wählst du ein anderes vorhandenes Ziel; **Ordner der Eingabedatei verwenden** wechselt zurück zum bekannten Eingabeordner. **Ordner prüfen** kontrolliert Verfügbarkeit und Schreibrechte. Die Auswahl zeigt Dateien auf dem Rechner der laufenden Anwendung, nicht auf einem anderen Gerät, mit dem du den Browser bedienst. Der bisherige Browserupload und das manuelle Pfadfeld bleiben verfügbar; beim Browserupload ist der ursprüngliche Dateiordner unbekannt und muss als Ziel ausdrücklich ausgewählt werden. Noch keine Freigabe neuer Windows-/macOS-Installationspakete.
+**Datei- und Ordnerauswahl:** Über **Auf diesem Rechner auswählen** lädst du Interviewdatei oder Kategoriensystem aus der Dateiauswahl innerhalb der Oberfläche. Bei einer so gewählten Interviewdatei wird deren Ordner als Ergebnisziel übernommen, sofern du kein eigenes Ziel festgelegt hast. Mit **Ordner auswählen** wählst du ein anderes vorhandenes Ziel; **Ordner der Eingabedatei verwenden** wechselt zurück zum bekannten Eingabeordner. **Ordner prüfen** kontrolliert Verfügbarkeit und Schreibrechte. Die Auswahl zeigt Dateien auf dem Rechner der laufenden Anwendung, nicht auf einem anderen Gerät, mit dem du den Browser bedienst. Der bisherige Browserupload und das manuelle Pfadfeld bleiben verfügbar; beim Browserupload ist der ursprüngliche Dateiordner unbekannt und muss als Ziel ausdrücklich ausgewählt werden.
 
 Jeder neue App-Lauf bekommt im gewählten Ziel einen eigenen Ordner `QualitativeAnalyse_<Datum>_<Job-ID>/`. Analyseberichte und Moduldateien liegen darunter in `runs/<Lauf-ID>/`; Prüfentscheidungen und deren Versionen in `review/`. Geprüfte Folgeeingaben werden zusätzlich unter `review/followups/<Revision-ID>/` mit `segments.csv`, `codebook.csv`, `review_snapshot.json` und einem Inhaltsnachweis abgelegt. Eine Zieländerung gilt nur für neue Läufe. Wiederaufnahme, Berichtsaufruf und Prüfung bestehender Läufe bleiben an deren ursprünglichen Ordner gebunden. Ist er nicht verfügbar oder passt seine gespeicherte Zuordnung nicht mehr, erscheint ein Hinweis; es gibt keinen Ersatzordner in AppData. Alte Läufe behalten ihre bisherige Ablage und bleiben dort lesbar.
 

@@ -1,3 +1,30 @@
+# 0.5.0-beta.1 · Releasekandidat, noch nicht veröffentlicht
+
+Der Kandidat ergänzt ein eigenständiges Windows-Paket mit enthaltener
+Python-Laufzeit und neue Prüfungen für wissenschaftliche Auswertungen.
+
+- Coverage, Information-Loss-Audit und Codebook-Diagnostik ergänzen die
+  Basismodule ohne zusätzliche Modellaufrufe.
+- Stabilitäts- und Sensitivitätsanalysen ermöglichen kontrollierte zusätzliche
+  Läufe mit Aufwandvorschau, Herkunftsnachweis und geprüftem Fortsetzen.
+- Analyseperspektiven unterscheiden qualitative Auswertung, nachvollziehbare
+  Häufigkeiten und beide Ansichten. Personenzahlen beruhen auf der bestätigten
+  Zuordnung; Häufigkeit ist kein Beleg für Bedeutung oder inhaltliche Richtigkeit.
+- Die lokale Datei- und Ergebnisordnerauswahl erhält Originaldateien und legt
+  neue Ergebnisse getrennt ab. Handbuch und Beispiele erklären die Bedienung.
+- Das Windows-Paket enthält Python, kontrolliertes Beenden, Instanzschutz,
+  begrenzte technische Protokolle und eine Prüfung der Paketidentität. Ollama
+  und Modelle werden weiterhin separat eingerichtet.
+
+**Prüfstand:** [Testbericht](TEST_REPORT.md). Die abschließende Windows-Paketabnahme
+läuft noch. Eine neue native Mac-Distribution ist zurückgestellt; vorhandene
+Mac-Source-Startdateien bleiben erhalten. Es wird keine native Mac-Abnahme behauptet.
+
+**Umstieg:** Laufende Analysen vor einem Update abschließen und das vollständige
+Windows-Paket in einen neuen Programmordner entpacken. Private Projekt- und
+Ergebnisordner behalten. Alte Ergebnisse bleiben lesbar; Fortsetzen verlangt
+denselben geprüften Programmstand, dieselben Eingaben und dieselbe Konfiguration.
+
 # 0.4.0-beta.1 · 13. September 2026
 
 Diese Beta ergänzt nachvollziehbare Personenzuordnung und Hilfe bei größeren Analysen. Ein Quelldokument zählt erst nach ausdrücklicher Zuordnung als Person; mehrere Interviewteile können gemeinsam ausgewertet werden. Oberfläche und Kommandozeile prüfen die Zuordnung vor der Analyse. Veränderte Daten erfordern eine neue Bestätigung.

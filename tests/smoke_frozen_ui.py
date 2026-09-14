@@ -23,7 +23,9 @@ def main():
     summary = {'checks': [], 'model_calls': 0, 'real_executable': True,
                'limitation': 'Isolated extracted copy with Python absent from PATH; not a clean Windows VM.'}
     (ROOT/'build').mkdir(exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix='fresh-windows-', dir=ROOT/'build') as tmp:
+    # Keep installation and ordinary result paths independent of checkout depth.
+    # Dedicated long-path cases are separate from this fresh-installation smoke.
+    with tempfile.TemporaryDirectory(prefix='qa-ui-') as tmp:
         area = Path(tmp).resolve()
         install = area/'Neu entpackt ä'
         shutil.copytree(opts.package.resolve(), install)
@@ -114,7 +116,7 @@ def main():
             assert not state['projects'] and state['runtime']['state'] == 'open'
             for resource in ('/', '/app.js', '/app.css', '/handbuch', '/manual.css',
                              '/images/local-file-selection.svg', '/logo.jpg',
-                             '/screenshots/15-speicherschaetzung.png'):
+                             '/screenshots/15-speicherschaetzung.png', '/WINDOWS_STANDALONE.txt'):
                 status, raw = request(address, resource, auth=False)
                 assert status == 200 and raw, (resource, status)
             assert request(address, '/api/state', auth=False)[0] == 403

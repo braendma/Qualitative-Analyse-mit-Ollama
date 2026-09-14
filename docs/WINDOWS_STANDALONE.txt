@@ -17,6 +17,10 @@ Die Anwendung ist nicht digital signiert. Windows kann deshalb eine Warnung
 anzeigen. Quelle und SHA256-Prüfsumme mit dem GitHub-Release vergleichen;
 bei unbekannter Herkunft oder abweichender Prüfsumme nicht starten. Es wird
 keine Abschaltung von Windows-Sicherheitsfunktionen benötigt oder empfohlen.
+Wenn das Speichern mit „Zugriff verweigert“ scheitert, offene Dateien, die
+Ordnerrechte und Meldungen des Virenschutzes prüfen. Eine Schreibsperre kann
+auch eine bereits gestartete EXE betreffen. Freigaben nur für das überprüfte
+Programmpaket setzen; anschließend denselben Vorgang erneut ausführen.
 
 Technische Projektablage: %LOCALAPPDATA%\QualitativeAnalyse (vorhandene ältere
 Ablagen werden erkannt). Ergebnisordner vor der Analyse auswählen; bei Auswahl
