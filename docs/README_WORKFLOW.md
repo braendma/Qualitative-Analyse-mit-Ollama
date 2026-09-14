@@ -145,3 +145,7 @@ Das off-default Modul `stability` führt ausgewählte Analysen samt Vorstufen al
 ## Optionale Sensitivitätsläufe
 
 `sensitivity` ist standardmäßig aus. Ziele, Varianten und Wiederholungen stehen unter `diagnostics.sensitivity`. Der bestehende Runner führt Basis und jede Variante in frischen Unterläufen aus, mit Pause/Resume und eigener Serie `_sensitivity_repetitions`. Ausgaben: `sensitivity.json` und `sensitivity.md`, letzteres automatisch im HTML-/Markdown-Gesamtbericht. Aktivierte Stabilität läuft zusätzlich und wird nicht als Sensitivitätsbasis wiederverwendet. Keine Diagnose darf rekursiv als Ziel gewählt werden.
+
+## Aufwand bei der Modulauswahl
+
+Alle Standardmodule zeigen ihren relativen Eigenaufwand und eine Einsatzempfehlung. Vorstufen kommen hinzu; Wiederholungen und Varianten verursachen zusätzliche Ausführungen. Die Klassen enthalten keine Laufzeit- oder Preisgarantie. [Erläuterung und vollständige Übersicht im Handbuch](HANDBUCH.md#aufwandprofile).

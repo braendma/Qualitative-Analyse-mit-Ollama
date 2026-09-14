@@ -631,3 +631,36 @@ Fehlgeschlagene Läufe zählen nicht als fehlendes Thema. Der Bericht nennt gepl
 Exakte Textprojektionen sind keine semantisch geprüften Themen. Die Quellenverteilung beschreibt ausgewählte Belege, nicht sämtliche thematischen Nennungen. Wiederholtes Vorkommen zählt Einstellungen oder Läufe, nicht Interviewpersonen. Bei mehreren Dokumentteilen derselben bestätigten Person bleibt die Personenzuordnung unverändert.
 
 Mit **Nach diesem Modul pausieren** kann zwischen den Modulen einer Wiederholung pausiert werden. Fertige Wiederholungen bleiben erhalten. Nach Behebung eines Fehlers verwendet **Diesen Lauf fortsetzen** dieselben unveränderten Einstellungen und setzt fehlende Teile fort. Geänderte Eingaben, Modellgewichte, Vorlagen oder Programmdateien benötigen einen neuen Lauf. Bei Problemen die Fehlerhilfe, den Teilbericht und die Serienlogs prüfen. Die Fortschrittsanzeige zählt abgeschlossene Wiederholungen; einzelne Anfragen eines laufenden Unterlaufs werden dort derzeit noch nicht separat gezählt.
+
+## Aufwandprofile
+
+Die Aufwandklasse beschreibt den relativen zusätzlichen Rechenaufwand des einzelnen Moduls. Sie enthält weder die Erstellung benötigter Vorstufen noch menschliche Prüfzeit und ist keine Minuten-, Stunden- oder Preisprognose. NIEDRIG bedeutet nicht zwangsläufig schnell: Materialmenge, Textlänge, Modell, Hardware, Kontextfenster, Parallelität und Reparaturversuche beeinflussen den tatsächlichen Aufwand. Die Klassen werden nicht zu einer Gesamtnote addiert.
+
+Beispiel: Human–LLM Coding Agreement hat den Eigenaufwand NIEDRIG und benötigt keine eigenen Modellanfragen. Für einen neuen Lauf werden aber Code-Verifikation und Blind-Coding sowie deren Clusteranalyse benötigt. Diese Vorstufen können den größten Teil des Aufwands verursachen. Stabilität und Sensitivität führen ihre ausgewählten Ziele samt Vorstufen mehrfach neu aus. Die Wiederholungspläne nennen daher Modulausführungen, keine vermeintlich exakte Zahl von Modellanfragen.
+
+Die Einsatzempfehlung dient der Arbeitsplanung und ist kein methodisches Qualitätsurteil. Häufiges Wiederholen teurer Diagnosen nach jeder kleinen Änderung ist meist wenig zweckmäßig. Zuerst Material und Kategoriensystem prüfen; umfangreiche Wiederholungen gezielt einplanen. Bereits erfolgreich gespeicherte Teilschritte können bei einer zulässigen Wiederaufnahme den verbleibenden Aufwand reduzieren.
+
+| Modul | Eigenaufwand | Einsatzempfehlung |
+|---|---|---|
+| Clusteranalyse | HOCH | für iterative Arbeit geeignet |
+| Code-Verifikation | HOCH | für Zwischenvalidierung geeignet |
+| Blind-Coding | HOCH | für Zwischenvalidierung geeignet |
+| Human–LLM Coding Agreement | NIEDRIG | für Zwischenvalidierung geeignet |
+| Cluster-Zusammenfassungen | MITTEL | für iterative Arbeit geeignet |
+| SWOT-Analysen | HOCH | für Zwischenvalidierung geeignet |
+| Meta-SWOT | MITTEL | eher für finale Analyse |
+| Personenanalyse | HOCH | für Zwischenvalidierung geeignet |
+| Personenvergleich und Typenbildung | HOCH | eher für finale Analyse |
+| Kontrast- und Negativfallanalyse | HOCH | eher für finale Analyse |
+| Zusammenhangsanalyse | HOCH | eher für finale Analyse |
+| Ambivalenz- und Widerspruchsanalyse | HOCH | für Zwischenvalidierung geeignet |
+| Evidence-Audit | SEHR HOCH | eher für finale Analyse |
+| Prüfliste der Codierungen | NIEDRIG | für iterative Arbeit geeignet |
+| Gesamtsynthese | MITTEL | eher für finale Analyse |
+| Coverage und Blind Spots | NIEDRIG | für iterative Arbeit geeignet |
+| Information-Loss-Audit | MITTEL | für iterative Arbeit geeignet |
+| Codebook-Diagnostik | NIEDRIG | für iterative Arbeit geeignet |
+| Stabilitätsanalyse | HOCH | erst nach Stabilisierung von Material und Kategoriensystem empfohlen |
+| Sensitivitätsanalyse | SEHR HOCH | erst nach Stabilisierung von Material und Kategoriensystem empfohlen |
+
+Eigene Erweiterungen ohne Profil erscheinen als **nicht eingestuft**. Fehlende Profile unveränderter Standardmodule werden auch in alten YAML-Dateien beim Einlesen ergänzt; die Originaldatei wird dabei nicht geändert. Das aktiviert keine Module.

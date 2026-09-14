@@ -1352,6 +1352,8 @@ prompts:
 # MODULARER WORKFLOW
 # ============================================================
 # Neue Module können hier ergänzt werden, ohne workflow.py zu ändern.
+# - cost_profile beschreibt den relativen Eigenaufwand, ohne Vorstufen oder Zeitgarantie.
+#   Fehlende Profile bekannter Originalmodule erhalten kompatible Standardwerte.
 # - depends_on steuert die Reihenfolge als Abhängigkeitsgraph.
 # - args sind die Kommandozeilenargumente des jeweiligen Scripts.
 # - outputs werden nach jedem Modul auf Existenz geprüft.
@@ -1363,6 +1365,10 @@ pipeline:
     - id: clusterer
       name: Clusteranalyse
       script: clusterer.py
+      cost_profile:
+        class: HOCH
+        recommendation: für iterative Arbeit geeignet
+        note: Gruppiert Textstellen je Codepfad; große Gruppen und lange Texte können mehrere Modellaufrufe erfordern.
       enabled: true
       depends_on: []
       args:
@@ -1390,6 +1396,10 @@ pipeline:
     - id: code_verification
       name: Code-Verifikation
       script: code_verification.py
+      cost_profile:
+        class: HOCH
+        recommendation: für Zwischenvalidierung geeignet
+        note: Prüft Codierungen am Text. Zahl und Länge der Codierzeilen sowie Reparaturversuche bestimmen den Aufwand.
       enabled: true
       depends_on: [clusterer]
       args:
@@ -1413,6 +1423,10 @@ pipeline:
     - id: blind_coding
       name: Blind-Coding
       script: blind_coding.py
+      cost_profile:
+        class: HOCH
+        recommendation: für Zwischenvalidierung geeignet
+        note: Ordnet Textstellen anhand des Kategoriensystems zu. Viele Textstellen und umfangreiche Codedefinitionen erhöhen den Aufwand.
       enabled: true
       depends_on: [clusterer]
       args:
@@ -1436,6 +1450,10 @@ pipeline:
     - id: coding_agreement
       name: Human–LLM Coding Agreement
       script: coding_agreement.py
+      cost_profile:
+        class: NIEDRIG
+        recommendation: für Zwischenvalidierung geeignet
+        note: Keine eigenen Modellaufrufe. Berechnet Übereinstimmungen aus Codierergebnissen; die benötigten Vorstufen verursachen zusätzlichen Aufwand.
       enabled: true
       depends_on: [code_verification, blind_coding]
       args:
@@ -1463,6 +1481,10 @@ pipeline:
     - id: summarizer
       name: Cluster-Zusammenfassungen
       script: summarizer.py
+      cost_profile:
+        class: MITTEL
+        recommendation: für iterative Arbeit geeignet
+        note: Verdichtet die Cluster. Viele Cluster oder lange Textsammlungen erfordern zusätzliche Verarbeitungsschritte.
       enabled: true
       depends_on: [clusterer]
       args:
@@ -1484,6 +1506,10 @@ pipeline:
     - id: swot
       name: SWOT-Analysen
       script: swot.py
+      cost_profile:
+        class: HOCH
+        recommendation: für Zwischenvalidierung geeignet
+        note: Analysiert Cluster und ihre Belege. Viele Cluster, lange Eingaben und Reparaturversuche erhöhen den Aufwand.
       enabled: true
       depends_on: [summarizer]
       args:
@@ -1507,6 +1533,10 @@ pipeline:
     - id: meta_swot
       name: Meta-SWOT
       script: meta_swot.py
+      cost_profile:
+        class: MITTEL
+        recommendation: eher für finale Analyse
+        note: Verdichtet vorhandene SWOT-Befunde. Umfangreiche Vorberichte können zusätzliche Aufteilungen erfordern.
       enabled: true
       depends_on: [swot]
       args:
@@ -1526,6 +1556,10 @@ pipeline:
     - id: person_analysis
       name: Personenanalyse
       script: person_analysis.py
+      cost_profile:
+        class: HOCH
+        recommendation: für Zwischenvalidierung geeignet
+        note: Analysiert die zugeordneten Personen. Viele Personen und umfangreiches Material je Person erhöhen den Aufwand.
       enabled: true
       depends_on: [summarizer]
       args:
@@ -1549,6 +1583,10 @@ pipeline:
     - id: person_comparison
       name: Personenvergleich und Typenbildung
       script: person_comparison.py
+      cost_profile:
+        class: HOCH
+        recommendation: eher für finale Analyse
+        note: Vergleicht Personenanalysen; Anzahl und Umfang der Personenprofile bestimmen den Aufwand.
       enabled: true
       depends_on: [person_analysis]
       args:
@@ -1568,6 +1606,10 @@ pipeline:
     - id: contrast_analysis
       name: Kontrast- und Negativfallanalyse
       script: contrast_analysis.py
+      cost_profile:
+        class: HOCH
+        recommendation: eher für finale Analyse
+        note: Prüft Muster auf abweichende Fälle. Umfangreiche Personenanalysen und Vergleichsergebnisse erhöhen den Aufwand.
       enabled: true
       depends_on: [person_analysis, person_comparison]
       args:
@@ -1589,6 +1631,10 @@ pipeline:
     - id: relation_analysis
       name: Zusammenhangsanalyse
       script: relation_analysis.py
+      cost_profile:
+        class: HOCH
+        recommendation: eher für finale Analyse
+        note: Untersucht Zusammenhänge zwischen Kategorien. Viele Kategorien und Belege können zahlreiche Prüfungen erfordern.
       enabled: true
       depends_on: [summarizer]
       args:
@@ -1612,6 +1658,10 @@ pipeline:
     - id: ambiguity_analysis
       name: Ambivalenz- und Widerspruchsanalyse
       script: ambiguity_analysis.py
+      cost_profile:
+        class: HOCH
+        recommendation: für Zwischenvalidierung geeignet
+        note: Prüft Personenanalysen auf gegenläufige Aussagen. Viele Personen und Befunde erhöhen den Aufwand.
       enabled: true
       depends_on: [person_analysis]
       args:
@@ -1633,6 +1683,10 @@ pipeline:
     - id: evidence_audit
       name: Evidence-Audit
       script: evidence_audit.py
+      cost_profile:
+        class: SEHR HOCH
+        recommendation: eher für finale Analyse
+        note: Prüft Befunde aus mehreren Analysen auf Gegenbelege. Viele Aussagen, lange Quellen und Reparaturversuche können den Aufwand stark erhöhen.
       enabled: true
       depends_on: [swot, meta_swot, contrast_analysis, ambiguity_analysis]
       args:
@@ -1660,6 +1714,10 @@ pipeline:
     - id: review_queue
       name: Prüfliste der Codierungen
       script: review_queue.py
+      cost_profile:
+        class: NIEDRIG
+        recommendation: für iterative Arbeit geeignet
+        note: Keine eigenen Modellaufrufe. Erstellt die Prüfliste aus vorhandenen Ergebnissen. Die manuelle Prüfung und benötigte Vorstufen sind hier nicht eingerechnet.
       enabled: true
       depends_on: [coding_agreement, evidence_audit]
       args: [--config, "{config}", --input-csv, "{input_csv}"]
@@ -1671,6 +1729,10 @@ pipeline:
     - id: overall_synthesis
       name: Gesamtsynthese
       script: overall_synthesis.py
+      cost_profile:
+        class: MITTEL
+        recommendation: eher für finale Analyse
+        note: Führt vorhandene Analyseberichte zusammen. Lange Vorberichte können zusätzliche Aufteilungen erfordern; ihre Erstellung ist nicht eingerechnet.
       enabled: true
       depends_on:
         - meta_swot
@@ -1707,14 +1769,14 @@ pipeline:
     - id: coverage
       name: Coverage und Blind Spots
       script: coverage_analysis.py
-      enabled: false
-      requires_model: false
-      depends_on: []
-      after_if_enabled: [clusterer, summarizer, swot, meta_swot, person_analysis, person_comparison, contrast_analysis, relation_analysis, ambiguity_analysis, evidence_audit, overall_synthesis]
       cost_profile:
         class: NIEDRIG
         recommendation: für iterative Arbeit geeignet
         note: Keine zusätzlichen Modellaufrufe. Wertet nur abgeschlossene ausgewählte Analysen aus; aktiviert keine Vorstufen.
+      enabled: false
+      requires_model: false
+      depends_on: []
+      after_if_enabled: [clusterer, summarizer, swot, meta_swot, person_analysis, person_comparison, contrast_analysis, relation_analysis, ambiguity_analysis, evidence_audit, overall_synthesis]
       args: [--config, "{config}", --input-csv, "{input_csv}"]
       outputs: [coverage.json, coverage.md]
       report:
@@ -1724,14 +1786,14 @@ pipeline:
     - id: information_loss
       name: Information-Loss-Audit
       script: information_loss_analysis.py
-      enabled: false
-      requires_model: false
-      depends_on: []
-      after_if_enabled: [clusterer, summarizer, swot, meta_swot, person_analysis, person_comparison, contrast_analysis, relation_analysis, ambiguity_analysis, evidence_audit, overall_synthesis]
       cost_profile:
         class: MITTEL
         recommendation: für iterative Arbeit geeignet
         note: Keine zusätzlichen Modellaufrufe. Vergleicht Referenzen ausgewählter Analysen; Prüfpunkte müssen am Original beurteilt werden.
+      enabled: false
+      requires_model: false
+      depends_on: []
+      after_if_enabled: [clusterer, summarizer, swot, meta_swot, person_analysis, person_comparison, contrast_analysis, relation_analysis, ambiguity_analysis, evidence_audit, overall_synthesis]
       args: [--config, "{config}", --input-csv, "{input_csv}"]
       outputs: [information_loss.json, information_loss.md]
       report:
@@ -1741,14 +1803,14 @@ pipeline:
     - id: codebook_diagnostics
       name: Codebook-Diagnostik
       script: codebook_diagnostics.py
-      enabled: false
-      requires_model: false
-      depends_on: []
-      after_if_enabled: [code_verification, blind_coding, coding_agreement, review_queue]
       cost_profile:
         class: NIEDRIG
         recommendation: für iterative Arbeit geeignet
         note: Keine zusätzlichen Modellaufrufe. Prüft das Kategoriensystem und ausgewählte Codierergebnisse; ändert keine Codes.
+      enabled: false
+      requires_model: false
+      depends_on: []
+      after_if_enabled: [code_verification, blind_coding, coding_agreement, review_queue]
       args: [--config, "{config}", --input-csv, "{input_csv}"]
       outputs: [codebook_diagnostics.json, codebook_diagnostics.md]
       report:
@@ -1760,15 +1822,15 @@ pipeline:
     - id: stability
       name: Stabilitätsanalyse
       script: stability_analysis.py
+      cost_profile:
+        class: HOCH
+        recommendation: erst nach Stabilisierung von Material und Kategoriensystem empfohlen
+        note: Zusätzliche vollständige Modellläufe mit getrennten Ausgaben. Wiederholungen und Ziele samt Vorstufen bestimmen den Zusatzaufwand.
       enabled: false
       requires_model: true
       starts_child_runs: true
       depends_on: []
       after_if_enabled: [clusterer, code_verification, blind_coding, coding_agreement, summarizer, swot, meta_swot, person_analysis, person_comparison, contrast_analysis, relation_analysis, ambiguity_analysis, evidence_audit, review_queue, overall_synthesis]
-      cost_profile:
-        class: HOCH
-        recommendation: eher für finale Validierung
-        note: Zusätzliche vollständige Modellläufe mit getrennten Ausgaben. Wiederholungszahl und Ziele vorher prüfen; tatsächliche Modellaufrufzahl hängt vom Material und Reparaturen ab.
       args: [--config, "{config}", --input-csv, "{input_csv}"]
       outputs: [stability.json, stability.md]
       report:
@@ -1778,15 +1840,15 @@ pipeline:
     - id: sensitivity
       name: Sensitivitätsanalyse
       script: sensitivity_analysis.py
+      cost_profile:
+        class: SEHR HOCH
+        recommendation: erst nach Stabilisierung von Material und Kategoriensystem empfohlen
+        note: Basis und jede Variante werden mehrfach neu ausgeführt, einschließlich benötigter Vorstufen. Unterschiede sind keine automatisch erkannten Fehler.
       enabled: false
       requires_model: true
       starts_child_runs: true
       depends_on: []
       after_if_enabled: [clusterer, code_verification, blind_coding, coding_agreement, summarizer, swot, meta_swot, person_analysis, person_comparison, contrast_analysis, relation_analysis, ambiguity_analysis, evidence_audit, review_queue, overall_synthesis, stability]
-      cost_profile:
-        class: SEHR HOCH
-        recommendation: erst nach Abschluss wesentlicher Material- und Codebook-Iterationen
-        note: Basis und jede Variante werden mehrfach neu ausgeführt. Unterschiede sind keine automatisch erkannten Fehler. Einstellungen und Zusatzaufwand vor dem Start prüfen.
       args: [--config, "{config}", --input-csv, "{input_csv}"]
       outputs: [sensitivity.json, sensitivity.md]
       report:

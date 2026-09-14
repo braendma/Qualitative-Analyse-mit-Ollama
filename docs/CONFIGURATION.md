@@ -220,3 +220,26 @@ Das mitgelieferte Pipeline-Modul heißt `stability`, verwendet `stability_analys
 Eine aktivierte Stabilitätskonfiguration wird bereits bei `00_WORKFLOW_RUNNER.py --config PFAD --validate-only` geprüft. `stability_plan` enthält Wiederholungszahl, Ziele, effektive Module, zusätzliche Vorstufen und zusätzliche Modulausführungen. `model_calls: null` bedeutet unbekannte tatsächliche Anzahl, nicht null Aufrufe. Abweichendes `--csv` ist gesperrt; zuerst `paths.input_csv` ändern.
 
 Direktes Starten des Moduls ohne passenden aktiven Runner-Lauf ist gesperrt. `_stability_repetitions` ist reserviert; Diagnoseausgaben dürfen keine internen Seriendateien überschreiben. App-Einstellungen speichern dieselbe Struktur als `settings.stability`. Ist das Modul aus, startet es keine Wiederholungen; ältere Projekte ohne diese Einstellungen behalten den ausgeschalteten Default.
+
+## Einheitliche Aufwandprofile
+
+Jedes der 20 Standardmodule enthält unter `pipeline.modules` ein `cost_profile`.
+Die Klassen `NIEDRIG`, `MITTEL`, `HOCH`, `SEHR HOCH` bezeichnen den relativen
+Eigenaufwand; benötigte Vorstufen kommen hinzu. Keine Zeit- oder Preisschätzung.
+Die Oberfläche zeigt Klasse, Einsatzempfehlung und konkrete Einflussfaktoren direkt
+bei der Auswahl. Eine Übersicht enthält das [Handbuch](HANDBUCH.md#aufwandprofile).
+
+```yaml
+cost_profile:
+  class: HOCH
+  recommendation: für Zwischenvalidierung geeignet
+  note: Viele Textstellen und lange Eingaben erhöhen den Aufwand.
+```
+
+`class` muss eine der vier Klassen sein, `recommendation` ein nichtleerer Text,
+`note` ist optional und muss bei Angabe Text sein. Fehler nennen Modul und Felder.
+Fehlende oder mit `null` belegte Profile erben den Standard aus `cost_profiles.py`,
+sofern Modul-ID und Script genau dem Originalmodul entsprechen. Eigene Scripts
+bekommen keine unterstellte Einstufung; dafür ein explizites Profil angeben.
+Die Standardkonfiguration und die kompatiblen Defaults werden auf Gleichheit geprüft.
+Normalisierung ändert keine Originaldateien und schaltet keine zusätzlichen Module ein.

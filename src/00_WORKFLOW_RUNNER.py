@@ -8,6 +8,7 @@ Neue Analysemodule werden ausschließlich in config_v2.yaml unter
 """
 
 from project_paths import DEFAULT_CONFIG, DEFAULT_OUTPUT
+from cost_profiles import normalize_cost_profile
 import argparse
 import os
 import uuid
@@ -91,6 +92,7 @@ def normalize_modules(config: dict) -> list[dict]:
         item['starts_child_runs'] = raw.get('starts_child_runs', False)
         if item['starts_child_runs'] and not item['requires_model']:
             raise ValueError('Module mit Modell-Unterläufen müssen requires_model: true ausweisen.')
+        item["cost_profile"] = normalize_cost_profile(item)
         normalized.append(item)
 
     return normalized

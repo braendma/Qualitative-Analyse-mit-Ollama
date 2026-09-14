@@ -29,7 +29,8 @@ const moduleHelp = {
 };
 function appendModuleProfile(target,module){
   const profile=module.cost_profile;
-  if(profile){target.append(el('small','Aufwand: '+profile.class+' · '+profile.recommendation));if(profile.note)target.append(el('small',profile.note));}
+  if(profile){target.append(el('small','Eigenaufwand: '+profile.class+' · '+profile.recommendation));if(profile.note)target.append(el('small',profile.note));}
+  else{target.append(el('small','Aufwand: nicht eingestuft. Hinweise des Moduls prüfen.'));}
 }
 function updateModuleSelection(){
   const selected=new Set([...document.querySelectorAll('[name=module]:checked')].map(n=>n.value));

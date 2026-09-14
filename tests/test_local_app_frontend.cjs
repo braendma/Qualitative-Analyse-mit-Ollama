@@ -68,7 +68,7 @@ test('optional diagnostics stay off by default and explain their cost',()=>{
   assert.equal(modules[0].children[0].children[0].checked,true);
   assert.equal(modules[1].children[0].children[0].checked,false);
   const text=modules[1].children[0].children[1];
-  assert.ok(text.children.some(n=>n.textContent.includes('Aufwand: NIEDRIG')));
+  assert.ok(text.children.some(n=>n.textContent.includes('Eigenaufwand: NIEDRIG')));
   app.run("project.settings.modules=['coverage']; loadFields();");
   assert.equal(app.node('modules').children[0].children[0].children[0].checked,false);
   assert.equal(app.node('modules').children[1].children[0].children[0].checked,true);
@@ -221,4 +221,15 @@ test('category columns are manually mapped and missing or duplicate required map
   app.node('book-columns-ausschluss').value='';app.run('updateStartGate()');assert.equal(app.node('start').disabled,false);
   app.node('book-columns-definition').value='';app.run('updateStartGate()');assert.equal(app.node('start').disabled,true);
   assert.match(app.node('start-requirements').textContent,/Definition/);
+});
+
+
+test('unclassified extensions and cost text stay understandable without HTML injection',()=>{
+  const app=setup();
+  app.run("state.modules=[{id:'custom',name:'Eigenes Modul',depends_on:[],cost_profile:null}]; loadFields();");
+  const label=app.node('modules').children[0].children[0].children[1];
+  assert.ok(label.children.some(n=>n.textContent.includes('nicht eingestuft')));
+  app.run("state.modules[0].cost_profile={class:'HOCH',recommendation:'<img src=x>',note:'Eigenes Profil'}; loadFields();");
+  const revised=app.node('modules').children[0].children[0].children[1];
+  assert.ok(revised.children.some(n=>n.textContent.includes('<img src=x>')));
 });
