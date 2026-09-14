@@ -14,7 +14,7 @@ from thematic_interpretation import interpret_counts, comparison_basis
 
 
 ADAPTER_MODULES = ('clusterer', 'summarizer', 'swot', 'meta_swot',
-                   'person_analysis', 'ambiguity_analysis')
+                   'person_analysis', 'ambiguity_analysis', 'person_comparison')
 
 
 def execute_perspective(module, mode, material, payload, params, *, cluster_payload=None,
@@ -41,6 +41,9 @@ The qualitative default has no new material, model or output requirements.
     elif module == 'person_analysis':
         from thematic_person_adapters import build_person_topics
         prepared = build_person_topics(material, payload)
+    elif module == 'person_comparison':
+        from thematic_comparison_adapter import build_person_comparison_topics
+        prepared = build_person_comparison_topics(material, payload, person_payload)
     else:
         from thematic_person_adapters import build_ambiguity_topics
         prepared = build_ambiguity_topics(material, payload, person_payload)
@@ -127,5 +130,6 @@ def perspective_markdown(result):
                   '\n**Gegenpositionen**\n', escape(frequency[tid]['counterpositions']),
                   '\n**Grenzen**\n', escape(frequency[tid]['limitations'])]
     if result['unassigned_context']:
-        lines.append('\nEine freie Gesamtzusammenfassung bleibt qualitativer Kontext. Ihre einzelnen Aussagen erhalten dadurch keine eigenen Nennungshäufigkeiten.')
+        note = result['unassigned_context'].get('counting_note')
+        lines.append('\n' + escape(note or 'Eine freie Gesamtzusammenfassung bleibt qualitativer Kontext. Ihre einzelnen Aussagen erhalten dadurch keine eigenen Nennungshäufigkeiten.'))
     return '\n\n'.join(lines) + '\n'

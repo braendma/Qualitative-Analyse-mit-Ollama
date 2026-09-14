@@ -17,7 +17,7 @@ _CAPABILITIES = (
     ('swot', True, 'Themenbreite kann Schwerpunkte informieren; explizite Äußerungen und analytische Ableitungen getrennt halten.'),
     ('meta_swot', True, 'Personen und Passagen über Mengenvereinigung zählen; neue Metathemen brauchen eine eigene geprüfte Zuordnung.'),
     ('person_analysis', True, 'Passagen innerhalb einer Person vergleichen; keine irreführende Personenquote im Einzelfall.'),
-    ('person_comparison', True, 'Themen oder Typen erst nach expliziter vollständiger Personen- und Unklarheitszuordnung zählen.'),
+    ('person_comparison', True, 'Nur gemeinsame Muster über vollständiges Originalmaterial aller bestätigten Personen prüfen. Typen, Unterschiede, nicht zugeordnete Personen und Gesamtvergleich bleiben qualitativ.'),
     ('contrast_analysis', True, 'Stützende Fälle und Gegenpositionen getrennt zählen; Häufigkeit entkräftet keinen Einzelfall.'),
     ('relation_analysis', True, 'Gemeinsames Auftreten mit Bezugsmenge beschreiben; daraus keine Kausalität ableiten.'),
     ('ambiguity_analysis', True, 'Beide Positionen und ihre Personenüberschneidung erhalten; Gegenpositionen nicht verrechnen.'),

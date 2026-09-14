@@ -9,6 +9,7 @@ import logging
 import yaml
 
 from person_comparison_core import build_person_comparison
+from thematic_pipeline import prepare, finish
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -28,6 +29,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description="Personenvergleich und qualitative Typenbildung")
     parser.add_argument("--config", "-c", default=str(DEFAULT_CONFIG))
     parser.add_argument("--person-json", "-j", default="person_analysis_v1.json")
+    parser.add_argument("--csv", default=None, help="Originalmaterial für die optionale Häufigkeitsperspektive")
     parser.add_argument("--out-md", "-o", default="person_comparison_v1.md")
     parser.add_argument("--out-json", "-x", default="person_comparison_v1.json")
     args = parser.parse_args(argv)
@@ -44,6 +46,7 @@ def main(argv=None):
         "log_thinking": bool(llm_cfg.get("log_thinking", False)),
     }
 
+    prepared = prepare('person_comparison', args.config, input_path=args.csv, person_path=args.person_json)
     md, json_output = build_person_comparison(
         person_analysis_json_path=args.person_json,
         ollama_params=ollama_params,
@@ -51,6 +54,7 @@ def main(argv=None):
         context=config.get("context", {}),
     )
 
+    md, json_output = finish(prepared, json_output, md, ollama_params)
     atomic_text(args.out_md, md)
     atomic_json(args.out_json, json_output)
 
@@ -60,4 +64,3 @@ def main(argv=None):
 
 if __name__ == "__main__":
     main()
-

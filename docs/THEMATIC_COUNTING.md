@@ -1,11 +1,11 @@
 # Thematische Zählung – Entwicklervertrag des gemeinsamen Kerns
 
-**Entwicklungsstand S13e:** Clusteranalyse (`clusterer`), Clusterzusammenfassungen
+**Entwicklungsstand S13f:** Clusteranalyse (`clusterer`), Clusterzusammenfassungen
 (`summarizer`), SWOT (`swot`), Meta-SWOT (`meta_swot`), Personenanalyse
-(`person_analysis`) und Ambivalenzanalyse (`ambiguity_analysis`) sind über ihre regulären Module in
+(`person_analysis`), Personenvergleich (`person_comparison`) und Ambivalenzanalyse (`ambiguity_analysis`) sind über ihre regulären Module in
 Workflow-CLI und Oberfläche mit den Perspektiven `qualitative`, `frequency` und
 `both` verbunden. Die Auswahl gilt unabhängig je Modul; fehlende Einstellungen
-bleiben qualitativ. Die vier weiteren geeigneten Module Personenvergleich,
+bleiben qualitativ. Die drei weiteren geeigneten Module
 Kontrastanalyse, Zusammenhangsanalyse und Gesamtsynthese haben noch keine
 zusätzlichen Perspektiven. Dies beschreibt den aktuellen Entwicklungsstand, keine neue
 veröffentlichte Version. Der gemeinsame Kern verbindet vollständige
@@ -219,7 +219,7 @@ Themen beruhen oder einen gesonderten geprüften Vertrag erhalten.
 Fehlende oder `null` gesetzte Abschnitte bleiben qualitativ. Methodische Eignung
 ist von implementierter Verfügbarkeit getrennt: Nichtqualitative Modi werden
 ohne ausdrücklich freigegebenen Adapter als „noch nicht integriert“ abgewiesen.
-Die zentrale Grenze `thematic_pipeline` gibt nur die sechs integrierten
+Die zentrale Grenze `thematic_pipeline` gibt nur die sieben integrierten
 Standardmodule frei. Ein eigenes Skript mit derselben Modul-ID erbt keine
 zusätzliche Verfügbarkeit. Die Oberfläche liest diese Freigabe vom Server.
 Ungültige gespeicherte Modi werden angezeigt und abgewiesen, auch bei gerade
@@ -284,9 +284,9 @@ muss genau ein qualitativer Ausgangstext vorhanden sein.
 Eine Interpretationsanfrage enthält das betreffende Thema, diesen
 unveränderten Ausgangstext, ein vollständiges Register der berechneten
 Themenkennzahlen im ausdrücklich benannten Vergleichsraum und die vorhandenen
-entgegenstehenden Originaleinheiten. Bei Cluster, Zusammenfassungen, SWOT und
-Meta-SWOT enthält `comparison_basis: all_fixed_topics` sämtliche festgelegten
-Modulthemen. Bei Personen- und Ambivalenzanalyse enthält
+entgegenstehenden Originaleinheiten. Bei Cluster, Zusammenfassungen, SWOT,
+Meta-SWOT und Personenvergleich enthält `comparison_basis: all_fixed_topics` sämtliche festgelegten
+gezählten Modulthemen. Beim Personenvergleich sind dies ausschließlich gemeinsame Muster. Bei Personen- und Ambivalenzanalyse enthält
 `comparison_basis: same_person_scope` dagegen sämtliche Themen desselben
 vollständigen Einzelfall-Scopes, einschließlich aller A-/B-Seiten dieses Falles.
 Themen anderer Personen gehören nicht zu diesem Vergleichsraum. Das ist eine
@@ -320,14 +320,14 @@ die danebenstehenden berechneten Werte müssen fachlich geprüft werden.
 
 `thematic_execution.execute_perspective(module, mode, material, payload, params,
 *, cluster_payload=None, swot_payload=None, person_payload=None, llm=None)`
-unterstützt `clusterer`, `summarizer`, `swot`, `meta_swot`, `person_analysis`
-und `ambiguity_analysis`:
+unterstützt `clusterer`, `summarizer`, `swot`, `meta_swot`, `person_analysis`,
+`person_comparison` und `ambiguity_analysis`:
 
 1. Bei `qualitative` liefert die Funktion `None` und startet keine neue
    Materialprüfung oder Modellanfrage; der bestehende Standardpfad bleibt.
 2. Der passende Adapter bereitet gemeinsame ungewichtete Themen vor.
    Cluster und Summarizer verwenden ihre vollständige Mitgliedschaft,
-   SWOT, Meta-SWOT, Personen- und Ambivalenzanalyse führen eine zusätzliche
+   SWOT, Meta-SWOT, Personenanalyse, Personenvergleich und Ambivalenzanalyse führen eine zusätzliche
    vollständige Matrixphase in ihrem ausdrücklich definierten Scope aus.
 3. Der Kern zählt die gemeinsame Zuordnung einmal und führt anschließend
    häufigkeitsinformierte Interpretationen pro Thema aus.
@@ -370,7 +370,7 @@ JSON-Datei des Moduls.
 
 Die Promptansicht ergänzt bei gespeichertem `frequency`/`both` die festen
 Systemanweisungen für Häufigkeitsinterpretation und bei SWOT, Meta-SWOT,
-Personen- und Ambivalenzanalyse für vollständige Themenzuordnung.
+Personenanalyse, Personenvergleich und Ambivalenzanalyse für vollständige Themenzuordnung.
 Sie beschreibt die dynamischen Eingaben, zeigt aber weder das vollständige
 Anfrageprotokoll noch automatisch Interviewmaterial. Stabilitäts-/Sensitivitätsansichten
 berücksichtigen die entsprechenden Zielmodule. Weitere Moduladapter bleiben
@@ -454,3 +454,40 @@ aufgelistet sind. Fehlt eine notwendige Quelle oder ist sie ungültig, ist die
 abhängige Projektion nicht auswertbar. Die Zuordnungsmatrix wird weiterhin nicht
 zur angeblich ausgewählten Evidenz. Wiederholungsvergleiche müssen dieselben
 Quellenregeln innerhalb des jeweiligen Kindlaufs anwenden.
+
+
+## 12. Personenvergleich: gemeinsame Muster und qualitativer Rest
+
+`thematic_comparison_adapter.build_person_comparison_topics(material, payload,
+source_person_payload)` validiert die vollständige Personenanalyse und die
+exakte Liste `source_persons`. `input_reduction.source_sha256` muss auf die
+ursprünglichen Personenanalysen zeigen. Bei tatsächlicher Verdichtung werden
+auch jede Personenquelle, Summary, Personenkennung und gespeicherte Bytegröße
+geprüft. Zeitreferenzen allein ersetzen diese Nachweise und die Dateihashes der
+Anwendungsgrenze nicht. Auch gewichtete Vorstufen werden anhand ihrer gemeinsamen
+ungewichteten Originalfelder geprüft.
+
+Nur `gemeinsame_muster[]` erzeugt Themen aus vollständigem Thema und Verdichtung.
+`kind=derived` beschreibt Unterstützung einer analytischen Aussage, keine
+automatisch bestätigte wörtliche Nennung. Der Scope enthält alle Originaleinheiten
+aller bestätigten Vergleichspersonen. `personen` wird als Herkunftsreferenz
+validiert, aber weder als vollständige Mitgliedschaft noch als positive
+Zuordnung übernommen. Jedes Muster erhält eine vollständige neue Matrix; bereits
+bekannte Personenhäufigkeiten anderer Module werden nicht addiert.
+
+`zentrale_unterschiede`, `typen`, `nicht_zugeordnete_personen`, `gesamtvergleich`
+und der Reduktionshinweis bleiben in `unassigned_context`. Auch ihre Personen-
+referenzen werden geprüft. Die Typenliste darf überlappen und unvollständig sein;
+das Ergebnis behauptet keine Typenpartition oder neue Typen-/Aussagenhäufigkeit.
+Der unveränderte qualitative Originalbericht bleibt erhalten; der zusätzliche
+Perspektivabschnitt benennt ausdrücklich, welche Abschnitte keine eigene Zählung
+besitzen. Keine gemeinsamen Muster bedeutet keine berechenbaren gemeinsamen
+Musterthemen, nicht automatisch fehlende Unterschiede oder Typen.
+
+`comparison_basis=all_fixed_topics` enthält hier alle gezählten gemeinsamen
+Muster über derselben globalen Originalbasis. Das ist vom `same_person_scope`
+der Personen- und Ambivalenzanalyse zu unterscheiden. `frequency`/`both` teilen
+wie bisher eine Zuordnungsmatrix. Neue Modellzuordnungen können ursprüngliche
+Mehrheitsformulierungen einschränken; die Bezeichnung als gemeinsames Muster
+beweist keine Mehrheit. Die Matrix ergänzt die Prüfung vorhandener Kandidaten
+und entdeckt keine zuvor in der Verdichtung übersehenen Muster nachträglich.

@@ -16,12 +16,12 @@ const load=(app,modules,settings={})=>{app.run(`state.modules=${JSON.stringify(m
 const snapshot=app=>JSON.parse(app.run('JSON.stringify(perspectiveSettings())'));
 
 test('new case and meta perspectives retain choices and explain their counting scope',()=>{
- const app=setup();const ids=['meta_swot','person_analysis','ambiguity_analysis'];
+ const app=setup();const ids=['meta_swot','person_analysis','ambiguity_analysis','person_comparison'];
  load(app,ids.map(id=>moduleRow(id)),{modules:ids,analysis_perspectives:Object.fromEntries(ids.map(id=>[id,'both']))});
- assert.equal(app.selectors().length,3);assert.ok(app.selectors().every(s=>s.value==='both'));
+ assert.equal(app.selectors().length,4);assert.ok(app.selectors().every(s=>s.value==='both'));
  assert.deepEqual(snapshot(app),Object.fromEntries(ids.map(id=>[id,'both'])));
- app.run('updatePerspectivePlan(new Set(["meta_swot","person_analysis","ambiguity_analysis"]))');
- assert.match(app.read(app.node('perspective-status')),/Meta-SWOT, Personen- und Ambivalenzanalyse benötigen vollständige Themenzuordnungen/);
+ app.run('updatePerspectivePlan(new Set(["meta_swot","person_analysis","ambiguity_analysis","person_comparison"]))');
+ assert.match(app.read(app.node('perspective-status')),/vollständige Themenzuordnungen/);
  const html=fs.readFileSync(path.join(__dirname,'../src/local_app.html'),'utf8');
  assert.match(html,/Eine Person mit zehn Aussagen bleibt eine Person/);
  assert.match(html,/A und B sind nicht automatisch Gegensätze/);

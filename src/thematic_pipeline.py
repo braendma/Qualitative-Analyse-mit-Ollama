@@ -10,8 +10,8 @@ from analysis_perspectives import normalize_analysis_perspectives, perspective_c
 
 
 IMPLEMENTED = ('clusterer', 'summarizer', 'swot', 'meta_swot',
-               'person_analysis', 'ambiguity_analysis')
-FULL_ASSIGNMENT_MODULES = ('swot', 'meta_swot', 'person_analysis', 'ambiguity_analysis')
+               'person_analysis', 'ambiguity_analysis', 'person_comparison')
+FULL_ASSIGNMENT_MODULES = ('swot', 'meta_swot', 'person_analysis', 'ambiguity_analysis', 'person_comparison')
 
 
 def modes(config):
@@ -129,10 +129,10 @@ def prepare(module, config_path, *, input_path=None, cluster_path=None, idmap_pa
             raise ValueError('Geprüfte originale SWOT-Analyse fehlt für die Meta-SWOT-Perspektive.')
         swot = source(swot_path, 'swot')
         build_swot_topics(material, swot)
-    if module == 'ambiguity_analysis':
+    if module in ('ambiguity_analysis', 'person_comparison'):
         from thematic_person_adapters import build_person_topics
         if person_path is None:
-            raise ValueError('Geprüfte originale Personenanalyse fehlt für die Ambivalenzperspektive.')
+            raise ValueError('Geprüfte originale Personenanalyse fehlt für die zusätzliche Analyseperspektive.')
         persons = source(person_path, 'person_analysis')
         build_person_topics(material, persons)
     return {'module_id': module, 'mode': mode, 'material': material, 'clusters': clusters,

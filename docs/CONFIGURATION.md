@@ -306,10 +306,10 @@ in diesem Fall ist `total_module_executions: null`. Keine Zeit-/Preisprognose.
 ## Analyseperspektiven je Modul
 
 Der aktuelle Entwicklungsstand erlaubt zusätzliche Perspektiven für die
-sechs unveränderten Standardmodule `clusterer`, `summarizer`, `swot`,
-`meta_swot`, `person_analysis` und `ambiguity_analysis`. Die Modi werden unabhängig
+sieben unveränderten Standardmodule `clusterer`, `summarizer`, `swot`,
+`meta_swot`, `person_analysis`, `person_comparison` und `ambiguity_analysis`. Die Modi werden unabhängig
 je Modul gewählt; die folgende Auswahl ist ein Beispiel, keine automatische
-Aktivierung aller sechs Module:
+Aktivierung aller sieben Module:
 
 ```yaml
 analysis_perspectives:
@@ -318,6 +318,7 @@ analysis_perspectives:
   swot: frequency
   meta_swot: both
   person_analysis: frequency
+  person_comparison: both
   ambiguity_analysis: both
 ```
 
@@ -335,7 +336,7 @@ dieselbe Zuordnung. Abgewählte Module behalten gespeicherte Modi.
 
 Ein fehlender oder `null` gesetzter gesamter Abschnitt bedeutet qualitativ.
 Null-Einzelwerte, Listen, unbekannte Modi und unbekannte Modul-IDs werden
-abgewiesen. Die vier übrigen geeigneten Module `person_comparison`,
+abgewiesen. Die drei übrigen geeigneten Module
 `contrast_analysis`, `relation_analysis` und `overall_synthesis` bleiben für
 `frequency`/`both` gesperrt. Ihre methodische Eignung bedeutet keine
 Ausführungsfreigabe. Codiervergleich, Review und Diagnosen erhalten
@@ -366,7 +367,8 @@ Eingaben und Programmversion; passende Teilblöcke können wiederverwendet werde
 Die Aufwandübersicht nennt gemeinsame Zählbasen und zusätzliche
 Interpretationsphasen. Eine Basis ist keine einzelne Modellanfrage. SWOT führt
 die vollständige Thema-Einheit-Zuordnung im jeweiligen Codepfad aus, Meta-SWOT
-im gesamten ausgewerteten SWOT-Material. Personenbefunde und jede einzelne
+im gesamten ausgewerteten SWOT-Material. Der Personenvergleich prüft gemeinsame
+Muster im vollständigen bestätigten Vergleichsmaterial. Personenbefunde und jede einzelne
 Ambivalenzseite werden gegen den vollständigen Einzelfall geprüft. Cluster und
 Zusammenfassungen verwenden vollständige Clusterzuordnungen.
 Matrixumfang, Themen und Reparaturen bestimmen die tatsächliche Zusatzarbeit;
@@ -400,9 +402,27 @@ oder beschädigte Vorstufen liefern keine vermeintlich gültigen Nullwerte.
 Der Vergleichsraum der Häufigkeitsinterpretation ist fachlich festgelegt, kein
 zusätzliches Feld in der YAML: Personen- und Ambivalenzanalyse übergeben sämtliche
 Themen desselben vollständigen Einzelfalls (`comparison_basis: same_person_scope`),
-einschließlich aller A-/B-Seiten. Cluster, Zusammenfassungen, SWOT und Meta-SWOT
-verwenden sämtliche Modulthemen (`all_fixed_topics`). Das Anfrageobjekt benennt
+einschließlich aller A-/B-Seiten. Cluster, Zusammenfassungen, SWOT, Meta-SWOT und Personenvergleich
+verwenden sämtliche gezählten Modulthemen (`all_fixed_topics`). Das Anfrageobjekt benennt
 `module_topic_count` und `comparison_topic_count` getrennt. Themen anderer Personen
 werden nicht in die Einzelfallinterpretation eingeschleust; alle Fälle und ihre
 Zähler bleiben im Gesamtergebnis. Auch das vollständige Einzelfallregister kann
 zu groß für den gewählten Kontext sein und wird dann nicht still gekürzt.
+
+
+Beim Personenvergleich zählt die neue Perspektive ausschließlich
+`gemeinsame_muster`. Jedes vollständig definierte Muster wird über sämtliche
+Originaleinheiten aller bestätigten Vergleichspersonen geprüft. Es handelt sich
+um Unterstützung oder Gegenposition zu einer analytisch abgeleiteten Aussage,
+nicht automatisch um ihre wörtliche Nennung. Die ursprüngliche Liste `personen`
+ist nur eine Kandidatenreferenz und setzt keine Matrixzellen vorab auf positiv.
+`zentrale_unterschiede`, `typen`, `nicht_zugeordnete_personen` und `gesamtvergleich`
+bleiben ausdrücklich qualitativer Kontext. Typenlisten dürfen sich überschneiden
+oder unvollständig sein; daraus entstehen keine behauptete Partition, Typenquote
+oder zusätzliche Nennungshäufigkeit. Diese Auswahl ist fest im Adapter definiert,
+kein weiterer YAML-Schalter.
+
+Der Personenvergleich benötigt die vollständige originale Personenanalyse und
+einen dazu passenden Verdichtungsnachweis (`input_reduction`). Fremde Personen,
+fehlende Originalpersonen oder falsche Quell-/Verdichtungshashes verhindern die
+zusätzliche Auswertung. Die Moduswahl ändert nicht die bestätigte Personenbasis.

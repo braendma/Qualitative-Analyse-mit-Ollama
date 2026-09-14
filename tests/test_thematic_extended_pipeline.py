@@ -1,4 +1,4 @@
-"""Six real thematic entrypoints; synthetic inputs and model transport only."""
+"""Seven real thematic entrypoints; synthetic inputs and model transport only."""
 import copy
 import json
 import os
@@ -28,7 +28,7 @@ def extended_setup(root):
     for module in cfg['pipeline']['modules']:
         module['enabled'] = module['id'] in IMPLEMENTED
     for key, placeholder in {'meta_swot': '{clusters}', 'person_analysis': '{persons}',
-                             'ambiguity_analysis': '{data}'}.items():
+                             'ambiguity_analysis': '{data}', 'person_comparison': '{persons}'}.items():
         cfg['prompts'][key] = {'system': key, 'user': placeholder}
     path.write_text(yaml.safe_dump(cfg, allow_unicode=True), encoding='utf-8')
     material = load_counting_material(path)
@@ -58,9 +58,9 @@ class ExtendedThematicBoundaryTests(unittest.TestCase):
                 with patch.dict(os.environ,partial), self.assertRaisesRegex(ValueError,'vollständigen Eingabe- und Laufnachweis'):
                     prepare('meta_swot',path,swot_path=root/'swot_v1.json')
 
-    def test_six_builtins_have_capabilities_but_custom_scripts_do_not(self):
+    def test_seven_builtins_have_capabilities_but_custom_scripts_do_not(self):
         self.assertEqual(set(IMPLEMENTED), {'clusterer', 'summarizer', 'swot', 'meta_swot',
-                                           'person_analysis', 'ambiguity_analysis'})
+                                           'person_analysis', 'ambiguity_analysis', 'person_comparison'})
         for mid in IMPLEMENTED:
             self.assertTrue(capability({'id': mid, 'script': mid+'.py'})['implemented'])
             self.assertFalse(capability({'id': mid, 'script': 'replacement.py'})['implemented'])
@@ -68,7 +68,8 @@ class ExtendedThematicBoundaryTests(unittest.TestCase):
     def test_module_specific_sources_are_required_without_irrelevant_cluster_files(self):
         with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, clean_environment(), clear=True):
             root=Path(tmp); path, _, _, _, _=extended_setup(root)
-            cases = [('meta_swot', {'swot_path': root/'swot_v1.json'}),
+            cases = [('person_comparison', {'person_path': root/'person_analysis_v1.json'}),
+                     ('meta_swot', {'swot_path': root/'swot_v1.json'}),
                      ('person_analysis', {'cluster_path': root/'clusters_output.json',
                         'idmap_path': root/'id_to_text.json', 'summary_path': root/'summary_v1.json'}),
                      ('ambiguity_analysis', {'idmap_path': root/'id_to_text.json',
@@ -116,16 +117,16 @@ class ExtendedThematicBoundaryTests(unittest.TestCase):
             path,cfg,_,_,_=extended_setup(Path(tmp))
             modules=[m for m in cfg['pipeline']['modules'] if m['enabled']]
             entries={r['id']:r for r in catalog(cfg,modules)['modules']}
-            for mid in ('meta_swot','person_analysis','ambiguity_analysis'):
+            for mid in ('meta_swot','person_analysis','ambiguity_analysis','person_comparison'):
                 self.assertTrue(any(row['key']==mid+' / thematic_assignment' for row in entries[mid]['templates']))
                 self.assertTrue(any(row['key']==mid+' / frequency_interpretation' for row in entries[mid]['templates']))
             long=Segment('s','Synthetic long original ' * 4000,'A','P','u')
             report=check_context(cfg,[long],{},[m for m in modules if m['id']!='clusterer'])
-            self.assertTrue({'meta_swot','person_analysis','ambiguity_analysis'} <= {r['module'] for r in report['blocked']})
+            self.assertTrue({'meta_swot','person_analysis','ambiguity_analysis','person_comparison'} <= {r['module'] for r in report['blocked']})
 
 
 class ExtendedThematicProcessTests(unittest.TestCase):
-    def test_six_cli_modules_html_diagnostics_person_scopes_sources_and_resume(self):
+    def test_seven_cli_modules_html_diagnostics_person_scopes_sources_and_resume(self):
         from diagnostic_sources import load_sources
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);path,cfg,_,_,_=extended_setup(root)
@@ -143,13 +144,14 @@ class ExtendedThematicProcessTests(unittest.TestCase):
             self.assertEqual(manifest['status'],'success')
             self.assertEqual(set(manifest['completed_steps']),set(IMPLEMENTED)|{'coverage','information_loss'})
             for mid,name in [('meta_swot','meta_swot_v1.json'),('person_analysis','person_analysis_v1.json'),
-                             ('ambiguity_analysis','ambiguity_analysis_v1.json')]:
+                             ('ambiguity_analysis','ambiguity_analysis_v1.json'),
+                             ('person_comparison','person_comparison_v1.json')]:
                 payload=json.loads((run/name).read_text(encoding='utf-8'))
                 counted=payload['analysis_perspective']['counting']
                 self.assertTrue(counted['topics'])
                 for topic in counted['topics']:
-                    self.assertEqual(topic['counts']['mentioned']['exact_person_count'],12 if mid=='meta_swot' else 1)
-                    self.assertEqual(topic['scope']['person_count'],12 if mid=='meta_swot' else 1)
+                    self.assertEqual(topic['counts']['mentioned']['exact_person_count'],12 if mid in ('meta_swot','person_comparison') else 1)
+                    self.assertEqual(topic['scope']['person_count'],12 if mid in ('meta_swot','person_comparison') else 1)
             html=(run/'gesamtbericht.html').read_text(encoding='utf-8')
             self.assertIn('nicht die gemeinsame Nennung von A und B',html)
             self.assertIn('innerhalb dieses Falles',html)

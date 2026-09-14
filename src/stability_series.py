@@ -18,7 +18,8 @@ def _thematic_upstreams(run, module_id, payload, by_id, manifest):
     """Bind required originals to the same completed child-run manifest."""
     if 'analysis_perspective' not in payload:
         return {}
-    required = {'meta_swot': ('swot',), 'ambiguity_analysis': ('person_analysis',)}.get(module_id, ())
+    required = {'meta_swot': ('swot',), 'ambiguity_analysis': ('person_analysis',),
+                'person_comparison': ('person_analysis',)}.get(module_id, ())
     result = {}
     for mid in required:
         if mid not in by_id:
