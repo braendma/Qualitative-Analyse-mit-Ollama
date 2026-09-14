@@ -83,7 +83,7 @@ class RepetitionPlanTests(unittest.TestCase):
             w.config['llm']['partial_checkpoint_dir']='shared';w.save()
             with self.assertRaisesRegex(ValueError,'partial_checkpoint_dir'):
                 prepare_repetitions(w.path,['blind_coding'])
-            for outside in ('../old.json',r'C:\old.json',r'\\server\share\old.json','/old.json','{output_dir}/old.json','workflow_manifest.json','file:stream','NUL.json'):
+            for outside in ('../old.json',r'C:\old.json',r'\\server\share\old.json','/old.json','{output_dir}/old.json','workflow_manifest.json','file:stream','NUL.json','.. /old.json','workflow_manifest.json.','name /old.json','name\n.json'):
                 w.config=copy.deepcopy(baseline);w.module('blind_coding')['outputs']=[outside];w.save()
                 with self.subTest(path=outside),self.assertRaises(ValueError):
                     prepare_repetitions(w.path,['blind_coding'])

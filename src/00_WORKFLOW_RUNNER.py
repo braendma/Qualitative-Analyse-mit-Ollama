@@ -234,6 +234,38 @@ def build_full_report(output_dir: Path, modules: list[dict], created_at: str) ->
     return report_path
 
 
+def execution_provenance(config_path, csv_path, config, script_dir=None):
+    """Shared execution identity for ordinary runs and controlled repetitions."""
+    script_dir = Path(script_dir or Path(__file__).resolve().parent)
+    config_path = Path(config_path)
+    provenance = {
+        'review_provenance': config.get('review_provenance'),
+        "input_sha256": file_hash(csv_path),
+        "config_sha256": file_hash(config_path),
+        "code": {p.name: file_hash(p) for p in sorted([*script_dir.glob("*.py"), *script_dir.glob("*.html"), *script_dir.glob("*.js"), *script_dir.glob("*.css")])},
+        "dependencies": {name: importlib.metadata.version(name) for name in ("pandas", "PyYAML", "ollama", "matplotlib")},
+        "llm": config.get("llm", {}),
+    }
+    codebook_path = config.get("paths", {}).get("category_system_csv")
+    if codebook_path:
+        provenance["codebook_sha256"] = file_hash(resolve_path(config_path.parent, codebook_path))
+    try:
+        provenance["commit"] = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=script_dir, stderr=subprocess.DEVNULL, text=True).strip()
+    except (OSError, subprocess.CalledProcessError):
+        provenance["commit"] = None
+    return provenance
+
+
+def verify_completed_outputs(output_dir, manifest, modules):
+    """A failed result is not a checkpoint; reuse only verified completed modules."""
+    for module in modules:
+        if module["id"] in manifest.get('completed_steps', []):
+            for filename in module.get("outputs", []):
+                path = Path(output_dir) / filename
+                if not path.is_file() or (path.suffix != '.log' and file_hash(path) != manifest.get("output_hashes", {}).get(filename)):
+                    raise ValueError(f"Wiederaufnahme abgelehnt: Output verändert oder fehlt: {filename}")
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(
         description="Generischer YAML-gesteuerter qualitativer Analyse-Workflow"
@@ -289,21 +321,7 @@ def main(argv=None):
         print(json.dumps({"status": "valid", "segments": len(input_segments), "code_paths": len(code_index),
                           "modules": len(modules), "model_calls": 0}))
         return
-    provenance = {
-        'review_provenance': config.get('review_provenance'),
-        "input_sha256": file_hash(csv_path),
-        "config_sha256": file_hash(config_path),
-        "code": {p.name: file_hash(p) for p in sorted([*script_dir.glob("*.py"), *script_dir.glob("*.html"), *script_dir.glob("*.js"), *script_dir.glob("*.css")])},
-        "dependencies": {name: importlib.metadata.version(name) for name in ("pandas", "PyYAML", "ollama", "matplotlib")},
-        "llm": config.get("llm", {}),
-    }
-    codebook_path = config.get("paths", {}).get("category_system_csv")
-    if codebook_path:
-        provenance["codebook_sha256"] = file_hash(resolve_path(config_path.parent, codebook_path))
-    try:
-        provenance["commit"] = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=script_dir, stderr=subprocess.DEVNULL, text=True).strip()
-    except (OSError, subprocess.CalledProcessError):
-        provenance["commit"] = None
+    provenance = execution_provenance(config_path, csv_path, config, script_dir)
     # Commit is descriptive; code content is the authoritative resume identity.
     identity = fingerprint({k: v for k, v in provenance.items() if k != "commit"})
     if args.resume:
@@ -313,13 +331,7 @@ def main(argv=None):
             raise ValueError("Wiederaufnahme abgelehnt: Eingaben, Konfiguration, Code oder Abhängigkeiten geändert.")
         run_id = manifest["run_id"]
         completed_steps = list(manifest["completed_steps"])
-        # A failed result is not a checkpoint. Reuse only verified completed modules.
-        for module in modules:
-            if module["id"] in completed_steps:
-                for filename in module.get("outputs", []):
-                    path = output_dir / filename
-                    if not path.is_file() or (path.suffix != '.log' and file_hash(path) != manifest.get("output_hashes", {}).get(filename)):
-                        raise ValueError(f"Wiederaufnahme abgelehnt: Output verändert oder fehlt: {filename}")
+        verify_completed_outputs(output_dir, manifest, modules)
     else:
         run_id = datetime.now().strftime("%Y%m%dT%H%M%S") + "-" + uuid.uuid4().hex[:8]
         output_dir = resolve_path(Path.cwd(), args.output_dir) / run_id

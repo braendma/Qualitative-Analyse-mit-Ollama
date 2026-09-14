@@ -39,7 +39,16 @@ csv.field_size_limit(MAX_UPLOAD)
 
 
 def read_json(path, default=None):
-    return json.loads(path.read_text(encoding='utf-8')) if path.exists() else default
+    # On Windows an atomic replacement or virus scanner can briefly deny a read.
+    for attempt in range(3):
+        try:
+            return json.loads(path.read_text(encoding='utf-8'))
+        except FileNotFoundError:
+            return default
+        except PermissionError:
+            if attempt == 2:
+                raise
+            time.sleep(.05)
 
 
 def safe_child(root, name):
@@ -580,9 +589,14 @@ class App(ReviewWorkspace):
             while process.poll() is None:
                 manifests=list((folder/'runs').glob('*/workflow_manifest.json'))
                 if manifests:
-                    manifest=read_json(manifests[0])
+                    try:
+                        manifest=read_json(manifests[0], {})
+                        detail=read_json(manifests[0].parent/'progress.json',{})
+                    except (OSError, ValueError):
+                        # A status read failure must not release the active-run guard.
+                        time.sleep(1)
+                        continue
                     count=len(manifest.get('completed_steps',[]))
-                    detail=read_json(manifests[0].parent/'progress.json',{})
                     if detail.get('module')!=manifest.get('current_module'):
                         detail={'module':manifest.get('current_module')}
                     failure=(detail.get('module'),detail.get('failed'),bool(detail.get('context_blocked')))

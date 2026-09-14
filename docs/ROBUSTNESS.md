@@ -127,8 +127,16 @@ Tabellentrennzeichen.
 
 ## Wiederholungen: vorbereiteter Plan und Cache-Trennung
 
+Die bestehende Desktop-Überwachung toleriert außerdem kurzzeitige Windows-
+Lesesperren auf Statusdateien. Ein JSON-Lesezugriff wird bei einer solchen Sperre
+begrenzt wiederholt; während eines aktiven Prozesses wird ein nicht lesbarer
+Status beim nächsten Überwachungstakt erneut geprüft. Die Sperre gegen einen
+zweiten Analysestart bleibt dabei bestehen. Beschädigte JSON-Dateien werden
+nicht allgemein als erfolgreiche oder leere Ergebnisse umgedeutet.
+
 Der Entwicklungsstand kann Wiederholungen mit identischen konfigurierten
-Bedingungen planen. Noch erfolgt keine automatische Serienausführung. Die
+Bedingungen planen und über die interne API `execute_repetitions` seriell an den
+vorhandenen Runner übergeben. Eine auswählbare UI-Diagnose ist noch nicht enthalten. Die
 Planung verwendet dieselbe Modulsortierung und denselben Schutz vor gespeicherten
 Schlüsselwerten wie die bestehende Anwendung. Sie lehnt rekursive Diagnosen,
 gemeinsame Checkpointordner und Ausgabeziele außerhalb eines Unterlaufs ab.
@@ -140,3 +148,15 @@ explizite Vorstufen, falsche YAML-Typen, fehlende Eingabedateien, DOS-/UNC-Pfade
 reservierte Windows-Dateinamen, alternative relative Ausgaben und unveränderte
 Datenschutzvorgaben. Die Ergebnisse belegen die technische Vorbereitung und
 Cache-Isolation, noch keine wissenschaftliche Stabilität eines Modells.
+
+Die Seriensteuerung verwendet getrennte Laufordner, die vorhandene strenge
+Runner-Identität und dessen Outputprüfung. Tests prüfen Fehler/Fortsetzen,
+Pause vor dem Start und innerhalb des Kind-Runners, veränderte Outputs/Berichte,
+beschädigte Manifeste, Code-/Konfigurationsänderungen, mehrdeutige Ordner,
+eine echte Prozesssperre und das Entfernen äußerer Checkpoint-/Fortschrittsvariablen.
+Ein kompletter Versuch wird beim Resume ohne Prozess-/Modellstart übernommen.
+Ein Kind mit ungeklärtem `running`-Status wird nicht erneut gestartet. Normale
+Tastaturunterbrechungen räumen den Kindprozess auf; harter Elternprozessabbruch
+benötigt noch die geplante Prozessaufsicht. Ebenso ist die Übergabe einer äußeren
+verwalteten Ollama-Instanz noch offen; gegenwärtig wird diese Konstellation vor
+einem Start verständlich abgewiesen. Siehe den API-Vertrag in `DIAGNOSTICS.md`.

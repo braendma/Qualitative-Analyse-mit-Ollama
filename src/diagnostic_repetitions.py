@@ -18,7 +18,9 @@ def _local_output(value):
     if not isinstance(value, str) or not value or value.startswith('-') or '{' in value or '}' in value:
         raise ValueError('Wiederholung benötigt feste relative Ausgabepfade innerhalb des einzelnen Laufs.')
     path = PureWindowsPath(value)
-    if path.drive or path.root or '..' in path.parts or str(path) == '.' or any(':' in p for p in path.parts) or path.is_reserved():
+    if (path.drive or path.root or '..' in path.parts or str(path) == '.'
+            or any(':' in p or p.endswith((' ', '.')) or any(ord(c) < 32 for c in p) for p in path.parts)
+            or path.is_reserved()):
         raise ValueError('Wiederholung darf keinen Ausgabe- oder Checkpointpfad außerhalb ihres Laufs verwenden.')
     if path.parts[0].casefold() in {'workflow_manifest.json', 'config_snapshot.yaml', 'progress.json'}:
         raise ValueError('Wiederholung darf keine Steuerdateien als Modulausgabe verwenden.')
@@ -102,7 +104,7 @@ def prepare_repetitions(config_path, module_ids, *, repetitions=3):
     plan = {'schema_version': 1, 'kind': 'stability', 'repetitions': repetitions,
             'requested_modules': list(module_ids), 'effective_modules': [m['id'] for m in order],
             'added_prerequisites': [m['id'] for m in order if m['id'] not in module_ids],
-            'source_provenance': sources, 'config': child,
+            'source_config': str(path), 'source_provenance': sources, 'config': child,
             'configuration_fingerprint': configuration_fingerprint,
             'samples': [{'sample_id': f'repeat-{i:03d}', 'configuration_fingerprint': configuration_fingerprint}
                         for i in range(1, repetitions + 1)],

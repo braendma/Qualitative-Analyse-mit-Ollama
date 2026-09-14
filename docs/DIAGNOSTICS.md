@@ -47,9 +47,40 @@ neu ausführen und der anschließende Resume fertige Ergebnisse wiederverwendet.
 noch nicht feststehen. `parameter_status: configured_not_runtime_verified`
 verhindert die Behauptung, Modellgewichte oder tatsächlich wirksame Parameter
 seien bereits geprüft. Gerade Thinking kann bisher auf einen Modellstandard
-zurückfallen. Laufzeitnachweis, koordinierte Ausführung, Abbruch/Resume der Serie
+zurückfallen. Laufzeitnachweis, Übergabe verwalteter Modellinstanzen
 und eigentliche Stabilitäts-/Sensitivitätsauswertung folgen in den nächsten
 technischen Einheiten. Keine Stabilitätskennzahl wird aus dem Plan abgeleitet.
+
+### Interne Serienausführung
+
+`diagnostic_series.execute_repetitions(plan, directory, resume=False,
+pause_file=None)` führt den geprüften Plan nacheinander mit dem bestehenden
+Workflow-Runner aus. `directory` muss für eine neue Serie neu sein; nur mit
+`resume=True` wird dieselbe Serie fortgesetzt. `pause_file` ist ein optionaler
+Dateipfad: Existiert die Datei, pausiert die Serie vor dem nächsten Versuch bzw.
+der Kind-Runner zwischen Modulen. Zum Fortsetzen die Pausendatei entfernen und
+dieselbe Serie wiederaufnehmen. Teilfehler stoppen weitere Versuche; bereits
+erfolgreiche Module im betroffenen Versuch verwendet der Runner nach Prüfung weiter.
+
+Jeder Versuch besitzt einen eigenen Unterordner mit genau einem UUID-Laufordner.
+Die Serienkonfiguration und der Plan bleiben gespeichert; das Ergebnisindex-JSON
+verweist auf die tatsächlichen Runner-Manifeste. Es gibt kein zweites
+Modulcheckpoint-System. Vor und nach jedem Versuch werden Ausgangsdateien,
+Konfiguration, Quellcode und Abhängigkeiten erneut geprüft. Fertige Versuche
+werden einschließlich ihrer Berichte per Prüfsumme geprüft und ohne neuen
+Modellstart übersprungen. Eine Prozesssperre verhindert parallele Bearbeitung
+derselben Serie. Fortschritts- und Checkpointvariablen eines äußeren Laufs werden
+nicht in die Kindumgebung übernommen. Serienlogs können Analyseinhalte enthalten
+und gehören zu den geschützten Projektergebnissen.
+
+Diese API ist noch nicht in der Oberfläche aktiv. Eine vorhandene verwaltete
+Ollama-Instanz des Elternprozesses wird ausdrücklich abgewiesen, bis deren
+kontrollierte Übergabe implementiert ist. Ein normaler Tastaturabbruch beendet
+den Kindprozessbaum vor einer späteren Wiederaufnahme. Bei hart beendetem
+Elternprozess und weiter als `running` markiertem Kind wird automatisch **kein**
+zweiter Lauf gestartet: Prozessstatus und Zwischenstand müssen zuerst geprüft
+werden. Das ist noch kein vollständig beaufsichtigter App-Abbruch. Effektive
+Modellparameter und Modellgewichte sind weiterhin nicht nachgewiesen.
 
 ## Referenzen eindeutig unterscheiden
 

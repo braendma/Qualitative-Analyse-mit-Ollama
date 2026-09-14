@@ -7,6 +7,7 @@ import os
 import tempfile
 import copy
 import logging
+from contextlib import contextmanager
 from dataclasses import asdict, is_dataclass
 from pathlib import Path
 
@@ -39,6 +40,33 @@ def atomic_text(path, text):
 
 def atomic_json(path, value):
     atomic_text(path, json.dumps(value, ensure_ascii=False, indent=2, allow_nan=False))
+
+
+@contextmanager
+def exclusive_file_lock(path):
+    """Nonblocking process lock; keep the inode/file after releasing the OS lock."""
+    with open(path, 'a+b') as handle:
+        if handle.seek(0, os.SEEK_END) == 0:
+            handle.write(b'\0')
+            handle.flush()
+        handle.seek(0)
+        try:
+            if os.name == 'nt':
+                import msvcrt
+                msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+            else:
+                import fcntl
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError as exc:
+            raise RuntimeError('Dieser Auftrag wird bereits von einem anderen Prozess bearbeitet.') from exc
+        try:
+            yield
+        finally:
+            if os.name == 'nt':
+                handle.seek(0)
+                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
 
 class Checkpoint:

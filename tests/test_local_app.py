@@ -10,12 +10,12 @@ import tempfile
 import threading
 import time
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 import yaml
 
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'src'))
-from local_app import App, make_server, safe_child, csv_info
+from local_app import App, make_server, safe_child, csv_info, read_json
 from telegram_notifications import Telegram
 
 
@@ -30,6 +30,40 @@ def settings(app):
 
 
 class DesktopTests(unittest.TestCase):
+    def test_json_read_retries_short_file_lock_but_preserves_errors(self):
+        path=MagicMock()
+        path.read_text.side_effect=[PermissionError('busy'), '{"status":"success"}']
+        with patch('local_app.time.sleep') as sleep:
+            self.assertEqual(read_json(path)['status'],'success')
+        sleep.assert_called_once_with(.05)
+        path.read_text.side_effect=PermissionError('still busy')
+        with patch('local_app.time.sleep'),self.assertRaises(PermissionError):read_json(path)
+        path.read_text.side_effect=None;path.read_text.return_value='{'
+        with self.assertRaises(ValueError):read_json(path)
+        path.read_text.side_effect=FileNotFoundError()
+        self.assertEqual(read_json(path,{}),{})
+
+    def test_monitor_keeps_active_guard_when_status_read_is_temporarily_unavailable(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            app=App(tmp);app.active='synthetic-job'
+            folder=Path(tmp)/'job';run=folder/'runs'/'synthetic-run';run.mkdir(parents=True)
+            (folder/'job.json').write_text('{"status":"running"}',encoding='utf-8')
+            manifest=run/'workflow_manifest.json'
+            manifest.write_text('{"status":"success","completed_steps":[]}',encoding='utf-8')
+            process=MagicMock();process.poll.side_effect=[None,None,0];process.returncode=0
+            first=True
+            def locked(path,default=None):
+                nonlocal first
+                if path==manifest and first:
+                    first=False
+                    raise PermissionError('synthetic transient file lock')
+                return read_json(path,default)
+            def still_active(_):self.assertEqual(app.active,'synthetic-job')
+            with patch('local_app.read_json',side_effect=locked),patch('local_app.time.sleep',side_effect=still_active),patch.object(app.telegram,'send'):
+                app.monitor(folder,process,1)
+            self.assertIsNone(app.active)
+            self.assertEqual(read_json(folder/'job.json')['status'],'success')
+
     def test_invalid_save_keeps_last_valid_revision_and_settings(self):
         with tempfile.TemporaryDirectory() as tmp:
             app=App(tmp);pid=app.create('Demo',True)['id'];opts=settings(app)
