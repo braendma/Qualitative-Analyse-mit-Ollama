@@ -1,6 +1,6 @@
-# 0.5.0-beta.1 · Releasekandidat, noch nicht veröffentlicht
+# Version 0.5.0-beta.1
 
-Der Kandidat ergänzt ein eigenständiges Windows-Paket mit enthaltener
+Diese Version ergänzt ein eigenständiges Windows-Paket mit enthaltener
 Python-Laufzeit und neue Prüfungen für wissenschaftliche Auswertungen.
 
 - Coverage, Information-Loss-Audit und Codebook-Diagnostik ergänzen die
@@ -23,8 +23,7 @@ Python-Laufzeit und neue Prüfungen für wissenschaftliche Auswertungen.
   Vorübergehende Windows-Dateisperren beim atomaren Speichern werden kurz
   erneut geprüft; dauerhafte Zugriffssperren bleiben sichtbare Fehler.
 
-**Prüfstand:** [Testbericht](TEST_REPORT.md). Die abschließende Windows-Paketabnahme
-läuft noch. Eine neue native Mac-Distribution ist zurückgestellt; vorhandene
+**Prüfstand:** [Testbericht](TEST_REPORT.md). Eine neue native Mac-Distribution ist zurückgestellt; vorhandene
 Mac-Source-Startdateien bleiben erhalten. Es wird keine native Mac-Abnahme behauptet.
 
 **Umstieg:** Laufende Analysen vor einem Update abschließen und das vollständige

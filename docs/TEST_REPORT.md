@@ -1,3 +1,43 @@
+# Abschlussprüfung für 0.5.0-beta.1 · 14. September 2026
+
+Am Quellstand `36dfe0d` liefen **946 Python-Tests in 433,075 Sekunden**:
+944 bestanden; zwei Tests mit echten Windows-Symlinks wurden wegen fehlender
+Erstellungsrechte übersprungen. Die übrigen Prüfungen für umgeleitete Pfade
+bestanden. Die zuvor beobachteten Testfixture-Fehler sind behoben; diese
+Gesamtausführung war erfolgreich. Für den unveränderten JavaScript-Code liegen
+**82 bestandene Tests** vor. Alle Analysedaten und simulierten Modellantworten
+dieser Regression sind künstlich; das ist kein Nachweis allgemeiner Modellqualität.
+
+Die daraus gebaute Windows-EXE bestand **11 normale Oberflächenprüfungen**,
+**12 Prüfungen mit Ergebnisordnern über 300 Zeichen** sowie CSV-/XLSX-Verarbeitung
+mit HTML-/Markdown-Berichten, unveränderten Eingaben und Wiederaufnahme. Die
+Oberflächenprüfung umfasst drei modellfreie Module, Handbuch, Instanzschutz,
+bestätigtes Beenden eigener Kindprozesse und Neustart. Temporäre
+UI-Installationen wurden entfernt. Die EXE startete ohne Python im Suchpfad;
+eine frische virtuelle Maschine wurde nicht geprüft.
+
+Zusätzliche native Tests bestätigten das atomare Speichern bei kurzzeitig offenen
+Windows-Lesehandles, auch auf langen Pfaden. Dauerhafte Verweigerung bleibt nach
+höchstens 0,75 Sekunden Wartezeit ein Fehler; Originaldatei und atomarer Austausch
+bleiben geschützt. Das ist keine allgemeine Zusage für jede Virenschutzkonfiguration.
+
+Der Paketbestand umfasst 1.407 Dateien. Der geprüfte Bootstrap entspricht den
+erfassten Quellen; Projektmodule werden aus den erfassten Quelldateien geladen.
+Der gezielte Abgleich fand keine der geprüften privaten Pfade oder Kennungen.
+Jedes Mitglied der geprüften ZIP stimmt per SHA-256 mit dem Paket überein.
+Dies ersetzt weder eine digitale Signatur noch einen vollständigen Malware-Scan.
+
+Der abschließende Dokumentationsstand ändert diesen Analysecode nicht. Die
+konkrete Quellenbindung jedes Pakets steht in dessen
+`_internal/packaging/build-manifest.json`. GitHub Actions führt Regression und
+Paketprüfungen zusätzlich aus; der tatsächliche Status ist am jeweiligen
+Release-Commit zu prüfen. Eine native Mac-Distribution bleibt zurückgestellt.
+
+## Ältere Zwischenstände
+
+Die folgenden datierten Nachweise bleiben zur Nachvollziehbarkeit erhalten;
+frühere offene Punkte beschreiben ihren jeweiligen damaligen Stand.
+
 # Windows-Quellstand und Paketprüfung · 14. September 2026
 
 Die zusammengeführte Regression am Quellstand `ad553db` führte **895 Python-Tests

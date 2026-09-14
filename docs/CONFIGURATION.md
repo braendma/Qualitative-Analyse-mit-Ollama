@@ -1,12 +1,12 @@
 # Konfigurationsreferenz der wissenschaftlichen Diagnosen
 
-**Releasekandidat 0.5.0-beta.1 – noch nicht veröffentlicht.** Die abschließende Abnahme des Windows-Pakets läuft. Die folgenden Hinweise beschreiben den Kandidaten und sind keine abgeschlossene Installationsfreigabe.
+**Version 0.5.0-beta.1.** Prüfungen und Grenzen stehen im [Testbericht](TEST_REPORT.md).
 
 ## Programmeinstiege in Paket und Source
 
 Im Sourcebetrieb bleiben die bisherigen Python-Aufrufe und eigene, über die Pipeline konfigurierte Skripte möglich. Für den Windows-Paketbetrieb gilt eine feste Liste von 24 Programmeinstiegen: die 20 Standardmodule sowie Oberfläche, Workflow-Runner, Prozessaufsicht und Kategorienüberarbeitung. Eine Benutzer-YAML erweitert diese Liste nicht. Der vollständige Skriptpfad muss zur zugelassenen gebündelten Datei gehören; ein gleichnamiges fremdes Skript genügt nicht. Nicht zugelassene Pfade werden vor dem Modellstart abgewiesen.
 
-Die gemeinsame Aufruflogik erhält Argumente, Arbeitsordner und Rückgabecodes einschließlich Pausecode `75`. Dafür sind keine neuen Einstellungen in der Oberfläche nötig. Die Paketidentität bindet EXE, erfasste Buildinputs und Ressourcen. Eine Prüfung des Source-Codes allein ersetzt die Abnahme des tatsächlich gebauten Pakets nicht; die abschließende Kandidatenprüfung läuft noch. [Windows-Nutzung](WINDOWS_STANDALONE.txt) und [Buildprüfung](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/blob/main/packaging/README.md) unterscheiden Installation und Entwicklung.
+Die gemeinsame Aufruflogik erhält Argumente, Arbeitsordner und Rückgabecodes einschließlich Pausecode `75`. Dafür sind keine neuen Einstellungen in der Oberfläche nötig. Die Paketidentität bindet EXE, erfasste Buildinputs und Ressourcen. Eine Prüfung des Source-Codes allein ersetzt die Abnahme des tatsächlich gebauten Pakets nicht. [Windows-Nutzung](WINDOWS_STANDALONE.txt) und [Buildprüfung](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/blob/main/packaging/README.md) unterscheiden Installation und Entwicklung.
 
 ## Ergebnisordner und technische Appdaten
 

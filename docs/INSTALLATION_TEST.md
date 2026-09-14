@@ -1,3 +1,23 @@
+# Eigenständiges Windows-Paket 0.5.0-beta.1 · 14. September 2026
+
+Das Windows-Paket enthält Python 3.12.14 und wurde mit PyInstaller 6.22.3 gebaut.
+Die EXE wurde in temporären Installationen ohne Python im Suchpfad geprüft:
+normale und sehr lange Ergebnisordner, drei modellfreie Module, CSV/XLSX,
+HTML-/Markdown-Export, Wiederaufnahme, Instanzschutz und geordnetes Beenden.
+Alle Paketprüfungen bestanden; die temporären UI-Installationen wurden entfernt.
+Die vollständige Python-Regression umfasst 946 Tests (944 bestanden, zwei
+Windows-Symlinktests mangels Erstellungsrechten übersprungen).
+
+Die Eingaben sind künstlich. Eine frische VM, eine universelle Virenschutzfreigabe
+oder native Mac-Installation wurden damit nicht geprüft. Die genaue Quellenbindung
+steht im mitgelieferten Buildmanifest; der [Testbericht](TEST_REPORT.md) nennt
+Prüfstand und Grenzen. [Windows-Kurzanleitung](WINDOWS_STANDALONE.txt) ·
+[Build und automatische Paketprüfungen](../packaging/README.md).
+
+## Ältere Zwischenstände
+
+Die folgenden Einträge beziehen sich auf ihre damaligen Paketstände.
+
 # Vorbereitung des eigenständigen Windows-Pakets · 14. September 2026
 
 Der aktuelle Paketkandidat enthält eine eigene Python-Laufzeit. Bau und

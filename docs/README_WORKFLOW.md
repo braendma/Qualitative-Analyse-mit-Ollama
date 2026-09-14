@@ -1,6 +1,6 @@
-**Releasekandidat 0.5.0-beta.1 – noch nicht veröffentlicht.** Die abschließende Abnahme des Windows-Pakets läuft. Die folgenden Hinweise beschreiben den Kandidaten und sind keine abgeschlossene Installationsfreigabe.
+**Version 0.5.0-beta.1.** Prüfungen und Grenzen stehen im [Testbericht](TEST_REPORT.md).
 
-**Programmstart:** Der Windows-Kandidat startet über `QualitativeAnalyse.exe` mit enthaltener Python-Laufzeit. [Kurzanleitung](WINDOWS_STANDALONE.txt) · [Buildprüfung](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/blob/main/packaging/README.md). Die folgenden Python-Aufrufe beschreiben die weiterhin verfügbare Source-Version. Native Mac-Distribution pausiert; bisherige Source-Starter bleiben erhalten.
+**Programmstart:** Das Windows-Paket startet über `QualitativeAnalyse.exe` mit enthaltener Python-Laufzeit. [Kurzanleitung](WINDOWS_STANDALONE.txt) · [Buildprüfung](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/blob/main/packaging/README.md). Die folgenden Python-Aufrufe beschreiben die weiterhin verfügbare Source-Version. Native Mac-Distribution pausiert; bisherige Source-Starter bleiben erhalten.
 
 Mehrfachcodierung, Prüfliste und mehrstufige Gesamtsynthese: [EXTENSIONS.md](EXTENSIONS.md). Die folgenden zeilenweisen Kennzahlen beziehen sich auf den Single-Label-Modus.
 

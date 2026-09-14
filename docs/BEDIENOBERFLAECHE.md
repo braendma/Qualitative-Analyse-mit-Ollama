@@ -2,7 +2,7 @@
 
 # Lokale Bedienoberfläche
 
-**Releasekandidat 0.5.0-beta.1 – noch nicht veröffentlicht.** Die abschließende Abnahme des Windows-Pakets läuft. Die folgenden Hinweise beschreiben den Kandidaten und sind keine abgeschlossene Installationsfreigabe.
+**Version 0.5.0-beta.1.** Prüfungen und Grenzen stehen im [Testbericht](TEST_REPORT.md).
 
 Die Oberfläche führt durch **Projekt → Eingaben prüfen → Analyse → Ergebnisse**. Sie startet den bestehenden Workflow-Runner und speichert unveränderliche Dateiversionen pro Lauf. Python- und YAML-Dateien müssen für die normale Bedienung nicht bearbeitet werden.
 
@@ -16,7 +16,7 @@ Ein neues Programmverzeichnis verschiebt bestehende Projekte nicht automatisch. 
 
 ## Einmalig einrichten und starten
 
-**Windows-Paket:** Den vollständigen Kandidaten in einen neuen Ordner entpacken und `QualitativeAnalyse.exe` starten. Python ist bereits enthalten; eine eigene Installation und `Einrichtung.cmd` sind dafür nicht nötig. Das Startfenster geöffnet lassen und später **Programm beenden** verwenden. [Windows-Kurzanleitung](WINDOWS_STANDALONE.txt) · [Build und Paketprüfung](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/blob/main/packaging/README.md). Die Installationsabnahme läuft noch. Eine native Mac-Distribution ist pausiert; die bisherigen [Mac-Source-Starter](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/blob/main/start/macos/README.md) bleiben verfügbar.
+**Windows-Paket:** Das vollständige Windows-Paket in einen neuen Ordner entpacken und `QualitativeAnalyse.exe` starten. Python ist bereits enthalten; eine eigene Installation und `Einrichtung.cmd` sind dafür nicht nötig. Das Startfenster geöffnet lassen und später **Programm beenden** verwenden. [Windows-Kurzanleitung](WINDOWS_STANDALONE.txt) · [Build und Paketprüfung](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/blob/main/packaging/README.md). Eine native Mac-Distribution ist pausiert; die bisherigen [Mac-Source-Starter](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/blob/main/start/macos/README.md) bleiben verfügbar.
 
 **Alternative Source-Version:**
 
@@ -27,7 +27,7 @@ Ein neues Programmverzeichnis verschiebt bestehende Projekte nicht automatisch. 
 
 Falls eine passende Python-Umgebung bereits eingerichtet ist, reicht `python -X utf8 src/local_app.py`. Auf anderen Betriebssystemen lässt sich die Oberfläche ebenfalls so starten; die Windows-Startdateien und die dauerhafte Windows-Tokenverschlüsselung sind dort nicht verfügbar.
 
-**Systemprüfung ohne Modellaufruf** prüft Programmabhängigkeiten und die gewählte Verbindung, ohne etwas zu installieren. Fehlende Abhängigkeiten führen in der Source-Version zum passenden Einrichtungsskript (`Einrichtung.cmd` bzw. `start/macos/Einrichtung.command`). Im Windows-Paketbetrieb wird die enthaltene Python-Laufzeit kenntlich gemacht; dort lautet die Reparatur, das vollständige Paket erneut herunterzuladen und in einen neuen Ordner zu entpacken. Eine externe Python-Installation ist dafür nicht nötig. Die vollständige Installationsabnahme des Releasekandidaten steht noch aus.
+**Systemprüfung ohne Modellaufruf** prüft Programmabhängigkeiten und die gewählte Verbindung, ohne etwas zu installieren. Fehlende Abhängigkeiten führen in der Source-Version zum passenden Einrichtungsskript (`Einrichtung.cmd` bzw. `start/macos/Einrichtung.command`). Im Windows-Paketbetrieb wird die enthaltene Python-Laufzeit kenntlich gemacht; dort lautet die Reparatur, das vollständige Paket erneut herunterzuladen und in einen neuen Ordner zu entpacken. Eine externe Python-Installation ist dafür nicht nötig.
 
 Die Oberfläche ist nur an `127.0.0.1` gebunden und wird nicht veröffentlicht. Ein zufälliger Sitzungsschlüssel schützt ihre API. Die angezeigte Startadresse gehört ausschließlich auf diesen PC. Standardmäßig gilt die DSGVO-Sperre mit lokalem Ollama. Cloud-Anbieter sind nach ausdrücklicher Freigabe im Projekt verfügbar; siehe [Handbuch](HANDBUCH.md#datenfreigabe-anbieter-und-schlussel) und [Anbieterhinweise](KI_ANBIETER.md).
 
