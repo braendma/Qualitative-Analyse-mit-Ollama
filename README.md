@@ -1196,3 +1196,7 @@ Die Gesamtsynthese zeigt [verständliche Herkunftsdetails und Originaltextstelle
 ## Sensitivität im Entwicklungsstand
 
 Die optionale **Sensitivitätsanalyse** ergänzt die vier vorhandenen Diagnosemodule. Varianten für Modell, Temperatur, Kontext, Antwortlimit, Thinking und gezielte Vorlagen werden vor dem Start geprüft. Die Basis und jede Variante erhalten eigene Wiederholungen; der Bericht trennt Binnenstreuung und Unterschiede zwischen Einstellungen. Standardmäßig aus, **sehr hoher Rechenaufwand**. [Anleitung und Beispiel](docs/HANDBUCH.html#sensitivitaet-einstellungen-vergleichen). Noch kein neues Release.
+
+### Vorstartübersicht und Validierungspreset im Entwicklungsstand
+
+Die Oberfläche zeigt den geplanten Ausführungsumfang einschließlich Vorstufen und zusätzlicher Wiederholungen. Das optionale Preset **Finale Validierungsanalyse** ergänzt die fünf Diagnosen; Varianten müssen ausdrücklich festgelegt werden. Es startet keinen Lauf und ersetzt keine menschliche Beurteilung. [Anleitung mit Rechenbeispiel](docs/HANDBUCH.md#finale-validierungsanalyse-und-aufwandübersicht).

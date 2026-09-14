@@ -149,3 +149,7 @@ Das off-default Modul `stability` führt ausgewählte Analysen samt Vorstufen al
 ## Aufwand bei der Modulauswahl
 
 Alle Standardmodule zeigen ihren relativen Eigenaufwand und eine Einsatzempfehlung. Vorstufen kommen hinzu; Wiederholungen und Varianten verursachen zusätzliche Ausführungen. Die Klassen enthalten keine Laufzeit- oder Preisgarantie. [Erläuterung und vollständige Übersicht im Handbuch](HANDBUCH.md#aufwandprofile).
+
+## Finale Validierungsanalyse
+
+Das optionale Preset ergänzt die fünf Diagnosen und erforderliche Basisanalysen, ohne einen Lauf zu starten. Bestehende Varianten bleiben erhalten; fehlende Varianten ausdrücklich festlegen. Die neue Aufwandübersicht trennt Hauptlauf und zusätzliche Wiederholungen. [Anleitung und Rechenbeispiel](HANDBUCH.md#finale-validierungsanalyse-und-aufwandübersicht).

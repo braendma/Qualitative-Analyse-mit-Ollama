@@ -3,6 +3,7 @@ const $ = id => document.getElementById(id);
 const tokenKey = 'qualitative-session-' + location.port;
 const token = location.hash.slice(1) || sessionStorage.getItem(tokenKey) || '';
 if (location.hash) { sessionStorage.setItem(tokenKey, token); history.replaceState(null, '', '/'); }
+let settingsRevision=0;
 let state, project, jobs = [], viewing = 'project', objectUrl = null, polling = false, projectRequest = 0, artifactRequest = 0;
 const names = {project:'Projekt & Dateien',check:'Eingaben prüfen',analysis:'Analyse',results:'Ergebnisse',telegram:'Telegram-Updates'};
 const moduleHelp = {
@@ -33,6 +34,7 @@ function appendModuleProfile(target,module){
   else{target.append(el('small','Aufwand: nicht eingestuft. Hinweise des Moduls prüfen.'));}
 }
 function updateModuleSelection(){
+  settingsRevision++;
   const selected=new Set([...document.querySelectorAll('[name=module]:checked')].map(n=>n.value));
   const required=new Set(selected);
   let changed=true;
@@ -42,15 +44,16 @@ function updateModuleSelection(){
   if(selected.size && state.modules.filter(m=>required.has(m.id)).every(m=>m.requires_model===false)){
     $('module-selection').textContent+=' Reiner Diagnoselauf: Kein Modell oder API-Schlüssel nötig. Ohne analytische Vorstufen ist nur der Materialbestand auswertbar.';
   }
-  updateStabilityPlan(required);
-  updateSensitivityPlan(required);
+  const stability=updateStabilityPlan(required),sensitivity=updateSensitivityPlan(required);
+  updateEffortPreview(required,stability,sensitivity);
+  $('validation-result').hidden=true;updateStartGate();
 }
 
 function stabilityEstimate(modules, selected, targets, repetitions){
   if(!Number.isInteger(repetitions)||repetitions<2||repetitions>20)return {error:'Wiederholungszahl muss zwischen 2 und 20 liegen.'};
   if(!Array.isArray(targets)||!targets.length)return {error:'Mindestens ein Zielmodul für die Wiederholungen auswählen.'};
   const available=new Map(modules.map(m=>[m.id,m])),required=new Set(targets),queue=[...targets];
-  for(const id of queue){const m=available.get(id);if(!m||!selected.has(id))return {error:'Zielmodule und ihre Vorstufen zuerst in der Modulauswahl aktivieren.'};if(['stability','sensitivity','coverage','information_loss','codebook_diagnostics'].includes(id))return {error:'Diagnosen können nicht selbst wiederholt werden.'};for(const dep of m.depends_on){if(!required.has(dep)){required.add(dep);queue.push(dep);}}}
+  for(const id of queue){const m=available.get(id);if(!m||!selected.has(id))return {error:'Zielmodule und ihre Vorstufen zuerst in der Modulauswahl aktivieren.'};if(['stability','sensitivity','coverage','information_loss','codebook_diagnostics'].includes(id)||m.starts_child_runs)return {error:'Diagnosen und Module mit Unterläufen können nicht selbst wiederholt werden.'};for(const dep of m.depends_on){if(!required.has(dep)){required.add(dep);queue.push(dep);}}}
   return {repetitions,modules:modules.filter(m=>required.has(m.id)),executions:required.size*repetitions};
 }
 function stabilitySettings(){return {repetitions:Number($('stability-repetitions').value),modules:[...document.querySelectorAll('[name=stability-target]:checked')].map(n=>n.value)};}
@@ -62,11 +65,13 @@ function loadStabilityFields(){
   });
   $('stability-repetitions').oninput=updateModuleSelection;
 }
+let stabilityIssue='';
 function updateStabilityPlan(required){
   const panel=$('stability-options');if(!panel)return;
-  panel.hidden=!required.has('stability');if(panel.hidden)return;
+  panel.hidden=!required.has('stability');stabilityIssue='';if(panel.hidden)return;
   const s=stabilitySettings(),plan=stabilityEstimate(state.modules,required,s.modules,s.repetitions),box=$('stability-estimate');
-  box.className=plan.error?'error':'selection-summary';box.textContent=plan.error||`Zusätzlich ${plan.repetitions} vollständige Wiederholungen: ${plan.executions} Modulausführungen einschließlich Vorstufen (${plan.modules.map(m=>m.name).join(', ')}). Die Anzahl der Modellanfragen hängt vom Material und nötigen Reparaturen ab und kann deutlich höher liegen.`;
+  stabilityIssue=plan.error||'';box.className=plan.error?'error':'selection-summary';box.textContent=plan.error||`Zusätzlich ${plan.repetitions} vollständige Wiederholungen: ${plan.executions} Modulausführungen einschließlich Vorstufen (${plan.modules.map(m=>m.name).join(', ')}). Die Anzahl der Modellanfragen hängt vom Material und nötigen Reparaturen ab und kann deutlich höher liegen.`;
+  return plan;
 }
 let sensitivityRows = [], sensitivityIssue = '';
 const sensitivityFields = {model:'Modell',temperature:'Temperatur',num_ctx:'Kontextfenster',max_tokens:'Antwortlimit',think:'Thinking'};
@@ -139,7 +144,63 @@ function updateSensitivityPlan(required){
   let plan;try{const provider=$('gdpr-relevant').checked?'ollama_local':$('provider').value;plan=sensitivityEstimate(state.modules,required,sensitivitySettings(),provider);}catch(error){plan={error:error.message};}
   sensitivityIssue=plan.error||'';const box=$('sensitivity-estimate');box.className=plan.error?'error':'selection-summary';
   box.textContent=plan.error||`${plan.configuration_count} Einstellungen einschließlich Basis × ${plan.repetitions} Wiederholungen = ${plan.total_repetitions} zusätzliche Läufe mit insgesamt ${plan.executions} Modulausführungen einschließlich Vorstufen. Die abschließende Prüfung prüft jede Änderung und ihre Kontextgrenzen vor dem Modellstart.`;
+  return plan;
 }
+// Only a display projection of the existing planners; the server preflight is authoritative.
+function workflowEffort(modules, plans={}){
+  const rows=new Map(modules.map(m=>[m.id,{id:m.id,name:m.name,cost_profile:m.cost_profile??null,main:1,stability:0,sensitivity:0,total:1}])),series=[];
+  for(const kind of ['stability','sensitivity']){
+    const plan=plans[kind];if(!plan)continue;if(plan.error)return {error:plan.error};
+    const configurations=plan.configuration_count??1,runs=configurations*plan.repetitions;
+    const ids=plan.modules.map(m=>m.id);
+    if(!rows.has(kind)||ids.some(id=>!rows.has(id)))return {error:'Zielmodule und Vorstufen zuerst auswählen.'};
+    for(const id of ids){rows.get(id)[kind]+=runs;rows.get(id).total+=runs;}
+    series.push({id:kind,configuration_count:configurations,repetitions:plan.repetitions,run_count:runs,effective_modules:ids,module_executions:plan.executions});
+  }
+  const planned=new Set(series.map(s=>s.id)),unknown=modules.filter(m=>m.starts_child_runs&&!planned.has(m.id)).map(m=>m.id);
+  const additional=series.reduce((sum,s)=>sum+s.module_executions,0);
+  return {basis:'fresh_run',main_module_executions:modules.length,additional_module_executions:additional,
+    known_module_executions:modules.length+additional,total_module_executions:unknown.length?null:modules.length+additional,
+    model_calls_estimate:modules.length&&modules.every(m=>m.requires_model===false)?0:null,
+    unplanned_child_modules:unknown,series,modules:[...rows.values()]};
+}
+function renderEffortSummary(box,effort,verified=false){
+  box.replaceChildren(el('h4',verified?'Geprüfter Ausführungsumfang':'Aufwandübersicht für einen neuen Lauf'));
+  if(effort.error){box.append(el('p','Noch kein vollständiger Aufwandplan: '+effort.error,'error'));return;}
+  if(!effort.main_module_executions){box.append(el('p','Module auswählen, um den Ausführungsumfang zu sehen.'));return;}
+  box.append(el('p',`Hauptlauf: ${effort.main_module_executions} Modulausführungen, einschließlich ausgewählter Diagnosen und benötigter Vorstufen.`));
+  for(const plan of effort.series){const label=plan.id==='stability'?'Stabilität':'Sensitivität';
+    box.append(el('p',`${label}: ${plan.configuration_count} ${plan.id==='sensitivity'?'Einstellungen einschließlich Basis':'Einstellung'} × ${plan.repetitions} Wiederholungen × ${plan.effective_modules.length} Module einschließlich Vorstufen = ${plan.module_executions} zusätzliche Modulausführungen.`));}
+  box.append(el('p',effort.total_module_executions===null?`Mindestens ${effort.known_module_executions} bekannte Modulausführungen. Zusatzläufe eigener Module sind nicht berechnet: ${effort.unplanned_child_modules.join(', ')}.`:`Gesamt: ${effort.main_module_executions} im Hauptlauf + ${effort.additional_module_executions} zusätzliche = ${effort.total_module_executions} Modulausführungen.`,'selection-summary'));
+  if(effort.series.length)box.append(el('p','Hoher zusätzlicher Rechenaufwand: Der Hauptlauf ersetzt keine Wiederholung. Stabilität und Sensitivität führen getrennte Serien aus.','hint'));
+  box.append(el('p',effort.model_calls_estimate===0?'Keine Modellanfragen geplant.':'Modulausführungen sind keine Modellanfragen: Ein Modul kann viele Anfragen benötigen. Ihre Anzahl, Laufzeit und Kosten sind vorab nicht zuverlässig bekannt.','hint'));
+  const details=el('details');details.append(el('summary','Ausführungen je Modul ansehen'));
+  for(const row of effort.modules)details.append(el('p',`${row.name}: ${row.main} Hauptlauf + ${row.stability} Stabilität + ${row.sensitivity} Sensitivität = ${row.total}${effort.unplanned_child_modules.length?' bekannte':''} ${row.total===1?'Ausführung':'Ausführungen'} · Eigenaufwand ${row.cost_profile?.class||'nicht eingestuft'}.`));
+  box.append(details,el('p',verified?'Die Eingaben und Wiederholungspläne wurden geprüft. Die Werte gelten für einen neuen vollständigen Lauf; bei Wiederaufnahme kann Arbeit bereits erledigt sein.':'Vorschau der aktuellen Auswahl. „Eingaben prüfen“ bzw. der Start prüft zusätzlich Daten, Varianten und Kontextgrenzen. Bei Wiederaufnahme kann Arbeit bereits erledigt sein.','hint'));
+}
+function updateEffortPreview(required,stability,sensitivity){
+  const box=$('effort-preview');if(box)renderEffortSummary(box,workflowEffort(state.modules.filter(m=>required.has(m.id)),{stability,sensitivity}));
+}
+function finalValidationSelection(modules,selected,stabilityTargets,sensitivityTargets){
+  const diagnostics=['coverage','information_loss','codebook_diagnostics','stability','sensitivity'];
+  const available=new Map(modules.map(m=>[m.id,m]));
+  if(diagnostics.some(id=>!available.has(id)))throw new Error('Das Preset benötigt alle fünf mitgelieferten Diagnosemodule. Konfiguration prüfen.');
+  const fallback=targets=>targets.length?targets:(available.has('blind_coding')?['blind_coding']:[]);
+  const targets={stability:fallback(stabilityTargets),sensitivity:fallback(sensitivityTargets)};
+  const required=new Set([...selected,...diagnostics,...targets.stability,...targets.sensitivity]),queue=[...required];
+  for(const id of queue){const module=available.get(id);if(!module)throw new Error('Unbekannte Vorstufe oder Analyse im Preset: '+id);for(const dep of module.depends_on){if(!required.has(dep)){required.add(dep);queue.push(dep);}}}
+  return {modules:[...required],targets};
+}
+function applyFinalValidation(){
+  needProject();
+  const chosen=name=>[...document.querySelectorAll(`[name=${name}]:checked`)].map(n=>n.value);
+  const selection=finalValidationSelection(state.modules,chosen('module'),chosen('stability-target'),chosen('sensitivity-target'));
+  document.querySelectorAll('[name=module]').forEach(n=>n.checked=selection.modules.includes(n.value));
+  for(const kind of ['stability','sensitivity'])document.querySelectorAll(`[name=${kind}-target]`).forEach(n=>n.checked=selection.targets[kind].includes(n.value));
+  updateModuleSelection();
+  const note=$('preset-status');note.hidden=false;note.textContent='Preset ausgewählt; noch nicht gespeichert oder gestartet. Bestehende Analyseauswahl, Wiederholungszahlen und Varianten bleiben erhalten. Ohne bisherige Wiederholungsziele wird Blind-Coding vorgeschlagen. Sensitivitätsvarianten und Aufwandübersicht jetzt prüfen.';
+}
+
 const columnLabels = {segment:'Text / Segment *',person:'Dokumentkennung / vorhandene Personen-ID *',code:'Vergebener Code *',segment_id:'Eindeutige Zeilen-ID (optional)',unit_id:'Passage-ID (für Mehrfachcodierung)'};
 function bookDescription(c){return 'Definition: '+c.definition+' · Einschluss: '+(c.einschluss||'—')+' · Ausschluss: '+(c.ausschluss||'—')+' · Abgrenzung: '+(c.abgrenzung||'—')+' · Ankerbeispiele: '+(c.ankerbeispiel||'—');}
 const bookLabels = {code:'Code / vollständiger Codepfad *',kategorie:'Kategorie / erste Hierarchieebene *',unterkategorie:'Unterkategorie',auspraegung:'Ausprägung',facette:'Facette',definition:'Definition *',einschluss:'Einschlussregeln (optional)',ausschluss:'Ausschlussregeln (optional)',abgrenzung:'Abgrenzung / weitere Codierhinweise (optional)',ankerbeispiel:'Ankerbeispiele (optional)'};
@@ -197,6 +258,7 @@ function renderFiles(){
 }
 function loadFields(){
   const s=project.settings||{}, llm=state.defaults.llm;
+  $('preset-status').hidden=true;
   $('parallel-workers').value=String(s.parallel_workers??1);
   $('model').value=s.model??llm.model;$('num-ctx').value=s.num_ctx??llm.num_ctx;$('max-tokens').value=s.max_tokens??llm.max_tokens;
   $('synthesis-max-calls').value=s.synthesis_max_calls??llm.synthesis_max_calls??64;
@@ -207,9 +269,10 @@ function loadFields(){
   $('modules').replaceChildren();
   const selected=s.modules||state.modules.filter(m=>m.enabled!==false).map(m=>m.id);
   state.modules.forEach(m=>{const label=el('label',undefined,'checkbox'),input=el('input'),text=el('span',m.name);input.type='checkbox';input.value=m.id;input.name='module';input.checked=selected.includes(m.id);input.addEventListener('change',updateModuleSelection);appendModuleProfile(text,m);if(moduleHelp[m.id])text.append(el('small',moduleHelp[m.id]));if(m.depends_on.length)text.append(el('small','Benötigt: '+m.depends_on.map(id=>state.modules.find(x=>x.id===id)?.name||id).join(', ')));label.append(input,text);const item=el('div',undefined,'module-example'),example=el('button','Ergebnisbeispiel ansehen','example-trigger');example.type='button';example.setAttribute('data-example','module-'+m.id);example.setAttribute('aria-haspopup','dialog');example.setAttribute('aria-controls','example-dialog');example.setAttribute('aria-label',m.name+' – Ergebnisbeispiel ansehen');item.append(label,example);const prompts=el('button','Prompts ansehen','example-trigger');prompts.type='button';prompts.setAttribute('aria-haspopup','dialog');prompts.setAttribute('aria-controls','prompt-dialog');prompts.setAttribute('aria-label',m.name+' – Prompts ansehen');prompts.addEventListener('click',()=>showModulePrompts(m.id));item.append(prompts);$('modules').append(item);});
-  loadStabilityFields();loadSensitivityFields();updateModuleSelection();
+  loadStabilityFields();loadSensitivityFields();
   renderFiles();
   if(typeof loadProviderFields==='function')loadProviderFields();
+  updateModuleSelection();
 }
 async function openProject(id){
   if(!id){$('projects').value=project?.id||'';return;}
@@ -237,12 +300,14 @@ function settings(){
 }
 async function saveAndValidate(pid=needProject()){
   $('validation-result').hidden=true;
-  const s=settings(), result=await api('save',{project:pid,settings:s});
+  const revision=settingsRevision,s=settings(), result=await api('save',{project:pid,settings:s});
   if(project?.id!==pid)return result;
+  if(settingsRevision!==revision)throw new Error('Einstellungen während der Prüfung geändert. Bitte die aktuelle Auswahl erneut prüfen und starten.');
   project.settings=s;
   const box=$('validation-result');box.replaceChildren(el('h3','Eingaben sind gültig'));box.hidden=false;
   if(result.stability_plan)box.append(el('p',`HOHER RECHENAUFWAND: ${result.stability_plan.repetitions} zusätzliche Wiederholungen mit ${result.stability_plan.module_executions} Modulausführungen einschließlich Vorstufen. Tatsächliche Modellanfragen können zahlreicher sein. Wiederholbarkeit ist kein Richtigkeitsnachweis.`,'selection-summary'));
   if(result.sensitivity_plan)box.append(el('p',`SEHR HOHER RECHENAUFWAND: ${result.sensitivity_plan.configuration_count} Einstellungen einschließlich Basis, je ${result.sensitivity_plan.repetitions} Wiederholungen: ${result.sensitivity_plan.module_executions} zusätzliche Modulausführungen. Alle Varianten wurden vorgeprüft. Das ist keine Qualitätsrangfolge.`,'selection-summary'));
+  if(result.effort){const effortBox=el('div');renderEffortSummary(effortBox,result.effort,true);box.append(effortBox);}
   const stats=el('div',undefined,'stats');[['Codierzeilen',result.segments],['Passagen',result.passages??'—'],['Personen',result.persons],['Codepfade',result.codes]].forEach(([label,n])=>{const part=el('div',undefined,'stat');part.append(el('b',String(n)),el('span',label));stats.append(part);});box.append(stats,el('p','Diese Module werden bei einem Start ausgeführt (einschließlich benötigter Vorstufen): '+result.modules.map(m=>m.name).join(' → '),'hint'));
   if(result.codebook_fields)box.append(el('p',`${result.codebook_fields.einschluss} Codes mit Einschlussregeln · ${result.codebook_fields.ausschluss} mit Ausschlussregeln · ${result.codebook_fields.abgrenzung||0} mit weiteren Codierhinweisen · ${result.codebook_fields.ankerbeispiel} mit Ankerbeispielen. Die zugeordneten Regeln werden bei der Codierung und Codeprüfung berücksichtigt.`));
   if(result.context_check){
@@ -396,6 +461,7 @@ action($('validate'),async()=>{const pid=needProject(),r=await saveAndValidate(p
 action($('start'),async()=>{const pid=needProject();await saveAndValidate(pid);if(project?.id!==pid)throw new Error('Projekt wurde während der Prüfung gewechselt. Bitte im gewünschten Projekt erneut starten.');await api('start',{project:pid});message('Analyse gestartet. Den Fortschritt findest du unten.');await refreshJobs();});
 action($('check-ollama'),async()=>{const r=await api('models');$('model-list').replaceChildren();r.models.forEach(m=>$('model-list').append(new Option(m,m)));$('ollama-status').textContent=r.models.length?`${r.models.length} lokale Modelle gefunden. Im Modellfeld auswählen oder Namen eingeben.`:'Ollama ist erreichbar, aber kein lokales Modell installiert.';});
 action($('clear-modules'),async()=>{document.querySelectorAll('[name=module]').forEach(n=>n.checked=false);updateModuleSelection();});
+action($('final-validation'),async()=>applyFinalValidation());
 action($('all-modules'),async()=>{document.querySelectorAll('[name=module]').forEach(n=>n.checked=true);updateModuleSelection();});
 action($('coding-modules'),async()=>{document.querySelectorAll('[name=module]').forEach(n=>n.checked=['clusterer','code_verification','blind_coding','coding_agreement'].includes(n.value));updateModuleSelection();});
 function closeViewer(){if(typeof closeReview==='function')closeReview();artifactRequest++;$('formatted-preview').hidden=true;$('formatted-preview').replaceChildren();$('viewer').hidden=true;$('html-preview').removeAttribute('srcdoc');$('text-preview').textContent='';$('image-preview').removeAttribute('src');if(objectUrl){URL.revokeObjectURL(objectUrl);objectUrl=null;}}
@@ -425,7 +491,7 @@ function mappingProblems(){
   return issues;
 }
 function updateStartGate(){
-  const issues=mappingProblems();if(sensitivityIssue)issues.push(sensitivityIssue);$('start').disabled=issues.length>0;
+  const issues=mappingProblems();if(stabilityIssue)issues.push(stabilityIssue);if(sensitivityIssue)issues.push(sensitivityIssue);$('start').disabled=issues.length>0;
   $('start-requirements').textContent=issues.length?'Start gesperrt: '+issues.join(' '):'Spalten zugeordnet. Beim Start werden alle Eingaben erneut geprüft.';
   $('mapping-requirements').textContent=$('start-requirements').textContent;
 }

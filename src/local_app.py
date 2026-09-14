@@ -411,11 +411,14 @@ class App(ReviewWorkspace):
         from stability_analysis import configured_plan, planning_summary
         stability_plan = configured_plan(path)
         sensitivity_plan = configured_plan(path, kind='sensitivity')
+        from workflow_effort import effort_summary
+        effort = effort_summary(modules, stability=planning_summary(stability_plan),
+                                sensitivity=planning_summary(sensitivity_plan))
         from context_preflight import check_context, require_context
         context_check=check_context(cfg,segments,codes,modules)
         require_context(context_check)
         return {'valid':True,'segments':len(segments),'persons':len({s.person for s in segments}),
-                'context_check':context_check,
+                'context_check':context_check, 'effort':effort,
                 **({'stability_plan':planning_summary(stability_plan)} if stability_plan else {}),
                 **({'sensitivity_plan':planning_summary(sensitivity_plan)} if sensitivity_plan else {}),
                 'passages':len({s.unit_id for s in segments}) if cfg['columns'].get('unit_id') else None,
@@ -717,7 +720,7 @@ class Handler(BaseHTTPRequestHandler):
                     'defaults':{'llm':{**{k:cfg['llm'].get(k) for k in ('model','num_ctx','max_tokens','temperature','think')},'synthesis_max_calls':cfg['llm'].get('hierarchical_synthesis',{}).get('max_calls',64)},'context':cfg['context'],'columns':cfg['columns'],
                                 'stability':diagnostics.get('stability',{'modules':[],'repetitions':3}),
                                 'sensitivity':diagnostics.get('sensitivity',{'modules':[],'repetitions':2,'variants':[]})},
-                    'modules':[{k:m[k] for k in ('id','name','depends_on','enabled','requires_model','after_if_enabled')} |
+                    'modules':[{k:m[k] for k in ('id','name','depends_on','enabled','requires_model','starts_child_runs','after_if_enabled')} |
                         {'cost_profile':m.get('cost_profile')} for m in RUNNER.normalize_modules(cfg)]})
             if parsed.path=='/api/project': return self.json(app.project(get('project')))
             if parsed.path=='/api/prompts': return self.json(app.prompt_templates(get('project'),get('job') or None))

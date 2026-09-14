@@ -188,3 +188,7 @@ Vor dem Modulstart wird eine vorhandene verwaltete Ollama-Instanz des Elternlauf
 ## Sensitivität: getrennte Konfigurationen und sichere Wiederaufnahme
 
 Basis und jede Variante sind an dieselben Originaldaten und eigene Konfigurationshashes gebunden. Vor dem Modellstart prüft der gemeinsame Planer Parameterunterstützung, Vorlagenplatzhalter, No-ops und bekannte Kontextgrenzen. Fehlgeschlagene oder pausierte Serien erzeugen einen ausdrücklich unvollständigen Teilbericht. Resume verwendet fertige Unterläufe nur nach Prüfung von Prozessabschluss, Manifesten, Daten-, Code- und Konfigurationsidentität. Eigene Seriendateien können nicht als alternative Berichtsausgabe überschrieben werden. Geänderte Gewichte unter demselben Modellnamen sperren die Serie; ein ausdrücklich anderes Modell darf andere Gewichte haben. Keine stillen Parameter-Fallbacks in kontrollierten Unterläufen.
+
+## Änderungen während der Eingabeprüfung
+
+Die Oberfläche verwirft verspätete Prüfergebnisse nach einer Änderung an Auswahl oder Einstellungen. Das gilt auch für Preset-Schaltflächen. Ein bereits angeklickter Start wird nach einer solchen Änderung nicht automatisch fortgesetzt; die aktuelle Auswahl muss erneut geprüft werden. Eine zuvor serverseitig gespeicherte Revision kann erhalten bleiben, wird aber durch diese Aktion nicht gestartet.

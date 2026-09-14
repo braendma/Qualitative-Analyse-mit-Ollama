@@ -346,6 +346,9 @@ def main(argv=None):
             validation['stability_plan'] = planning_summary(stability_plan)
         if sensitivity_plan:
             validation['sensitivity_plan'] = planning_summary(sensitivity_plan)
+        from workflow_effort import effort_summary
+        validation["effort"] = effort_summary(modules, stability=planning_summary(stability_plan),
+                                              sensitivity=planning_summary(sensitivity_plan))
         print(json.dumps(validation))
         return
     provenance = execution_provenance(config_path, csv_path, config, script_dir)

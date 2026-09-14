@@ -15,7 +15,7 @@ function setup(){
     removeAttribute(){},setAttribute(){},classList:{toggle(){}},scrollIntoView(){},
     async click(){await this.listeners.click({preventDefault(){}});}
   };}
-  function node(id){if(!nodes.has(id))nodes.set(id,element());return nodes.get(id);}
+  function node(id){if(!nodes.has(id)){const n=element();n.id=id;nodes.set(id,n);}return nodes.get(id);}
   const context=vm.createContext({
     document:{addEventListener(){},getElementById:node,createElement:element,querySelectorAll:()=>[]},
     location:{port:'1234',hash:''},sessionStorage:{getItem:()=>''},history:{},
@@ -36,6 +36,7 @@ test('stability estimate counts fresh prerequisites and rejects invalid selectio
   assert.equal(app.run("stabilityEstimate(state.modules,new Set(['clusterer','blind_coding','stability']),['blind_coding'],3).executions"),6);
   assert.ok(app.run("stabilityEstimate(state.modules,new Set(['stability']),['blind_coding'],3).error"));
   assert.ok(app.run("stabilityEstimate(state.modules,new Set(['stability']),['stability'],3).error"));
+  assert.ok(app.run("stabilityEstimate([{id:'custom',depends_on:[],starts_child_runs:true}],new Set(['custom']),['custom'],2).error"));
   for(const count of [0,1,21,2.5,NaN])assert.ok(app.run(`stabilityEstimate(state.modules,new Set(['clusterer']),['clusterer'],${count}).error`));
 });
 
@@ -232,4 +233,83 @@ test('unclassified extensions and cost text stay understandable without HTML inj
   app.run("state.modules[0].cost_profile={class:'HOCH',recommendation:'<img src=x>',note:'Eigenes Profil'}; loadFields();");
   const revised=app.node('modules').children[0].children[0].children[1];
   assert.ok(revised.children.some(n=>n.textContent.includes('<img src=x>')));
+});
+
+
+function moduleSelectors(app){
+  app.run(`document.querySelectorAll=selector=>{
+    const match=selector.match(/^\\[name=([^\\]]+)\\](:checked)?$/);if(!match)return [];
+    const all=[],visit=n=>{if(n.name===match[1])all.push(n);for(const c of n.children||[])visit(c);};
+    for(const id of ['modules','stability-targets','sensitivity-targets'])visit(document.getElementById(id));
+    return all.filter(n=>!match[2]||n.checked);
+  };`);
+}
+function finalModules(app){
+  app.run(`state.modules=[{id:'clusterer',name:'Cluster',depends_on:[],requires_model:true},
+    {id:'blind_coding',name:'Blind',depends_on:['clusterer'],requires_model:true},
+    ...['coverage','information_loss','codebook_diagnostics','stability','sensitivity'].map(id=>({id,name:id,enabled:false,depends_on:[],requires_model:['stability','sensitivity'].includes(id),starts_child_runs:['stability','sensitivity'].includes(id)}))];
+    state.defaults.stability={modules:['blind_coding'],repetitions:3};
+    state.defaults.sensitivity={modules:['blind_coding'],repetitions:2,variants:[]};`);
+}
+
+test('combined effort counts each prerequisite per repetition and both independent series',()=>{
+  const app=setup();finalModules(app);
+  app.run(`var selected=new Set(state.modules.map(m=>m.id));var plans={
+    stability:stabilityEstimate(state.modules,selected,['blind_coding'],3),
+    sensitivity:sensitivityEstimate(state.modules,selected,{modules:['blind_coding'],repetitions:2,variants:[{id:'warm',llm:{temperature:.2}}]})};
+    var combined=workflowEffort(state.modules,plans);renderEffortSummary(document.getElementById('effort-preview'),combined);`);
+  assert.equal(app.run('combined.total_module_executions'),21);
+  assert.equal(app.run('combined.additional_module_executions'),14);
+  assert.equal(app.run("combined.modules.find(m=>m.id==='clusterer').total"),8);
+  assert.equal(app.run('combined.model_calls_estimate'),null);
+  assert.ok(app.node('effort-preview').children.some(n=>n.textContent.includes('Modulausführungen sind keine Modellanfragen')));
+  assert.ok(app.run("workflowEffort(state.modules,{sensitivity:{error:'Varianten fehlen'}}).error"));
+  assert.equal(app.run("workflowEffort([{id:'custom',name:'Custom',starts_child_runs:true}]).total_module_executions"),null);
+  assert.equal(app.run("workflowEffort(state.modules.filter(m=>m.requires_model===false)).model_calls_estimate"),0);
+});
+
+test('final validation is explicit, preserves variants and never saves or starts by itself',async()=>{
+  const app=setup();finalModules(app);moduleSelectors(app);app.run('loadFields()');
+  assert.equal(app.run("document.querySelectorAll('[name=module]:checked').length"),2);
+  app.run("project.settings.sensitivity={modules:['blind_coding'],repetitions:4,variants:[{id:'warm',llm:{temperature:.2,think:false}}]};loadFields();");
+  const before=app.run('JSON.stringify(sensitivitySettings())'),requestsBefore=app.requests.length;
+  await app.node('final-validation').click();
+  assert.equal(app.run("document.querySelectorAll('[name=module]:checked').length"),7);
+  assert.equal(app.run('JSON.stringify(sensitivitySettings())'),before);
+  assert.equal(app.requests.length,requestsBefore);
+  assert.equal(app.node('preset-status').hidden,false);
+  assert.match(app.node('preset-status').textContent,/noch nicht gespeichert oder gestartet/);
+  const once=app.run("JSON.stringify([...document.querySelectorAll('[name=module]:checked')].map(n=>n.value))");
+  await app.node('final-validation').click();
+  assert.equal(app.run("JSON.stringify([...document.querySelectorAll('[name=module]:checked')].map(n=>n.value))"),once);
+  assert.equal(app.run('JSON.stringify(sensitivitySettings())'),before);
+});
+
+test('preset suggests a target for empty selections but missing variants still block start',async()=>{
+  const app=setup();finalModules(app);moduleSelectors(app);
+  app.run('state.defaults.stability.modules=[];state.defaults.sensitivity.modules=[];loadFields();');
+  await app.node('final-validation').click();
+  assert.equal(app.run("stabilitySettings().modules[0]"),'blind_coding');
+  assert.equal(app.run("sensitivitySettings().modules[0]"),'blind_coding');
+  assert.equal(app.node('start').disabled,true);
+  assert.match(app.node('start-requirements').textContent,/Varianten/);
+  assert.equal(app.run('sensitivityRows.length'),0);
+  app.run("document.querySelectorAll('[name=module]').forEach(n=>n.checked=n.value==='coverage');updateModuleSelection();");
+  assert.equal(app.run('sensitivityIssue'),'');
+  assert.equal(app.run('stabilityIssue'),'');
+  assert.equal(app.node('validation-result').hidden,true);
+  assert.throws(()=>app.run("finalValidationSelection([],[],[],[])"));
+});
+
+
+test('changing the preset during preflight cannot start an outdated expensive selection',async()=>{
+  const app=setup();finalModules(app);moduleSelectors(app);app.run('loadFields()');
+  const pending=app.node('start').click();
+  const save=app.requests.find(r=>r.url==='/api/save');assert.ok(save);
+  await app.node('final-validation').click();
+  save.reply(checkResult);await pending;
+  assert.equal(app.requests.some(r=>r.url==='/api/start'),false);
+  assert.equal(app.node('validation-result').hidden,true);
+  assert.equal(app.node('start').disabled,true);
+  assert.equal(app.run("document.querySelectorAll('[name=module]:checked').length"),7);
 });

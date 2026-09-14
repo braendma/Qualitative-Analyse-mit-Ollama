@@ -68,3 +68,7 @@ Das zusätzliche Modul `stability` ist standardmäßig aus, mit hohem Rechenaufw
 ## Optionale Sensitivitätsanalyse
 
 Modul `sensitivity`, `enabled: false`, `requires_model: true`, `starts_child_runs: true`. Dieselbe Ausführungs- und Prüfarchitektur wie Stabilität, mit getrennten Konfigurationen. `diagnostics.sensitivity` enthält `modules`, `repetitions` (Default 2) und `variants` (Default leer, vor Aktivierung 1–9 erforderlich). Basis wird automatisch ergänzt. [Vollständiger Konfigurationsvertrag](CONFIGURATION.md#sensitivität-interner-entwicklungsvertrag) und [Bedienung](HANDBUCH.html#sensitivitaet-einstellungen-vergleichen). Aufwand SEHR HOCH.
+
+## Finale Validierungsanalyse
+
+Das optionale Preset ergänzt die fünf Diagnosen und erforderliche Basisanalysen, ohne einen Lauf zu starten. Bestehende Varianten bleiben erhalten; fehlende Varianten ausdrücklich festlegen. Die neue Aufwandübersicht trennt Hauptlauf und zusätzliche Wiederholungen. [Anleitung und Rechenbeispiel](HANDBUCH.md#finale-validierungsanalyse-und-aufwandübersicht).

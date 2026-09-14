@@ -243,3 +243,26 @@ sofern Modul-ID und Script genau dem Originalmodul entsprechen. Eigene Scripts
 bekommen keine unterstellte Einstufung; dafür ein explizites Profil angeben.
 Die Standardkonfiguration und die kompatiblen Defaults werden auf Gleichheit geprüft.
 Normalisierung ändert keine Originaldateien und schaltet keine zusätzlichen Module ein.
+
+
+## Vorstartübersicht und finales Validierungspreset
+
+Die optionale Schaltfläche **Finale Validierungsanalyse** wählt die fünf Diagnosen
+und benötigte Basisanalysen aus, ohne etwas zu starten oder bestehende Varianten
+zu ersetzen. Material, Segmentierung und Kategoriensystem sollten weitgehend
+stabil sein. Sensitivitätsvarianten müssen ausdrücklich festgelegt werden.
+Die Oberfläche zeigt Hauptlauf, zusätzliche Serien und Ausführungen je Modul;
+`--validate-only` liefert dieselbe serverseitige Zusammenfassung als `effort`.
+[Bedienung und Beispiel mit 21 Modulausführungen im Handbuch](HANDBUCH.md#finale-validierungsanalyse-und-aufwandübersicht).
+
+Es wird kein neuer YAML-Schalter benötigt: `pipeline.modules[].enabled` und
+`diagnostics.stability` / `diagnostics.sensitivity` bleiben maßgeblich. Die
+Konfiguration aktiviert das Preset nicht automatisch; es gilt nur die ausdrücklich
+gewählte Modulliste. `effort` ist Ausgabe der Prüfung, keine Konfigurationsoption.
+Es enthält `main_module_executions`, `additional_module_executions`,
+`total_module_executions`, `known_module_executions`, `series` und `modules` mit
+Einzelausführungen pro Hauptlauf/Stabilität/Sensitivität. `basis: fresh_run`
+kennzeichnet den vollständigen neuen Lauf; keine Restzeit beim Resume.
+`model_calls_estimate` ist bei einem rein modellfreien Lauf 0, sonst `null`.
+`unplanned_child_modules` nennt eigene Module mit nicht berechneten Unterläufen;
+in diesem Fall ist `total_module_executions: null`. Keine Zeit-/Preisprognose.

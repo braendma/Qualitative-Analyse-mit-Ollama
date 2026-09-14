@@ -664,3 +664,34 @@ Die Einsatzempfehlung dient der Arbeitsplanung und ist kein methodisches Qualit�
 | Sensitivitätsanalyse | SEHR HOCH | erst nach Stabilisierung von Material und Kategoriensystem empfohlen |
 
 Eigene Erweiterungen ohne Profil erscheinen als **nicht eingestuft**. Fehlende Profile unveränderter Standardmodule werden auch in alten YAML-Dateien beim Einlesen ergänzt; die Originaldatei wird dabei nicht geändert. Das aktiviert keine Module.
+
+## Finale Validierungsanalyse und Aufwandübersicht
+
+Unter **Analyse → Analysemodule auswählen** zeigt die **Aufwandübersicht für einen neuen Lauf** die aktuelle Auswahl einschließlich benötigter Vorstufen. Die Rechnung trennt den Hauptlauf von zusätzlichen Stabilitäts- und Sensitivitätsläufen. Unter **Ausführungen je Modul ansehen** lässt sich nachvollziehen, wie oft etwa die Clusteranalyse tatsächlich neu ausgeführt wird.
+
+Das optionale Preset **Finale Validierungsanalyse** ergänzt Coverage, Information-Loss-Audit, Codebook-Diagnostik, Stabilität und Sensitivität. Nutze es vorzugsweise, wenn Material, Segmentierung und Kategoriensystem weitgehend feststehen und wesentliche Überarbeitungen abgeschlossen sind. Es verursacht hohen bis sehr hohen zusätzlichen Rechenaufwand. Es ist standardmäßig nicht aktiv.
+
+1. Die gewünschten Analysen auswählen. Für das kleine Beispiel unten zuerst **Auswahl leeren** wählen.
+2. **Finale Validierungsanalyse** anklicken. Die vorhandene Auswahl bleibt erhalten; die fünf Diagnosen und benötigte Vorstufen kommen hinzu. Wenn noch keine Wiederholungsziele gewählt sind, schlägt das Preset Blind-Coding vor.
+3. Ziele und Wiederholungszahlen prüfen. Vorhandene Werte und Sensitivitätsvarianten werden nicht ersetzt. Bei Sensitivität mindestens eine Variante ausdrücklich hinzufügen und eine unterstützte Einstellung oder tatsächlich verwendete Promptvorlage ändern. Leere, unveränderte oder ungültige Varianten werden bei der Startprüfung abgelehnt.
+4. Aufwandübersicht lesen und über **Eingaben prüfen** die Daten und Einstellungen validieren. Der **Geprüfte Ausführungsumfang** verwendet dieselben Wiederholungspläne wie der Runner. Fehlende Varianten oder andere ungültige Eingaben müssen zuerst korrigiert werden.
+5. Erst **Prüfen & neuen Lauf starten** startet die Auswertung. Der Preset-Button speichert oder startet nichts. Die ausgewählten Module und Einstellungen werden beim Prüfen bzw. Start projektbezogen gespeichert; es gibt keinen zusätzlichen dauerhaft aktiven Preset-Schalter.
+
+### Rechenbeispiel mit Blind-Coding
+
+Nach **Auswahl leeren → Finale Validierungsanalyse**, mit Blind-Coding als Ziel beider Serien, 3 Stabilitätswiederholungen und 2 Sensitivitätswiederholungen je Einstellung sowie einer zusätzlichen Variante:
+
+| Teil | Berechnung | Modulausführungen |
+|---|---|---:|
+| Hauptlauf | Clusteranalyse + Blind-Coding + fünf Diagnosen | 7 |
+| Stabilität | 1 Einstellung × 3 Wiederholungen × 2 Module | 6 zusätzlich |
+| Sensitivität | Basis + 1 Variante = 2 Einstellungen × 2 Wiederholungen × 2 Module | 8 zusätzlich |
+| Gesamt | 7 + 6 + 8 | 21 |
+
+Clusteranalyse und Blind-Coding werden dabei jeweils **8-mal** ausgeführt: einmal im Hauptlauf, dreimal für Stabilität und viermal für Sensitivität. Der Hauptlauf wird nicht als Wiederholung angerechnet. Die beiden Serien teilen auch bei gleicher Basiseinstellung keine Ergebnisse. Das verhindert, dass Wiederverwendung eine scheinbare Wiederholbarkeit erzeugt.
+
+**21 Modulausführungen bedeuten nicht 21 Modellanfragen.** Ein Modul kann zahlreiche Anfragen und Reparaturen auslösen; andere Module benötigen keine eigenen Modellanfragen. Es gibt deshalb keine erfundene Anfrage-, Minuten-, Stunden- oder Preisprognose. Die Übersicht zählt einen neuen vollständigen Lauf. Bei Wiederaufnahme können geprüfte Teilschritte bereits erledigt sein. Eigene Module, deren zusätzliche Unterläufe nicht im Plan stehen, führen zu einer ausdrücklich unvollständigen Gesamtzahl.
+
+Das Preset verändert weder Anbieter noch Datenfreigabe, Personenzuordnung oder Originaldateien. Es bescheinigt keine methodische Güte: Wiederholbarkeit ist kein Nachweis der Richtigkeit, und Unterschiede zwischen Varianten sind nicht automatisch Fehler.
+
+Änderst du Einstellungen, während eine Eingabeprüfung noch läuft, wird deren verspätetes Ergebnis nicht als aktuelle Freigabe angezeigt und kein Lauf daraus automatisch gestartet. Prüfe die aktuelle Auswahl anschließend erneut.
