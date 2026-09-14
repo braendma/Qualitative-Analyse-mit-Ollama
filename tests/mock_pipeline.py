@@ -82,7 +82,7 @@ if os.environ.get('MOCK_RUNTIME_EVIDENCE') == '1':
     # Keep the real request/receipt layer while replacing only model I/O.
     import ollama_capacity
     def fake_metadata(endpoint, **kwargs):
-        return {'models':[{'name':'mock:latest', 'digest':os.environ.get('MOCK_MODEL_DIGEST','a'*64),
+        return {'models':[{'name':os.environ.get('MOCK_MODEL_NAME','mock:latest'), 'digest':os.environ.get('MOCK_MODEL_DIGEST','a'*64),
                            'context_length':32768}]}
     ollama_capacity.metadata = fake_metadata
     class ReceiptBackend:

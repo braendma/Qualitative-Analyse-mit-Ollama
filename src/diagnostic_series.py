@@ -1,7 +1,7 @@
 """Internal sequential dispatch to the existing runner, with isolated run directories.
 
 No additional module runner or checkpoint format: child manifests remain authoritative.
-Runtime receipts and supervised managed-server handoff are implemented; UI follows.
+Runtime receipts and supervised managed-server handoff serve both diagnostic types.
 """
 import importlib
 import json
@@ -28,9 +28,16 @@ def _runner_command():
 
 
 def _check_plan(plan):
+    if not isinstance(plan,dict):
+        raise ValueError('Serienplan muss eine gültige Zuordnung sein.')
     try:
-        actual = prepare_repetitions(plan['source_config'], plan['requested_modules'],
-                                     repetitions=plan['repetitions'])
+        if plan.get('kind') == 'sensitivity':
+            from diagnostic_sensitivity import prepare_sensitivity
+            actual = prepare_sensitivity(plan['source_config'], plan['requested_modules'],
+                                         plan['variants'], repetitions=plan['repetitions'])
+        else:
+            actual = prepare_repetitions(plan['source_config'], plan['requested_modules'],
+                                         repetitions=plan['repetitions'])
     except (KeyError, TypeError, OSError) as exc:
         raise ValueError('Wiederholungsplan oder seine Ausgangsdateien fehlen bzw. sind beschädigt.') from exc
     if actual != plan:
@@ -55,6 +62,37 @@ def _read_json(path):
 def _inside(path, root):
     if not path.resolve().is_relative_to(root.resolve()) or path.is_symlink():
         raise ValueError('Serienpfad verweist außerhalb des zugehörigen Laufordners.')
+
+
+def _sensitivity_records(root, plan, *, prepare=False):
+    """Bind each variant to its own configuration and the shared process supervisor.
+
+    No execution or module checkpoint here: this is the immutable series receipt.
+    The same receipt reader is used before dispatch, after dispatch and on resume.
+    """
+    receipt_path=root/'repetition_plan.json'
+    _inside(receipt_path,root)
+    records={}; bindings=[]
+    for condition in plan['configurations']:
+        cid=condition['configuration_id'];config=condition['config']
+        path=root/('configuration-'+cid+'.yaml')
+        _inside(path,root)
+        if prepare:
+            if path.exists():
+                raise ValueError('Sensitivitätskonfiguration bereits vorhanden; keine Datei überschrieben.')
+            atomic_text(path,yaml.safe_dump(config,allow_unicode=True,sort_keys=True))
+        identity=_identity(path,config)
+        binding={'configuration_id':cid,'filename':path.name,'config_sha256':file_hash(path),
+                 'execution_fingerprint':identity}
+        bindings.append(binding)
+        records[cid]={'path':path,'config':config,'identity':identity}
+    identity=fingerprint(bindings)
+    expected={'schema_version':2,'plan':plan,'configurations':bindings,'execution_fingerprint':identity}
+    if prepare:
+        atomic_json(receipt_path,expected)
+    elif _read_json(receipt_path) != expected:
+        raise ValueError('Sensitivitätskonfiguration, Code oder Laufgrundlage verändert; neue Serie verwenden.')
+    return records,identity
 
 
 def _sample_run(parent, identity, modules):
@@ -161,8 +199,8 @@ def execute_repetitions(plan, directory, *, resume=False, pause_file=None, progr
     """Run samples sequentially; stop on first failure/pause, preserving all outputs.
 
     Abruptly abandoned children require the supervisor's cleanup receipt before
-    a restart. A supervising app is not yet
-    supported: release its managed Ollama server before dispatching this API.
+    a restart. The caller must release its managed Ollama server before dispatch;
+    the existing runner does so for modules marked starts_child_runs.
     """
     _check_plan(plan)
     if os.environ.get('QUALITATIVE_MANAGED_OLLAMA_HOST'):
@@ -181,7 +219,11 @@ def execute_repetitions(plan, directory, *, resume=False, pause_file=None, progr
         receipt_path = root / 'repetition_plan.json'
         for path in (config_path, receipt_path):
             _inside(path, root)
-        if resume:
+        varied=plan['kind']=='sensitivity'
+        if varied:
+            configurations,identity=_sensitivity_records(root,plan,prepare=not resume)
+            first_config=next(iter(configurations.values()))['config']
+        elif resume:
             receipt = _read_json(receipt_path)
             if receipt.get('plan') != plan:
                 raise ValueError('Gespeicherter Serienplan stimmt nicht überein; neue Serie verwenden.')
@@ -195,25 +237,36 @@ def execute_repetitions(plan, directory, *, resume=False, pause_file=None, progr
             identity = _identity(config_path, plan['config'])
             atomic_json(receipt_path, {'schema_version': 1, 'plan': plan,
                 'execution_fingerprint': identity, 'config_sha256': file_hash(config_path)})
-        modules = _runner().topological_order(_runner().normalize_modules(plan['config']))
+        if not varied:
+            configurations={'baseline':{'path':config_path,'config':plan['config'],'identity':identity}}
+            first_config=plan['config']
+        modules = _runner().topological_order(_runner().normalize_modules(first_config))
         result = {'schema_version': 1, 'status': 'running', 'plan_fingerprint': plan['plan_fingerprint'],
                   'execution_fingerprint': identity, 'samples': [],
                   'parameter_status': 'configured_not_runtime_verified'}
         env = {k: v for k, v in os.environ.items() if not k.startswith('WORKFLOW_')}
         env['PYTHONUTF8'] = '1'
-        observed_digests = set()
+        observed_by_model = {}
         for sample in plan['samples']:
             if progress:
                 progress(sum(s['status'] == 'success' for s in result['samples']), len(plan['samples']))
             _check_plan(plan)
-            if _identity(config_path, plan['config']) != identity:
+            selected_config=configurations[sample.get('configuration_id','baseline')]
+            sample_config=selected_config['config'];config_path=selected_config['path']
+            sample_identity=selected_config['identity']
+            if varied:
+                _sensitivity_records(root,plan)
+            if _identity(config_path, sample_config) != sample_identity:
                 raise ValueError('Laufgrundlage während der Serie geändert; keine weiteren Wiederholungen gestartet.')
+            from runtime_evidence import _canonical
+            model_key=_canonical(sample_config['llm']['model'])
+            observed_digests=observed_by_model.setdefault(model_key,set())
             parent = root / sample['sample_id']
             supervision_log = root / (sample['sample_id'] + '.log')
             has_dispatch = supervision_log.with_suffix('.supervision.request.json').exists()
             if has_dispatch:
                 _confirmed_supervision(supervision_log, identity, str(parent))
-            run, manifest = _sample_run(parent, identity, modules)
+            run, manifest = _sample_run(parent, sample_identity, modules)
             if manifest and not has_dispatch:
                 raise ValueError('Vorhandener Lauf hat keine zugehörige Prozessaufsicht; keine automatische Übernahme.')
             if manifest and manifest['status'] == 'running':
@@ -231,23 +284,28 @@ def execute_repetitions(plan, directory, *, resume=False, pause_file=None, progr
                 log_path = root / (sample['sample_id'] + '.log')
                 _inside(log_path, root)
                 try:
+                    env.pop('WORKFLOW_EXPECTED_MODEL_DIGEST',None)
                     if observed_digests:
                         env['WORKFLOW_EXPECTED_MODEL_DIGEST'] = next(iter(observed_digests))
                     code = _execute(command, root, log_path, env)
                 except KeyboardInterrupt:
                     # _execute only propagates this after its child has been reaped.
-                    stopped_run, stopped = _sample_run(parent, identity, modules)
+                    stopped_run, stopped = _sample_run(parent, sample_identity, modules)
                     if stopped and stopped['status'] == 'running':
                         stopped['status'] = 'interrupted'
                         atomic_json(stopped_run / 'workflow_manifest.json', stopped)
                     raise
                 _check_plan(plan)
-                if _identity(config_path, plan['config']) != identity:
+                if varied:
+                    _sensitivity_records(root,plan)
+                if _identity(config_path, sample_config) != sample_identity:
                     raise ValueError('Laufgrundlage während einer Wiederholung geändert; Ergebnisse nicht vergleichbar.')
-                run, manifest = _sample_run(parent, identity, modules)
+                run, manifest = _sample_run(parent, sample_identity, modules)
                 if not manifest:
                     result['samples'].append({'sample_id': sample['sample_id'], 'status': 'failed',
                         'run_dir': None, 'exit_code': code, 'error': 'Runner ohne gültiges Manifest beendet; Serienlog prüfen.'})
+                    if varied:
+                        result['samples'][-1]['configuration_id']=sample['configuration_id']
                     result['status'] = 'failed'
                     break
                 if code != 0 or manifest['status'] not in {'success', 'paused'}:
@@ -257,11 +315,13 @@ def execute_repetitions(plan, directory, *, resume=False, pause_file=None, progr
             evidence = manifest.get('runtime_evidence', {})
             observed_digests.update(evidence.get('local_digests', []))
             if len(observed_digests) > 1:
-                result.update(status='failed', error='Modellidentität zwischen kontrollierten Anfragen verändert; keine gemeinsame Stabilitätsbewertung.')
+                result.update(status='failed', error='Modellidentität desselben Modellnamens zwischen kontrollierten Anfragen verändert; keine gemeinsame Bewertung.')
             result['samples'].append({'sample_id': sample['sample_id'],
                 'status': 'failed' if result['status'] == 'failed' else manifest['status'],
                 'run_dir': str(run.relative_to(root)),
                 'runtime_evidence': {k: evidence.get(k) for k in ('records', 'accepted', 'failed', 'pending', 'local_digests', 'parameter_status')}})
+            if varied:
+                result['samples'][-1]['configuration_id']=sample['configuration_id']
             if result['status'] != 'running':
                 break
         if result['status'] == 'running':

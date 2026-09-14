@@ -1,5 +1,85 @@
 # Konfigurationsreferenz der wissenschaftlichen Diagnosen
 
+## Sensitivität: interner Entwicklungsvertrag
+
+**Noch keine auswählbare Sensitivitätsanalyse in der Oberfläche.** Planung und
+kontrollierte Ausführung sind vorbereitet; Vergleichsbericht und Bedienintegration
+folgen. Für die interne Entwicklung ist der Einstieg
+`diagnostic_sensitivity.prepare_sensitivity(config_path, module_ids, variants, repetitions=2)`.
+Er liest Eingaben, schreibt keine Dateien und fragt kein Modell ab. Der vorhandene
+`diagnostic_series.execute_repetitions` führt einen solchen Plan aus; dabei entstehen
+zusätzliche Modellanfragen und eigene Laufordner. Das ist kein öffentlicher CLI-Befehl.
+
+| Feld | Typ / Vorgabe | Bedeutung und Grenze |
+|---|---|---|
+| `config_path` | Pfad | Unveränderte Ursprungskonfiguration; keine Diagnose-Kindkonfiguration |
+| `module_ids` | Nicht leere Liste | Bereits aktivierte Basisanalysen; benötigte Vorstufen werden mit wiederholt |
+| `variants` | Liste mit 1–9 Einträgen | Zusätzliche Varianten; unveränderte `baseline` kommt automatisch hinzu |
+| `variants[].id` | Text, 1–40 Zeichen | Eindeutig, beginnt mit Kleinbuchstaben; danach Kleinbuchstaben/Ziffern/`_`/`-`; `baseline` reserviert |
+| `variants[].llm` | Optionale Zuordnung | Nur `model`, `temperature`, `num_ctx`, `max_tokens`, `think` |
+| `variants[].prompts` | Optionale Zuordnung | Vorhandener Vorlagenname → `system` und/oder `user`; unveränderte Platzhalter samt Häufigkeit |
+| `repetitions` | Ganzzahl, Vorgabe 2; 2–20 | Frische Wiederholungen je Konfiguration einschließlich Basis |
+
+Die Basis muss `llm.model`, `llm.temperature`, `llm.num_ctx` und `llm.max_tokens`
+ausdrücklich setzen. Temperatur: endliche Zahl von 0 bis 2; Kontext und Antwortlimit:
+positive Ganzzahlen, Antwortlimit kleiner als Kontext. Thinking: `true`, `false`,
+`low`, `medium`, `high`, `max`; tatsächliche Unterstützung ist modellabhängig.
+Nicht angegebene Felder bleiben unverändert. Jeder Eintrag wird von derselben Basis
+abgeleitet, nicht vom vorherigen Eintrag. Ein Eintrag muss etwas ändern; wirkungslose
+Schlüssel, reine Leerraumänderungen und doppelte Konfigurationen werden abgelehnt.
+
+Beispiel für `variants` (alle Texte und Modellnamen in Tests müssen künstlich sein):
+
+```yaml
+- id: temperatur-020
+  llm:
+    temperature: 0.20
+- id: andere-anweisung
+  prompts:
+    blind_coding:
+      system: "Blindcodierung: Prüfe ausdrücklich auch mögliche Gegenargumente."
+```
+
+Das Promptbeispiel setzt eine Basisvorlage ohne Platzhalter im Systemtext voraus.
+Bei Platzhaltern in der eigenen Vorlage diese vollständig übernehmen. Nur Vorlagen
+der tatsächlich gewählten Module/Vorstufen sind zulässig. `self_repair` wird nicht
+als eigene Behandlung angeboten. Im Mehrfachmodus verwendet Blind-Coding eine
+programmseitige Passage-Anweisung; die dort nicht verwendete YAML-Blindvorlage
+kann deshalb kein Sensitivitätsziel sein. Platzhalterprüfung ersetzt keine fachliche
+Prüfung, ob eine neue Formulierung dieselben Daten angemessen berücksichtigen lässt.
+
+Die Adapter übertragen unterschiedliche Parameter: Temperatur/Thinking werden nur
+für Ollama zugelassen, Kontextvariation nur für lokales Ollama. Die Cloud-Kontextzahl
+ist eine lokale Eingabegrenze und wird deshalb nicht als Modellparameter variiert.
+`top_p`, `top_k` und `seed` sind derzeit nicht durch die Analyse-Aufrufe verdrahtet;
+der Planer lehnt diese Schlüssel ab. Das beschreibt die aktuelle Programmanbindung,
+keine grundsätzliche Begrenzung der Anbieter-APIs. Anbieter, Freigabe, Schlüssel,
+Hosts, Quelldateien, Personen-/Spaltenzuordnung und Modulauswahl bleiben fest.
+
+Vor jeder Ausführung werden Plan und Originaldateien erneut geprüft. Pro Variante
+liegt eine separate `configuration-<id>.yaml` im Serienordner; der gemeinsame
+`repetition_plan.json` verwendet dafür Schema 2. Jeder Sampleordner erhält einen
+frischen regulären Runner-Lauf samt Checkpoints, Prozessaufsicht und Anfragequittungen.
+Fehler/Pause stoppen die weitere Serie; eine zulässige Wiederaufnahme überspringt
+fertige Samples und setzt denselben unvollständigen Kindlauf fort. Geänderte Dateien,
+Laufgrundlagen oder nicht bestätigte Prozessenden sperren die Wiederaufnahme.
+Modellwechsel dürfen andere Modelldigests haben; unter demselben Modellnamen
+bleiben geänderte Gewichte auch zwischen Varianten unzulässig. Bestehende
+Stabilitätsserien behalten ihren bisherigen Schema-1-Vertrag.
+
+**Aufwand:** `(1 + Anzahl Varianten) × Wiederholungen × Anzahl Module einschließlich
+Vorstufen`. Zwei Varianten plus Basis, je zwei Wiederholungen von Blind-Coding mit
+Clustering, ergeben zwölf zusätzliche Modulausführungen. Das ist keine exakte Zahl
+von Modellanfragen. Antwortreparaturen und Verdichtungen erhöhen sie gegebenenfalls.
+Die Kontextvorprüfung prüft das bekannte Material jeder Konfiguration; unbekannte
+spätere Modellbefunde und GPU-Kapazität sind dadurch nicht freigegeben.
+
+Mehrere geänderte Parameter werden als gemeinsame Veränderung (`joint_changes`)
+markiert: Unterschiede können keinem einzelnen Parameter zugeschrieben werden.
+Die Planung beweist weder tatsächliche Parameterübertragung noch deren Durchsetzung
+im Modell. Der Vergleich muss später die Anfragequittungen und Wiederholungsstreuung
+berücksichtigen. Sensitivität wird nicht automatisch als methodischer Fehler bewertet.
+
 Diese Referenz wird mit jedem neuen Diagnosemodul erweitert. Bisherige Optionen:
 [EXTENSIONS](EXTENSIONS.md), [ROBUSTNESS](ROBUSTNESS.md) und die kommentierte
 `config/config_v2.yaml`. Die neuen Felder sind optional; alte YAML-Dateien benötigen

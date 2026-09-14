@@ -1,5 +1,13 @@
 # Wissenschaftliche Diagnosen – technische Grundlage
 
+Sensitivität, interner Teilstand: Ein reiner Variantenplaner prüft tatsächlich
+verdrahtete Parameter, unveränderte Datenbasis und Kontextgrenzen. Der gemeinsame
+Serienexecutor kann getrennte Konfigurationen mit eigenen Wiederholungen ausführen,
+unter derselben Prozessaufsicht und Wiederaufnahmelogik. Der Sensitivitätsvergleich
+und seine Oberfläche sind noch nicht fertig. Der
+[Konfigurationsvertrag](CONFIGURATION.md#sensitivität-interner-entwicklungsvertrag)
+beschreibt Aufwand, Grenzen und die Trennung zwischen Plan und Laufzeitnachweis.
+
 Entwicklungsstand: Die gemeinsame Quellenauswertung und Coverage sind in CLI,
 Pipeline, Modulauswahl, Promptansicht, Fortschritt und Berichte integriert.
 Der Information-Loss-Audit ist ebenfalls in CLI, Modulauswahl, Fortschritt,
