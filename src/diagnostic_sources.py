@@ -53,7 +53,7 @@ def project_stage(module_id, payload):
     out = []
     warnings = []
 
-    def add(path, row, *, ids=None, people=None, scope='direct', kind='finding', unresolved=None):
+    def add(path, row, *, ids=None, people=None, scope='direct', kind='finding', unresolved=None, context=()):
         text = [row[k] for k in TEXT_FIELDS if isinstance(row.get(k), str)]
         # Explicit schema fields only: do not traverse evidence registries or whole input inventories.
         for position in row.get('personenpositionen', []):
@@ -61,7 +61,7 @@ def project_stage(module_id, payload):
                 text.append(str(position.get('person', '')) + ': ' + position['position'])
         if isinstance(row.get('merkmale'), list):
             text.extend(value for value in row['merkmale'] if isinstance(value, str))
-        out.append({'key': path, 'kind': kind, 'scope': scope,
+        out.append({'key': path, 'kind': kind, 'scope': scope, 'comparison_context': list(context),
                     'segment_ids': strings(row.get('segment_ids', []) if ids is None else ids),
                     'persons': strings([] if people is None else people),
                     'text': '\n'.join(text),
@@ -78,7 +78,7 @@ def project_stage(module_id, payload):
         for unit, value in mapping(payload, 'swot').items():
             for dimension in DIMENSIONS:
                 for i, row in enumerate(records(value, dimension)):
-                    add(f'swot/{unit}/{dimension}/{i}', row)
+                    add(f'swot/{unit}/{dimension}/{i}', row, context=(unit, dimension))
     elif module_id == 'meta_swot':
         registry = mapping(payload, 'finding_registry')
         for dimension, value in mapping(payload, 'meta_swot').items():
@@ -95,7 +95,8 @@ def project_stage(module_id, payload):
                                 raise ValueError('Ungültiger Befund im Quellenregister.')
                             ids.extend(strings(registry[fid].get('segment_ids', [])))
                     add(f'meta_swot/{dimension}/{section}/{i}', row, ids=ids,
-                        kind='exception' if section == 'einzelbefunde' else 'pattern', unresolved=missing)
+                        kind='exception' if section == 'einzelbefunde' else 'pattern', unresolved=missing,
+                        context=(dimension, section))
     elif module_id in ('person_analysis', 'ambiguity_analysis'):
         sections = ('ambivalenzen',) if module_id == 'ambiguity_analysis' else (
             'zentrale_themen', 'perspektiven', 'spannungsfelder', 'kontrastierende_aspekte')
@@ -115,7 +116,7 @@ def project_stage(module_id, payload):
                 if 'person' in row:
                     people.append(row['person'])
                 people.extend(x['person'] for x in row.get('personenpositionen', []) if isinstance(x, dict) and 'person' in x)
-                add(f'{section}/{i}', row, people=people, scope='person_reference')
+                add(f'{section}/{i}', row, people=people, scope='person_reference', context=(section,))
         warnings.append('Personenvergleich: Personenreferenzen sind keine direkte Segmentauswahl.')
     elif module_id == 'contrast_analysis':
         for section in ('dominante_muster', 'negativfaelle', 'spannungen_zwischen_typen', 'relativierungen'):
@@ -151,7 +152,7 @@ def project_stage(module_id, payload):
                     ids += detail.get('segment_ids', [])
                     if not detail or detail.get('unresolved'):
                         missing.append(ref)
-                add(f'{section}/{i}', row, ids=ids, scope='source_group', unresolved=missing)
+                add(f'{section}/{i}', row, ids=ids, scope='source_group', unresolved=missing, context=(section,))
                 out[-1]['source_refs'] = refs
         warnings.append('Synthese: Quellengruppen beschreiben Eingabematerial, keine bestätigte Evidenz pro Aussage.')
     else:

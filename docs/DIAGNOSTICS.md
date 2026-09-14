@@ -474,3 +474,68 @@ vollständige ausgegeben. Im Zeilenmodus ist diese Auswertung `not_applicable`.
 
 Stabilitäts- und Sensitivitätshinweise werden erst angebunden, sobald diese Module
 implementiert und geprüft sind. Der Kern behauptet keine entsprechende Messung.
+
+## Stabilitätsvergleich: interner Vergleichskern (S06, Integration ausstehend)
+
+`stability_core.analyze_stage_repetitions` und `analyze_coding_repetitions` vergleichen
+bereits vorliegende Ergebnisse ohne Modellaufrufe und ohne Dateien zu ändern. Sie
+sind noch kein auswählbares Diagnosemodul. Der aufrufende Serienloader muss zuvor
+die gemeinsame Konfiguration, Originaldaten, Codebuch, Laufidentitäten und
+Artefaktprüfsummen anhand des S05-Vertrags prüfen. Der Kern selbst weist deshalb
+`provenance_status: caller_must_verify` aus; ein übergebenes `success` ersetzt
+keinen Laufnachweis.
+
+Übergeben werden 2–20 Objekte mit eindeutiger `sample_id`, `status` und bei Erfolg
+`payload`. Fehlgeschlagene, unterbrochene, pausierte, ausstehende oder ungültige
+Wiederholungen werden mit Grund ausgeschlossen. Unvollständige Artefakte, unbekannte
+Segment-/Personenreferenzen, unaufgelöste Quellen und widersprüchliche Codierkopien
+werden ebenfalls ausgeschlossen. Weniger als zwei verwertbare Wiederholungen
+ergeben `not_computable`, niemals einen Stabilitätswert. Die Zuordnung von Personen
+und Passagen stammt ausschließlich aus den gemeinsamen Originaleingaben.
+
+### Getrennte Vergleichsgrößen
+
+- **Codierung:** paarweise exakte Modell–Modell-Übereinstimmung der vollständigen
+  Codepfadmengen. Mehrfachcodierung zählt explizite Passagen einmal, Zeilenmodus jede
+  Codierzeile. `none` ist eine gültige leere Zuordnung. `abstained` bleibt als
+  Unsicherheit sichtbar und wird aus der Code-Übereinstimmung ausgeschlossen.
+  Technisch fehlgeschlagene Einheiten zählen weder als Unsicherheit noch als
+  Übereinstimmung. Zustandsübereinstimmung und Code-Übereinstimmung besitzen eigene
+  Nenner. Zwei gleiche Unsicherheiten können gleiche Zustände, aber keine verwertbare
+  Code-Übereinstimmung ergeben. Codehäufigkeiten nennen pro Lauf die ausgewerteten
+  Einheiten; Alternativen der Verifikation sind ausdrücklich keine Blindzuordnungen.
+- **Cluster:** Überlappung vollständiger Mitgliedsmengen ohne Clusternamen oder
+  Arraypositionen. Zusätzlich wird verglichen, welche Segmentpaare mindestens einmal
+  gemeinsam gruppiert wurden; überlappende Cluster sind erlaubt. Es werden keine
+  massenhaften gemeinsam nicht gruppierten Paare als Übereinstimmung angerechnet.
+  Mehr als 100.000 Paarereignisse in einem Lauf unterdrücken diese Paarberechnung
+  vollständig und sichtbar; der Vergleich der Mitgliedsmengen bleibt möglich.
+- **Referenzen:** Jaccard-Überlappung von Segment- und Personenmengen, getrennt nach
+  Quellenart, Befundart und strukturellem Abschnitt (beispielsweise SWOT-Dimension).
+  Direkte Belege, Cluster-Eingabezuordnungen, Quellengruppen und Personenreferenzen
+  bleiben getrennt. Eine Synthese-Quellengruppe wird nicht zu einem direkten Beleg.
+- **Projizierte Befunde:** Multimengen-Jaccard berücksichtigt doppelte Einträge,
+  ignoriert Reihenfolge und laufabhängige technische Befund-IDs. Verglichen werden
+  ausschließlich die expliziten Textfelder und Referenzen der S01-Adapter. Die
+  Referenzbindung wird zusätzlich ohne Text verglichen. Gleiche Referenzen bei
+  geändertem Text sind damit erkennbar, ohne semantische Gleichheit zu behaupten.
+  SWOT-Dimensionen und Syntheseabschnitte bleiben Bestandteil der Identität.
+
+Jede Verhältnisgröße enthält Zähler und Nenner. Ein leerer Nenner ergibt `null`:
+zwei leere Belegmengen sind kein Nachweis perfekter Evidenzstabilität. Die Häufigkeit
+eines projizierten Befunds zählt erfolgreiche Wiederholungen mit diesem Befund,
+nicht Personen oder thematische Nennungen. Die Eintragszahl pro Wiederholung steht
+daneben; `present_in_all` bedeutet nur Vorkommen in allen verwertbaren Wiederholungen.
+
+Text wird vollständig nach Unicode-NFC und Leerzeichennormalisierung verglichen.
+Großschreibung, Satzzeichen, Negationen und Zahlen bleiben erhalten. Auszüge sind
+auf 1.200 Zeichen begrenzt, mit vollständiger Zeichenanzahl und Kürzungskennzeichnung;
+die Berechnung verwendet den ganzen Text. Es gibt keine automatische semantische
+Gleichsetzung unterschiedlich formulierter Aussagen. Auch die genaue Beziehung
+zwischen mehreren Teilbefunden, Freitext außerhalb der Adapter und fachliche
+Bedeutung sind durch diese Projektion nicht vollständig abgedeckt. Ein hoher
+Projektionswert darf deshalb weder als identischer Gesamtbericht noch als Wahrheit
+oder Validitätsnachweis bezeichnet werden. Die fachliche Prüfung bleibt erforderlich.
+
+Serienloader, CLI, Aufwandshinweise, Oberfläche und lesbarer Diagnosebericht folgen
+innerhalb S06. Stabilitätsbefunde sind noch nicht in die Codebook-Diagnostik integriert.
