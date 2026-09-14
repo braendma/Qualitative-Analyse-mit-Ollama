@@ -6,7 +6,7 @@ import re
 
 from coding_validation_common import load_codebook, load_segments
 from diagnostic_series import (_check_plan, _confirmed_supervision, _identity, _inside,
-                               _read_json, _runner, _sample_run)
+                               _read_json, _runner, _sample_run, _sensitivity_records)
 from diagnostic_sources import STAGES, load_declared_artifact
 from runtime_evidence import _canonical, _name
 from runtime_support import exclusive_file_lock, file_hash, fingerprint
@@ -83,6 +83,14 @@ def _request_profiles(run, manifest, plan, modules):
 
 
 def load_stability_series(directory):
+    return _load_series(directory, kind='stability')
+
+
+def load_sensitivity_series(directory):
+    return _load_series(directory, kind='sensitivity')
+
+
+def _load_series(directory, *, kind):
     """Reconstruct only planned samples; repetition_index.json is never authority.
 
     Busy/unconfirmed processes and corrupted provenance raise instead of reading
@@ -101,28 +109,37 @@ def load_stability_series(directory):
             _inside(path, root)
         receipt = _read_json(receipt_path)
         plan = receipt.get('plan')
-        if not isinstance(plan, dict) or receipt.get('schema_version') != 1:
+        sensitivity = kind == 'sensitivity'
+        if (not isinstance(plan, dict) or receipt.get('schema_version') != (2 if sensitivity else 1)
+                or (plan.get('kind') == 'sensitivity') != sensitivity):
             raise ValueError('Ungültiger Seriennachweis.')
         _check_plan(plan)
-        if file_hash(config_path) != receipt.get('config_sha256'):
-            raise ValueError('Gespeicherte Serienkonfiguration verändert oder fehlt.')
-        identity = _identity(config_path, plan['config'])
-        if identity != receipt.get('execution_fingerprint'):
-            raise ValueError('Code, Abhängigkeiten oder Laufgrundlage passen nicht zur Serie.')
+        if sensitivity:
+            records, identity = _sensitivity_records(root, plan)
+        else:
+            if file_hash(config_path) != receipt.get('config_sha256'):
+                raise ValueError('Gespeicherte Serienkonfiguration verändert oder fehlt.')
+            identity = _identity(config_path, plan['config'])
+            if identity != receipt.get('execution_fingerprint'):
+                raise ValueError('Code, Abhängigkeiten oder Laufgrundlage passen nicht zur Serie.')
+            records = {'baseline': {'path': config_path, 'config': plan['config'], 'identity': identity}}
+        config = records['baseline']['config']
         receipt_hash = file_hash(receipt_path)
-        modules = _runner().topological_order(_runner().normalize_modules(plan['config']))
+        modules = _runner().topological_order(_runner().normalize_modules(config))
         by_id = {m['id']: m for m in modules}
         comparable = [mid for mid in by_id if mid in STAGES or mid in {'blind_coding', 'code_verification'}]
         samples = {mid: [] for mid in comparable}
-        conditions, checked, all_digests = [], [], set()
+        conditions, checked, all_digests, model_digests = [], [], set(), {}
         for sample in plan['samples']:
             sid = sample['sample_id']
+            cid = sample.get('configuration_id', 'baseline')
+            record = records[cid]
             parent, log = root / sid, root / (sid + '.log')
             dispatch = log.with_suffix('.supervision.request.json')
             supervision = None
             if dispatch.exists():
                 supervision = _confirmed_supervision(log, identity, str(parent))
-            run, manifest = _sample_run(parent, identity, modules)
+            run, manifest = _sample_run(parent, record['identity'], modules)
             if manifest and supervision is None:
                 raise ValueError('Lauf ohne zugehörigen Prozessabschlussnachweis.')
             status = manifest['status'] if manifest else 'failed' if supervision else 'pending'
@@ -131,53 +148,58 @@ def load_stability_series(directory):
             if status == 'success' and (type(supervision.get('exit_code')) is not int or supervision['exit_code'] != 0):
                 status = 'failed'
             condition = {'sample_id': sid, 'status': status, 'run_dir': str(run.relative_to(root)) if run else None}
+            if sensitivity:
+                condition['configuration_id'] = cid
             if manifest:
-                checked.append((parent, manifest))
-                runtime = _request_profiles(run, manifest, plan, by_id)
+                checked.append((parent, manifest, record['identity']))
+                runtime = _request_profiles(run, manifest, {'provider': plan['provider'], 'config': record['config']}, by_id)
                 all_digests.update(runtime['local_digests'])
+                model = _canonical(record['config']['llm']['model'])
+                model_digests.setdefault(model, set()).update(runtime['local_digests'])
                 condition['runtime'] = runtime
             conditions.append(condition)
             for mid in comparable:
                 item = {'sample_id': sid, 'status': status}
+                if sensitivity:
+                    item['configuration_id'] = cid
                 if status == 'success':
                     artifact = load_declared_artifact(run, by_id[mid], manifest)
                     if artifact['status'] != 'available':
                         raise ValueError('Abgeschlossene Wiederholung enthält kein verifiziertes Modulergebnis: ' + mid)
                     item['payload'] = artifact['payload']
                 samples[mid].append(item)
-        if len(all_digests) > 1:
+        if any(len(digests) > 1 for digests in model_digests.values()):
             raise ValueError('Verschiedene lokale Modellgewichte: keine gemeinsame Stabilitätsbewertung.')
-        config = plan['config']
         segments = load_segments(config['paths']['input_csv'], config['columns'])
         codebook, _ = load_codebook(config['paths']['category_system_csv'])
         label_mode = config.get('coding_agreement', {}).get('label_mode', 'single_label')
         label_mode = 'single_label' if label_mode == 'unspecified' else label_mode
         comparisons = {}
         for mid, items in samples.items():
+            if sensitivity:
+                from sensitivity_core import analyze_sensitivity
+                result = analyze_sensitivity(segments, codebook, mid, plan['configurations'], items, label_mode=label_mode)
+                for within in result['within_configurations'].values():
+                    _runtime_comparison(within, mid, conditions)
+                result['provenance_status'] = 'series_and_artifact_hashes_verified'
+                comparisons[mid] = result
+                continue
             if mid in STAGES:
                 result = analyze_stage_repetitions(segments, mid, items)
             else:
                 result = analyze_coding_repetitions(segments, codebook, mid, items, label_mode=label_mode)
-            result['provenance_status'] = 'series_and_artifact_hashes_verified'
-            runtime_ids = []
-            for sid in result['included_samples']:
-                condition = next(c for c in conditions if c['sample_id'] == sid)
-                runtime_ids.append({p['fingerprint'] for p in condition['runtime']['profiles'] if p['module'] == mid})
-            result['runtime_comparison'] = {
-                'parameter_profiles_same': all(p == runtime_ids[0] for p in runtime_ids[1:])
-                    if len(runtime_ids) >= 2 and all(runtime_ids) else None,
-                'samples_with_accepted_requests': sum(bool(p) for p in runtime_ids),
-                'server_parameter_enforcement': 'not_verifiable'}
+            _runtime_comparison(result, mid, conditions)
             comparisons[mid] = result
         # Detect changes while reading, even from processes outside our series lock.
-        for parent, original in checked:
-            _, current = _sample_run(parent, identity, modules)
+        for parent, original, sample_identity in checked:
+            _, current = _sample_run(parent, sample_identity, modules)
             if current != original:
                 raise ValueError('Lauf während der Diagnose geändert; erneut prüfen.')
         _check_plan(plan)
-        if (_identity(config_path, config) != identity or file_hash(receipt_path) != receipt_hash):
+        current_identity = _sensitivity_records(root, plan)[1] if sensitivity else _identity(config_path, config)
+        if (current_identity != identity or file_hash(receipt_path) != receipt_hash):
             raise ValueError('Seriengrundlage während der Diagnose geändert.')
-        return {'schema_version': 1, 'kind': 'stability', 'model_calls': 0,
+        output = {'schema_version': 1, 'kind': kind, 'model_calls': 0,
             'processing_status': 'completed' if all(r['processing_status'] == 'completed' for r in comparisons.values()) else 'incomplete',
             'execution_fingerprint': identity, 'plan_fingerprint': plan['plan_fingerprint'],
             'source_provenance': plan['source_provenance'], 'conditions': conditions, 'comparisons': comparisons,
@@ -188,3 +210,26 @@ def load_stability_series(directory):
                       'Anfragezahlen können sich durch Reparaturen und variable Analyseschritte unterscheiden.',
                       'Fehlende Laufzeitnachweise erlauben nur einen Vergleich unter gleichen konfigurierten Bedingungen.',
                       'Agreement und Prüfliste sind abgeleitete Ergebnisse, keine zusätzlichen unabhängigen Wiederholungen.']}
+        if sensitivity:
+            output['configurations'] = [{key: row[key] for key in
+                ('configuration_id', 'changes', 'joint_changes', 'configuration_fingerprint')}
+                for row in plan['configurations']]
+            output['model_digests'] = {name: sorted(values) for name, values in model_digests.items()}
+            output['model_identity_status'] = 'local_digest_observed_per_model' if all_digests else 'not_observed_or_cloud_weights_unverifiable'
+            output['notes'] += ['Vorlagenänderungen sind gespeichert; die tatsächliche Verwendung jedes Promptpfads ist nicht gesondert nachgewiesen.',
+                'Mehrere gleichzeitig geänderte Parameter erlauben keine Zuordnung zu einer einzelnen Ursache.',
+                'Unterschiede sind Prüfhinweise, keine automatisch erkannten Fehler oder Verbesserung.']
+        return output
+
+
+def _runtime_comparison(result, mid, conditions):
+    result['provenance_status'] = 'series_and_artifact_hashes_verified'
+    runtime_ids = []
+    for sid in result['included_samples']:
+        condition = next(c for c in conditions if c['sample_id'] == sid)
+        runtime_ids.append({p['fingerprint'] for p in condition['runtime']['profiles'] if p['module'] == mid})
+    result['runtime_comparison'] = {
+        'parameter_profiles_same': all(p == runtime_ids[0] for p in runtime_ids[1:])
+            if len(runtime_ids) >= 2 and all(runtime_ids) else None,
+        'samples_with_accepted_requests': sum(bool(p) for p in runtime_ids),
+        'server_parameter_enforcement': 'not_verifiable'}

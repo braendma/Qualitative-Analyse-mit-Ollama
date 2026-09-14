@@ -3,8 +3,8 @@
 Sensitivität, interner Teilstand: Ein reiner Variantenplaner prüft tatsächlich
 verdrahtete Parameter, unveränderte Datenbasis und Kontextgrenzen. Der gemeinsame
 Serienexecutor kann getrennte Konfigurationen mit eigenen Wiederholungen ausführen,
-unter derselben Prozessaufsicht und Wiederaufnahmelogik. Der Sensitivitätsvergleich
-und seine Oberfläche sind noch nicht fertig. Der
+unter derselben Prozessaufsicht und Wiederaufnahmelogik. Ein geprüfter Reader,
+Vergleichskern und Markdownbericht sind vorhanden; CLI-Modul und Oberfläche folgen. Der
 [Konfigurationsvertrag](CONFIGURATION.md#sensitivität-interner-entwicklungsvertrag)
 beschreibt Aufwand, Grenzen und die Trennung zwischen Plan und Laufzeitnachweis.
 
@@ -14,7 +14,7 @@ Der Information-Loss-Audit ist ebenfalls in CLI, Modulauswahl, Fortschritt,
 Beispielhilfe und Berichte integriert. Die Codebook-Diagnostik ist ebenfalls in
 Modulauswahl, Berichte, Fortschritt und Beispielhilfe eingebunden. Stabilität ist
 mit Zielauswahl, Aufwandvorschau, Wiederholungen, Pause/Resume und Gesamtbericht integriert.
-Sensitivität und die Verknüpfung ihrer Befunde folgen. Dieser Abschnitt
+Die Bedienintegration der Sensitivität und die Verknüpfung ihrer Befunde folgen. Dieser Abschnitt
 beschreibt den überprüfbaren Datenvertrag und die technische Schnittstelle.
 
 ## Entwicklungsstand der Wiederholungsplanung
@@ -632,3 +632,72 @@ Teilberichte sind keine abgeschlossenen Ausgaben. Der eigene Serienordner ist f�
 separate Ausgabeziele gesperrt. Die Bedienung steht im
 [Handbuch](HANDBUCH.html#stabilitaet-kontrollierter-wiederholungen).
 Die spätere Anbindung von Stabilitätsbefunden an die Codebook-Diagnostik folgt in S10.
+
+## Geprüfter Sensitivitätsvergleich
+
+`stability_series.load_sensitivity_series(directory)` liest eine bestehende
+Schema-2-Serie ohne neue Anfragen, Wiederaufnahme oder Änderungen an ihren Dateien.
+Stabilität und Sensitivität verwenden denselben Reader für Prozessabschlüsse,
+Manifestbindung, deklarierte Artefakte und Laufzeitquittungen. Die Variante wird
+gegen ihre eigene Konfiguration geprüft, der Prozessabschluss gegen die gesamte
+Serie. Plan, Konfigurationen, Originaleingaben, Programmstand und Kindmanifeste
+werden erneut geprüft, bevor ein Ergebnis zurückgegeben wird. Der unverbindliche
+Serienindex kann keine fremden Ergebnisse einschleusen.
+
+Ein ausdrücklich geänderter Modellname darf einen anderen lokalen Gewichts-Digest
+haben; derselbe Modellname muss über alle Einstellungen hinweg dieselben
+beobachteten Gewichte behalten. Fehlende Quittungen bestätigen keine Laufzeitparameter.
+Akzeptierte Parameterprofile werden je Wiederholung ausgewiesen, einschließlich
+zusätzlicher Reparaturversuche. Das bestätigt die Übertragung, nicht die interne
+Durchsetzung durch den Anbieter. Eine gespeicherte Promptvariante ist noch kein
+gesonderter Nachweis, dass jeder betreffende Anfragepfad tatsächlich benutzt wurde.
+
+`sensitivity_core.analyze_sensitivity` verwendet die Stabilitätskerne zunächst
+getrennt pro Einstellung. Zwischen Einstellungen werden Wiederholungen nicht
+als unabhängige Konfigurationen zusammengezählt. Beispiel: Zwei Wiederholungen
+der Basis enthalten Code A; bei einer zweiten Einstellung enthält ihn nur eine
+von zwei Wiederholungen. A erscheint damit mindestens einmal in **2/2 Einstellungen**,
+aber jedes Mal nur in **1/2 Einstellungen**. Der zweite Befund zeigt zugleich
+Schwankungen innerhalb einer Einstellung und beweist keine kausale Parameterwirkung.
+
+Die Ergebnisse unterscheiden:
+
+- `any_observed_repeat`: mindestens einmal beobachtet; Nenner sind Einstellungen
+  mit mindestens einer für diesen Befund auswertbaren Wiederholung.
+- `all_observed_repeats`: in allen auswertbaren Wiederholungen; Nenner sind
+  Einstellungen mit mindestens zwei auswertbaren Wiederholungen.
+- `any_repeat_complete_only` / `all_repeats_complete_only`: dieselben Fragen,
+  aber nur für Einstellungen mit sämtlichen geplanten Wiederholungen auswertbar.
+- Geplante, ausgeschlossene und nur vorläufig auswertbare Einstellungen bleiben
+  separat erhalten. Ein leerer Nenner ergibt `null`, keinen Prozentwert.
+
+Bei Codierungen werden Entscheidungszustände, einzelne Codes und vollständige
+Codemengen getrennt betrachtet. Inhaltliche Enthaltungen gehen in den
+Zustandsvergleich ein, nicht in den Nenner der Codemengen. Technische Fehler
+werden getrennt gezählt. Begründet keine Zuordnung bleibt eine gültige leere
+Codemenge. Alternativcodes der Codierüberprüfung sind keine Blindzuordnungen.
+Explizite gemeinsame Passage-IDs ergeben im Mehrfachmodus eine Analyseeinheit.
+
+Analytische Module vergleichen exakte Textprojektionen und Belegbindungen
+getrennt. Cluster-Mitgliedschaft wird unabhängig vom Clusternamen betrachtet.
+Diese operationalisierten Vorkommen sind keine semantisch geprüften Themen und
+kein Qualitätsmaß. Mehrfaches Vorkommen derselben Projektion innerhalb eines
+Laufs erhöht die Konfigurationshäufigkeit nicht; die Binnenvergleiche bewahren
+zusätzlich ihre bestehenden Multimengenvergleiche.
+
+Die Auswahl von Personen- und Kategoriequellen wird unmittelbar aus dem
+gemeinsamen Coverage-Kern übernommen. Je Einstellung stehen die einzelnen
+Zähler/Nenner und die Spannweiten über Wiederholungen bereit. Personen beziehen
+sich auf Materialeinheiten, Kategorieanteile auf Codierzeilen derselben
+Hierarchieebene. Direkte Belege, Quellengruppenkontext und andere Quellenarten
+bleiben getrennt. Reine Personenreferenzen werden nicht zu Textstellen erweitert.
+Fehlende Quellenverteilungen ergeben keine Nullmessung; Anteile mit leerem
+Nenner werden aus der Anteilsspannweite ausgeschlossen und bleiben im JSON sichtbar.
+
+`sensitivity_report.render_sensitivity(result)` erzeugt Markdown mit Änderungen,
+Zählern, Nennern und Binnenvergleichen. Er enthält höchstens 80 Befunde und
+50 Quellenverteilungen je Modul; Restzahlen verweisen auf das vollständige JSON.
+Die Befunde verwenden verständliche Texte, Personen und Codes statt technischer
+Fingerprints als Erklärung. Lange Auszüge sind als gekürzt markiert, der Vergleich
+verwendet vollständige Projektionen. HTML-/Markdown-Zeichen werden maskiert.
+Die Einbindung in CLI, Oberfläche und den interaktiven Gesamtbericht ist noch offen.

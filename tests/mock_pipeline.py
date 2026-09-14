@@ -46,6 +46,8 @@ def fake_chat(messages, **kwargs):
     elif module=='blind_coding':
         result={'segment_id':data['segment_id'],'predicted_code': 'A > B > C > '+('positiv' if 'gut' in data['segment'] else 'negativ'),
                 'confidence':'mittel','begruendung':'Beleg vorhanden','alternative_codes':[]}
+        if os.environ.get('MOCK_BLIND_CODE'):
+            result['predicted_code'] = os.environ['MOCK_BLIND_CODE']
     elif module=='swot_analysis':
         ids=[s['id'] for c in data['clusters'] for s in c['segments']]
         result={d:[] for d in ('Stärken','Schwächen','Chancen','Risiken')}

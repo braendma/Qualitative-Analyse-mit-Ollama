@@ -2,9 +2,9 @@
 
 ## Sensitivität: interner Entwicklungsvertrag
 
-**Noch keine auswählbare Sensitivitätsanalyse in der Oberfläche.** Planung und
-kontrollierte Ausführung sind vorbereitet; Vergleichsbericht und Bedienintegration
-folgen. Für die interne Entwicklung ist der Einstieg
+**Noch keine auswählbare Sensitivitätsanalyse in der Oberfläche.** Planung,
+kontrollierte Ausführung, geprüfter Vergleich und Markdownbericht sind vorhanden;
+die Bedienintegration folgt. Für die interne Entwicklung ist der Einstieg
 `diagnostic_sensitivity.prepare_sensitivity(config_path, module_ids, variants, repetitions=2)`.
 Er liest Eingaben, schreibt keine Dateien und fragt kein Modell ab. Der vorhandene
 `diagnostic_series.execute_repetitions` führt einen solchen Plan aus; dabei entstehen
