@@ -48,6 +48,17 @@ Beispiele und technische Grenzen stehen in [DIAGNOSTICS.md](DIAGNOSTICS.md).
 
 ## Methodische Einordnung, Qualitätssicherung und verwandte Arbeiten
 
+Entwicklungsstand Codebook-Diagnostik: Ein deterministischer Kern prüft die
+Verwendung von Codes, gespeicherte Zuordnungsabweichungen, gleiche Definitionen
+und Ankertexte sowie gemeinsame Mehrfachcodierungen. Die CLI-/UI-Integration ist
+noch nicht abgeschlossen. Die Kennzahlen geben Anlass zur menschlichen Prüfung;
+sie begründen keine automatische Löschung, Zusammenführung oder Änderung von Codes.
+Technische Fehler, Enthaltung und begründet keine Zuordnung bleiben getrennt.
+Gemeinsame Codes auf einer Passage sind keine Verwechslung. Gerade seltene
+Positionen können für die Forschungsfrage relevant sein. Schwellen und Nenner
+sowie der Umgang mit unvollständigen Quellen sind in [DIAGNOSTICS.md](DIAGNOSTICS.md)
+offengelegt. Stabilitäts- und Sensitivitätsbefunde sind noch nicht angebunden.
+
 > **Stand der Dokumentation:** August 2026.  
 > Die vorliegende Dokumentation beschreibt die methodische Logik der Pipeline und ordnet diese in die Forschung zur LLM-gestützten qualitativen Analyse ein. Die Darstellung begründet keinen Neuheitsanspruch für einzelne Methoden und setzt LLM-basierte Auswertung nicht mit menschlicher qualitativer Forschung gleich.
 

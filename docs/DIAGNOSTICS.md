@@ -222,3 +222,81 @@ Die Wortlisten berücksichtigen trotzdem die vollständigen projizierten Texte
 aller Kandidaten. Anhand von Quellartefakt und Eintragsschlüssel sind die vollständigen
 Texte manuell nachzulesen. Die aktuelle JSON-Ausgabe enthält denselben begrenzten
 Vorschaubestand, keine heimliche Vollkopie der Originaltexte.
+
+## Codebook-Diagnostik – derzeit geprüfter Kern, noch keine UI-Funktion
+
+`codebook_diagnostics_core.analyze_codebook(segments, codebook, verification=...,
+blind=..., agreement=..., review=..., settings=...)` verarbeitet vorhandene
+Python-Datenobjekte; `render_codebook_diagnostics` erzeugt Markdown. Ein geschützter
+Dateilader, CLI und UI-Integration folgen als nächste technische Einheit. Der Kern
+führt keine Modellaufrufe durch und verändert weder Originaldaten noch Codebuch.
+Die Dateiprüfsummen muss künftig der gemeinsame Diagnoselader prüfen; der Kern
+validiert bereits Datenstrukturen, IDs, ursprüngliche Codezuordnungen und die
+Konsistenz abhängiger Ergebnisse. Eingabe- und Codebuchfingerprints stehen im Ergebnis.
+
+### Nenner, Fehler und Grenzen
+
+Die Modi `unspecified` und `single_label` verwenden Codierzeilen. `multi_label`
+verwendet explizite Passagen und die vorhandene unabhängige Blindvorhersage je
+Passage. Gleiche Texte werden niemals automatisch gruppiert. Widersprüchliche
+Personen oder Texte derselben Passage führen zum Fehler. Die gespeicherten
+Zeilenkopien der Blindvorhersagen müssen den unabhängigen Passagenvorhersagen
+entsprechen. Die Verifikation bleibt eine Prüfung einzelner Codierzeilen.
+
+- `categories`: menschliche Zeilen/Einheiten, Personenanzahl, erfolgreiche
+  Modellzuordnungen, auswertbare menschliche Einheiten, fehlende und zusätzliche
+  Blindcodes, unklare Verifikationszeilen, Blind-Enthaltungen, begründet keine
+  Zuordnung und technische Fehler. Fehlende Quellen ergeben `null`, keine Nullquote.
+- `blind_unit_states`: `assigned`, `none`, `abstained`, `technical_failure` werden
+  getrennt gezählt. Eine technische Verifikationsstörung wird zusätzlich getrennt
+  dokumentiert; sie macht keine erfolgreiche Blindantwort rückwirkend zur Enthaltung.
+- `difference_patterns`: konkrete Mengenabweichungen aus auswertbaren Fällen.
+  Single-Label benötigt einen gültigen konkreten Blindcode; `keine_zuordnung` bleibt
+  separat. In Multi-Label ist `none` eine gültige leere Codemenge. Enthaltungen und
+  Fälle mit technischem Fehler in Blindcodierung oder Verifikation werden aus
+  diesen Abweichungsmustern ausgeschlossen. Die zusätzliche Verifikationsbedingung
+  ist bewusst strenger als der reine Blindvergleich im bisherigen Agreement.
+- `is_single_code_pair` ist nur dann wahr, wenn genau ein menschlicher Code fehlt
+  und genau ein anderer Blindcode hinzukommt. Aus `{A,B} → {C,D}` entstehen keine
+  vier erfundenen Verwechslungspaare. Die ganze Mengenabweichung bleibt ein Muster.
+- `verification_alternatives`: separat gezählte Alternativvorschläge der
+  Code-Verifikation; keine zusätzlichen Blindzuordnungen.
+- `review_flagged_units`: im gespeicherten Queue-Stand markierte Fälle, kein
+  aktueller Fortschritt menschlicher Entscheidungen. Originaltext, Personen,
+  Codes, Fallstatus und Codebuch werden gegen die Quellen geprüft. Auch das
+  gespeicherte Agreement einschließlich Konfusionsmatrix wird mit der bestehenden
+  Berechnungsfunktion erneut abgeglichen. Widersprüche führen zum Fehler.
+
+Technische Fehler oder als unvollständig markierte Quellen erzeugen
+`processing_status: incomplete`. Fehlende optionale Quellen sind dagegen explizit
+nicht verfügbar. Materialverteilung und Codebuchstruktur können auch ohne Modell-
+oder Agreementergebnisse beschrieben werden.
+
+### Feste, versionierte Hinweisregeln
+
+Nicht im menschlichen Material verwendete Codes und Codes mit weniger als drei
+Analyseeinheiten erhalten einen Prüfhinweis. Das ist kein Löschvorschlag und keine
+Einstufung als bedeutungslos. Fehlende Ankerbeispiele oder ein Ankertext, der nur
+die Definition wiederholt, werden zur Prüfung benannt. Ein-/Ausschluss- und
+Abgrenzungsregeln sind optional; ihre Anwesenheit wird beschrieben, ihr Fehlen
+nicht automatisch zum Qualitätsmangel erklärt.
+
+Gleiche Definitionen und gleiche Ankertexte werden nach Unicode-NFKC,
+Kleinschreibung und Leerzeichennormalisierung gruppiert. Verglichen werden ganze
+Texte. Das ist keine semantische Ähnlichkeitssuche; Begriffsbreite oder fachliche
+Qualität können daraus nicht abgeleitet werden. Der JSON-Definitionsauszug ist auf
+600 Zeichen begrenzt, mit `definition_preview_truncated`, vollständiger Zeichenanzahl
+und Fingerprint. Originale bleiben vollständig erhalten.
+
+Gemeinsame menschliche Codierungen werden nur im Mehrfachmodus ausgewertet.
+Der Überlappungsanteil ist `gemeinsame Einheiten / Einheiten der kleineren Kategorie`.
+Mindestens drei gemeinsame Einheiten und ein Anteil von mindestens 0,8 markieren
+eine wiederholte gemeinsame Codierung. Das belegt keine Verwechslung und keine
+Notwendigkeit, Codes zusammenzuführen. Überschreitet die Summe der Paarereignisse
+`Σ k·(k−1)/2` über alle Passagen 100.000, wird diese Paarberechnung vollständig
+ausgelassen und als `not_calculated` mit Bedarf und Grenze ausgewiesen. Die
+Einzelzahlen bleiben verfügbar; es wird keine abgeschnittene Paarliste als
+vollständige ausgegeben. Im Zeilenmodus ist diese Auswertung `not_applicable`.
+
+Stabilitäts- und Sensitivitätshinweise werden erst angebunden, sobald diese Module
+implementiert und geprüft sind. Der Kern behauptet keine entsprechende Messung.
