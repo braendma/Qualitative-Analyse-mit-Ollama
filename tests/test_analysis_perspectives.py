@@ -1,7 +1,10 @@
 """Opt-in modes and honest cost projection, without activating future adapters."""
 import copy
+from pathlib import Path
+import sys
 import unittest
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
 from analysis_perspectives import (normalize_analysis_perspectives, perspective_capabilities,
                                    perspective_effort, perspective_metadata)
 

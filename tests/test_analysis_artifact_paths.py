@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import re
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -13,6 +14,7 @@ import matplotlib
 matplotlib.use('Agg')
 import pandas as pd
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
 from filesystem_paths import canonical_path, io_path
 from runtime_support import artifact_reference
 
@@ -79,12 +81,12 @@ class AnalysisArtifactPathTests(unittest.TestCase):
                         module.main.__wrapped__(args)
                         kwargs = execute.call_args.kwargs
                         if enabled:
-                            self.assertEqual(canonical_path(kwargs['raw_log_path']), run / (name + '_raw.jsonl'))
+                            self.assertEqual(canonical_path(kwargs['raw_log_path']), canonical_path(run / (name + '_raw.jsonl')))
                         else:
                             self.assertIsNone(kwargs['raw_log_path'])
                         if checkpoint or enabled:
                             self.assertEqual(canonical_path(kwargs['checkpoint_path']),
-                                             Path(checkpoint) if checkpoint else run / (name + '_checkpoint.json'))
+                                             canonical_path(Path(checkpoint) if checkpoint else run / (name + '_checkpoint.json')))
                         else:
                             self.assertIsNone(kwargs['checkpoint_path'])
 

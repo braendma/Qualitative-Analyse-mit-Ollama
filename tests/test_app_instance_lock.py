@@ -30,13 +30,19 @@ class AppInstanceLockTests(unittest.TestCase):
         self.temp.cleanup()
 
     def command(self,data):
-        return [sys.executable,str(ROOT/'src/local_app.py'),'--data-dir',str(data),'--no-browser','--port','0']
+        return [sys.executable,'-u',str(ROOT/'src/local_app.py'),'--data-dir',str(data),'--no-browser','--port','0']
+
+    def environment(self):
+        # Explicit source import boundary; do not depend on test discovery order
+        # or the parent process exporting its own PYTHONPATH.
+        return {**os.environ,'PYTHONPATH':str(ROOT/'src'),
+                'PYTHONUTF8':'1','PYTHONIOENCODING':'utf-8'}
 
     def start(self,data):
         trace=self.root/f'app-{len(self.children)}.txt'
         with trace.open('wb') as log:
             process=subprocess.Popen(self.command(data),stdout=log,stderr=subprocess.STDOUT,
-                env={**os.environ,'PYTHONUTF8':'1','PYTHONIOENCODING':'utf-8'},
+                env=self.environment(),cwd=ROOT,
                 creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
         self.children.append((process,trace))
         deadline=time.monotonic()+25
@@ -46,7 +52,8 @@ class AppInstanceLockTests(unittest.TestCase):
             if match:return process,urlsplit(match.group(1))
             if process.poll() is not None:self.fail('Idle application exited before becoming ready: '+text)
             time.sleep(.05)
-        self.fail('Idle application failed to start within the test deadline.')
+        self.fail('Idle application failed to start within the test deadline: '+
+                  trace.read_text(encoding='utf-8',errors='replace')[-4000:])
 
     def close_idle(self,process,address):
         connection=http.client.HTTPConnection(address.hostname,address.port,timeout=10)
@@ -78,7 +85,7 @@ class AppInstanceLockTests(unittest.TestCase):
         first,url=self.start(self.root/'technical-one')
         duplicate=subprocess.run(self.command(self.root/'technical-one'),stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,timeout=20,encoding='utf-8',errors='replace',
-            env={**os.environ,'PYTHONUTF8':'1','PYTHONIOENCODING':'utf-8'},
+            env=self.environment(),cwd=ROOT,
             creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
         self.assertNotEqual(duplicate.returncode,0)
         self.assertNotIn('Lokale Oberfläche:',duplicate.stdout)

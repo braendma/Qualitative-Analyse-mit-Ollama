@@ -67,8 +67,8 @@ class JobStorageTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             folder, config, _, job = workspace(Path(temp)); before = set(Path(temp).rglob('*'))
             self.assertIsNone(storage.research_root(folder, job))
-            self.assertEqual(canonical_path(storage.runs_root(folder, job)), folder / 'runs')
-            self.assertEqual(canonical_path(storage.review_root(folder, job)), folder / 'review')
+            self.assertEqual(canonical_path(storage.runs_root(folder, job)), canonical_path(folder / 'runs'))
+            self.assertEqual(canonical_path(storage.review_root(folder, job)), canonical_path(folder / 'review'))
             self.assertIsNone(storage.run_path(folder, job))
             self.assertEqual(storage.config_path(folder, job), config.resolve())
             self.assertEqual(set(Path(temp).rglob('*')), before)
