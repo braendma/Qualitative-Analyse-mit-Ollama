@@ -332,6 +332,8 @@ def main(argv=None):
         run_id = manifest["run_id"]
         completed_steps = list(manifest["completed_steps"])
         verify_completed_outputs(output_dir, manifest, modules)
+        from runtime_evidence import verify_inventory
+        verify_inventory(output_dir, manifest)
     else:
         run_id = datetime.now().strftime("%Y%m%dT%H%M%S") + "-" + uuid.uuid4().hex[:8]
         output_dir = resolve_path(Path.cwd(), args.output_dir) / run_id
@@ -344,6 +346,10 @@ def main(argv=None):
     os.environ["WORKFLOW_RUN_ID"] = run_id
     os.environ["WORKFLOW_FINGERPRINT"] = identity
     os.environ["WORKFLOW_CHECKPOINT_DIR"] = str(output_dir / "_checkpoints")
+    from runtime_evidence import ENV as evidence_env
+    os.environ.pop(evidence_env, None)
+    if config.get('_diagnostic_child') is True:
+        os.environ[evidence_env] = str(output_dir / '_runtime_evidence')
     for stream in (sys.stdout, sys.stderr):
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(encoding="utf-8")
@@ -373,6 +379,9 @@ def main(argv=None):
                 continue
             if args.pause_file and Path(args.pause_file).is_file():
                 manifest.update(status="paused", current_module=None)
+                if config.get('_diagnostic_child') is True:
+                    from runtime_evidence import summarize
+                    manifest['runtime_evidence'] = summarize(output_dir / '_runtime_evidence', run_id, identity)
                 atomic_json(output_dir / "workflow_manifest.json", manifest)
                 LOGGER.info("Workflow auf Wunsch zwischen Modulen pausiert.")
                 return
@@ -405,6 +414,10 @@ def main(argv=None):
                 if path.is_file():
                     manifest["output_hashes"][filename] = file_hash(path)
             atomic_json(output_dir / "workflow_manifest.json", manifest)
+        if config.get('_diagnostic_child') is True:
+            from runtime_evidence import summarize
+            manifest['runtime_evidence'] = summarize(output_dir / '_runtime_evidence', run_id, identity)
+            atomic_json(output_dir / 'workflow_manifest.json', manifest)
         if failures:
             manifest['current_module']=failures[0][0]
             raise failures[0][1]

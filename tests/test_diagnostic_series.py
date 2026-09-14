@@ -53,6 +53,36 @@ class SeriesTests(unittest.TestCase):
         with self.assertRaises(FileExistsError):
             self.execute()
 
+    def test_real_receipt_layer_is_stored_hashed_and_reused_by_series(self):
+        with patch.dict(os.environ,{'MOCK_RUNTIME_EVIDENCE':'1'}):
+            result=self.execute()
+            self.assertEqual(result['status'],'success')
+            self.assertTrue(all(s['runtime_evidence']['accepted']>0 for s in result['samples']))
+            self.assertTrue(all(s['runtime_evidence']['local_digests']==['a'*64] for s in result['samples']))
+            self.assertEqual(self.execute(resume=True)['status'],'success')
+        run,manifest=self.manifest()
+        name=next(iter(manifest['runtime_evidence']['files']))
+        path=run/'_runtime_evidence'/name
+        path.write_bytes(path.read_bytes()+b' ')
+        with self.assertRaisesRegex(ValueError,'Laufzeitnachweis verändert'):
+            self.execute(resume=True)
+
+    def test_model_change_between_samples_fails_before_second_model_inference(self):
+        original=series._execute;dispatches=0;calls_after_first=None
+        def changing(command,directory,log,env):
+            nonlocal dispatches,calls_after_first
+            dispatches+=1
+            if dispatches==2:
+                calls_after_first=self.trace.read_bytes()
+                env={**env,'MOCK_MODEL_DIGEST':'b'*64}
+            return original(command,directory,log,env)
+        with patch.dict(os.environ,{'MOCK_RUNTIME_EVIDENCE':'1'}),patch.object(series,'_execute',side_effect=changing):
+            result=self.execute()
+        self.assertEqual(result['status'],'failed')
+        self.assertEqual(result['completed_samples'],1)
+        self.assertEqual(self.trace.read_bytes(),calls_after_first)
+        self.assertEqual(self.manifest('repeat-002')[1]['status'],'failed')
+
     def test_failure_stops_series_then_resumes_same_child_and_starts_next_fresh(self):
         with patch.dict(os.environ, {'MOCK_FAIL_MODULE': 'blind_coding', 'MOCK_FAIL_AFTER': '1'}):
             failed = self.execute()

@@ -72,7 +72,19 @@ def fake_chat(messages, **kwargs):
         raise AssertionError(f'Unexpected test call: {module}')
     return json.dumps(result,ensure_ascii=False)
 
-clusterer_core.ollama_chat=fake_chat
+if os.environ.get('MOCK_RUNTIME_EVIDENCE') == '1':
+    # Keep the real request/receipt layer while replacing only model I/O.
+    import ollama_capacity
+    def fake_metadata(endpoint, **kwargs):
+        return {'models':[{'name':'mock:latest', 'digest':os.environ.get('MOCK_MODEL_DIGEST','a'*64),
+                           'context_length':32768}]}
+    ollama_capacity.metadata = fake_metadata
+    class ReceiptBackend:
+        def chat(self, **request):
+            return {'model':request['model'], 'message':{'content':fake_chat(request['messages'])}}
+    clusterer_core.ollama = types.SimpleNamespace(Client=lambda **kwargs:ReceiptBackend())
+else:
+    clusterer_core.ollama_chat=fake_chat
 original_run=subprocess.run
 def execute(command, **kwargs):
     if len(command)>1 and str(command[1]).endswith('.py'):

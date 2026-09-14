@@ -22,7 +22,7 @@ def _local_output(value):
             or any(':' in p or p.endswith((' ', '.')) or any(ord(c) < 32 for c in p) for p in path.parts)
             or path.is_reserved()):
         raise ValueError('Wiederholung darf keinen Ausgabe- oder Checkpointpfad außerhalb ihres Laufs verwenden.')
-    if path.parts[0].casefold() in {'workflow_manifest.json', 'config_snapshot.yaml', 'progress.json'}:
+    if path.parts[0].casefold() in {'workflow_manifest.json', 'config_snapshot.yaml', 'progress.json', '_runtime_evidence'}:
         raise ValueError('Wiederholung darf keine Steuerdateien als Modulausgabe verwenden.')
 
 

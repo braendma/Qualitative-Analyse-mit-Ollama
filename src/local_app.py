@@ -515,7 +515,7 @@ class App(ReviewWorkspace):
             pause.unlink(missing_ok=True)
             command=[sys.executable,str(ROOT/'00_WORKFLOW_RUNNER.py'),'--config',str(config),'--output-dir',str(folder/'runs'),'--pause-file',str(pause)]
             if resume: command.extend(['--resume',str(manifests[0].parent)])
-            env={k:v for k,v in os.environ.items() if k not in KEY_ENVS and k not in ('QUALITATIVE_MANAGED_OLLAMA_HOST','OLLAMA_API_KEY','OLLAMA_HOST','WORKFLOW_CHECKPOINT_DIR','WORKFLOW_FINGERPRINT','WORKFLOW_RUN_ID','WORKFLOW_PROGRESS_FILE','WORKFLOW_MODULE')}
+            env={k:v for k,v in os.environ.items() if k not in KEY_ENVS and not k.startswith('WORKFLOW_') and k not in ('QUALITATIVE_MANAGED_OLLAMA_HOST','OLLAMA_API_KEY','OLLAMA_HOST')}
             if needs_model and selected['provider'] != 'ollama_local':
                 env[selected['api_key_env']] = self.provider_keys.keys[selected['provider']]
             env.update(PYTHONUTF8='1',PYTHONIOENCODING='utf-8',MPLBACKEND='Agg')

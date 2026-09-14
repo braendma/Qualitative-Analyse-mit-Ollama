@@ -6,6 +6,7 @@ import os
 import subprocess
 import time
 import urllib.request
+from urllib.parse import urlparse
 from pathlib import Path
 from llm_providers import NoRedirect, selection
 
@@ -13,14 +14,18 @@ GIB = 1024 ** 3
 MAX_PARALLEL = 8
 
 
-def metadata(endpoint, body=None):
+def metadata(endpoint, body=None, *, host='http://127.0.0.1:11434', timeout=6):
     if endpoint not in ('tags', 'ps', 'show'):
         raise ValueError('Nur Modellmetadaten dürfen abgefragt werden.')
-    request = urllib.request.Request('http://127.0.0.1:11434/api/' + endpoint,
+    parsed = urlparse(host)
+    if (parsed.scheme != 'http' or parsed.hostname not in ('localhost', '127.0.0.1', '::1')
+            or parsed.username or parsed.password or parsed.path not in ('', '/') or parsed.query or parsed.fragment):
+        raise ValueError('Modellmetadaten benötigen eine reine HTTP-Loopback-Adresse.')
+    request = urllib.request.Request(host.rstrip('/') + '/api/' + endpoint,
         data=None if body is None else json.dumps(body).encode(),
         headers={'Content-Type': 'application/json'})
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect())
-    with opener.open(request, timeout=6) as response:
+    with opener.open(request, timeout=timeout) as response:
         raw = response.read(4 * 1024 * 1024 + 1)
     if len(raw) > 4 * 1024 * 1024:
         raise ValueError('Ollama-Metadaten sind zu groß.')

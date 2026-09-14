@@ -46,8 +46,9 @@ neu ausführen und der anschließende Resume fertige Ergebnisse wiederverwendet.
 `model_calls` bleibt unbekannt (`null`), da Paketbildung und Reparaturversuche
 noch nicht feststehen. `parameter_status: configured_not_runtime_verified`
 verhindert die Behauptung, Modellgewichte oder tatsächlich wirksame Parameter
-seien bereits geprüft. Gerade Thinking kann bisher auf einen Modellstandard
-zurückfallen. Laufzeitnachweis, Übergabe verwalteter Modellinstanzen
+seien bereits geprüft. Reguläre Läufe können bei nicht unterstütztem Thinking
+auf den Modellstandard zurückfallen; kontrollierte Diagnosekinder stoppen stattdessen.
+Übergabe verwalteter Modellinstanzen
 und eigentliche Stabilitäts-/Sensitivitätsauswertung folgen in den nächsten
 technischen Einheiten. Keine Stabilitätskennzahl wird aus dem Plan abgeleitet.
 
@@ -79,8 +80,47 @@ kontrollierte Übergabe implementiert ist. Ein normaler Tastaturabbruch beendet
 den Kindprozessbaum vor einer späteren Wiederaufnahme. Bei hart beendetem
 Elternprozess und weiter als `running` markiertem Kind wird automatisch **kein**
 zweiter Lauf gestartet: Prozessstatus und Zwischenstand müssen zuerst geprüft
-werden. Das ist noch kein vollständig beaufsichtigter App-Abbruch. Effektive
-Modellparameter und Modellgewichte sind weiterhin nicht nachgewiesen.
+werden. Das ist noch kein vollständig beaufsichtigter App-Abbruch.
+
+### Nachweise der Modellanfragen
+
+Kontrollierte Diagnosekinder speichern unter `_runtime_evidence/` für jeden
+Anfrageversuch eine atomare technische JSON-Datei. Das Runner-Manifest enthält
+ein Inventar mit Prüfsummen. Bei der Wiederaufnahme werden bekannte Dateien und
+bei abgeschlossenen Versuchen auch das gesamte Inventar geprüft. Fehlende oder
+noch offene Nachweise gelten nicht als erfolgreiche Prüfung. Reguläre Läufe
+erzeugen diese zusätzlichen Nachweise nicht.
+
+Die Dateien enthalten Lauf-/Modulidentität, Anbieter, Modellkennung, Zeitpunkte,
+tatsächlich an den jeweiligen Adapter übergebene Parameter sowie Erfolg/Fehler
+der Anfrage. Bei OpenAI/Anthropic/Hugging Face werden nicht übertragene Temperatur-
+oder Thinking-Werte nicht als angewandt ausgegeben. Das Kontextfenster bei Cloud
+bleibt eine lokale Vorprüfung und wird nicht als Serverparameter übertragen.
+Prompttexte, Modellantworten, Thinking-Inhalte, Schlüssel und Serverfehlermeldungen
+werden nicht in diese technischen Nachweise kopiert. Allgemeine Analyse- und
+Konsolenlogs können weiterhin Forschungsinhalte enthalten.
+
+Für lokales Ollama wird die Modellkennung über den Digest aus `/api/tags` vor
+und nach einer Anfrage beobachtet. Nicht eindeutig zuordenbare bzw. entfernte
+Modelle und geänderte Digests führen zum Fehler. Ein weiterer Versuch einer
+Serie muss zum bereits beobachteten Digest passen. Cloud-Modellgewichte bleiben
+ausdrücklich nicht überprüfbar. `/api/ps` ergänzt, falls verfügbar, das gemeldete
+Kontextfenster als separate Beobachtung. Diese Angaben stammen aus der lokalen
+[Ollama-Modellliste](https://docs.ollama.com/api/tags) und der
+[Liste geladener Modelle](https://docs.ollama.com/api/ps); sie starten keine Inferenz.
+
+`request_accepted` bedeutet, dass die API die dokumentierte Anfrage angenommen
+hat. Es beweist weder die inhaltliche Güte einer Antwort noch die interne Umsetzung
+jedes Parameters. `server_parameter_enforcement: not_verifiable` bleibt deshalb
+sichtbar. Ein vor/nachher gleicher Modell-Digest ist ebenfalls kein Beweis für die
+intern bei jedem Token verwendeten Gewichte. Antwortbudgets können sich durch
+bestehende Reparaturversuche ändern; die Nachweise dokumentieren diese tatsächlichen
+Anfragen, statt alle nur mit der ursprünglichen YAML-Einstellung zu beschriften.
+
+Die Umgebungsvariablen `WORKFLOW_RUNTIME_EVIDENCE_DIR` und
+`WORKFLOW_EXPECTED_MODEL_DIGEST` werden ausschließlich von Runner/Seriensteuerung
+gesetzt. Sie sind keine zusätzlichen Benutzereinstellungen. Die Oberfläche entfernt
+geerbte Workflow-Variablen vor einem neuen unabhängigen Lauf.
 
 ## Referenzen eindeutig unterscheiden
 

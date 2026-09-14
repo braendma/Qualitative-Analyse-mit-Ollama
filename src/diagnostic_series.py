@@ -90,6 +90,8 @@ def _sample_run(parent, identity, modules):
             for name in module.get('outputs', []):
                 _inside(run / name, run)
     _runner().verify_completed_outputs(run, manifest, modules)
+    from runtime_evidence import verify_inventory
+    verify_inventory(run, manifest)
     status = manifest.get('status')
     if status not in {'success', 'failed', 'paused', 'interrupted', 'running'}:
         raise ValueError(f'{parent.name}: Unbekannter Laufstatus; Zwischenstand prüfen.')
@@ -162,6 +164,7 @@ def execute_repetitions(plan, directory, *, resume=False, pause_file=None):
                   'parameter_status': 'configured_not_runtime_verified'}
         env = {k: v for k, v in os.environ.items() if not k.startswith('WORKFLOW_')}
         env['PYTHONUTF8'] = '1'
+        observed_digests = set()
         for sample in plan['samples']:
             _check_plan(plan)
             if _identity(config_path, plan['config']) != identity:
@@ -182,6 +185,8 @@ def execute_repetitions(plan, directory, *, resume=False, pause_file=None):
                 log_path = root / (sample['sample_id'] + '.log')
                 _inside(log_path, root)
                 try:
+                    if observed_digests:
+                        env['WORKFLOW_EXPECTED_MODEL_DIGEST'] = next(iter(observed_digests))
                     code = _execute(command, root, log_path, env)
                 except KeyboardInterrupt:
                     # _execute only propagates this after its child has been reaped.
@@ -203,9 +208,14 @@ def execute_repetitions(plan, directory, *, resume=False, pause_file=None):
                     result['status'] = 'failed'
                 elif manifest['status'] == 'paused':
                     result['status'] = 'paused'
+            evidence = manifest.get('runtime_evidence', {})
+            observed_digests.update(evidence.get('local_digests', []))
+            if len(observed_digests) > 1:
+                result.update(status='failed', error='Modellidentität zwischen kontrollierten Anfragen verändert; keine gemeinsame Stabilitätsbewertung.')
             result['samples'].append({'sample_id': sample['sample_id'],
                 'status': 'failed' if result['status'] == 'failed' else manifest['status'],
-                'run_dir': str(run.relative_to(root))})
+                'run_dir': str(run.relative_to(root)),
+                'runtime_evidence': {k: evidence.get(k) for k in ('records', 'accepted', 'failed', 'pending', 'local_digests', 'parameter_status')}})
             if result['status'] != 'running':
                 break
         if result['status'] == 'running':

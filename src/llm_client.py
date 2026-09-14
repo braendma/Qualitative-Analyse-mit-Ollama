@@ -48,6 +48,8 @@ def request_chat(backend, request, settings, *, api_key=None):
     require_messages(request['messages'], settings, answer=reserve)
     if not cloud:
         request['options']['num_ctx'] = num_ctx
+    else:
+        request['options'].pop('num_ctx', None)
     headers = {}
     key = api_key or os.environ.get(selected['api_key_env'])
     if cloud and not key:
@@ -63,6 +65,8 @@ def request_chat(backend, request, settings, *, api_key=None):
         raise ValueError('max_attempts muss zwischen 1 und 5 liegen.')
     started = time.monotonic()
     for attempt in range(attempts):
+        from runtime_evidence import RequestReceipt
+        receipt = RequestReceipt(provider, host, request)
         try:
             from progress_events import request_event
             request_event(start=True)
@@ -70,19 +74,26 @@ def request_chat(backend, request, settings, *, api_key=None):
             request_event()
             logger.info('LLM request completed: model=%s attempt=%s elapsed=%.2fs',
                         request['model'], attempt + 1, time.monotonic() - started)
-            return response
         except Exception as exc:
             request_event(success=False)
             status = getattr(exc, 'status_code', None)
             error = str(getattr(exc, 'error', exc)).lower()
             if 'think' in request and any(s in error for s in (
                     "unexpected keyword argument 'think'", 'does not support thinking', 'invalid think value')):
+                receipt.fail('thinking_unsupported')
+                if receipt.path:
+                    raise LLMTransportError('Thinking wird nicht unterstützt. Kontrollierte Wiederholung stoppt ohne Wechsel zum Modellstandard; Einstellung prüfen und neue Serie planen.') from None
                 logger.warning('Thinking-Einstellung wird vom Modell/Client nicht unterstützt; verwende Modellstandard.')
                 request.pop('think')
                 return request_chat(backend, request, {**settings, 'max_attempts': max(1, attempts - attempt)}, api_key=api_key)
+            receipt.fail('transport_error')
             retryable = status in (408, 429, 500, 502, 503, 504) or (
                 status is None and not isinstance(exc, (ValueError, TypeError)))
             if not retryable or attempt + 1 == attempts:
                 # Do not include arbitrary server/transport strings (may contain secrets).
                 raise LLMTransportError(f'KI-Anfrage fehlgeschlagen ({type(exc).__name__}, Status {status}).') from None
             time.sleep(min(float(settings.get('retry_delay_seconds', 1)) * 2 ** attempt, 8))
+            continue
+        # An invalid receipt is not a retryable model transport failure.
+        receipt.accept(response)
+        return response

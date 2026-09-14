@@ -127,6 +127,15 @@ Tabellentrennzeichen.
 
 ## Wiederholungen: vorbereiteter Plan und Cache-Trennung
 
+Kontrollierte Diagnosekinder führen zusätzlich ein geprüftes Inventar technischer
+Anfragenachweise. Thinking wird dort bei Inkompatibilität nicht still entfernt.
+Lokale Modell-Digests werden vor und nach Anfragen verglichen und über Versuche
+hinweg gebunden. Die Annahme einer Anfrage ist ausdrücklich kein Beweis für die
+serverinterne Umsetzung aller Parameter. Cloud-Gewichte und fehlende Metadaten
+werden nicht als geprüft dargestellt. Nachweise enthalten keine Prompt-/Antwort-
+oder Schlüsselwerte; Konsolenlogs bleiben davon getrennt. Der ausführliche Vertrag
+und die Grenzen stehen unter „Nachweise der Modellanfragen“ in `DIAGNOSTICS.md`.
+
 Die bestehende Desktop-Überwachung toleriert außerdem kurzzeitige Windows-
 Lesesperren auf Statusdateien. Ein JSON-Lesezugriff wird bei einer solchen Sperre
 begrenzt wiederholt; während eines aktiven Prozesses wird ein nicht lesbarer
