@@ -3,7 +3,15 @@
 
 def failure_help(text):
     value=str(text).lower()
-    if any(x in value for x in ('diagnose abgelehnt', 'output-prüfsumme fehlt')):
+    if any(x in value for x in ('stabilitätsanalyse unvollständig', 'stabilität benötigt', 'diagnostics.stability', 'wiederholungsziele', 'wiederholungszahl')):
+        kind='stability'
+        cause='Die kontrollierten Wiederholungen sind unvollständig oder ihre Auswahl ist ungültig.'
+        action='Wiederholungszahl (2–20), ausgewählte Zielmodule und aktivierte Vorstufen prüfen. Bei einem Laufabbruch den Stabilitäts-Teilbericht und das Serienlog im Unterordner _stability_repetitions lesen. Nach Behebung ohne geänderte Einstellungen denselben Lauf fortsetzen; bei neuen Einstellungen einen neuen Lauf starten.'
+    elif any(x in value for x in ('serienkonfiguration verändert', 'laufgrundlage', 'prozessende ist noch nicht sicher bestätigt', 'modellgewichte', 'laufzeitnachweis verändert')):
+        kind='stability_integrity'
+        cause='Die gemeinsame Laufgrundlage oder das sichere Ende einer Wiederholung kann nicht bestätigt werden.'
+        action='Auf das bestätigte Prozessende warten und Originaldateien sowie Laufzeitnachweise prüfen. Keine Prüfsummen bearbeiten und keine parallele Wiederaufnahme erzwingen. Bei geändertem Code, Modell oder Einstellungen eine neue Serie in einem neuen Lauf anlegen.'
+    elif any(x in value for x in ('diagnose abgelehnt', 'output-prüfsumme fehlt')):
         kind='diagnostic_integrity'
         cause='Die Diagnose kann Eingaben, Konfiguration oder Analyseergebnisse nicht dem gespeicherten Lauf zuordnen.'
         action='Unveränderte Originaldateien dieses Laufs und den Herkunftsnachweis prüfen. Geänderte Daten in einem neuen Lauf auswerten. Prüfsummen oder Prüfregeln nicht von Hand ändern. Ein höheres Modelllimit behebt dieses Problem nicht.'

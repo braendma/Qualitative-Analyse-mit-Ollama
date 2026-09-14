@@ -30,6 +30,15 @@ function setup(){
 const checkResult={segments:2,passages:1,persons:1,codes:1,modules:[]};
 const settle=()=>new Promise(resolve=>setImmediate(resolve));
 
+test('stability estimate counts fresh prerequisites and rejects invalid selection',()=>{
+  const app=setup();
+  app.run("state.modules=[{id:'clusterer',name:'Cluster',depends_on:[]},{id:'blind_coding',name:'Blind',depends_on:['clusterer']},{id:'stability',name:'Stabilität',depends_on:[]}];");
+  assert.equal(app.run("stabilityEstimate(state.modules,new Set(['clusterer','blind_coding','stability']),['blind_coding'],3).executions"),6);
+  assert.ok(app.run("stabilityEstimate(state.modules,new Set(['stability']),['blind_coding'],3).error"));
+  assert.ok(app.run("stabilityEstimate(state.modules,new Set(['stability']),['stability'],3).error"));
+  for(const count of [0,1,21,2.5,NaN])assert.ok(app.run(`stabilityEstimate(state.modules,new Set(['clusterer']),['clusterer'],${count}).error`));
+});
+
 test('optional diagnostics stay off by default and explain their cost',()=>{
   const app=setup();
   app.run("state.modules=[{id:'clusterer',name:'Cluster',depends_on:[]},{id:'coverage',name:'Coverage',depends_on:[],enabled:false,cost_profile:{class:'NIEDRIG',recommendation:'für iterative Arbeit geeignet',note:'Keine Modellaufrufe'}}]; loadFields();");

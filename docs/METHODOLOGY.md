@@ -4,8 +4,8 @@ Entwicklungshinweis: Die gemeinsame Grundlage für neue wissenschaftliche Diagno
 unterscheidet direkte Segmentbelege, Eingabezuordnungen, Personenreferenzen und
 Synthese-Quellengruppen. Vollständige Register zählen nicht automatisch als
 ausgewählte Evidenz. Datenvertrag und Grenzen stehen in [DIAGNOSTICS.md](DIAGNOSTICS.md).
-Coverage und Information-Loss-Audit sind als optionale Module in Oberfläche und
-CLI integriert. Die weiteren Diagnosemodule folgen.
+Coverage, Information-Loss-Audit, Codebook-Diagnostik und Stabilitätsanalyse sind
+als optionale Module in Oberfläche und CLI integriert. Sensitivität folgt gesondert.
 
 ### Coverage: Repräsentation in gespeicherten Analysebelegen
 
@@ -356,3 +356,12 @@ Misra, R., Dahal, R., Kirk, B., Khan, R., Dogan, G., Chataut, R., & Gyawali, P. 
 ## Zitier- und Aktualisierungshinweis
 
 Die Datei dokumentiert den methodischen Stand des Projekts und die zum angegebenen Zeitpunkt identifizierten verwandten Arbeiten. Da sich Forschung und Open-Source-Software zur LLM-gestützten qualitativen Analyse dynamisch entwickeln, ist die Literatur- und Softwareabgrenzung vor einer wissenschaftlichen Publikation erneut systematisch zu prüfen.
+
+### Kontrollierte Wiederholungen im aktuellen Entwicklungsstand
+
+Die optionale Stabilitätsanalyse ist nun in Runner, Oberfläche und Gesamtbericht integriert. Sie vergleicht frische, getrennte Wiederholungen unter gleicher gespeicherter Laufgrundlage, einschließlich effektiver Anfrageprofile und technischer Einschränkungen. Verglichen werden Modellentscheidungen, projizierte Texte und Referenzen sowie Verteilungen der gespeicherten Quellenauswahl. Fehlgeschlagene Wiederholungen, Abstention und Nullnenner werden getrennt behandelt. Das ist keine Prüfung der inhaltlichen Wahrheit, keine klassische Interrater-Reliabilität und keine umfassende Messung semantischer Gleichheit. Die Quellenverteilung ist keine vollständige Themenhäufigkeit und ändert keine Modellgewichtung. Sensitivität und die Vernetzung entsprechender Befunde in der Codebook-Diagnostik folgen gesondert. Die operationalen Definitionen und Grenzen stehen in [DIAGNOSTICS.md](DIAGNOSTICS.md).
+
+
+### Aussagen- und Personenperspektive
+
+Das [Handbuchkapitel zur methodischen Einordnung](HANDBUCH.html#aussagen-und-personen-zaehlen) erläutert Zähleinheiten, ein künstliches Vergleichsbeispiel, Grenzen und die unterschiedlichen Positionen von Maxwell (2010), Sandelowski (2001) und Gale et al. (2013). Die Quellen begründen keine validierte LLM-Gewichtungsformel. [BibTeX und Quellenhinweise](literature/README.md) liegen separat vor. Die optionalen Analyseperspektiven sind noch in Entwicklung; die technische Umsetzung und diese Beschreibung müssen vor Veröffentlichung gemeinsam geprüft werden.

@@ -27,6 +27,10 @@ LOGGER = logging.getLogger("workflow")
 TOKEN_RE = re.compile(r"\{([A-Za-z_][A-Za-z0-9_]*)\}")
 
 
+class ModulePaused(RuntimeError):
+    """A module owning child runs reached a safe, resumable pause boundary."""
+
+
 def resolve_path(base: Path, value: str | Path) -> Path:
     path = Path(value)
     if not path.is_absolute():
@@ -146,6 +150,8 @@ def run_step(module: dict, command: list[str], cwd: Path):
     with execution_path.open('ab') as execution_log:
         result = subprocess.run(command, cwd=str(cwd), env=child_env,
                                 stdout=execution_log, stderr=subprocess.STDOUT)
+    if result.returncode == 75 and module.get('starts_child_runs'):
+        raise ModulePaused('Modul hat seine Wiederholungen sicher pausiert.')
     if result.returncode != 0:
         with execution_path.open('rb') as failed_log:
             failed_log.seek(0, 2); size=failed_log.tell(); failed_log.seek(max(0,size-16000))
@@ -305,6 +311,10 @@ def main(argv=None):
     modules = topological_order(normalize_modules(config))
     if config.get('_diagnostic_child') and any(m['starts_child_runs'] for m in modules):
         raise ValueError('Ein Diagnose-Unterlauf darf keine weiteren Modell-Unterläufe starten.')
+    from stability_analysis import configured_plan, planning_summary
+    stability_plan = configured_plan(config_path)
+    if stability_plan and csv_path != Path(stability_plan['config']['paths']['input_csv']):
+        raise ValueError('Stabilität benötigt dieselbe CSV wie die gespeicherte Konfiguration; paths.input_csv zuerst anpassen.')
     from coding_validation_common import load_codebook, load_segments
     codebook_config = config.get("paths", {}).get("category_system_csv")
     if not codebook_config:
@@ -325,8 +335,11 @@ def main(argv=None):
     for warning in context_check['warnings']:
         logging.warning('Kontext-Vorprüfung: %s',warning)
     if args.validate_only:
-        print(json.dumps({"status": "valid", "segments": len(input_segments), "code_paths": len(code_index),
-                          "modules": len(modules), "model_calls": 0}))
+        validation = {"status": "valid", "segments": len(input_segments), "code_paths": len(code_index),
+                      "modules": len(modules), "model_calls": 0}
+        if stability_plan:
+            validation['stability_plan'] = planning_summary(stability_plan)
+        print(json.dumps(validation))
         return
     provenance = execution_provenance(config_path, csv_path, config, script_dir)
     # Commit is descriptive; code content is the authoritative resume identity.
@@ -353,6 +366,9 @@ def main(argv=None):
     os.environ["WORKFLOW_RUN_ID"] = run_id
     os.environ["WORKFLOW_FINGERPRINT"] = identity
     os.environ["WORKFLOW_CHECKPOINT_DIR"] = str(output_dir / "_checkpoints")
+    os.environ.pop('WORKFLOW_PAUSE_FILE', None)
+    if args.pause_file:
+        os.environ['WORKFLOW_PAUSE_FILE'] = str(Path(args.pause_file).resolve())
     from runtime_evidence import ENV as evidence_env
     os.environ.pop(evidence_env, None)
     if config.get('_diagnostic_child') is True:
@@ -414,6 +430,11 @@ def main(argv=None):
                 rendered = [render_arg(value, runtime).strip() for value in module.get("args", [])]
                 command = [sys.executable, str(script_path), *[v for v in rendered if v]]
                 run_step(module, command, output_dir)
+            except ModulePaused:
+                manifest['module_status'][module['id']] = 'paused'
+                manifest.update(status='paused', current_module=module['id'])
+                atomic_json(output_dir / 'workflow_manifest.json', manifest)
+                return
             except Exception as exc:
                 from failure_help import failure_help
                 failures.append((module['id'],exc))

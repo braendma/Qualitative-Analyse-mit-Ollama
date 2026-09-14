@@ -10,13 +10,14 @@ MODULES={
  'person_comparison':'Personenvergleich','contrast_analysis':'Kontrastanalyse',
  'relation_analysis':'Zusammenhangsanalyse','ambiguity_analysis':'Ambivalenzanalyse',
  'evidence_audit':'Evidence-Audit','review_queue':'Prüfliste','overall_synthesis':'Gesamtsynthese','coverage':'Coverage und Blind Spots',
- 'information_loss':'Information-Loss-Audit','codebook_diagnostics':'Codebook-Diagnostik'}
+ 'information_loss':'Information-Loss-Audit','codebook_diagnostics':'Codebook-Diagnostik','stability':'Stabilitätsanalyse'}
 UNITS={'passages':'Passagen','rows':'Codierzeilen','batches':'Prüfblöcke',
        'categories':'Kategorien','persons':'Personen','summaries':'Zusammenfassungen','dimensions':'SWOT-Dimensionen',
-       'pairs':'Paare','steps':'Schritte'}
+       'pairs':'Paare','steps':'Schritte','repetitions':'Wiederholungen'}
 PHASES={'preparation':'Vorbereitung','analysis':'Analyse','person_reduction':'Vorbereitung je Person',
         'comparison':'Vergleich','synthesis':'Abschließende Synthese','reduction_level':'Verdichtungsebene',
-        'finished':'Abgeschlossen','cluster_summaries':'Clusterzusammenfassungen','overall_summary':'Gesamtzusammenfassung'}
+        'finished':'Abgeschlossen','cluster_summaries':'Clusterzusammenfassungen','overall_summary':'Gesamtzusammenfassung',
+        'repetitions':'Kontrollierte Wiederholungen','paused':'Pausiert'}
 
 
 def counter(value):

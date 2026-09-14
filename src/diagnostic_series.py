@@ -157,7 +157,7 @@ def _confirmed_supervision(log, identity, parent):
     return receipt
 
 
-def execute_repetitions(plan, directory, *, resume=False, pause_file=None):
+def execute_repetitions(plan, directory, *, resume=False, pause_file=None, progress=None):
     """Run samples sequentially; stop on first failure/pause, preserving all outputs.
 
     Abruptly abandoned children require the supervisor's cleanup receipt before
@@ -203,6 +203,8 @@ def execute_repetitions(plan, directory, *, resume=False, pause_file=None):
         env['PYTHONUTF8'] = '1'
         observed_digests = set()
         for sample in plan['samples']:
+            if progress:
+                progress(sum(s['status'] == 'success' for s in result['samples']), len(plan['samples']))
             _check_plan(plan)
             if _identity(config_path, plan['config']) != identity:
                 raise ValueError('Laufgrundlage während der Serie geändert; keine weiteren Wiederholungen gestartet.')
@@ -268,4 +270,6 @@ def execute_repetitions(plan, directory, *, resume=False, pause_file=None):
         result['planned_samples'] = len(plan['samples'])
         # This is an index of existing manifests, never a second module checkpoint.
         atomic_json(root / 'repetition_index.json', result)
+        if progress:
+            progress(result['completed_samples'], result['planned_samples'])
         return result

@@ -23,7 +23,8 @@ const moduleHelp = {
   overall_synthesis:'Führt die vorherigen Analyseergebnisse zu einer Gesamtsynthese zusammen.',
   coverage:'Zeigt Personen- und Kategorieanteile in gespeicherten Belegen. Wertet ausgewählte Analysen aus, ohne zusätzliche Vorstufen oder Modellaufrufe zu starten. Ohne weitere Analysen erscheint nur die Materialverteilung.',
   information_loss:'Zeigt Prüfpunkte zu Unsicherheit, Gegenpositionen und Kontext bei der Verdichtung. Kein automatisches Urteil über Informationsverlust; Ergebnisse früherer Läufe werden nicht übernommen.',
-  codebook_diagnostics:'Zeigt selten verwendete Codes, identische Definitionen und Ankertexte sowie Abweichungen in ausgewählten Codieranalysen. Ohne Codieranalysen werden nur Material und Kategoriensystem geprüft. Ändert keine Codes und benötigt keine eigenen Modellaufrufe.'
+  codebook_diagnostics:'Zeigt selten verwendete Codes, identische Definitionen und Ankertexte sowie Abweichungen in ausgewählten Codieranalysen. Ohne Codieranalysen werden nur Material und Kategoriensystem geprüft. Ändert keine Codes und benötigt keine eigenen Modellaufrufe.',
+  stability:'HOHER RECHENAUFWAND: Wiederholt ausgewählte Module samt Vorstufen mit identischen gespeicherten Einstellungen. Prüft Codierungen, Belege, Verteilungen und Texte. Wiederholbarkeit ist kein Nachweis der Richtigkeit.'
 };
 function appendModuleProfile(target,module){
   const profile=module.cost_profile;
@@ -39,6 +40,30 @@ function updateModuleSelection(){
   if(selected.size && state.modules.filter(m=>required.has(m.id)).every(m=>m.requires_model===false)){
     $('module-selection').textContent+=' Reiner Diagnoselauf: Kein Modell oder API-Schlüssel nötig. Ohne analytische Vorstufen ist nur der Materialbestand auswertbar.';
   }
+  updateStabilityPlan(required);
+}
+
+function stabilityEstimate(modules, selected, targets, repetitions){
+  if(!Number.isInteger(repetitions)||repetitions<2||repetitions>20)return {error:'Wiederholungszahl muss zwischen 2 und 20 liegen.'};
+  if(!Array.isArray(targets)||!targets.length)return {error:'Mindestens ein Zielmodul für die Wiederholungen auswählen.'};
+  const available=new Map(modules.map(m=>[m.id,m])),required=new Set(targets),queue=[...targets];
+  for(const id of queue){const m=available.get(id);if(!m||!selected.has(id))return {error:'Zielmodule und ihre Vorstufen zuerst in der Modulauswahl aktivieren.'};if(['stability','coverage','information_loss','codebook_diagnostics'].includes(id))return {error:'Diagnosen können nicht selbst wiederholt werden.'};for(const dep of m.depends_on){if(!required.has(dep)){required.add(dep);queue.push(dep);}}}
+  return {repetitions,modules:modules.filter(m=>required.has(m.id)),executions:required.size*repetitions};
+}
+function stabilitySettings(){return {repetitions:Number($('stability-repetitions').value),modules:[...document.querySelectorAll('[name=stability-target]:checked')].map(n=>n.value)};}
+function loadStabilityFields(){
+  const saved=project.settings?.stability||state.defaults.stability||{repetitions:3,modules:[]};
+  $('stability-repetitions').value=saved.repetitions??3;$('stability-targets').replaceChildren();
+  state.modules.filter(m=>!['stability','coverage','information_loss','codebook_diagnostics'].includes(m.id)).forEach(m=>{
+    const label=el('label',undefined,'checkbox'),input=el('input');input.type='checkbox';input.name='stability-target';input.value=m.id;input.checked=(saved.modules||[]).includes(m.id);input.addEventListener('change',updateModuleSelection);label.append(input,el('span',m.name));$('stability-targets').append(label);
+  });
+  $('stability-repetitions').oninput=updateModuleSelection;
+}
+function updateStabilityPlan(required){
+  const panel=$('stability-options');if(!panel)return;
+  panel.hidden=!required.has('stability');if(panel.hidden)return;
+  const s=stabilitySettings(),plan=stabilityEstimate(state.modules,required,s.modules,s.repetitions),box=$('stability-estimate');
+  box.className=plan.error?'error':'selection-summary';box.textContent=plan.error||`Zusätzlich ${plan.repetitions} vollständige Wiederholungen: ${plan.executions} Modulausführungen einschließlich Vorstufen (${plan.modules.map(m=>m.name).join(', ')}). Die Anzahl der Modellanfragen hängt vom Material und nötigen Reparaturen ab und kann deutlich höher liegen.`;
 }
 const columnLabels = {segment:'Text / Segment *',person:'Dokumentkennung / vorhandene Personen-ID *',code:'Vergebener Code *',segment_id:'Eindeutige Zeilen-ID (optional)',unit_id:'Passage-ID (für Mehrfachcodierung)'};
 function bookDescription(c){return 'Definition: '+c.definition+' · Einschluss: '+(c.einschluss||'—')+' · Ausschluss: '+(c.ausschluss||'—')+' · Abgrenzung: '+(c.abgrenzung||'—')+' · Ankerbeispiele: '+(c.ankerbeispiel||'—');}
@@ -107,7 +132,7 @@ function loadFields(){
   $('modules').replaceChildren();
   const selected=s.modules||state.modules.filter(m=>m.enabled!==false).map(m=>m.id);
   state.modules.forEach(m=>{const label=el('label',undefined,'checkbox'),input=el('input'),text=el('span',m.name);input.type='checkbox';input.value=m.id;input.name='module';input.checked=selected.includes(m.id);input.addEventListener('change',updateModuleSelection);appendModuleProfile(text,m);if(moduleHelp[m.id])text.append(el('small',moduleHelp[m.id]));if(m.depends_on.length)text.append(el('small','Benötigt: '+m.depends_on.map(id=>state.modules.find(x=>x.id===id)?.name||id).join(', ')));label.append(input,text);const item=el('div',undefined,'module-example'),example=el('button','Ergebnisbeispiel ansehen','example-trigger');example.type='button';example.setAttribute('data-example','module-'+m.id);example.setAttribute('aria-haspopup','dialog');example.setAttribute('aria-controls','example-dialog');example.setAttribute('aria-label',m.name+' – Ergebnisbeispiel ansehen');item.append(label,example);const prompts=el('button','Prompts ansehen','example-trigger');prompts.type='button';prompts.setAttribute('aria-haspopup','dialog');prompts.setAttribute('aria-controls','prompt-dialog');prompts.setAttribute('aria-label',m.name+' – Prompts ansehen');prompts.addEventListener('click',()=>showModulePrompts(m.id));item.append(prompts);$('modules').append(item);});
-  updateModuleSelection();
+  loadStabilityFields();updateModuleSelection();
   renderFiles();
   if(typeof loadProviderFields==='function')loadProviderFields();
 }
@@ -133,7 +158,7 @@ function settings(){
   return {...(typeof providerSelection==='function'?providerSelection():{}),columns,book_columns,person_identity:typeof personIdentitySettings==='function'?personIdentitySettings():null,parallel_workers:$('provider').value==='ollama_local'?Number($('parallel-workers').value):1,model:$('model').value,num_ctx:Number($('num-ctx').value),max_tokens:Number($('max-tokens').value),synthesis_max_calls:Number($('synthesis-max-calls').value),temperature:Number($('temperature').value),
     think:think==='true'?true:think==='false'?false:think,label_mode:$('label-mode').value,
     context:{project_description:$('context-project').value,participants:$('context-persons').value,methodology:$('context-method').value},
-    modules:[...document.querySelectorAll('[name=module]:checked')].map(n=>n.value)};
+    stability:stabilitySettings(),modules:[...document.querySelectorAll('[name=module]:checked')].map(n=>n.value)};
 }
 async function saveAndValidate(pid=needProject()){
   $('validation-result').hidden=true;
@@ -141,6 +166,7 @@ async function saveAndValidate(pid=needProject()){
   if(project?.id!==pid)return result;
   project.settings=s;
   const box=$('validation-result');box.replaceChildren(el('h3','Eingaben sind gültig'));box.hidden=false;
+  if(result.stability_plan)box.append(el('p',`HOHER RECHENAUFWAND: ${result.stability_plan.repetitions} zusätzliche Wiederholungen mit ${result.stability_plan.module_executions} Modulausführungen einschließlich Vorstufen. Tatsächliche Modellanfragen können zahlreicher sein. Wiederholbarkeit ist kein Richtigkeitsnachweis.`,'selection-summary'));
   const stats=el('div',undefined,'stats');[['Codierzeilen',result.segments],['Passagen',result.passages??'—'],['Personen',result.persons],['Codepfade',result.codes]].forEach(([label,n])=>{const part=el('div',undefined,'stat');part.append(el('b',String(n)),el('span',label));stats.append(part);});box.append(stats,el('p','Diese Module werden bei einem Start ausgeführt (einschließlich benötigter Vorstufen): '+result.modules.map(m=>m.name).join(' → '),'hint'));
   if(result.codebook_fields)box.append(el('p',`${result.codebook_fields.einschluss} Codes mit Einschlussregeln · ${result.codebook_fields.ausschluss} mit Ausschlussregeln · ${result.codebook_fields.abgrenzung||0} mit weiteren Codierhinweisen · ${result.codebook_fields.ankerbeispiel} mit Ankerbeispielen. Die zugeordneten Regeln werden bei der Codierung und Codeprüfung berücksichtigt.`));
   if(result.context_check){
@@ -154,7 +180,7 @@ async function saveAndValidate(pid=needProject()){
 }
 function renderProgressDetails(card,d,status,label='Modulfortschritt'){
   const count=v=>Number.isFinite(v)&&v>=0?Math.floor(v):0;
-  const unit={passages:'Passagen',rows:'Codierzeilen',batches:'Prüfblöcke',categories:'Kategorien',persons:'Personen',summaries:'Zusammenfassungen',dimensions:'SWOT-Dimensionen',pairs:'Codepfad-Paare',steps:'Arbeitsschritte'}[d.unit]||'Arbeitsschritte';
+  const unit={passages:'Passagen',rows:'Codierzeilen',batches:'Prüfblöcke',categories:'Kategorien',persons:'Personen',summaries:'Zusammenfassungen',dimensions:'SWOT-Dimensionen',pairs:'Codepfad-Paare',steps:'Arbeitsschritte',repetitions:'Wiederholungen'}[d.unit]||'Arbeitsschritte';
   const known=Number.isInteger(d.total)&&d.total>=0,done=known?Math.min(count(d.completed),d.total):count(d.completed);
   if(known&&d.total===0)card.append(el('p','Keine Arbeitseinheiten in dieser Phase.','hint'));
   else if(known){const p=el('progress');p.max=d.total;p.value=done;p.setAttribute('aria-label',label);card.append(p,el('p',`${done} von ${d.total} ${unit} bearbeitet · ${Math.floor(done/d.total*100)} %`));}
@@ -162,7 +188,7 @@ function renderProgressDetails(card,d,status,label='Modulfortschritt'){
     if(status==='running'){const activity=el('div',undefined,'module-activity');activity.setAttribute('role','img');activity.setAttribute('aria-label','Aktivität ohne Prozentangabe');card.append(activity);}
     card.append(el('p','Für dieses Modul ist noch keine Gesamtzahl der Arbeitsschritte verfügbar. Daher wird kein Prozentwert angezeigt.','hint'));
   }
-  const phase={preparation:'Vorbereitung',analysis:'Analyse',person_reduction:'Vorbereitung: Personenanalysen verdichten',comparison:'Abschließender Personenvergleich',synthesis:'Abschließende Gesamtsynthese',reduction_level:'Hierarchische Verdichtung',finished:'Verarbeitung abgeschlossen',cluster_summaries:'Einzelne Cluster zusammenfassen',overall_summary:'Gesamtzusammenfassung erstellen'}[d.phase];
+  const phase={preparation:'Vorbereitung',analysis:'Analyse',person_reduction:'Vorbereitung: Personenanalysen verdichten',comparison:d.module==='stability'?'Stabilitätsvergleich':'Abschließender Personenvergleich',repetitions:'Kontrollierte Wiederholungen',paused:'Pausiert',synthesis:'Abschließende Gesamtsynthese',reduction_level:'Hierarchische Verdichtung',finished:'Verarbeitung abgeschlossen',cluster_summaries:'Einzelne Cluster zusammenfassen',overall_summary:'Gesamtzusammenfassung erstellen'}[d.phase];
   if(phase)card.append(el('p','Phase: '+phase+(d.phase==='reduction_level'&&Number.isInteger(d.phase_level)?' · Ebene '+d.phase_level:''),'hint'));
   if(Number.isInteger(d.detail_total)&&d.detail_total>0)card.append(el('p',`${Math.min(count(d.detail_completed),d.detail_total)} von ${d.detail_total} Prüfblöcken der aktuellen Einheit abgeschlossen`,'hint'));
   if(known)card.append(el('p','Der Prozentwert bezieht sich auf die angezeigten Arbeitseinheiten dieser Phase, nicht auf die benötigte Zeit.','hint'));

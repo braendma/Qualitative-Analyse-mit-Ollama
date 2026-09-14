@@ -180,3 +180,7 @@ Integrationstest führt tatsächliche verschachtelte Serien mit künstlichen
 Modellservern aus und prüft die Übergabe. Native Windows-Abbruchtests bestehen;
 native macOS-Prüfung bleibt Bestandteil der dortigen CI-/Distributionsprüfung.
 Siehe den vollständigen API-Vertrag und die Grenzen in `DIAGNOSTICS.md`.
+
+## Integrierte Stabilität: Pause und Fortsetzen
+
+Vor dem Modulstart wird eine vorhandene verwaltete Ollama-Instanz des Elternlaufs freigegeben. Unterläufe verwenden die bestehende S05-Prozessaufsicht und eigene Verzeichnisse. `WORKFLOW_PAUSE_FILE` wird an die kontrollierte Serie weitergereicht; die Kindrunner erhalten ihren Pausepfad explizit, sonstige `WORKFLOW_*`-Werte werden nicht geerbt. Exit 75 bedeutet ausschließlich bei `starts_child_runs` eine sichere Modul-Pause. Das Elternmanifest erhält `paused`; das Modul und seine Teilberichte werden nicht als abgeschlossene, gehashte Ausgaben verbucht. Andere Module mit Exit 75 bleiben Fehler. Nach Resume werden fertige Samples geprüft und nicht erneut gestartet. Abbruchfehler bleiben mit Teilbericht und Fehlerhilfe sichtbar. Vollständiger App-Abbruch beim Schließen wird separat für die Standalone-Distribution geprüft.

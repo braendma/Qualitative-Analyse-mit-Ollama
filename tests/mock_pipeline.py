@@ -121,7 +121,10 @@ def execute(command, **kwargs):
                 os.environ.update(kwargs['env'])
             os.chdir(kwargs['cwd'])
             sys.argv=command[1:]
-            runpy.run_path(command[1],run_name='__main__')
+            try:
+                runpy.run_path(command[1],run_name='__main__')
+            except SystemExit as exc:
+                return types.SimpleNamespace(returncode=exc.code if type(exc.code) is int else 0 if exc.code is None else 1)
             return types.SimpleNamespace(returncode=0)
         finally:
             os.chdir(old_cwd)
@@ -131,4 +134,14 @@ def execute(command, **kwargs):
     return original_run(command,**kwargs)
 
 subprocess.run=execute
+import diagnostic_series
+diagnostic_series._runner_command=lambda:[sys.executable,str(ROOT/'tests/mock_pipeline.py')]
+if os.environ.get('MOCK_PAUSE_AFTER_FIRST_REPETITION') == '1':
+    original_series_execute=diagnostic_series._execute
+    def pause_after_repetition(command,directory,log,env):
+        result=original_series_execute(command,directory,log,env)
+        if os.environ.get('WORKFLOW_MODULE')=='stability' and os.environ.get('WORKFLOW_PAUSE_FILE'):
+            Path(os.environ['WORKFLOW_PAUSE_FILE']).touch()
+        return result
+    diagnostic_series._execute=pause_after_repetition
 runpy.run_path(str(ROOT/'src/00_WORKFLOW_RUNNER.py'),run_name='__main__')

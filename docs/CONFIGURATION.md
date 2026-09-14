@@ -116,3 +116,19 @@ zur vorläufigen Diagnose und wird bei Resume erneut geprüft. Die Schwellen fü
 geringe Häufigkeit, Co-Codierung sowie die Darstellungs-/Rechengrenzen sind feste,
 versionierte Regeln in [DIAGNOSTICS.md](DIAGNOSTICS.md), keine versteckten
 Modellparameter. Die Diagnose ändert keine Codes oder menschlichen Entscheidungen.
+
+## Stabilitätsanalyse konfigurieren
+
+
+```yaml
+diagnostics:
+  stability:
+    repetitions: 3  # ganze Zahl 2–20; zusätzliche Läufe
+    modules: [blind_coding]  # explizite, bereits aktivierte Ziele
+```
+
+Das mitgelieferte Pipeline-Modul heißt `stability`, verwendet `stability_analysis.py` und ist `enabled: false`. Für die Aktivierung bleiben `requires_model: true` und `starts_child_runs: true` zwingend. Die Argumente sind `--config "{config}" --input-csv "{input_csv}"`; Ausgaben: `stability.json`, `stability.md`. `after_if_enabled` ordnet es nach den aktivierten Basisanalysen ein, ohne die Zielauswahl still zu erweitern. Nötige analytische Vorstufen werden innerhalb jeder Wiederholung neu gerechnet; Diagnosen selbst sind keine Ziele.
+
+Eine aktivierte Stabilitätskonfiguration wird bereits bei `00_WORKFLOW_RUNNER.py --config PFAD --validate-only` geprüft. `stability_plan` enthält Wiederholungszahl, Ziele, effektive Module, zusätzliche Vorstufen und zusätzliche Modulausführungen. `model_calls: null` bedeutet unbekannte tatsächliche Anzahl, nicht null Aufrufe. Abweichendes `--csv` ist gesperrt; zuerst `paths.input_csv` ändern.
+
+Direktes Starten des Moduls ohne passenden aktiven Runner-Lauf ist gesperrt. `_stability_repetitions` ist reserviert; Diagnoseausgaben dürfen keine internen Seriendateien überschreiben. App-Einstellungen speichern dieselbe Struktur als `settings.stability`. Ist das Modul aus, startet es keine Wiederholungen; ältere Projekte ohne diese Einstellungen behalten den ausgeschalteten Default.

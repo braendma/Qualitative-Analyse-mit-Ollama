@@ -520,3 +520,72 @@ Sehr lange Definitionen werden vollständig verglichen; die JSON-Vorschau ist au
 Künstliches Beispiel: Drei Passagen tragen „Zeitplanung“, eine davon zusätzlich „Begleitung“. „Ortswahl“ wird nicht verwendet. Das ergibt vier Codierzeilen, drei Passagen und Prüfhinweise zur geringen Datenbasis bzw. fehlenden Verwendung. Es sind keine automatischen Löschvorschläge.
 
 [Bebildertes Ergebnisbeispiel](BEISPIELE.html#module-codebook_diagnostics).
+
+## Stabilität kontrollierter Wiederholungen
+
+Die Stabilitätsanalyse ist optional und standardmäßig ausgeschaltet. Sie verursacht **hohen zusätzlichen Rechenaufwand** und ist eher für die finale Validierung gedacht. Sie wiederholt ausgewählte Module unter derselben gespeicherten Laufgrundlage; das trainiert kein Modell und ändert keine Originalcodierungen.
+
+1. Aktiviere unter **Analyse** die gewünschten Analysen und zusätzlich **Stabilitätsanalyse**.
+2. Wähle im eingeblendeten Bereich die Zielmodule und **2–20 zusätzliche vollständige Wiederholungen** (Vorgabe: 3). Zielmodule und ihre Vorstufen müssen in der Modulauswahl aktiv sein. Andere Diagnosen lassen sich nicht als Wiederholungsziel auswählen.
+3. Prüfe die Aufwandvorschau. Beispiel: Blind-Coding mit drei Wiederholungen benötigt zusätzlich dreimal Blind-Coding und dreimal Clustering, also sechs Modulausführungen. Jede Ausführung kann viele Modellanfragen und Reparaturversuche enthalten. Der ursprüngliche Analyselauf kommt hinzu.
+4. Prüfe Eingaben, Personen-/Passagenzuordnung und Modell wie gewohnt. **Prüfen & neuen Lauf starten** führt die freigegebenen Module einschließlich Wiederholungen aus. Der gespeicherte Plan wird vor dem Modellstart nochmals geprüft.
+5. Öffne unter **Ergebnisse** den HTML-Gesamtbericht; dort steht der Stabilitätsabschnitt. Zusätzlich liegen `stability.md` und das vollständige `stability.json` im Laufordner.
+
+Jede Wiederholung erhält im internen Unterordner `_stability_repetitions` einen eigenen Runner-Lauf. **Nach diesem Modul pausieren** kann bei Stabilität zwischen den Modulen der aktuellen Wiederholung anhalten; fertige Wiederholungen bleiben erhalten. **Diesen Lauf fortsetzen** verwendet deren geprüfte Ergebnisse und setzt fehlende Arbeit fort. Eine Pause wird nicht als Erfolg oder Fehler ausgegeben. Ein Teilbericht bleibt bei Pause/Fehler ausdrücklich unvollständig.
+
+Im Bericht werden Codeentscheidungen, Unsicherheiten, technische Fehler, Cluster-Mitgliedschaften, Belegauswahl, Quellenverteilungen und projizierte Textänderungen getrennt beschrieben. Bei auffälligen Codierungen stehen Person und Textauszug neben den Entscheidungen. Ein hoher Wiederholungswert ist **kein Richtigkeitsnachweis**. Zwei Unsicherheiten ergeben keine bestätigte Codierung. Leere Nenner ergeben keinen Prozentwert.
+
+Parameterprofile zeigen die tatsächlich übertragenen Einstellungen und bekannte Reparaturvarianten. Sie beweisen nicht die serverinterne Durchsetzung. Cloud-Modellgewichte sind nicht unabhängig prüfbar; veränderte beobachtete lokale Modelldigests sperren den gemeinsamen Vergleich. Bei geänderten Daten, Einstellungen, Code oder Abhängigkeiten einen neuen Lauf verwenden und keine Prüfsummen manuell anpassen.
+
+Die Fortschrittsanzeige zählt fertiggestellte Wiederholungen; innerhalb einer laufenden Wiederholung kann die Zahl länger unverändert bleiben. Daraus wird keine erfundene Restzeit berechnet. Allgemeine Telegram-Meldungen können diese Phase und Zählung anzeigen; Rohtexte werden dafür nicht versendet.
+
+**Bei Problemen:** Den Stabilitäts-Teilbericht, die Fehlerhilfe und das Serienlog im Unterordner prüfen. Ziel-/Vorstufenauswahl korrigieren oder den technischen Fehler beheben. Nur bei unveränderter Laufgrundlage fortsetzen. Eine neue Konfiguration benötigt einen neuen Lauf.
+
+## Aussagen und Personen zählen: methodische Einordnung
+
+**Entwicklungsstand:** Dieses Kapitel erklärt die methodischen Entscheidungen für die geplanten zwei Analyseperspektiven. Die Auswahl „qualitativ“, „mit thematischer Zählung“ und „beide Perspektiven“ ist noch in Entwicklung. Bereits vorhandene Beleg- und Coverage-Zahlen sind keine vollständige Themenzählung.
+
+### Warum alle Aussagen berücksichtigen?
+
+Wenn du verstehen möchtest, wie Personen ihre Entscheidung begründen, brauchst du den Zusammenhang ihrer Aussagen. Mehrere Äußerungen derselben Person können unterschiedliche Bedingungen, Veränderungen und Widersprüche zeigen. Eine Reduktion auf „Thema vorhanden“ würde diese Unterschiede verdecken. „Jede Aussage berücksichtigen“ bedeutet hier, das relevante übergebene Material in die Interpretation einzubeziehen; es verspricht weder eine mathematische Gleichgewichtung noch einen Abdruck jeder Aussage im Bericht.
+
+Zählungen ersetzen diese Interpretation nicht. Maxwell beschreibt Zahlen als Ergänzung qualitativer Informationen: Sie können Verteilungsaussagen präzisieren, lassen für sich genommen aber den inhaltlichen Zusammenhang weg. Auch das Zählen macht eine Studie nach seiner Argumentation nicht automatisch zu einer Mixed-Methods-Studie [(Maxwell, 2010, S. 478–479)](https://doi.org/10.1177/1077800410364740).
+
+### Warum Personen und Aussagen getrennt zählen?
+
+Eine Person kann dasselbe Thema häufig ansprechen. Die Personenzahl zeigt, auf wie viele unterschiedliche Fälle sich ein Thema im ausgewerteten Material verteilt. Die Passagenzahl zeigt dagegen, wie viele abgegrenzte Textstellen ihm zugeordnet wurden. Keine der beiden Zahlen misst allein die Bedeutung eines Themas.
+
+**Künstliches Beispiel:** Von zehn Personen spricht eine Person das Thema A in zehn getrennten Passagen an. Alle zehn Personen sprechen Thema B jeweils einmal an. Beide Themen haben zehn Passagen; A hat eine Personenbasis von 1/10, B von 10/10. Die qualitative Interpretation kann dennoch A als wichtigen Einzelfall hervorheben. Die Zählperspektive macht die unterschiedliche Verteilung sichtbar. Sie rechtfertigt nicht, A automatisch zu verwerfen.
+
+Sandelowski erläutert, dass Zahlen qualitative Interpretationen dokumentieren und prüfen helfen können. Zugleich warnt sie vor Überzählung und irreführendem, vom Kontext gelöstem Zählen. Die hier gewählte getrennte Darstellung ist eine Projektentscheidung im Anschluss an diese Überlegungen [(Sandelowski, 2001)](https://doi.org/10.1002/nur.1025). Hier wurde der Verlagsabstract ausgewertet.
+
+### Was die Literatur nicht einheitlich bewertet
+
+Gale, Heath, Cameron, Rashid und Redwood beurteilen Angaben wie „13 von 20“ im Rahmen der Framework Method deutlich kritischer. Sie verweisen auf die gezielte, auf Vielfalt ausgerichtete Fallauswahl statt statistischer Repräsentativität [(Gale, Heath, Cameron, Rashid, & Redwood, 2013, S. 6)](https://doi.org/10.1186/1471-2288-13-117). Das ist keine allgemeine Zustimmung zur Häufigkeitsgewichtung. Unser Ansatz folgt Maxwells begrenztem deskriptivem Gebrauch: Zahlen beschreiben die untersuchte Materialbasis; sie schätzen keine Verbreitung in der Gesamtbevölkerung. Welche Perspektive zur eigenen Studie passt, muss methodisch begründet werden.
+
+### Zählregeln vor der Auswertung festlegen
+
+Die folgenden Regeln operationalisieren den Ansatz für dieses Projekt; die Literatur validiert damit keine bestimmte LLM- oder SWOT-Gewichtungsformel.
+
+- **Personen:** Interviewteile derselben Person zusammenführen und die Zuordnung bestätigen. Pro Thema zählt jede Person einmal. N bezeichnet die dokumentierte Bezugsgruppe; eine themenspezifische Einschränkung muss sichtbar sein.
+- **Passagen:** Eine mehrfach codierte Textstelle nicht mehrfach als Nennung zählen. Identischer Wortlaut allein beweist keine identische Passage. Eine Passage kann mehrere Themen enthalten; Themenzahlen sind deshalb nicht beliebig addierbar.
+- **Aussagen:** Eine Codierzeile oder Passage ist nicht automatisch genau eine Aussage. Wenn Aussagen gezählt werden sollen, zuvor definieren, wie Sinneinheiten abgegrenzt werden. Im Bericht die tatsächlich verwendete Einheit nennen.
+- **Datenabdeckung:** Vollständige Zuordnung eines MAXQDA-Exports bezieht sich auf das exportierte Material. Sie sagt nichts über nicht exportierte Interviewteile. Ausgewählte Beispielzitate erlauben nur Aussagen zur belegten Personenbasis, keine vollständige Nennungshäufigkeit.
+- **Erhebung und Gegenpositionen:** Unterschiedliche Leitfragen, Nachfragen und Interviewlängen berücksichtigen. Nicht erwähnt bedeutet weder Ablehnung noch Abwesenheit. Zustimmende, ablehnende und ambivalente Aussagen unterscheiden; seltene Gegenbelege erhalten.
+- **Modell und Prüfung:** LLM-Zuordnungen als solche kennzeichnen und ihren menschlichen Prüfstatus angeben. Deterministische Zählung macht fehlerhafte Zuordnungen nicht richtig. In SWOT analytisch abgeleitete Chancen/Risiken von ausdrücklich genannten Themen trennen.
+
+### Beide Perspektiven transparent berichten
+
+Beim geplanten Vergleich sollen beide Perspektiven dieselbe gespeicherte Daten-, Kategorien- und Personenbasis verwenden. Die zusätzliche Interpretation berücksichtigt die dokumentierte Verteilung; die qualitative Perspektive bleibt daneben lesbar. Abweichende Schlussfolgerungen sind Anlass zur Prüfung, kein automatischer Qualitätsgewinn.
+
+**Formulierungsbeispiel zur Anpassung:** „Die Aussagen wurden zunächst im Fall- und Themenzusammenhang interpretiert. Ergänzend wurde je Thema die Anzahl unterschiedlicher Personen mit zugeordneten Passagen im exportierten Material ermittelt. Mehrere Interviewteile wurden derselben Person zugeordnet. Häufigkeiten dienen der Beschreibung dieser Materialbasis; sie wurden nicht als Maß inhaltlicher Bedeutung oder statistischer Repräsentativität verwendet. Gegenpositionen und der Prüfstatus modellgestützter Zuordnungen wurden gesondert dokumentiert.“ Nur verwenden, wenn die eigene Durchführung dem tatsächlich entspricht.
+
+Die bibliografischen Angaben liegen im Quellpaket unter `docs/literature/methods_counting.bib`. Angaben und Quellenzugänge wurden am 14.09.2026 geprüft.
+
+### Literaturverzeichnis (APA 6)
+
+Gale, N. K., Heath, G., Cameron, E., Rashid, S., & Redwood, S. (2013). Using the framework method for the analysis of qualitative data in multi-disciplinary health research. *BMC Medical Research Methodology, 13*, 117. [doi:10.1186/1471-2288-13-117](https://doi.org/10.1186/1471-2288-13-117)
+
+Maxwell, J. A. (2010). Using numbers in qualitative research. *Qualitative Inquiry, 16*(6), 475–482. [doi:10.1177/1077800410364740](https://doi.org/10.1177/1077800410364740)
+
+Sandelowski, M. (2001). Real qualitative researchers do not count: The use of numbers in qualitative research. *Research in Nursing & Health, 24*(3), 230–240. [doi:10.1002/nur.1025](https://doi.org/10.1002/nur.1025)

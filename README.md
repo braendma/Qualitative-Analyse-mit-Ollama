@@ -12,6 +12,8 @@ Sie verändert keine Kategorien. [Coverage bedienen](docs/HANDBUCH.html#coverage
 [Codebook-Diagnostik](docs/HANDBUCH.html#codebook-diagnostik) ·
 [Methodik und Grenzen](docs/DIAGNOSTICS.md) · [Konfiguration](docs/CONFIGURATION.md).
 
+Zusätzlich verfügbar im Entwicklungsstand: **Stabilitätsanalyse** mit auswählbaren Wiederholungszielen, Aufwandvorschau, geprüftem Fortsetzen und Bericht. Sie ist standardmäßig aus und verursacht zusätzliche Modellaufrufe. [Anleitung mit Beispiel](docs/HANDBUCH.html#stabilitaet-kontrollierter-wiederholungen).
+
 ## Neu in 0.4.0-beta.1
 
 - **Personen ausdrücklich zuordnen:** Mehrere Dokumente können zu einer Person gehören. Vorschau und Bestätigung sind vor dem Start erforderlich. [Anleitung](docs/Personenzuordnung.md).

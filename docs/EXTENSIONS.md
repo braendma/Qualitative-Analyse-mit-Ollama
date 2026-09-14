@@ -60,3 +60,7 @@ Passt die Gesamtsynthese nicht in das konfigurierte Kontextbudget, zerlegt das P
 Im JSON der Gesamtsynthese steht `hierarchical_reduction`: Originalteilbefunde mit Quellenpfaden, sämtliche Verdichtungsstufen und ein vom Programm geführter Graph der tatsächlich verwendeten Eingaben. Finale empirische Einträge müssen gültige Verweise auf Teilanalysen tragen. Die vollständigen analytischen Originalausgaben bleiben erhalten. Diese Herkunftsnachweise belegen, welche Eingaben verwendet wurden; sie garantieren nicht, dass das Modell bei der Verdichtung jede Nuance erhalten hat. Widersprüche und Unsicherheit sollen ausdrücklich erhalten bleiben und müssen fachlich geprüft werden.
 
 Die hierarchische Verarbeitung betrifft die Gesamtsynthese. Andere Module behalten ihre eigenen Grenzen: Relations- und Auditbefunde werden bereits paketweise bearbeitet; ein übergroßes Codebuch, ein einzelnes Interview oder ein übergroßer Eingabebestand eines vorgelagerten globalen Moduls können weiterhin eine angepasste Konfiguration erfordern. Ein neuer Lauf nach Softwareänderungen bleibt erforderlich.
+
+## Optionale Stabilitätsanalyse
+
+Das zusätzliche Modul `stability` ist standardmäßig aus, mit hohem Rechenaufwand und Empfehlung für finale Validierung. Es nutzt den bestehenden Runner für getrennte Wiederholungen, geprüftes Resume und einen deterministischen Vergleich. Auswahl, Kostenvorschau, Beispielhilfe und Parameteranzeige sind in der Oberfläche enthalten. Weitere Details stehen im [Handbuch](HANDBUCH.html#stabilitaet-kontrollierter-wiederholungen).

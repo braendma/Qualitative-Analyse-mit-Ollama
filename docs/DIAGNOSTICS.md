@@ -4,15 +4,16 @@ Entwicklungsstand: Die gemeinsame Quellenauswertung und Coverage sind in CLI,
 Pipeline, Modulauswahl, Promptansicht, Fortschritt und Berichte integriert.
 Der Information-Loss-Audit ist ebenfalls in CLI, Modulauswahl, Fortschritt,
 Beispielhilfe und Berichte integriert. Die Codebook-Diagnostik ist ebenfalls in
-Modulauswahl, Berichte, Fortschritt und Beispielhilfe eingebunden. Stabilität und
-Sensitivität folgen. Dieser Abschnitt
+Modulauswahl, Berichte, Fortschritt und Beispielhilfe eingebunden. Stabilität ist
+mit Zielauswahl, Aufwandvorschau, Wiederholungen, Pause/Resume und Gesamtbericht integriert.
+Sensitivität und die Verknüpfung ihrer Befunde folgen. Dieser Abschnitt
 beschreibt den überprüfbaren Datenvertrag und die technische Schnittstelle.
 
 ## Entwicklungsstand der Wiederholungsplanung
 
 `diagnostic_repetitions.prepare_repetitions(config_path, module_ids,
 repetitions=3)` bereitet einen stabilen Laufplan vor. Diese interne API startet
-noch keine Modellanfragen und ist noch kein auswählbares Stabilitätsmodul.
+selbst keine Modellanfragen; die Ausführung übernimmt das optionale Modul `stability`.
 Zulässig sind 2 bis 20 Wiederholungen. Ziele müssen ausdrücklich benannt und in
 der Ausgangskonfiguration bereits aktiviert sein. Die vorhandene topologische
 Sortierung ergänzt notwendige Vorstufen im Plan und weist diese gesondert aus.
@@ -475,11 +476,11 @@ vollständige ausgegeben. Im Zeilenmodus ist diese Auswertung `not_applicable`.
 Stabilitäts- und Sensitivitätshinweise werden erst angebunden, sobald diese Module
 implementiert und geprüft sind. Der Kern behauptet keine entsprechende Messung.
 
-## Stabilitätsvergleich: interner Vergleichskern (S06, Integration ausstehend)
+## Stabilitätsvergleich: interner Vergleichskern und integriertes Modul
 
 `stability_core.analyze_stage_repetitions` und `analyze_coding_repetitions` vergleichen
 bereits vorliegende Ergebnisse ohne Modellaufrufe und ohne Dateien zu ändern. Sie
-sind noch kein auswählbares Diagnosemodul. Der aufrufende Serienloader muss zuvor
+sind die deterministischen Funktionen des optionalen Moduls `stability`. Der aufrufende Serienloader muss zuvor
 die gemeinsame Konfiguration, Originaldaten, Codebuch, Laufidentitäten und
 Artefaktprüfsummen anhand des S05-Vertrags prüfen. Der Kern selbst weist deshalb
 `provenance_status: caller_must_verify` aus; ein übergebenes `success` ersetzt
@@ -617,5 +618,9 @@ werden dadurch nicht vorweggenommen. Im Markdown erscheinen geänderte Personen-
 Kategoriezeilen (je höchstens 50 mit expliziter Restzahl); das JSON enthält auch die
 unveränderten Verteilungen vollständig.
 
-CLI, Aufwandshinweise, Oberfläche, Integration in den Gesamtbericht und spätere
-Anbindung an die Codebook-Diagnostik folgen innerhalb der weiteren Integrationsschritte.
+CLI, Aufwandhinweise, Oberfläche und Gesamtbericht sind über `stability_analysis.py`
+angebunden. Ein Pause-Exit des Moduls wird vom Runner als `paused` übernommen;
+Teilberichte sind keine abgeschlossenen Ausgaben. Der eigene Serienordner ist für
+separate Ausgabeziele gesperrt. Die Bedienung steht im
+[Handbuch](HANDBUCH.html#stabilitaet-kontrollierter-wiederholungen).
+Die spätere Anbindung von Stabilitätsbefunden an die Codebook-Diagnostik folgt in S10.

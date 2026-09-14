@@ -20,6 +20,7 @@ PROMPT_KEYS = {
     'coverage': (),
     'information_loss': (),
     'codebook_diagnostics': (),
+    'stability': (),
 }
 
 
@@ -29,6 +30,16 @@ def catalog(config, modules):
     result=[]
     for module in modules:
         mid=module['id'];keys=PROMPT_KEYS.get(mid,(mid,));templates=[]
+        if mid == 'stability':
+            diagnostics=config.get('diagnostics',{})
+            settings=diagnostics.get('stability',{}) if isinstance(diagnostics,dict) else {}
+            targets=settings.get('modules',[]) if isinstance(settings,dict) else []
+            required=set(targets) if isinstance(targets,list) and all(isinstance(x,str) for x in targets) else set()
+            while True:
+                expanded=required|{d for m in modules if m['id'] in required for d in m.get('depends_on',[])}
+                if expanded==required:break
+                required=expanded
+            keys=tuple(dict.fromkeys(k for m in modules if m['id'] in required for k in PROMPT_KEYS.get(m['id'],())))
         for key in keys:
             value=prompts.get(key)
             if not isinstance(value,dict):continue
@@ -36,7 +47,9 @@ def catalog(config, modules):
             if not isinstance(system,str) or not isinstance(user,str):continue
             templates.append({'key':key,'system':system,'user':user,
                 'placeholders':sorted(set(re.findall(r'\{([A-Za-z_][A-Za-z0-9_]*)\}',system+'\n'+user)))})
-        if not keys:
+        if mid == 'stability':
+            note='Die Wiederholungen verwenden die konfigurierten Vorlagen ihrer Zielmodule und Vorstufen. Dafür entstehen zusätzliche Modellaufrufe; der anschließende Stabilitätsvergleich selbst benötigt keine Modellanfrage.'
+        elif not keys:
             note='Dieses Modul arbeitet ohne eigenen LLM-Aufruf. Es verarbeitet vorhandene Codierungen oder Analyseergebnisse.'
         elif not templates:
             note='Keine passende Vorlage in dieser Konfiguration vorhanden. Das Modul kann Vorgaben aus dem Programmcode verwenden; hier wird kein Prompt erfunden.'

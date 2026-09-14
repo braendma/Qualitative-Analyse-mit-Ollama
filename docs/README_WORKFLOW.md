@@ -127,3 +127,7 @@ mit Mock-LLM-Antworten. Der Test benötigt kein laufendes Ollama-Modell.
 ## Fehlerbehandlung, Laufverzeichnisse und Wiederaufnahme
 
 Siehe [ROBUSTNESS.md](ROBUSTNESS.md) für Vorprüfung, vollständige Hierarchien, technische Statusfelder, Checkpoints, Kontextgrenzen und Agreement-Voraussetzungen. Neue Ergebnisse liegen unter `workflow_output/LAUF-ID/`. `--resume` akzeptiert nur unveränderte Eingaben und überprüfte Ergebnisse. Die künstlichen Beispieldaten sind in [DEMO_DATA.md](DEMO_DATA.md) beschrieben.
+
+## Optionale kontrollierte Stabilitätsläufe
+
+Das off-default Modul `stability` führt ausgewählte Analysen samt Vorstufen als frische Unterläufe aus und integriert `stability.md` in Markdown- und HTML-Gesamtbericht. Es benötigt `requires_model: true` und `starts_child_runs: true`; Zielauswahl und Anzahl stehen unter `diagnostics.stability`. Der gemeinsame Runner prüft den Plan auch mit `--validate-only`. [Bedienung und Grenzen](HANDBUCH.html#stabilitaet-kontrollierter-wiederholungen), [Konfiguration](CONFIGURATION.md). Es handelt sich um zusätzliche Läufe, keine Wiederverwendung als neue unabhängige Stichprobe.

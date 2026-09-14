@@ -1757,6 +1757,29 @@ pipeline:
 
 
 
+    - id: stability
+      name: Stabilitätsanalyse
+      script: stability_analysis.py
+      enabled: false
+      requires_model: true
+      starts_child_runs: true
+      depends_on: []
+      after_if_enabled: [clusterer, code_verification, blind_coding, coding_agreement, summarizer, swot, meta_swot, person_analysis, person_comparison, contrast_analysis, relation_analysis, ambiguity_analysis, evidence_audit, review_queue, overall_synthesis]
+      cost_profile:
+        class: HOCH
+        recommendation: eher für finale Validierung
+        note: Zusätzliche vollständige Modellläufe mit getrennten Ausgaben. Wiederholungszahl und Ziele vorher prüfen; tatsächliche Modellaufrufzahl hängt vom Material und Reparaturen ab.
+      args: [--config, "{config}", --input-csv, "{input_csv}"]
+      outputs: [stability.json, stability.md]
+      report:
+        title: Stabilitätsanalyse
+        markdown: stability.md
+
+diagnostics:
+  stability:
+    repetitions: 3
+    modules: [blind_coding]
+
 # Kappa requires explicit confirmation AND a configured unique columns.unit_id.
 # Multi-Label uses explicit passage IDs and independent set predictions.
 coding_agreement:
