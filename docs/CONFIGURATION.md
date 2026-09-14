@@ -9,7 +9,7 @@ keine automatische Migration und werden nicht umgeschrieben.
 
 | Schlüssel | Typ / Default | Erlaubte Werte | Bedeutung / Laufzeitwirkung / methodische Wirkung |
 |---|---|---|---|
-| `enabled` | bool / `true` (bereits vorhanden) | `true`, `false` | UI und Runner respektieren den Default. Coverage ist in der gelieferten Konfiguration ausdrücklich `false`. Eine gespeicherte manuelle Auswahl hat Vorrang. |
+| `enabled` | bool / `true` (bereits vorhanden) | `true`, `false` | UI und Runner respektieren den Default. Coverage und Information-Loss sind in der gelieferten Konfiguration ausdrücklich `false`. Eine gespeicherte manuelle Auswahl hat Vorrang. |
 | `after_if_enabled` | Liste von Strings / `[]` | Modul-IDs | Reihenfolge nach den genannten, ebenfalls aktivierten Modulen. Fehlende/deaktivierte Module werden nicht hinzugeschaltet; erfolglose Quellen bleiben diagnostizierbar. Keine Voraussetzung einer erfolgreichen Quelle; Zyklen werden abgelehnt. |
 | `requires_model` | bool / `true` | `true`, `false` | `false` nur für tatsächlich modellfreie Programme. Sind alle ausgewählten Module modellfrei, entfallen Provider-/Modellprüfung und eigener Ollama-Start. Kein methodischer Qualitätsanspruch. |
 | `cost_profile.class` | String / nicht gesetzt | `NIEDRIG`, `MITTEL`, `HOCH`, `SEHR HOCH` | Qualitativer Aufwandshinweis in der Modulauswahl, keine Laufzeitzusage. |
@@ -48,3 +48,36 @@ Personenzuordnung und die expliziten Passage-IDs; sie bestimmen die Nenner. Die
 Diagnose verändert weder Zuordnungen noch Kategorien. Fehlende Passage-IDs werden
 nicht anhand ähnlicher Texte ergänzt. CLI-Pfade und Ergebnisfelder:
 [DIAGNOSTICS](DIAGNOSTICS.md).
+
+## Information-Loss-Audit
+
+`information_loss` nutzt dieselben Modulfelder, ohne zusätzliche Modellparameter.
+Die vollständige ausgelieferte Definition wartet über `after_if_enabled` auf alle
+elf ebenfalls ausgewählten analytischen Quellen. Beispiel mit zwei Quellen:
+
+```yaml
+- id: information_loss
+  name: Information-Loss-Audit
+  script: information_loss_analysis.py
+  enabled: false
+  requires_model: false
+  depends_on: []
+  after_if_enabled: [swot, meta_swot]
+  cost_profile:
+    class: MITTEL
+    recommendation: für iterative Arbeit geeignet
+    note: Keine zusätzlichen Modellaufrufe; Prüfpunkte am Original beurteilen.
+  args: [--config, "{config}", --input-csv, "{input_csv}"]
+  outputs: [information_loss.json, information_loss.md]
+  report:
+    title: Information-Loss-Audit
+    markdown: information_loss.md
+```
+
+Wortlisten und Vorschaugrenzen sind derzeit feste, versionierte Programmregeln,
+keine YAML-Optionen. Sie sind vollständig in [DIAGNOSTICS.md](DIAGNOSTICS.md)
+dokumentiert. Die methodisch relevanten Referenzkanten stammen aus den
+`depends_on`- und Dateiargumenten der ausgewählten Quellmodule; bloßes Warten über
+`after_if_enabled` erfindet keinen inhaltlichen Analyseübergang. Fehlgeschlagene
+Quellen führen zu vorläufigen Ergebnissen und gezielter Fehlerhilfe. Wird das
+Quellenproblem behoben, berechnet der bestehende Resume die Diagnose erneut.

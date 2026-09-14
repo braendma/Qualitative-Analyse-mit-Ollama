@@ -3,7 +3,19 @@
 
 def failure_help(text):
     value=str(text).lower()
-    if any(x in value for x in ('out of memory','cuda error','cuda allocation','nicht genügend speicher')):
+    if any(x in value for x in ('diagnose abgelehnt', 'output-prüfsumme fehlt')):
+        kind='diagnostic_integrity'
+        cause='Die Diagnose kann Eingaben, Konfiguration oder Analyseergebnisse nicht dem gespeicherten Lauf zuordnen.'
+        action='Unveränderte Originaldateien dieses Laufs und den Herkunftsnachweis prüfen. Geänderte Daten in einem neuen Lauf auswerten. Prüfsummen oder Prüfregeln nicht von Hand ändern. Ein höheres Modelllimit behebt dieses Problem nicht.'
+    elif any(x in value for x in ('diagnoseausgabe existiert bereits', 'diagnoseausgaben dürfen')):
+        kind='diagnostic_output'
+        cause='Die gewählten Diagnoseausgaben würden vorhandene Dateien überschreiben.'
+        action='Für den separaten Diagnoseexport neue Ausgabedateinamen oder einen neuen Zielordner wählen. Eingaben und vorhandene Ergebnisse erhalten.'
+    elif any(x in value for x in ('modul coverage lieferte unvollständige', 'modul information_loss lieferte unvollständige')):
+        kind='diagnostic_sources'
+        cause='Mindestens eine ausgewählte Analysequelle ist unvollständig oder nicht verifizierbar. Die Diagnose ist vorläufig.'
+        action='Zuerst das vorher fehlgeschlagene Analysenmodul und dessen Fehlerhilfe prüfen. Nach Behebung den Lauf fortsetzen; die Diagnose wird erneut berechnet. Bei veränderten Quelldateien einen neuen Lauf anlegen. Das Antwortlimit der Diagnose muss nicht erhöht werden.'
+    elif any(x in value for x in ('out of memory','cuda error','cuda allocation','nicht genügend speicher')):
         kind='memory'
         cause='Der Arbeitsspeicher oder Grafikspeicher reicht für diese Anfrage nicht aus.'
         action='Andere GPU-Anwendungen schließen und erneut prüfen. Falls nötig Parallelität reduzieren oder ein kleineres Modell wählen; geänderte Einstellungen erfordern einen neuen Lauf.'

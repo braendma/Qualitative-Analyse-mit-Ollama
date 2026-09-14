@@ -18,6 +18,7 @@ PROMPT_KEYS = {
     'review_queue': (),
     'overall_synthesis': ('overall_synthesis',),
     'coverage': (),
+    'information_loss': (),
 }
 
 

@@ -10,7 +10,7 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
 from coding_validation_common import Segment
-from diagnostic_sources import make_snapshot, dependency_edges
+from diagnostic_sources import make_snapshot, dependency_edges, project_stage
 from information_loss_core import analyze_information_loss, render_information_loss
 from information_loss_analysis import main as loss_main
 from runtime_support import atomic_json, file_hash
@@ -144,6 +144,22 @@ class InformationLossTests(unittest.TestCase):
         # Scheduling dependency without consumed artifact is not semantic lineage.
         cfg['pipeline']['modules'][1]['args'][1] = 'different.json'
         self.assertEqual(dependency_edges(cfg), [('meta_swot', 'overall_synthesis')])
+        cfg['pipeline']['modules'][1]['enabled'] = False
+        self.assertEqual(dependency_edges(cfg), [])
+
+    def test_input_cluster_boundary_and_projected_position_explanations(self):
+        snap = snapshot(stage(), stage(), clusterer=stage(row('cluster', ['s2'], scope='input_association')))
+        result = diagnose(snap)
+        self.assertEqual(result['input_to_clusters']['unreferenced_coding_rows'], ['s1', 's3'])
+        self.assertEqual(result['input_to_clusters']['unreferenced_material_units'], [['s3']])
+        projected=project_stage('person_comparison', {
+            'gemeinsame_muster': [], 'typen': [],
+            'zentrale_unterschiede': [{'thema':'Wahl', 'beschreibung':'Verschieden',
+                'personenpositionen':[{'person':'P1','position':'Vielleicht möglich'}, {'person':'P2','position':'Unklar'}]}],
+            'nicht_zugeordnete_personen': [{'person':'P1','begruendung':'Möglicherweise ungeeignet'}]})
+        self.assertIn('P1: Vielleicht möglich',projected['records'][0]['text'])
+        self.assertIn('P2: Unklar',projected['records'][0]['text'])
+        self.assertEqual(projected['records'][1]['text'],'Möglicherweise ungeeignet')
 
     def test_cli_partial_retry_checks_hashes_and_preserves_originals(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -181,6 +197,7 @@ class InformationLossTests(unittest.TestCase):
             self.assertEqual(result['processing_status'], 'completed')
             self.assertEqual(len(result['transitions'][0]['review_items']), 1)
             self.assertEqual(result['source_artifacts']['meta_swot']['sha256'], file_hash(root/'meta.json'))
+            self.assertIn('Zwischenprodukte: swot.json → meta.json', outputs[1].read_text(encoding='utf-8'))
             for path, content in protected_before.items():
                 self.assertEqual(path.read_bytes(), content)
             with self.assertRaisesRegex(ValueError, 'existiert bereits'):

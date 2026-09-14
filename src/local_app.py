@@ -678,6 +678,8 @@ class Handler(BaseHTTPRequestHandler):
                 '/capacity.js':'capacity_ui.js','/providers.js':'providers_ui.js','/passage-ids.js':'passage_ids_ui.js','/person-identity.js':'person_identity_ui.js','/logo.jpg':'brand.jpg','/favicon.ico':'brand.jpg',
                 '/handbuch':'../docs/HANDBUCH.html','/HANDBUCH.html':'../docs/HANDBUCH.html','/manual.css':'../docs/manual.css',
                 '/BEDIENOBERFLAECHE.md':'../docs/BEDIENOBERFLAECHE.md',
+                '/DIAGNOSTICS.md':'../docs/DIAGNOSTICS.md','/CONFIGURATION.md':'../docs/CONFIGURATION.md',
+                '/METHODOLOGY.md':'../docs/METHODOLOGY.md','/ROBUSTNESS.md':'../docs/ROBUSTNESS.md',
                 '/KI_ANBIETER.md':'../docs/KI_ANBIETER.md','/EXTENSIONS.md':'../docs/EXTENSIONS.md','/RELEASE_NOTES.md':'../docs/RELEASE_NOTES.md'}
         for screenshot in (ROOT.parent/'docs/screenshots').glob('*.jpg'):
             assets['/screenshots/'+screenshot.name]='../docs/screenshots/'+screenshot.name

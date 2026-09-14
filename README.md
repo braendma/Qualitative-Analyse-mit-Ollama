@@ -1,9 +1,12 @@
 # Qualitative Analyse mit Ollama
 
-Im aktuellen Entwicklungsstand ergänzt **Coverage und Blind Spots** die 15
-Basismodule als optionale, standardmäßig ausgeschaltete Diagnose. Sie vergleicht
-Personen- und Kategorieanteile mit gespeicherten Belegreferenzen und benötigt keine
-zusätzlichen Modellaufrufe. [Bedienung](docs/HANDBUCH.html#coverage) ·
+Im aktuellen Entwicklungsstand ergänzen **Coverage und Blind Spots** sowie der
+**Information-Loss-Audit** die 15 Basismodule. Beide sind optional, standardmäßig
+ausgeschaltet und benötigen keine zusätzlichen Modellaufrufe. Coverage vergleicht
+Personen- und Kategorieanteile mit gespeicherten Belegreferenzen. Der Audit zeigt
+Referenzänderungen und manuelle Prüfpunkte zu Unsicherheit, Gegenpositionen und
+Kontext zwischen Analysestufen. [Coverage bedienen](docs/HANDBUCH.html#coverage) ·
+[Audit mit Beispiel](docs/HANDBUCH.html#information-loss-audit) ·
 [Methodik und Grenzen](docs/DIAGNOSTICS.md) · [Konfiguration](docs/CONFIGURATION.md).
 
 ## Neu in 0.4.0-beta.1

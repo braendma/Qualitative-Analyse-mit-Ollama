@@ -9,6 +9,16 @@ analytischen Module und aktiviert keine eigenen Vorstufen. Ergebnisse stehen in
 Personen-/Passagen-/Kategorie-Nenner und Messgrenzen: [DIAGNOSTICS](DIAGNOSTICS.md).
 Konfigurationsfelder und Defaults: [CONFIGURATION](CONFIGURATION.md).
 
+## Optionaler Information-Loss-Audit
+
+Der ebenfalls optionale `information_loss`-Audit folgt demselben Prinzip:
+keine eigenen Modellaufrufe oder zusätzlich aktivierten Vorstufen. Er vergleicht
+ausgewählte konsumierte Quellübergänge, zeigt anfänglich fehlende Clusterzuordnungen
+und stellt manuelle Prüfpunkte zu sprachlicher Vorsicht, Gegenpositionen und Kontext
+bereit. Die Ausgabe ist kein semantisches Verlustmaß. Aufwand MITTEL, standardmäßig
+ausgeschaltet; Ergebnisse in `information_loss.json`, `information_loss.md` und im
+abschließenden HTML-Bericht. [Anleitung](HANDBUCH.html#information-loss-audit).
+
 ## Mehrfachcodierung je Passage
 
 `coding_agreement.label_mode: multi_label` benötigt eine explizite Spalte `columns.unit_id`, im Beispiel `PassageID`. Mehrere Codierzeilen derselben Passage müssen exakt denselben Text und dieselbe Person haben. Gleiche Texte allein werden nicht automatisch zusammengelegt. Fehlende oder widersprüchliche Passage-IDs werden vor dem ersten Modellaufruf abgewiesen.

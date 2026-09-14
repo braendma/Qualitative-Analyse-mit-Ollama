@@ -24,7 +24,10 @@ class FullPipelineTests(unittest.TestCase):
     def test_coverage_integrated_after_sources_and_in_export(self):
         self._run_pipeline(True, coverage=True)
 
-    def _run_pipeline(self,multi,partial_module=None,coverage=False):
+    def test_information_loss_with_coverage_integrated_and_resumed(self):
+        self._run_pipeline(True, coverage=True, information_loss=True)
+
+    def _run_pipeline(self,multi,partial_module=None,coverage=False,information_loss=False):
         with tempfile.TemporaryDirectory() as tmp:
             temp=Path(tmp)
             cfg=yaml.safe_load((ROOT/'config/config_v2.yaml').read_text(encoding='utf-8'))
@@ -32,6 +35,8 @@ class FullPipelineTests(unittest.TestCase):
             for module in cfg['pipeline']['modules']:
                 if module['id']=='coverage':
                     module['enabled']=coverage
+                if module['id']=='information_loss':
+                    module['enabled']=information_loss
             cfg['coding_agreement']['label_mode']='multi_label' if multi else 'unspecified'
             if multi: cfg['llm']['hierarchical_synthesis']={'enabled':True,'force':True,'batch_items':12,'summary_chars':1200}
             cfg['context']={}
@@ -73,6 +78,11 @@ class FullPipelineTests(unittest.TestCase):
                     self.assertNotIn('coverage', manifest['completed_steps'])
                     partial=json.loads((run/'coverage.json').read_text(encoding='utf-8'))
                     self.assertEqual(partial['processing_status'],'incomplete')
+                if information_loss:
+                    self.assertNotIn('information_loss', manifest['completed_steps'])
+                    partial_loss=json.loads((run/'information_loss.json').read_text(encoding='utf-8'))
+                    self.assertEqual(partial_loss['processing_status'],'incomplete')
+                    self.assertEqual(manifest['module_errors']['information_loss']['kind'],'diagnostic_sources')
             if partial_module:
                 trace=[json.loads(line) for line in (temp/'requests.jsonl').read_text().splitlines()]
                 first_success=next(x for x in trace if x['module']==partial_module)
@@ -107,6 +117,17 @@ class FullPipelineTests(unittest.TestCase):
                 self.assertEqual(diagnosis['stages']['swot']['scopes']['direct']['distribution']['unit_coverage'],1)
                 self.assertIn('Coverage und Blind Spots',(run/'gesamtbericht.html').read_text(encoding='utf-8'))
                 self.assertGreater(manifest['completed_steps'].index('coverage'),manifest['completed_steps'].index('overall_synthesis'))
+            if information_loss:
+                loss=json.loads((run/'information_loss.json').read_text(encoding='utf-8'))
+                self.assertEqual(loss['processing_status'],'completed')
+                self.assertEqual(loss['input_to_clusters']['unreferenced_coding_rows'],[])
+                transitions={(e['source'],e['target']):e for e in loss['transitions']}
+                self.assertIn(('person_comparison','contrast_analysis'),transitions)
+                self.assertNotIn(('relation_analysis','ambiguity_analysis'),transitions)
+                self.assertIsNone(transitions['person_comparison','contrast_analysis']['reference_comparison'])
+                self.assertIn('Information-Loss-Audit',(run/'gesamtbericht.html').read_text(encoding='utf-8'))
+                self.assertIn('Referenzarten:',(run/'gesamtbericht.html').read_text(encoding='utf-8'))
+                self.assertGreater(manifest['completed_steps'].index('information_loss'),manifest['completed_steps'].index('overall_synthesis'))
             self.assertTrue((run/'review_queue.html').is_file())
             # Diagnostic adapters must accept the real saved module schemas,
             # not merely handcrafted fixtures or complete input inventories.

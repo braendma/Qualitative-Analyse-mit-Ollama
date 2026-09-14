@@ -2,8 +2,8 @@
 
 Entwicklungsstand: Die gemeinsame Quellenauswertung und Coverage sind in CLI,
 Pipeline, Modulauswahl, Promptansicht, Fortschritt und Berichte integriert.
-Der Information-Loss-Audit ist als Kern und separate CLI verfügbar; die Einbindung
-in die Modulauswahl folgt. Weitere Diagnosemodule werden darauf aufbauend ergänzt. Dieser Abschnitt
+Der Information-Loss-Audit ist ebenfalls in CLI, Modulauswahl, Fortschritt,
+Beispielhilfe und Berichte integriert. Weitere Diagnosemodule folgen. Dieser Abschnitt
 beschreibt den überprüfbaren Datenvertrag und die technische Schnittstelle.
 
 ## Referenzen eindeutig unterscheiden
@@ -155,13 +155,21 @@ python src/information_loss_analysis.py --config /pfad/zum/lauf/config_snapshot.
 
 Die Pflichtparameter und Überschreibschutzregeln entsprechen Coverage. Die
 Standardausgaben heißen `information_loss.json` und `information_loss.md`.
-Derzeit erfolgt der Aufruf separat; ein UI-Häkchen wird erst mit abgeschlossener
-Runner-/UI-Integration dokumentiert. In alten Laufständen müssen Konfiguration
+Unter **Analyse → Analysemodule auswählen** ist **Information-Loss-Audit**
+standardmäßig ausgeschaltet. Aufwand: **MITTEL · für iterative Arbeit geeignet**;
+es erfolgen keine zusätzlichen Modellaufrufe. Der Audit wartet auf die ebenfalls
+gewählten analytischen Module und aktiviert keine Vorstufen. MD/JSON stehen im
+Ergebnisbereich, die Berichtsektion im abschließenden HTML. Ohne analytische
+Vorstufen zeigt er den Materialbestand und erklärt, welche Auswahl fehlt.
+[Bedienung und Beispiel](HANDBUCH.html#information-loss-audit).
+In alten Laufständen müssen Konfiguration
 und Eingabe exakt zum gespeicherten Herkunftsnachweis passen.
 
 ### Was die Ausgaben bedeuten
 
-- `transitions`: ausschließlich konfigurierte, tatsächlich konsumierte Quellübergänge.
+- `material` / `input_to_clusters`: Materialbestand und vorhandene Clusterzuordnungen;
+  Codierzeilen ohne Cluster und davon getrennt Materialeinheiten ohne Cluster.
+- `transitions`: ausschließlich ausgewählte, konfigurierte, tatsächlich konsumierte Quellübergänge.
 - `reference_comparison`: nicht weiter referenzierte, neue und gemeinsame
   Codierzeilen; daneben separat eindeutige Materialeinheiten. Personenanteile vor
   und nach dem Übergang und nicht weiter referenzierte Codes sind beschreibend.
@@ -198,6 +206,12 @@ Negation, Zitat, Gegenposition und Originalkontext auf. Es gibt keinen Verlustsc
 
 Geprüft werden die im Adapter dokumentierten analytischen Textfelder, nicht der
 gesamte Inhalt jedes Zwischenprodukts und nicht die Roh-CSV auf sprachliche Nuancen.
+Diese Textfelder sind `thema`, `definition`, `summary`, `verdichtung`, `analyse`,
+`aussage`, `beschreibung`, `abweichung`, `position_a`, `position_b`, `cluster_name`,
+`typ_name`, `muster`, `bezugs_muster`, `begruendung`, `bedeutung`, `einordnung` sowie
+die ausdrücklich gespeicherten `personenpositionen` und `merkmale` eines Eintrags.
+Globale Freitext-Zusammenfassungen ohne aussagenspezifische Referenzen werden nicht
+heimlich auf alle Textstellen des Moduls verteilt.
 Ein Referenzwechsel beweist keinen Verlust; erhaltene Referenzen beweisen keinen
 Bedeutungserhalt. Der fertige HTML-Bericht entsteht erst nach den Modulen und ist
 hier kein eigener Diagnoseeingang.

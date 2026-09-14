@@ -1721,6 +1721,23 @@ pipeline:
         title: Coverage und Blind Spots
         markdown: coverage.md
 
+    - id: information_loss
+      name: Information-Loss-Audit
+      script: information_loss_analysis.py
+      enabled: false
+      requires_model: false
+      depends_on: []
+      after_if_enabled: [clusterer, summarizer, swot, meta_swot, person_analysis, person_comparison, contrast_analysis, relation_analysis, ambiguity_analysis, evidence_audit, overall_synthesis]
+      cost_profile:
+        class: MITTEL
+        recommendation: für iterative Arbeit geeignet
+        note: Keine zusätzlichen Modellaufrufe. Vergleicht Referenzen ausgewählter Analysen; Prüfpunkte müssen am Original beurteilt werden.
+      args: [--config, "{config}", --input-csv, "{input_csv}"]
+      outputs: [information_loss.json, information_loss.md]
+      report:
+        title: Information-Loss-Audit
+        markdown: information_loss.md
+
 
 
 # Kappa requires explicit confirmation AND a configured unique columns.unit_id.

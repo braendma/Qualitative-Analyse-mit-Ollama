@@ -22,7 +22,7 @@ class PromptViewTests(unittest.TestCase):
             cfg['llm']['api_key'] = 'PRIVATE_API_KEY'
             data = catalog(cfg, RUNNER.normalize_modules(cfg))
             self.assertEqual(len(data['modules']), len(cfg['pipeline']['modules']))
-            deterministic = {'coding_agreement', 'review_queue', 'coverage'}
+            deterministic = {'coding_agreement', 'review_queue', 'coverage', 'information_loss'}
             for module in data['modules']:
                 if module['id'] in deterministic:
                     self.assertEqual(module['templates'], [])

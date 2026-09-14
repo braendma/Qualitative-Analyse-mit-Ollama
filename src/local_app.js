@@ -21,7 +21,8 @@ const moduleHelp = {
   evidence_audit:'Prüft ausgewählte Befunde auf Gegenbelege aus den vorherigen Analysen.',
   review_queue:'Erstellt die interaktive Liste zur manuellen Prüfung von Codierungen und Modellvorschlägen.',
   overall_synthesis:'Führt die vorherigen Analyseergebnisse zu einer Gesamtsynthese zusammen.',
-  coverage:'Zeigt Personen- und Kategorieanteile in gespeicherten Belegen. Wertet ausgewählte Analysen aus, ohne zusätzliche Vorstufen oder Modellaufrufe zu starten. Ohne weitere Analysen erscheint nur die Materialverteilung.'
+  coverage:'Zeigt Personen- und Kategorieanteile in gespeicherten Belegen. Wertet ausgewählte Analysen aus, ohne zusätzliche Vorstufen oder Modellaufrufe zu starten. Ohne weitere Analysen erscheint nur die Materialverteilung.',
+  information_loss:'Zeigt Prüfpunkte zu Unsicherheit, Gegenpositionen und Kontext bei der Verdichtung. Kein automatisches Urteil über Informationsverlust; Ergebnisse früherer Läufe werden nicht übernommen.'
 };
 function appendModuleProfile(target,module){
   const profile=module.cost_profile;
@@ -34,6 +35,9 @@ function updateModuleSelection(){
   while(changed){changed=false;state.modules.forEach(m=>{if(required.has(m.id))m.depends_on.forEach(id=>{if(!required.has(id)){required.add(id);changed=true;}});});}
   const added=state.modules.filter(m=>required.has(m.id)&&!selected.has(m.id)).map(m=>m.name);
   $('module-selection').textContent=selected.size?`${selected.size} ${selected.size===1?"Modul":"Module"} ausgewählt · ${required.size} ${required.size===1?"Modul wird":"Module werden"} ausgeführt.`+(added.length?' Automatisch benötigte Vorstufen: '+added.join(', ')+'.':' Keine zusätzlichen Vorstufen erforderlich.'):'Noch kein Modul ausgewählt. Setze mindestens ein Häkchen.';
+  if(selected.size && state.modules.filter(m=>required.has(m.id)).every(m=>m.requires_model===false)){
+    $('module-selection').textContent+=' Reiner Diagnoselauf: Kein Modell oder API-Schlüssel nötig. Ohne analytische Vorstufen ist nur der Materialbestand auswertbar.';
+  }
 }
 const columnLabels = {segment:'Text / Segment *',person:'Dokumentkennung / vorhandene Personen-ID *',code:'Vergebener Code *',segment_id:'Eindeutige Zeilen-ID (optional)',unit_id:'Passage-ID (für Mehrfachcodierung)'};
 function bookDescription(c){return 'Definition: '+c.definition+' · Einschluss: '+(c.einschluss||'—')+' · Ausschluss: '+(c.ausschluss||'—')+' · Abgrenzung: '+(c.abgrenzung||'—')+' · Ankerbeispiele: '+(c.ankerbeispiel||'—');}

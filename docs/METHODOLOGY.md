@@ -4,8 +4,8 @@ Entwicklungshinweis: Die gemeinsame Grundlage für neue wissenschaftliche Diagno
 unterscheidet direkte Segmentbelege, Eingabezuordnungen, Personenreferenzen und
 Synthese-Quellengruppen. Vollständige Register zählen nicht automatisch als
 ausgewählte Evidenz. Datenvertrag und Grenzen stehen in [DIAGNOSTICS.md](DIAGNOSTICS.md).
-Coverage ist bereits integriert; der Information-Loss-Audit ist zunächst als
-separate CLI verfügbar. Die weiteren Diagnosemodule folgen.
+Coverage und Information-Loss-Audit sind als optionale Module in Oberfläche und
+CLI integriert. Die weiteren Diagnosemodule folgen.
 
 ### Coverage: Repräsentation in gespeicherten Analysebelegen
 

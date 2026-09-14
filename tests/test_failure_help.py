@@ -6,6 +6,16 @@ from failure_help import failure_help
 
 
 class FailureHelpTests(unittest.TestCase):
+    def test_diagnostic_failures_explain_sources_and_integrity_without_model_tuning(self):
+        for marker, kind in [('Diagnose abgelehnt', 'diagnostic_integrity'),
+                             ('Diagnoseausgabe existiert bereits', 'diagnostic_output'),
+                             ('Modul information_loss lieferte unvollständige Ergebnisse', 'diagnostic_sources'),
+                             ('Modul coverage lieferte unvollständige Ergebnisse', 'diagnostic_sources')]:
+            result=failure_help(marker+' PRIVATE_CONTENT')
+            self.assertEqual(result['kind'],kind)
+            self.assertNotIn('PRIVATE_CONTENT',str(result))
+        self.assertIn('erneut berechnet',result['action'])
+
     def test_invalid_audit_references_explain_preserved_results_and_validation(self):
         for marker in ('Audit enthält ungültige Gegenbeleg-IDs.', 'Unbekannte oder doppelte Audit-ID.', 'Audit unvollständig: erwartete Audit-IDs fehlen.'):
             result=failure_help(marker+' SECRET_TEST')

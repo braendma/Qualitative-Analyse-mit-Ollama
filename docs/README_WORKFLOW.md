@@ -2,19 +2,25 @@ Mehrfachcodierung, Prüfliste und mehrstufige Gesamtsynthese: [EXTENSIONS.md](EX
 
 # Erweiterung: Coding-Validierung
 
-Die 15 Basismodule bleiben verfügbar. Optional ergänzt `coverage` ihre Ergebnisse:
+Die 15 Basismodule bleiben verfügbar. Optional ergänzen `coverage` und
+`information_loss` ihre Ergebnisse:
 
 ```mermaid
 flowchart LR
   Input[Exportierte Codierzeilen] --> Analysen[Ausgewählte Analysemodule]
   Input --> Coverage[Coverage: modellfreie Diagnose]
   Analysen -. verifizierte ausgewählte Quellen .-> Coverage
+  Analysen -. tatsächliche Quellübergänge .-> Audit[Information-Loss: Referenzen und Prüfpunkte]
+  Input --> Audit
+  Audit --> Bericht
   Coverage --> Bericht[Markdown / JSON / HTML]
 ```
 
 Die gestrichelte Verbindung schaltet keine Analyse zusätzlich ein. Technische
 Ausfälle werden im vorläufigen Bericht ausgewiesen und bei Resume erneut geprüft.
-Die Diagnose ist standardmäßig aus; [Felder und Beispiel](CONFIGURATION.md).
+Beide Diagnosen sind standardmäßig aus und benötigen keine zusätzlichen
+Modellaufrufe. Sie teilen die vorhandene Ausführungs-/Resume-Logik und den
+Überschreibschutz; [Felder und Beispiel](CONFIGURATION.md).
 
 Die in Entwicklung befindlichen wissenschaftlichen Diagnosen verwenden dieselben
 deklarativen Modul-Outputs und Run-Manifeste. Die bereits getestete gemeinsame

@@ -19,8 +19,11 @@ class OptionalDiagnosticsTests(unittest.TestCase):
             opts.pop('modules')
             result = app.save(pid, opts)
             self.assertNotIn('coverage', [m['id'] for m in result['modules']])
+            self.assertNotIn('information_loss', [m['id'] for m in result['modules']])
             result = app.save(pid, {**opts, 'modules': ['coverage']})
             self.assertEqual(result['modules'], [{'id':'coverage','name':'Coverage und Blind Spots','requires_model':False}])
+            result = app.save(pid, {**opts, 'modules': ['information_loss']})
+            self.assertEqual(result['modules'], [{'id':'information_loss','name':'Information-Loss-Audit','requires_model':False}])
 
     def test_optional_order_waits_only_for_enabled_modules_without_requiring_success(self):
         raw = [{'id':'coverage','script':'coverage_analysis.py','after_if_enabled':['source','absent']},
@@ -37,7 +40,7 @@ class OptionalDiagnosticsTests(unittest.TestCase):
     def test_actual_app_run_without_ollama_or_api_key(self):
         with tempfile.TemporaryDirectory() as tmp:
             app=App(tmp);pid=app.create('Synthetic coverage',True)['id']
-            app.save(pid,{**settings(app),'modules':['coverage'],'parallel_workers':8})
+            app.save(pid,{**settings(app),'modules':['coverage','information_loss'],'parallel_workers':8})
             # Starting a pure diagnostic must not even call provider/capacity checks.
             with patch.object(app,'authorize_llm',side_effect=AssertionError('No model needed')), \
                  patch('managed_ollama.preflight',side_effect=AssertionError('No GPU needed')):
@@ -54,6 +57,12 @@ class OptionalDiagnosticsTests(unittest.TestCase):
             self.assertEqual(result['material']['material_units'],43)
             html=app.artifact(pid,job['id'],'gesamtbericht.html').read_text(encoding='utf-8')
             self.assertIn('Coverage und Blind Spots',html)
+            self.assertIn('Information-Loss-Audit',html)
+            loss=json.loads(app.artifact(pid,job['id'],'information_loss.json').read_text(encoding='utf-8'))
+            self.assertEqual(loss['model_calls'],0)
+            self.assertEqual(loss['material']['material_units'],43)
+            self.assertEqual(loss['transitions'],[])
+            self.assertIn('Keine analytischen Quellübergänge ausgewählt',html)
 
 
 if __name__ == '__main__':

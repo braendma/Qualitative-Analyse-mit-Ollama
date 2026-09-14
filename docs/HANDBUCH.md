@@ -474,3 +474,26 @@ Die Tabelle vergleicht den Anteil jeder Person am Material und an der Evidenzaus
 **Ergebnisbeispiel ansehen** zeigt ein künstliches Beispiel: P01 hat eine Passage mit zwei Codes, P02 eine mit einem Code. Beide stellen 50 % der zwei Materialeinheiten; bei ausschließlicher Referenz auf P01 stellt diese Person 100 % der Evidenzauswahl. Es bleiben drei Codierzeilen für die Kategorieauswertung. **Prompts ansehen** erklärt, dass dieses Modul keinen eigenen LLM-Aufruf benötigt.
 
 [Methodik und technische Details](DIAGNOSTICS.md) · [Künstliches Ergebnisbeispiel](BEISPIELE.html#module-coverage).
+
+
+## Information-Loss-Audit
+
+Unter **Analyse → Analysemodule auswählen** lässt sich **Information-Loss-Audit** ergänzen. Standardmäßig ist das Modul ausgeschaltet. Aufwand: **MITTEL · für iterative Arbeit geeignet**. Der technische Vergleich benötigt keine zusätzlichen Modellaufrufe; die manuelle Prüfung kann Zeit beanspruchen.
+
+Wähle zuerst die Analysen, deren Verdichtung du prüfen möchtest, beispielsweise SWOT und Meta-SWOT, und ergänze den Audit. Er läuft nach den ausgewählten Analysen, aktiviert aber keine Vorstufen. Zwischen unabhängigen Analysezweigen wird kein Übergang erfunden. Ergebnisse früherer Läufe werden nicht automatisch eingelesen.
+
+Unter **Ergebnisse** findest du `information_loss.md` und `information_loss.json`. Nach erfolgreichem Gesamtworkflow ist der Audit auch Bestandteil des HTML-Berichts. Öffne dort den Abschnitt **Information-Loss-Audit**. Er zeigt zunächst das Ausgangsmaterial und fehlende Clusterzuordnungen, dann die Referenzänderungen je Analyseschritt.
+
+Prüfe anschließend die angezeigten Aussagen und Gegenpositionen am Original. Eintragsschlüssel und Segment-IDs führen zu den Stellen in den genannten Zwischenprodukten und im Export. Personenanteile zählen explizite Passagen einmal; ohne Passage-ID zählt jede Codierzeile. Reine Personenreferenzen oder unverknüpfte Quellengruppen ergeben keinen geschätzten Segmentverlust.
+
+Die Sprachprüfung nutzt einfache deutsche Wortlisten. Sie versteht weder Negationen noch Synonyme zuverlässig. Auch die Zahl der Prüfpunkte ist keine Fehlerquote. Aus geringer Häufigkeit folgt keine inhaltliche Minderheitenposition. Der Audit verändert weder Codes noch Ergebnisse automatisch.
+
+Sehr lange Texte erscheinen als gekennzeichnete Vorschau mit höchstens 1.200 Zeichen; maximal 50 mögliche Nachfolgeeinträge werden angezeigt. Die Wortlisten prüfen trotzdem die vollständigen projizierten Texte aller Kandidaten. Weitere Kandidaten und vollständige Texte sind im angegebenen Originalartefakt nachzulesen.
+
+Fehlt eine ausgewählte Quelle wegen eines Fehlers, ist die Diagnose vorläufig. Behebe die gemeldete Ursache und setze den Lauf fort. Ohne ausgewählte Analysen zeigt der Audit nur den Materialbestand und einen Hinweis zur Modulauswahl; ein reiner Diagnoselauf benötigt kein Ollama und keinen API-Schlüssel.
+
+**Ergebnisbeispiel ansehen** öffnet das folgende künstliche Beispiel. **Prompts ansehen** erklärt, dass keine eigene LLM-Abfrage erfolgt. Die fachlichen Grenzen und alle Wortlisten stehen unter [Methodik und technische Details](DIAGNOSTICS.md).
+
+Künstliches Beispiel: SWOT „Vielleicht erleichtern feste Zeiten die Planung teilweise.“ → Meta-SWOT „Feste Zeiten erleichtern immer die Planung.“ Beide nennen S01. Die Referenz bleibt, die Formulierung wird zum Prüfpunkt. Das ist kein bestätigter Fehler; Negation, Synonyme und Originalkontext müssen geprüft werden.
+
+[Künstliches Ergebnisbeispiel](BEISPIELE.html#module-information_loss).

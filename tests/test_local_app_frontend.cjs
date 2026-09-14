@@ -43,6 +43,14 @@ test('optional diagnostics stay off by default and explain their cost',()=>{
   assert.equal(app.node('modules').children[1].children[0].children[0].checked,true);
 });
 
+test('pure diagnostics explain model-free selection but generative stages remove that claim',()=>{
+  const app=setup();
+  app.run("state.modules=[{id:'clusterer',depends_on:[]},{id:'information_loss',depends_on:[],requires_model:false}]; document.querySelectorAll=()=>[{value:'information_loss'}]; updateModuleSelection();");
+  assert.match(app.node('module-selection').textContent,/Kein Modell oder API-Schlüssel nötig/);
+  app.run("document.querySelectorAll=()=>[{value:'information_loss'},{value:'clusterer'}]; updateModuleSelection();");
+  assert.doesNotMatch(app.node('module-selection').textContent,/Kein Modell oder API-Schlüssel nötig/);
+});
+
 test('person grouping requires confirmation, counts unique IDs and clears approval after editing',async()=>{
   const app=setup();app.loadIdentity();
   assert.equal(app.run('personIdentityReady()'),false);

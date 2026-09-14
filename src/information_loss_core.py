@@ -108,6 +108,12 @@ def analyze_information_loss(snapshot, edges):
     inputs, stages = snapshot['inputs'], snapshot['stages']
     units = material_units(inputs)
     unit_for_id = {sid: key for key, ids in units.items() for sid in ids}
+    initial = _view(stages.get('clusterer'), inputs)
+    initial_comparison = {'status': 'not_measurable', 'reason': initial.get('reason', 'unlinked_records')}
+    if initial['measurable'] and initial['segment_measurable']:
+        initial_comparison = {'status': 'available',
+                              'unreferenced_coding_rows': sorted(inputs.keys() - initial['ids']),
+                              'unreferenced_material_units': [ids for ids in units.values() if not set(ids) & initial['ids']]}
     transitions = []
     for source, target in sorted(set(tuple(edge) for edge in edges)):
         if source == target:
@@ -147,6 +153,8 @@ def analyze_information_loss(snapshot, edges):
                      any(not row['valid'] for row in stage['records']) for stage in stages.values())
     return {'schema_version': 1, 'processing_status': 'incomplete' if incomplete else 'completed',
             'model_calls': 0, 'input_fingerprint': snapshot['input_fingerprint'],
+            'material': {'coding_rows': len(inputs), 'material_units': len(units)},
+            'input_to_clusters': initial_comparison,
             'methodological_note': NOTE, 'transitions': transitions,
             'limits': ['Kein semantisches Verlustmaß; keine Bewertung der Codierungsqualität.',
                        'Der Prüftext umfasst die dokumentierten Textfelder des Diagnoseadapters, keine vollständigen Zwischenprodukte.',
@@ -172,13 +180,28 @@ def render_information_loss(result):
     if result['processing_status'] != 'completed':
         lines += ['Vorläufige Diagnose: Quelle unvollständig oder ungültig. Fehler beheben und Lauf fortsetzen.', '']
     lines += ['## Grenzen', ''] + ['- ' + markdown_escape(limit) for limit in result['limits']] + ['']
+    lines += ['## Ausgangsmaterial und Clusterzuordnung', '',
+              f"{result['material']['coding_rows']} Codierzeilen, {result['material']['material_units']} Materialeinheiten.", '']
+    initial = result['input_to_clusters']
+    if initial['status'] == 'available':
+        lines += [f"{len(initial['unreferenced_material_units'])} Materialeinheiten ohne Clusterzuordnung.", '',
+                  'Codierzeilen ohne Clusterzuordnung: ' + (', '.join(map(markdown_escape, initial['unreferenced_coding_rows'])) or 'keine'), '']
+    else:
+        lines += ['Clusterzuordnung nicht bestimmbar: ' + markdown_escape(initial['reason']), '']
+    if not result['transitions']:
+        lines += ['Keine analytischen Quellübergänge ausgewählt. Die gewünschten Analysen zusätzlich aktivieren. Ergebnisse aus früheren Läufen werden nicht automatisch übernommen.', '']
+    scope_labels = {'direct': 'direkte Segmentbelege', 'input_association': 'Eingabezuordnung',
+                    'source_group': 'Material einer Quellengruppe', 'person_reference': 'Personenreferenzen'}
     for edge in result['transitions']:
         lines += ['## ' + markdown_escape(edge['source']) + ' → ' + markdown_escape(edge['target']), '']
+        source_paths = [result['source_artifacts'].get(mid, {}).get('artifact') for mid in (edge['source'], edge['target'])]
+        if any(source_paths):
+            lines += ['Zwischenprodukte: ' + ' → '.join(markdown_escape(path or 'nicht verfügbar') for path in source_paths), '']
         if edge['status'] != 'available':
             lines += ['Nicht bestimmbar: ' + markdown_escape(str(edge['reasons'])), '']
             continue
-        lines += ['Referenzarten: ' + markdown_escape(', '.join(edge['source_scopes'])) + ' → ' +
-                  markdown_escape(', '.join(edge['target_scopes'])), '',
+        lines += ['Referenzarten: ' + ', '.join(scope_labels[s] for s in edge['source_scopes']) + ' → ' +
+                  ', '.join(scope_labels[s] for s in edge['target_scopes']), '',
                   'Nicht mehr referenzierte Personen: ' + (', '.join(map(markdown_escape, edge['persons_no_longer_referenced'])) or 'keine'), '']
         data = edge['reference_comparison']
         if data is None:
@@ -187,6 +210,13 @@ def render_information_loss(result):
             lines += [f"Materialeinheiten ohne Nachfolgereferenz: {len(data['material_units_no_longer_referenced'])}; in beiden Stufen referenziert: {data['material_units_referenced_in_both']}.", '',
                       'Codierzeilen ohne Nachfolgereferenz: ' + (', '.join(map(markdown_escape, data['coding_rows_no_longer_referenced'])) or 'keine'), '',
                       'Kategorien ohne Nachfolgereferenz: ' + (', '.join(map(markdown_escape, data['categories_no_longer_referenced'])) or 'keine'), '']
+            lines += ['| Person | Materialanteil | Referenzanteil vorher | Referenzanteil nachher |', '|---|---:|---:|---:|']
+            def percent(value):
+                return 'nicht bestimmbar' if value is None else f'{100 * value:.1f} %'
+            for person in data['person_shares']:
+                lines.append('| ' + markdown_escape(person['person']) + ' | ' + ' | '.join(
+                    percent(person[key]) for key in ('material_share', 'before', 'after')) + ' |')
+            lines += ['', 'Personenanteile verwenden eindeutige explizite Passagen, sonst Codierzeilen. Sie beschreiben Referenzen, keine inhaltliche Bedeutung.', '']
         lines += [f"Prüfpunkte: {len(edge['review_items'])}. Dies ist keine Fehlerquote.", '']
         for review in edge['review_items']:
             source = review['source']

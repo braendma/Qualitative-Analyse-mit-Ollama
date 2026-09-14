@@ -107,6 +107,11 @@ class DesktopTests(unittest.TestCase):
                 result=conn.getresponse();body=result.read();status=result.status;conn.close();return status,body
             try:
                 self.assertEqual(request('GET','/')[0],200)
+                for doc in ('DIAGNOSTICS.md','CONFIGURATION.md','METHODOLOGY.md','ROBUSTNESS.md'):
+                    status, body=request('GET','/'+doc)
+                    self.assertEqual(status,200,doc)
+                    self.assertTrue(body.startswith(b'# '),doc)
+                self.assertEqual(request('GET','/DIAGNOSTICS.md',headers={'Origin':'https://attacker.invalid'})[0],403)
                 self.assertEqual(request('GET','/api/state')[0],403)
                 headers={'X-App-Token':server.token,'Content-Type':'application/json'}
                 self.assertEqual(request('GET','/api/state',headers={**headers,'Origin':'https://attacker.invalid'})[0],403)

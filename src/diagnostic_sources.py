@@ -15,7 +15,9 @@ STAGES = ('clusterer', 'summarizer', 'swot', 'meta_swot', 'person_analysis',
           'person_comparison', 'contrast_analysis', 'relation_analysis',
           'ambiguity_analysis', 'evidence_audit', 'overall_synthesis')
 TEXT_FIELDS = ('thema', 'definition', 'summary', 'verdichtung', 'analyse',
-               'aussage', 'beschreibung', 'abweichung', 'position_a', 'position_b')
+               'aussage', 'beschreibung', 'abweichung', 'position_a', 'position_b',
+               'cluster_name', 'typ_name', 'muster', 'bezugs_muster', 'begruendung',
+               'bedeutung', 'einordnung')
 
 
 def strings(value):
@@ -52,10 +54,17 @@ def project_stage(module_id, payload):
     warnings = []
 
     def add(path, row, *, ids=None, people=None, scope='direct', kind='finding', unresolved=None):
+        text = [row[k] for k in TEXT_FIELDS if isinstance(row.get(k), str)]
+        # Explicit schema fields only: do not traverse evidence registries or whole input inventories.
+        for position in row.get('personenpositionen', []):
+            if isinstance(position, dict) and isinstance(position.get('position'), str):
+                text.append(str(position.get('person', '')) + ': ' + position['position'])
+        if isinstance(row.get('merkmale'), list):
+            text.extend(value for value in row['merkmale'] if isinstance(value, str))
         out.append({'key': path, 'kind': kind, 'scope': scope,
                     'segment_ids': strings(row.get('segment_ids', []) if ids is None else ids),
                     'persons': strings([] if people is None else people),
-                    'text': '\n'.join(row[k] for k in TEXT_FIELDS if isinstance(row.get(k), str)),
+                    'text': '\n'.join(text),
                     'unresolved': sorted(set(unresolved or []))})
 
     if module_id == 'clusterer':
@@ -241,7 +250,8 @@ def load_snapshot(directory, config_path, input_path):
 
 def dependency_edges(config):
     """Only configured analytic dependencies whose declared JSON is actually an input."""
-    modules = {m['id']: m for m in config.get('pipeline', {}).get('modules', []) if m['id'] in STAGES}
+    modules = {m['id']: m for m in config.get('pipeline', {}).get('modules', [])
+               if m['id'] in STAGES and m.get('enabled', True)}
     edges = []
     for target, module in modules.items():
         args = module.get('args', [])
