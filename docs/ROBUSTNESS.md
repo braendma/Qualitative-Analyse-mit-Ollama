@@ -27,8 +27,10 @@ der Wiederaufnahme.
 Diese Prozessfälle sind im Windows-Sourcebetrieb mit künstlichen Aufgaben
 geprüft. Die neue Mac-Distribution ist vorerst zurückgestellt. Vorarbeiten
 für verschachtelte POSIX-Prozessgruppen sind getrennt gesichert; ihre
-Einbindung und native Abnahme stehen aus. Zwei aktuelle Mac-Quelltests zur
-Abschlussbestätigung einfacher Prozessgruppen sind ebenfalls noch fehlgeschlagen.
+Einbindung und native Abnahme stehen aus. Die zwei zuvor fehlgeschlagenen
+Mac-Quelltests zur Abschlussbestätigung einfacher Prozessgruppen bestanden
+im abschließenden Source-Lauf auf `7f14156`; eine allgemeine Ursachenklärung
+oder native Mac-Paketabnahme folgt daraus nicht.
 Die konkreten Windows-Paketnachweise stehen im [Testbericht](TEST_REPORT.md);
 Windows-Ergebnisse gelten nicht als Mac-Abnahme.
 

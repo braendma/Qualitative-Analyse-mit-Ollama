@@ -1,5 +1,34 @@
 # Abschlussprüfung für 0.5.0-beta.1 · 14. September 2026
 
+## Veröffentlichtes Release
+
+Der endgültige Release-Commit ist `7f14156db83e56e2f96395cbb27bdcda5e543475`.
+Der [Windows-Paketlauf](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/actions/runs/34896832148)
+bestand 947 Python-Tests in 799,967 Sekunden, 82 JavaScript-Tests, Paketidentität,
+normale und lange Ausgabepfade sowie einen vollständigen modellfreien Workflow
+mit CSV/XLSX, HTML/Markdown und Wiederaufnahme. Das veröffentlichte ZIP stammt
+unverändert aus diesem geprüften Lauf.
+
+Die [Source-Installationsprüfungen](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/actions/runs/34896832413)
+bestanden auf Windows (947 Tests, 862,344 Sekunden) und macOS (947 Tests,
+374,240 Sekunden, 18 plattformabhängige Skips), jeweils zusätzlich 67 JS-Tests
+und den tatsächlichen HTTP-Start. Frühere Mac-Prozessfehler traten in diesem
+Lauf nicht auf; die native Mac-Ausgabe bleibt zurückgestellt.
+
+Lokal wurden 202 Ressourcen exakt mit den Git-Blobs verglichen. Die Prüfung
+von 1408 Paketdateien und eingebettetem Python-Code fand keine der geprüften
+Privatmarker; elf erneute UI-Prüfungen bestanden. Das ist kein vollständiger
+Geheimnisscan, VM-Test oder empirischer Qualitätsnachweis. Alle Analysedaten
+der Tests sind synthetisch.
+
+Windows-ZIP SHA256: `d15166b48ea85a61dc3735eaf96f3e60af2df950c7703b27dff1683a73c21836`.
+
+## Historische Zwischenschritte vor der Veröffentlichung
+
+Die folgenden Angaben beziehen sich jeweils auf frühere Commits und ersetzen
+nicht den oben ausgewiesenen abschließenden Nachweis.
+
+
 Auf `92b8971` bestand die GitHub-Windows-Sourceprüfung 947 Python-Tests in
 631,116 Sekunden, 67 JavaScript-Tests sowie den HTTP-Start der Oberfläche.
 Der separate Paketjob führte ebenfalls 947 Python-Tests aus; dort scheiterte

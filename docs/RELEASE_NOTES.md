@@ -3,6 +3,8 @@
 Diese Version ergänzt ein eigenständiges Windows-Paket mit enthaltener
 Python-Laufzeit und neue Prüfungen für wissenschaftliche Auswertungen.
 
+Der [Release](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/tag/v0.5.0-beta.1) enthält außerdem zwei gesondert benannte Python-Quellpakete für Windows und macOS. Beide enthalten alle 368 getaggten Quelldateien unverändert sowie eine plattformspezifische `START_HERE.txt`. Python und Modelle sind in diesen Quellpaketen nicht enthalten.
+
 - Coverage, Information-Loss-Audit und Codebook-Diagnostik ergänzen die
   Basismodule ohne zusätzliche Modellaufrufe.
 - Stabilitäts- und Sensitivitätsanalysen ermöglichen kontrollierte zusätzliche
@@ -27,7 +29,7 @@ Python-Laufzeit und neue Prüfungen für wissenschaftliche Auswertungen.
   erneut geprüft; dauerhafte Zugriffssperren bleiben sichtbare Fehler.
 
 **Prüfstand:** [Testbericht](TEST_REPORT.md). Eine neue native Mac-Distribution ist zurückgestellt; vorhandene
-Mac-Source-Startdateien bleiben erhalten. Zwei aktuelle Mac-Quelltests zur Prozessbeendigung sind noch fehlgeschlagen; auch dieser Source-Stand ist dort nicht freigegeben. Die Windows-Abnahme erfolgt separat. [Mac-Grenzen](../start/macos/README.md).
+Mac-Source-Startdateien bleiben erhalten. Die abschließenden Source-Prüfungen für Windows und macOS sowie der eigenständige Windows-Paketlauf am Release-Commit `7f14156` sind bestanden. Das Release enthält das unveränderte geprüfte Windows-ZIP; frühere Mac-Prozessfehler sind im Testbericht historisch eingeordnet. [Mac-Grenzen](../start/macos/README.md).
 
 **Umstieg:** Laufende Analysen vor einem Update abschließen und das vollständige
 Windows-Paket in einen neuen Programmordner entpacken. Private Projekt- und

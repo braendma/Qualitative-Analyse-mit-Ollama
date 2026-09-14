@@ -2,6 +2,16 @@
 
 **Version 0.5.0-beta.1.** Prüfungen und Grenzen stehen im [Testbericht](docs/TEST_REPORT.md).
 
+[Technischer Kurzbericht (PDF, 3 Seiten)](docs/technical_report/technical_report.pdf) · [Methodischer Überblick](docs/METHODOLOGY.md) · [Handbuch](docs/HANDBUCH.md)
+
+| Download | Voraussetzung | Start |
+|---|---|---|
+| [Windows Standalone](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/download/v0.5.0-beta.1/QualitativeAnalyse-windows-x64.zip) | Python ist enthalten | ZIP entpacken, `QualitativeAnalyse.exe` öffnen |
+| [Windows mit Python](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/download/v0.5.0-beta.1/QualitativeAnalyse-0.5.0-beta.1-windows-python.zip) | Eigene Python-Installation | `Einrichtung.cmd`, dann `Start_Oberflaeche.cmd` |
+| [macOS mit Python](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/download/v0.5.0-beta.1/QualitativeAnalyse-0.5.0-beta.1-macos-python.zip) | Eigene Python-Installation | `start/macos/Einrichtung.command`, dann `Start_Oberflaeche.command` |
+
+Alle ZIPs vollständig entpacken. Die beiden Python-Pakete enthalten denselben geprüften Quellstand und jeweils eine passende Startanleitung. Ollama und Modelle werden separat eingerichtet. Ein natives Mac-Paket ist noch nicht enthalten.
+
 Diese Version ergänzt ein **Windows-Paket mit enthaltener Python-Laufzeit**, lokale Datei- und Ergebnisordnerauswahl sowie kontrolliertes Beenden und technische Fehlerprotokolle. [Windows-Kurzanleitung](docs/WINDOWS_STANDALONE.txt) · [Build und Paketprüfung](packaging/README.md).
 
 In dieser Version ergänzen **Coverage und Blind Spots**, der
@@ -70,7 +80,7 @@ Seit Beta 3: lesbarere Clusterdiagramme und Konfusionsmatrix, anklickbare Person
 2. Python **3.10 oder neuer** installieren. Unter Windows einmal `Einrichtung.cmd` öffnen; dabei werden Python-Pakete aus dem Internet installiert, keine Modelle ausgeführt.
 3. `Start_Oberflaeche.cmd` öffnen. Alternativ aus einer passenden Python-Umgebung `python -X utf8 src/local_app.py` verwenden.
 
-**macOS:** Eine neue native Mac-Distribution ist pausiert. Die bisherigen Source-Starter bleiben unter `start/macos/` verfügbar. Im aktuellen Mac-Quelltest sind das bestätigte Beenden nach Pause und nach unerwartetem Ende des steuernden Prozesses noch nicht zuverlässig bestanden; dieser Stand ist dort nicht freigegeben. [Mac-Source-Anleitung und Grenzen](start/macos/README.md).
+**macOS:** Eine neue native Mac-Distribution ist pausiert. Die bisherigen Source-Starter bleiben unter `start/macos/` verfügbar. Die Source-Installationsprüfung am Release-Commit `7f14156` bestand einschließlich der Prozess- und HTTP-Starttests. Ein natives Mac-Paket und dessen Abnahme bleiben zurückgestellt. [Mac-Source-Anleitung und Grenzen](start/macos/README.md).
 
 Für lokale Modellanalysen zusätzlich Ollama und ein passendes Modell bereitstellen. Beides ist nicht im Windows-Paket enthalten. Ohne lokales Ollama bleiben Vorbereitung, reine Diagnosen ohne Modellbedarf und ausdrücklich freigegebene Cloud-Anbieter nutzbar.
 
