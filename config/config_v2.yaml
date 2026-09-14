@@ -1810,7 +1810,7 @@ pipeline:
       enabled: false
       requires_model: false
       depends_on: []
-      after_if_enabled: [code_verification, blind_coding, coding_agreement, review_queue]
+      after_if_enabled: [code_verification, blind_coding, coding_agreement, review_queue, stability, sensitivity]
       args: [--config, "{config}", --input-csv, "{input_csv}"]
       outputs: [codebook_diagnostics.json, codebook_diagnostics.md]
       report:

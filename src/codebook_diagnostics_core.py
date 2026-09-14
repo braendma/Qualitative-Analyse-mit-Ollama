@@ -267,7 +267,7 @@ def analyze_codebook(segments, codebook, *, verification=None, blind=None, agree
                        'Single-Label: nur gültige konkrete Blindcodes vergleichen; keine Zuordnung separat zählen. Multi-Label: none ist eine gültige leere Menge.',
                        'Enthaltungen und technische Fehler gehen nicht in Mengenabweichungen ein. Verifikation zählt Codierzeilen, Blindcodierung die gewählte Analyseeinheit.',
                        'Der gespeicherte Prüfbedarf ist kein aktueller Fortschritt menschlicher Entscheidungen.',
-                       'Stabilitäts- und Sensitivitätsergebnisse werden erst nach Implementierung dieser Module angebunden.']}
+                       'Wiederholungsbefunde sind optionale Prüfhinweise aus verifizierten Berichten. Parameterunterschiede und Schwankungen sind keine automatischen Codebuchfehler.']}
 
 
 def render_codebook_diagnostics(result):
@@ -326,5 +326,8 @@ def render_codebook_diagnostics(result):
     for row in result['categories']:
         if row['hints']:
             lines += ['### ' + markdown_escape(row['code']), ''] + ['- ' + hints[h] for h in row['hints']] + ['']
+    if result.get('repetition_diagnostics'):
+        from codebook_repetition_links import render_repetition_links
+        lines += render_repetition_links(result['repetition_diagnostics'])
     lines += ['## Methodische Grenzen', ''] + ['- ' + markdown_escape(x) for x in result['limits']]
     return '\n'.join(lines)

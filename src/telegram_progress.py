@@ -1,7 +1,7 @@
 """Readable progress, restricted to built-in labels and bounded counters."""
 import time
 import math
-from progress_presentation import module_overview, phase_lines, request_age_lines, unknown_work_lines
+from progress_presentation import module_overview, phase_lines, request_age_lines, unknown_work_lines, safe_series_progress
 
 MODULES={
  'clusterer':'Clusteranalyse','code_verification':'Code-Prüfung','blind_coding':'Blind-Coding',
@@ -22,6 +22,66 @@ PHASES={'preparation':'Vorbereitung','analysis':'Analyse','person_reduction':'Vo
 
 def counter(value):
     return value if type(value) is int and 0<=value<=10000000 else None
+
+
+def _request_lines(detail, now):
+    lines = []
+    requests=counter(detail.get('requests'));active=counter(detail.get('active_requests'))
+    if requests is not None:lines.append(f'Modellantworten: {requests}')
+    if active is not None:lines.append(f'Modellanfragen gleichzeitig aktiv: {active}')
+    elif detail.get('request_active') is True:lines.append('Eine Modellanfrage läuft.')
+    lines.extend(request_age_lines(detail,now))
+    stamp=detail.get('last_response_at')
+    if type(stamp) in (int,float) and math.isfinite(stamp) and 0<stamp<=now:
+        seconds=int(now-stamp)
+        age=f'{seconds} Sekunden' if seconds<60 else f'{seconds//60} Minuten'
+        lines.append(f'Letzte Modellantwort vor {age}.')
+    if (counter(detail.get('failed')) or 0)>0 or detail.get('context_blocked') is True:
+        lines.append('⚠️ Teilproblem erkannt · Details in der Oberfläche prüfen.')
+    return lines
+
+
+def _series_lines(current, now):
+    lines = ['', 'Aktuelle Wiederholung (getrennt vom Serienfortschritt):']
+    for numerator, denominator, title in (
+            ('configuration_number', 'configuration_total', 'Einstellung'),
+            ('repetition_number', 'repetition_total', 'Wiederholung dieser Einstellung'),
+            ('modules_completed', 'modules_total', 'Darin vom Runner abgeschlossene Module')):
+        done, total = counter(current.get(numerator)), counter(current.get(denominator))
+        if done is not None and total and done <= total:
+            lines.append(f'{title}: {done}/{total}')
+    state = current.get('state')
+    if state == 'unavailable':
+        lines.append('Innerer Status momentan nicht verlässlich lesbar; Analyse kann weiterlaufen.')
+    elif state == 'starting':
+        lines.append('Kindlauf wird vorbereitet.')
+    elif state == 'finishing':
+        lines.append('Kindlauf beendet; Ergebnis- und Prozessprüfung folgt.')
+    elif state in ('failed', 'paused'):
+        lines.append('Kindlauf ' + ('fehlgeschlagen / unterbrochen.' if state == 'failed' else 'pausiert.'))
+    mid = current.get('module')
+    if mid in MODULES:
+        lines.append('Aktuelles Modul darin: ' + MODULES[mid])
+    detail = current.get('detail', {})
+    if detail:
+        lines.extend(phase_lines(detail, PHASES))
+        done, total = counter(detail.get('completed')), counter(detail.get('total'))
+        if done is not None and total and done <= total:
+            lines.append(f'{done}/{total} {UNITS.get(detail.get("unit"), "Einheiten")} in dieser Phase')
+        elif done == 0 and total == 0:
+            lines.append('Keine Arbeitseinheiten in dieser Phase.')
+        else:
+            lines.append('Innere Gesamtzahl noch unbekannt; kein Gesamtprozentwert.')
+        subdone, subtotal = counter(detail.get('detail_completed')), counter(detail.get('detail_total'))
+        if subdone is not None and subtotal and subdone <= subtotal:
+            lines.append(f'Aktueller Teilabschnitt: {subdone}/{subtotal} Prüfblöcke')
+        lines.extend(_request_lines(detail, now))
+        stamp = detail.get('updated_at')
+        if type(stamp) in (int, float) and math.isfinite(stamp) and 0 < stamp <= now and now - stamp > 180:
+            lines.append('Innere Fortschrittsmeldung seit über drei Minuten unverändert.')
+    elif state == 'running':
+        lines.append('Noch keine gebundene Arbeitseinheitenmeldung für dieses Modul.')
+    return lines
 
 
 def format_progress(completed,total,detail=None,now=None):
@@ -50,17 +110,10 @@ def format_progress(completed,total,detail=None,now=None):
         reused=counter(detail.get('reused'))
         if reused and done is not None and reused<=done:
             lines.append(f'Davon {reused} aus geprüften Zwischenergebnissen wiederverwendet.')
-        requests=counter(detail.get('requests'));active=counter(detail.get('active_requests'))
-        if requests is not None:lines.append(f'Modellantworten: {requests}')
-        if active is not None:lines.append(f'Modellanfragen gleichzeitig aktiv: {active}')
-        elif detail.get('request_active') is True:lines.append('Eine Modellanfrage läuft.')
-        lines.extend(request_age_lines(detail,now))
-        stamp=detail.get('last_response_at')
-        if type(stamp) in (int,float) and math.isfinite(stamp) and 0<stamp<=now:
-            seconds=int(now-stamp)
-            age=f'{seconds} Sekunden' if seconds<60 else f'{seconds//60} Minuten'
-            lines.append(f'Letzte Modellantwort vor {age}.')
-        if (counter(detail.get('failed')) or 0)>0 or detail.get('context_blocked') is True:
-            lines.append('⚠️ Teilproblem erkannt · Details in der Oberfläche prüfen.')
+        nested = safe_series_progress(detail.get('series_current'))
+        if detail.get('module') in ('stability', 'sensitivity') and detail.get('phase') == 'repetitions' and nested:
+            lines.extend(_series_lines(nested, now))
+        else:
+            lines.extend(_request_lines(detail, now))
     lines.extend(['','Modulübersicht zählt fertige Module, keine verstrichene Laufzeit. Teilbalken gelten nur für den jeweiligen Abschnitt.'])
     return '\n'.join(lines)

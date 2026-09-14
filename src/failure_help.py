@@ -1,8 +1,65 @@
 """Local, fixed troubleshooting guidance; never copy raw model/log text into hints."""
+import re
+
+
+# Replay a known category through the same fixed guidance catalog. Persisted causes,
+# actions, module names and log text are deliberately not trusted as display text.
+_KIND_MARKERS = {
+    'memory': 'CUDA out of memory', 'context': 'ContextBudgetError',
+    'credentials': 'Status 401', 'quota': 'Status 429', 'connection': 'ConnectError',
+    'response': 'LLMResponseError', 'reduction': 'Zwischenzusammenfassung',
+    'call_budget': 'Synthese-Aufrufbudget', 'diagnostic_integrity': 'Diagnose abgelehnt',
+    'diagnostic_output': 'Diagnoseausgabe existiert bereits',
+    'diagnostic_sources': 'Modul coverage lieferte unvollständige Ergebnisse',
+    'stability_integrity': 'Laufgrundlage', 'stability': 'Stabilitätsanalyse unvollständig',
+    'sensitivity': 'Sensitivitätsanalyse unvollständig', 'unknown': 'Unbekannter Fehler',
+}
+
+
+def fixed_failure_help(kind):
+    """Return only application-authored guidance for an untrusted stored kind."""
+    marker = _KIND_MARKERS.get(kind) if isinstance(kind, str) else None
+    return failure_help(marker or _KIND_MARKERS['unknown'])
+
+
+def child_failure_guidance(manifest, planned_modules):
+    """Project failed planned modules without copying child logs or input content."""
+    from prompt_catalog import PROMPT_KEYS
+    statuses = manifest.get('module_status', {})
+    errors = manifest.get('module_errors', {})
+    if not isinstance(statuses, dict):
+        return []
+    errors = errors if isinstance(errors, dict) else {}
+    result = []
+    for mid in planned_modules:
+        if statuses.get(mid) != 'failed':
+            continue
+        error = errors.get(mid)
+        kind = error.get('kind') if isinstance(error, dict) else None
+        result.append({'module': mid if mid in PROMPT_KEYS else 'custom_module',
+                       **fixed_failure_help(kind)})
+    return result
+
+
+def repetition_failure_marker(result):
+    """Choose a fixed error category for the existing parent log classifier."""
+    for condition in result.get('conditions', []):
+        if condition.get('status') not in ('failed', 'interrupted'):
+            continue
+        for item in condition.get('failure_guidance', []):
+            kind = fixed_failure_help(item.get('kind'))['kind']
+            return 'Wiederholungsfehler [' + kind + ']. '
+    return ''
 
 
 def failure_help(text):
     value=str(text).lower()
+    repeated = re.search(r'wiederholungsfehler \[([a-z_]+)\]', value)
+    if repeated and repeated[1] in _KIND_MARKERS:
+        guidance = fixed_failure_help(repeated[1])
+        guidance['cause'] = 'Eine kontrollierte Wiederholung ist fehlgeschlagen. ' + guidance['cause']
+        guidance['action'] += ' Den Stabilitäts- oder Sensitivitäts-Teilbericht für Wiederholung und betroffenes Modul öffnen.'
+        return guidance
     if any(x in value for x in ('sensitivitätsanalyse unvollständig', 'sensitivität benötigt', 'diagnostics.sensitivity', 'variante')):
         kind='sensitivity'
         cause='Die Vergleichsvarianten sind ungültig oder ihre Wiederholungen sind nicht vollständig.'
@@ -34,7 +91,6 @@ def failure_help(text):
     elif any(x in value for x in ('synthesiscallbudgeterror','synthese-aufrufbudget','hierarchische synthese erreicht max_calls')):
         kind='call_budget'
         cause='Das Aufrufbudget der Gesamtsynthese reicht nicht für die nächste Verdichtungsrunde oder notwendige Antwortreparaturen.'
-        import re
         counts=re.search(r'mindestens (\d{1,7}) teilaufgaben, (\d{1,7}) aufrufe übrig',value)
         if counts:
             needed,left=map(int,counts.groups())

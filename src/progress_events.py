@@ -20,13 +20,20 @@ def _update_progress(**changes):
     if not path:return
     try:
         data=json.loads(Path(path).read_text(encoding='utf-8')) if Path(path).exists() else {}
+        if not isinstance(data, dict):
+            data = {}
         allowed={'completed','total','unit','requests','active_requests','request_active','last_response_at','request_started_at',
                  'reused','failed','failure_kind','context_required','context_limit','context_blocked','phase',
-                 'phase_level','detail_completed','detail_total'}
+                 'phase_level','detail_completed','detail_total','series_current'}
         if data.get('module') != os.environ.get('WORKFLOW_MODULE',''):
             data = {}
+        if 'series_current' in changes:
+            from progress_presentation import safe_series_progress
+            changes['series_current'] = safe_series_progress(changes['series_current'])
         data.update({k:v for k,v in changes.items() if k in allowed})
-        data.update(module=os.environ.get('WORKFLOW_MODULE',''),updated_at=time.time())
+        data.update(module=os.environ.get('WORKFLOW_MODULE',''),updated_at=time.time(),
+                    run_id=os.environ.get('WORKFLOW_RUN_ID',''),
+                    fingerprint=os.environ.get('WORKFLOW_FINGERPRINT',''))
         atomic_json(path,data)
     except (OSError,ValueError):
         pass  # Status display must not turn a successful analysis into a failure.
@@ -44,6 +51,8 @@ def _request_event(start, success):
     if not path:return
     try:
         data=json.loads(Path(path).read_text(encoding='utf-8')) if Path(path).exists() else {}
+        if not isinstance(data, dict):
+            data = {}
         changes = {'request_active': ACTIVE_REQUESTS > 0, 'active_requests': ACTIVE_REQUESTS}
         if start: changes['request_started_at'] = time.time()
         elif success: changes.update(last_response_at=time.time(), requests=int(data.get('requests',0))+1)
@@ -54,7 +63,7 @@ def _request_event(start, success):
 def begin_phase(phase, total=None, unit='steps', level=None):
     """Reset a phase's counts without discarding module-wide response counters."""
     update_progress(phase=phase, completed=0, total=total, unit=unit,
-                    phase_level=level, detail_completed=None, detail_total=None)
+                    phase_level=level, detail_completed=None, detail_total=None, series_current=None)
 
 
 def track_module(function):

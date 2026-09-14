@@ -29,6 +29,7 @@ from review_workspace import ReviewWorkspace, decisions_xlsx
 from telegram_notifications import Telegram, NoRedirect
 from llm_providers import PROVIDERS, KEY_ENVS, selection
 from provider_keys import ProviderKeys, reject_secret_settings
+from progress_presentation import safe_series_progress
 
 ROOT = Path(__file__).resolve().parent
 SPEC = importlib.util.spec_from_file_location('desktop_runner', ROOT / '00_WORKFLOW_RUNNER.py')
@@ -615,16 +616,35 @@ class App(ReviewWorkspace):
                         # A status read failure must not release the active-run guard.
                         time.sleep(1)
                         continue
+                    if not isinstance(manifest, dict):
+                        time.sleep(1)
+                        continue
+                    if not isinstance(detail, dict):
+                        detail = {}
                     count=len(manifest.get('completed_steps',[]))
                     if detail.get('module')!=manifest.get('current_module'):
                         detail={'module':manifest.get('current_module')}
-                    failure=(detail.get('module'),detail.get('failed'),bool(detail.get('context_blocked')))
-                    if (detail.get('failed') or detail.get('context_blocked')) and failure!=last_failure:
+                    current = (safe_series_progress(detail.get('series_current')) or {}) if (
+                        detail.get('module') in ('stability', 'sensitivity') and detail.get('phase') == 'repetitions') else {}
+                    if 'series_current' in detail:
+                        detail['series_current'] = current or None
+                    child_detail = current.get('detail', {})
+                    child_failed = (child_detail.get('failed') or 0) > 0 or child_detail.get('context_blocked') is True
+                    failure=(detail.get('module'),detail.get('failed'),bool(detail.get('context_blocked')),
+                             current.get('sample_number'),current.get('module'),child_detail.get('failed'),
+                             child_detail.get('context_blocked'))
+                    if (detail.get('failed') or detail.get('context_blocked') or child_failed) and failure!=last_failure:
                         self.telegram.send('partial_failed')
                         last_failure=failure
                     marker=tuple(detail.get(k) for k in ('module','completed','total','unit','phase','phase_level',
                         'detail_completed','detail_total','requests','active_requests','request_active',
                         'request_started_at','last_response_at','reused','failed','context_blocked'))
+                    # Poll timestamps alone are not new work. Preserve the usual
+                    # two-minute throttle for genuine inner counter/phase changes.
+                    marker_current = {**current}
+                    if 'detail' in marker_current:
+                        marker_current['detail'] = {k: v for k, v in child_detail.items() if k != 'updated_at'}
+                    marker += (json.dumps(marker_current, sort_keys=True),)
                     tick=time.monotonic()
                     age=tick-last_detail_sent
                     if count>last_count or (marker!=last_detail and age>=120) or (detail.get('module') and age>=600):

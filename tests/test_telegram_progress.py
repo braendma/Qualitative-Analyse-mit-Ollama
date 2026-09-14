@@ -115,4 +115,61 @@ class TelegramProgressTests(unittest.TestCase):
             self.assertNotIn('%',text)
 
 
+    def inner_monitor(self, frames, ticks):
+        with tempfile.TemporaryDirectory() as tmp:
+            folder=Path(tmp);run=folder/'runs/example';run.mkdir(parents=True)
+            (folder/'job.json').write_text('{}')
+            (run/'workflow_manifest.json').write_text(json.dumps({'status':'success','completed_steps':[],
+                                                                 'current_module':'stability'}))
+            base={'module':'stability','phase':'repetitions','completed':0,'total':2,'unit':'repetitions'}
+            def write(frame):
+                (run/'progress.json').write_text(json.dumps({**base,'series_current':frame}))
+            write(frames[0])
+            remaining=iter(frames[1:])
+            def advance(*args):
+                frame=next(remaining,None)
+                if frame is not None:write(frame)
+            app=object.__new__(App);app.telegram=Mock();app.lock=threading.RLock();app.active=True
+            process=Mock(returncode=0);process.poll.side_effect=[None]*len(frames)+[0]
+            with patch('local_app.time.sleep',side_effect=advance),patch('local_app.time.monotonic',side_effect=[0]+ticks):
+                app.monitor(folder,process,20)
+            return app.telegram.send.call_args_list
+
+    def test_inner_counter_changes_reach_telegram_after_throttle(self):
+        current={'state':'running','sample_number':1,'module':'blind_coding',
+                 'detail':{'completed':1,'total':9,'requests':2,'updated_at':100}}
+        second={**current,'detail':{**current['detail'],'completed':2,'requests':3,'updated_at':101}}
+        calls=self.inner_monitor([current,second,second],[121,180,242])
+        sent=[c for c in calls if c.args[0]=='progress']
+        self.assertEqual(len(sent),2)
+        self.assertEqual(sent[-1].kwargs['detail']['series_current']['detail']['completed'],2)
+        self.assertEqual(sent[-1].kwargs['detail']['completed'],0)
+
+    def test_poll_timestamp_only_change_does_not_send_extra_status(self):
+        current={'state':'running','sample_number':1,'module':'blind_coding',
+                 'detail':{'requests':2,'updated_at':100}}
+        second={**current,'detail':{**current['detail'],'updated_at':999}}
+        calls=self.inner_monitor([current,second,second],[121,242,722])
+        sent=[c for c in calls if c.args[0]=='progress']
+        # First bounded update, then the existing ten-minute activity heartbeat.
+        self.assertEqual(len(sent),2)
+        self.assertEqual(sent[-1].kwargs['detail']['series_current']['detail']['updated_at'],999)
+
+    def test_inner_failure_is_announced_once_without_research_data(self):
+        current={'state':'running','sample_number':1,'module':'blind_coding','configuration_id':'PRIVATE',
+                 'detail':{'requests':2,'failed':1,'context_blocked':True,'error':'PRIVATE'}}
+        calls=self.inner_monitor([current,current],[121,242])
+        failed=[c for c in calls if c.args[0]=='partial_failed']
+        self.assertEqual(len(failed),1)
+        sent=[c for c in calls if c.args[0]=='progress']
+        self.assertEqual(len(sent),1)
+        self.assertNotIn('PRIVATE',str(sent[0]))
+
+    def test_new_repetition_with_same_inner_counts_is_a_status_change(self):
+        current={'state':'running','sample_number':1,'module':'blind_coding','detail':{'completed':1,'total':9}}
+        second={**current,'sample_number':2}
+        calls=self.inner_monitor([current,second],[121,242])
+        self.assertEqual(len([c for c in calls if c.args[0]=='progress']),2)
+
+
 if __name__=='__main__':unittest.main()

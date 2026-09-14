@@ -10,6 +10,7 @@ from diagnostic_series import (_check_plan, _confirmed_supervision, _identity, _
 from diagnostic_sources import STAGES, load_declared_artifact
 from runtime_evidence import _canonical, _name
 from runtime_support import exclusive_file_lock, file_hash, fingerprint
+from failure_help import child_failure_guidance
 from stability_core import analyze_coding_repetitions, analyze_stage_repetitions
 
 
@@ -152,6 +153,8 @@ def _load_series(directory, *, kind):
                 condition['configuration_id'] = cid
             if manifest:
                 checked.append((parent, manifest, record['identity']))
+                if status in ('failed', 'interrupted'):
+                    condition['failure_guidance'] = child_failure_guidance(manifest, by_id)
                 runtime = _request_profiles(run, manifest, {'provider': plan['provider'], 'config': record['config']}, by_id)
                 all_digests.update(runtime['local_digests'])
                 model = _canonical(record['config']['llm']['model'])

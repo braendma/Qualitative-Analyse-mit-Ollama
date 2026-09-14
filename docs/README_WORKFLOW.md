@@ -24,6 +24,8 @@ flowchart LR
   Varianten --> Sensitivitaet[Sensitivitätsvergleich]
   Stabilitaet --> Bericht
   Sensitivitaet --> Bericht
+  Stabilitaet -. verifizierte Codierbefunde .-> Codebook
+  Sensitivitaet -. verifizierte Codierbefunde .-> Codebook
 ```
 
 Die gestrichelten Quellenverbindungen zu Coverage, Audit und Codebook schalten
@@ -153,3 +155,18 @@ Alle Standardmodule zeigen ihren relativen Eigenaufwand und eine Einsatzempfehlu
 ## Finale Validierungsanalyse
 
 Das optionale Preset ergänzt die fünf Diagnosen und erforderliche Basisanalysen, ohne einen Lauf zu starten. Bestehende Varianten bleiben erhalten; fehlende Varianten ausdrücklich festlegen. Die neue Aufwandübersicht trennt Hauptlauf und zusätzliche Wiederholungen. [Anleitung und Rechenbeispiel](HANDBUCH.md#finale-validierungsanalyse-und-aufwandübersicht).
+
+
+## Zusammenhängende Diagnosen und lesbarer Laufstatus
+
+Sind Codebook-Diagnostik und Stabilität/Sensitivität ausgewählt, nutzt die
+Codebook-Diagnostik die passenden verifizierten Codiervergleiche desselben Laufs.
+Sie zeigt schwankende Code-Vorkommen mit getrennten Nennern und verweist auf den
+jeweiligen Diagnoseabschnitt. Die Verbindung schaltet keine Wiederholung ein
+und deutet Unterschiede nicht als bewiesene Codefehler.
+
+Der Serienbalken zählt abgeschlossene, geprüfte Wiederholungen. Ein separater Bereich zeigt die aktuelle Einstellung und Wiederholung, das aktive Modul sowie dessen gemeldete Arbeitseinheiten und aktive Modellanfragen. Browser und Telegram halten diese Ebenen getrennt: Drei von acht Arbeitseinheiten einer Wiederholung sind kein zusätzlicher Anteil am Serienbalken und keine Schätzung der verbleibenden Zeit. Ist eine Gesamtzahl unbekannt, wird sie nicht als null ausgegeben.
+
+Scheitert eine kontrollierte Wiederholung, zeigen Laufkarte und Teilbericht die gesicherte Fehlerkategorie und passende Schritte, beispielsweise bei zu kleinem Kontextfenster, Speichermangel oder einem Anbieterkontingent. Der Teilbericht nennt die betroffene Wiederholung und das Modul. Alte oder unvollständige Fehlerdaten werden ausdrücklich als unbekannt gekennzeichnet. Rohprotokolle, Eingabetexte und Zugangsdaten werden nicht in diese Hinweise übernommen. Fortsetzen erhält die ursprünglichen Einstellungen; geänderte Einstellungen benötigen einen neuen Lauf.
+
+Der HTML-Gesamtbericht lässt sich als einzelne Datei offline lesen, durchsuchen und über die Druckfunktion als PDF speichern; seine eingebetteten Bilder bleiben enthalten. Die vollständigen Diagnose-JSON-Dateien sind jedoch separate Dateien. Bei langen Diagnosen enthält HTML dieselbe gekennzeichnete Auswahl wie der Markdown-Bericht. Weitere Befunde und Einzelzähler findest du in der Oberfläche unter „Ergebnisse → Einzelberichte und Datendateien“ bei der jeweiligen JSON-Datei. Wer nur die HTML-Datei erhält, erhält diese zusätzlichen JSON-Daten nicht. Für eine vollständige Detailprüfung die benötigten JSON-Dateien gezielt mitgeben; ein PDF enthält nur die gedruckte Ansicht.

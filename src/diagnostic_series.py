@@ -4,6 +4,8 @@ No additional module runner or checkpoint format: child manifests remain authori
 Runtime receipts and supervised managed-server handoff serve both diagnostic types.
 """
 import importlib
+from contextvars import ContextVar
+from itertools import islice
 import json
 import os
 import re
@@ -17,6 +19,11 @@ import yaml
 from diagnostic_repetitions import prepare_repetitions
 from managed_ollama import stop_tree
 from runtime_support import atomic_json, atomic_text, exclusive_file_lock, file_hash, fingerprint
+
+
+# Scope display callbacks to one synchronous dispatch without changing the
+# established dispatch interface or passing callbacks into the child process.
+_PROGRESS_POLL = ContextVar('diagnostic_series_progress_poll', default=None)
 
 
 def _runner():
@@ -146,6 +153,84 @@ def _sample_run(parent, identity, modules):
     return run, manifest
 
 
+def _bounded_status(path, root, limit):
+    _inside(path, root)
+    with path.open('rb') as handle:
+        raw = handle.read(limit + 1)
+    if len(raw) > limit:
+        raise ValueError('Statusdatei überschreitet die Anzeigegrenze.')
+    value = json.loads(raw.decode('utf-8'))
+    if not isinstance(value, dict):
+        raise ValueError('Statusdatei ist keine Zuordnung.')
+    return value
+
+
+def _child_progress(parent, identity, modules):
+    """Read only the allocated child's small status files, never result artifacts.
+
+    This live projection does not replace the full verification at completion or
+    resume. Missing, changing, unbound or malformed status is simply unavailable.
+    """
+    from progress_presentation import safe_numeric_progress
+    unavailable = {'state': 'unavailable'}
+    try:
+        if not parent.exists():
+            return {'state': 'starting'}
+        _inside(parent, parent.parent)
+        entries = list(islice(parent.iterdir(), 2))
+        if not entries:
+            return {'state': 'starting'}
+        if len(entries) != 1 or not entries[0].is_dir():
+            return unavailable
+        run = entries[0]
+        _inside(run, parent)
+        path = run / 'workflow_manifest.json'
+        manifest = _bounded_status(path, run, 2 * 1024 * 1024)
+        if (manifest.get('run_id') != run.name or manifest.get('fingerprint') != identity or
+                not isinstance(manifest.get('provenance'), dict) or
+                fingerprint({k: v for k, v in manifest['provenance'].items() if k != 'commit'}) != identity):
+            return unavailable
+        expected = {m['id'] for m in modules}
+        completed = manifest.get('completed_steps')
+        if (not isinstance(completed, list) or any(not isinstance(mid, str) for mid in completed) or
+                len(set(completed)) != len(completed) or set(completed) - expected):
+            return unavailable
+        status = manifest.get('status')
+        if status not in {'running', 'success', 'failed', 'paused', 'interrupted'}:
+            return unavailable
+        result = {'state': {'success': 'finishing', 'interrupted': 'failed'}.get(status, status),
+                  'modules_completed': len(completed), 'modules_total': len(expected)}
+        mid = manifest.get('current_module')
+        if mid in expected:
+            result['module'] = mid
+        if status == 'running' and mid in expected and manifest.get('module_status', {}).get(mid) == 'running':
+            try:
+                detail = _bounded_status(run / 'progress.json', run, 16384)
+                if (detail.get('run_id') == run.name and detail.get('fingerprint') == identity and
+                        detail.get('module') == mid):
+                    result['detail'] = safe_numeric_progress(detail)
+            except (OSError, ValueError, TypeError):
+                pass
+        # A module may finish between the two reads; do not combine counters
+        # from different modules or lifecycle boundaries in one display frame.
+        again = _bounded_status(path, run, 2 * 1024 * 1024)
+        keys = ('run_id', 'fingerprint', 'provenance', 'current_module', 'module_status', 'completed_steps', 'status')
+        if any(again.get(key) != manifest.get(key) for key in keys):
+            return unavailable
+        return result
+    except (OSError, ValueError, TypeError, AttributeError, RecursionError):
+        return unavailable
+
+
+def _poll_progress():
+    callback = _PROGRESS_POLL.get()
+    if callback is not None:
+        try:
+            callback()
+        except Exception:
+            pass  # Optional display failure must never abort or detach a run.
+
+
 def _execute(command, directory, log, env):
     """Keep a pipe lease; the shared supervisor owns and reaps the child tree."""
     request_path = log.with_suffix('.supervision.request.json')
@@ -165,7 +250,16 @@ def _execute(command, directory, log, env):
             stdout=output, stderr=subprocess.STDOUT, start_new_session=os.name != 'nt',
             creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
         try:
-            return process.wait()
+            if _PROGRESS_POLL.get() is None:
+                return process.wait()
+            while True:
+                _poll_progress()
+                try:
+                    code = process.wait(timeout=2)
+                    _poll_progress()
+                    return code
+                except subprocess.TimeoutExpired:
+                    continue
         finally:
             if process.stdin:
                 process.stdin.close()
@@ -195,7 +289,7 @@ def _confirmed_supervision(log, identity, parent):
     return receipt
 
 
-def execute_repetitions(plan, directory, *, resume=False, pause_file=None, progress=None):
+def execute_repetitions(plan, directory, *, resume=False, pause_file=None, progress=None, inner_progress=None):
     """Run samples sequentially; stop on first failure/pause, preserving all outputs.
 
     Abruptly abandoned children require the supervisor's cleanup receipt before
@@ -247,7 +341,7 @@ def execute_repetitions(plan, directory, *, resume=False, pause_file=None, progr
         env = {k: v for k, v in os.environ.items() if not k.startswith('WORKFLOW_')}
         env['PYTHONUTF8'] = '1'
         observed_by_model = {}
-        for sample in plan['samples']:
+        for sample_index, sample in enumerate(plan['samples'], 1):
             if progress:
                 progress(sum(s['status'] == 'success' for s in result['samples']), len(plan['samples']))
             _check_plan(plan)
@@ -287,7 +381,20 @@ def execute_repetitions(plan, directory, *, resume=False, pause_file=None, progr
                     env.pop('WORKFLOW_EXPECTED_MODEL_DIGEST',None)
                     if observed_digests:
                         env['WORKFLOW_EXPECTED_MODEL_DIGEST'] = next(iter(observed_digests))
-                    code = _execute(command, root, log_path, env)
+                    def current_progress():
+                        ids = list(configurations)
+                        cid = sample.get('configuration_id', 'baseline')
+                        metadata = {'sample_number': sample_index, 'sample_total': len(plan['samples']),
+                            'configuration_number': ids.index(cid) + 1, 'configuration_total': len(ids),
+                            'repetition_number': sum(s.get('configuration_id', 'baseline') == cid
+                                                     for s in plan['samples'][:sample_index]),
+                            'repetition_total': plan['repetitions']}
+                        inner_progress({**metadata, **_child_progress(parent, sample_identity, modules)})
+                    token = _PROGRESS_POLL.set(current_progress if inner_progress else None)
+                    try:
+                        code = _execute(command, root, log_path, env)
+                    finally:
+                        _PROGRESS_POLL.reset(token)
                 except KeyboardInterrupt:
                     # _execute only propagates this after its child has been reaped.
                     stopped_run, stopped = _sample_run(parent, sample_identity, modules)

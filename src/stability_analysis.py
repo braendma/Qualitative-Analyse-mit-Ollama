@@ -10,6 +10,7 @@ from diagnostic_repetitions import prepare_repetitions
 from diagnostic_series import _inside, execute_repetitions
 from diagnostic_sources import load_input_context
 from progress_events import begin_phase, update_progress
+from failure_help import repetition_failure_marker
 from stability_report import render_stability
 from stability_series import load_stability_series
 
@@ -76,9 +77,10 @@ def _load_context(directory, config_path, input_path, *, kind='stability'):
 
 def _analyze(context):
     def progress(completed, total):
-        update_progress(phase='repetitions', completed=completed, total=total, unit='repetitions')
+        update_progress(phase='repetitions', completed=completed, total=total, unit='repetitions', series_current=None)
     series = execute_repetitions(context['plan'], context['directory'],
-        resume=context['directory'].exists(), pause_file=os.environ.get('WORKFLOW_PAUSE_FILE'), progress=progress)
+        resume=context['directory'].exists(), pause_file=os.environ.get('WORKFLOW_PAUSE_FILE'), progress=progress,
+        inner_progress=lambda current: update_progress(series_current=current))
     begin_phase('comparison')
     if context['plan']['kind'] == 'sensitivity':
         from stability_series import load_sensitivity_series
@@ -107,7 +109,7 @@ def main(argv=None, *, kind='stability'):
         return PAUSED_EXIT_CODE
     if result['processing_status'] != 'completed':
         name = 'Stabilitätsanalyse' if kind == 'stability' else 'Sensitivitätsanalyse'
-        raise RuntimeError(name + ' unvollständig. Ausschlussgründe im Teilbericht und Serienlog prüfen; dann denselben Lauf fortsetzen.')
+        raise RuntimeError(repetition_failure_marker(result) + name + ' unvollständig. Ausschlussgründe im Teilbericht und Serienlog prüfen; dann denselben Lauf fortsetzen.')
     update_progress(phase='finished', completed=1, total=1, unit='steps')
     return 0
 

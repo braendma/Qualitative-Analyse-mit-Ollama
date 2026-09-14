@@ -2,13 +2,16 @@
 import json
 
 from coverage_core import markdown_escape as esc
+from failure_help import fixed_failure_help
 
 LABELS = {'clusterer': 'Cluster', 'summarizer': 'Zusammenfassungen', 'swot': 'SWOT',
           'meta_swot': 'Meta-SWOT', 'person_analysis': 'Personenanalyse',
           'person_comparison': 'Personenvergleich', 'contrast_analysis': 'Kontraste und Negativfälle',
           'relation_analysis': 'Relationen', 'ambiguity_analysis': 'Ambivalenzen',
           'evidence_audit': 'Evidenzprüfung', 'overall_synthesis': 'Gesamtsynthese',
-          'blind_coding': 'Unabhängige Codierung', 'code_verification': 'Codierüberprüfung'}
+          'blind_coding': 'Unabhängige Codierung', 'code_verification': 'Codierüberprüfung',
+          'coding_agreement': 'Codierübereinstimmung', 'review_queue': 'Prüfliste',
+          'custom_module': 'Eigenes Modul'}
 SCOPES = {'direct': 'Direkte Belegauswahl', 'input_association': 'Zuordnung von Eingabestellen',
           'source_group': 'Kontext aus Quellengruppen', 'person_reference': 'Personenreferenzen'}
 STATES = {'success': 'abgeschlossen', 'failed': 'fehlgeschlagen', 'pending': 'noch nicht gestartet',
@@ -40,6 +43,18 @@ def render_stability(result):
               'Bei unterbrochenen Läufen können weitere, noch nicht im Manifest gesicherte Versuche fehlen. '
               'Akzeptierte Anfragen sind kein Nachweis '
               'inhaltlich gültiger Antworten oder der serverinternen Durchsetzung aller Parameter.', '']
+    for condition in result['conditions']:
+        if condition['status'] not in ('failed', 'interrupted'):
+            continue
+        lines += ['### Fehlerhilfe: ' + esc(condition['sample_id']), '']
+        guidance = condition.get('failure_guidance', [])
+        if not guidance:
+            lines += ['Die Fehlerkategorie wurde nicht gesichert. Das Serienprotokoll im internen Wiederholungsordner '
+                      'enthält weitere technische Angaben. Vor dem Teilen Forschungsinhalte, Pfade und Zugangsdaten entfernen.', '']
+        for item in guidance:
+            safe = fixed_failure_help(item.get('kind'))
+            lines += ['**' + esc(LABELS.get(item.get('module'), 'Modul der Wiederholung')) + '**', '',
+                      safe['cause'], '', safe['action'], '', safe['resume_note'], '']
     for note in result['notes']:
         lines += ['- ' + esc(note)]
     lines += ['', 'Modellgewichte: ' + ('derselbe lokale Digest wurde vor und nach den akzeptierten Anfragen beobachtet; '

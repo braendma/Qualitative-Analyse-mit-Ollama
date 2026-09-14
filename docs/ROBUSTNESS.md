@@ -192,3 +192,25 @@ Basis und jede Variante sind an dieselben Originaldaten und eigene Konfiguration
 ## Änderungen während der Eingabeprüfung
 
 Die Oberfläche verwirft verspätete Prüfergebnisse nach einer Änderung an Auswahl oder Einstellungen. Das gilt auch für Preset-Schaltflächen. Ein bereits angeklickter Start wird nach einer solchen Änderung nicht automatisch fortgesetzt; die aktuelle Auswahl muss erneut geprüft werden. Eine zuvor serverseitig gespeicherte Revision kann erhalten bleiben, wird aber durch diese Aktion nicht gestartet.
+
+
+## Kontrollierte Serien: Status ist kein Abschlussnachweis
+
+Der bestehende Supervisor bleibt für Prozessende und Bereinigung verantwortlich.
+Während seiner Wartezeit liest ein optionaler Fortschrittscallback nur den zur
+geplanten Wiederholung gehörenden Unterlauf. Die Statusdateien sind größenbegrenzt;
+Laufbindung, Modulübergang und die Herkunft der Fortschrittsmeldung werden geprüft.
+Im Sekunden-Polling werden keine vollständigen Ergebnisdateien erneut gehasht.
+Fehlende, beschädigte oder fremde Statusdaten bleiben unbeziffert und belegen
+allein keinen Analyseabbruch. Der Zeitstempel stammt aus dem Kindlauf und wird
+nicht durch bloßes Polling erneuert. Die vollständigen bisherigen Manifest-,
+Artefakt-, Quellen- und Prozessabschlussprüfungen bleiben für Abschluss/Resume bestehen.
+
+Scheitert eine kontrollierte Wiederholung, zeigen Laufkarte und Teilbericht die gesicherte Fehlerkategorie und passende Schritte, beispielsweise bei zu kleinem Kontextfenster, Speichermangel oder einem Anbieterkontingent. Der Teilbericht nennt die betroffene Wiederholung und das Modul. Alte oder unvollständige Fehlerdaten werden ausdrücklich als unbekannt gekennzeichnet. Rohprotokolle, Eingabetexte und Zugangsdaten werden nicht in diese Hinweise übernommen. Fortsetzen erhält die ursprünglichen Einstellungen; geänderte Einstellungen benötigen einen neuen Lauf.
+
+Bei Codebook-Verweisen werden nur deklarierte, abgeschlossene und verifizierte
+Wiederholungsberichte des aktuellen Laufs ausgewertet. Stimmen Material,
+Kategoriensystem, Einheiten oder Vergleichsschema nicht überein, wird die Quelle
+als ungültig ausgewiesen. Aus ihr wird kein Code-Vorkommen von null abgeleitet.
+Deaktivierte Quellen bleiben optional; es werden keine teuren Wiederholungen
+durch Auswahl der Codebook-Diagnostik automatisch gestartet.

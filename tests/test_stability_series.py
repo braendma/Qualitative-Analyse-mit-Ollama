@@ -81,6 +81,11 @@ class StabilitySeriesTests(unittest.TestCase):
             self.assertEqual(series.execute_repetitions(self.plan,self.root)['status'], 'failed')
         result = load_stability_series(self.root)
         self.assertEqual([c['status'] for c in result['conditions']], ['failed', 'pending'])
+        guidance = result['conditions'][0]['failure_guidance']
+        self.assertEqual([g['module'] for g in guidance], ['blind_coding'])
+        self.assertTrue(all(g['cause'] and g['action'] for g in guidance))
+        self.assertIn('Fehlerhilfe:', render_stability(result))
+        self.assertNotIn('failure_guidance', result['conditions'][1])
         self.assertTrue(all(r['comparison_status']=='not_computable' for r in result['comparisons'].values()))
         self.assertIn('kein Stabilitätsvergleich möglich',render_stability(result))
         # Even the completed prerequisite of an unsuccessful repetition is excluded.

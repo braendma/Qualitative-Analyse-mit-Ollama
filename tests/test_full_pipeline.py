@@ -167,7 +167,13 @@ class FullPipelineTests(unittest.TestCase):
                            '--out-md', str(temp/'codebook_diagnostics.md')])
             codebook_diagnosis=json.loads((temp/'codebook_diagnostics.json').read_text(encoding='utf-8'))
             self.assertEqual(codebook_diagnosis['processing_status'],'completed')
-            self.assertTrue(all(s['status']=='available' for s in codebook_diagnosis['source_artifacts'].values()))
+            sources=codebook_diagnosis['source_artifacts']
+            for mid in ('code_verification','blind_coding','coding_agreement','review_queue'):
+                self.assertEqual(sources[mid]['status'],'available')
+            for mid in ('stability','sensitivity'):
+                self.assertEqual(sources[mid]['status'],'unavailable')
+                self.assertEqual(sources[mid]['reason'],'disabled')
+                self.assertEqual(codebook_diagnosis['repetition_diagnostics'][mid]['status'],'unavailable')
             self.assertEqual(codebook_diagnosis['codebook_source']['sha256'],manifest['provenance']['codebook_sha256'])
             self.assertEqual(sum(c['human_rows'] for c in codebook_diagnosis['categories']),4)
             if multi:

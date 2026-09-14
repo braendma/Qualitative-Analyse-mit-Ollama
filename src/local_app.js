@@ -331,13 +331,39 @@ function renderProgressDetails(card,d,status,label='Modulfortschritt'){
   }
   const phase={preparation:'Vorbereitung',analysis:'Analyse',person_reduction:'Vorbereitung: Personenanalysen verdichten',comparison:d.module==='stability'?'Stabilitätsvergleich':d.module==='sensitivity'?'Sensitivitätsvergleich':'Abschließender Personenvergleich',repetitions:'Kontrollierte Wiederholungen',paused:'Pausiert',synthesis:'Abschließende Gesamtsynthese',reduction_level:'Hierarchische Verdichtung',finished:'Verarbeitung abgeschlossen',cluster_summaries:'Einzelne Cluster zusammenfassen',overall_summary:'Gesamtzusammenfassung erstellen'}[d.phase];
   if(phase)card.append(el('p','Phase: '+phase+(d.phase==='reduction_level'&&Number.isInteger(d.phase_level)?' · Ebene '+d.phase_level:''),'hint'));
+  const series=['stability','sensitivity'].includes(d.module)&&d.phase==='repetitions';
+  if(series){
+    const section=el('section',undefined,'series-progress');section.append(el('h4','Aktuelle Wiederholung · getrennt vom Serienfortschritt'));
+    const current=d.series_current&&typeof d.series_current==='object'?d.series_current:{};
+    const integer=v=>Number.isInteger(v)&&v>=0&&v<=10000;
+    for(const [a,b,title] of [['configuration_number','configuration_total','Einstellung'],['repetition_number','repetition_total','Wiederholung dieser Einstellung'],['modules_completed','modules_total','Darin vom Runner abgeschlossene Module']]){
+      if(integer(current[a])&&integer(current[b])&&current[b]>0&&current[a]<=current[b]&&(a==='modules_completed'||current[a]>0))section.append(el('p',`${title}: ${current[a]}/${current[b]}`));
+    }
+    const states={starting:'Kindlauf wird vorbereitet.',running:'Kindlauf in Bearbeitung.',finishing:'Kindlauf beendet; Ergebnis- und Prozessprüfung folgt.',paused:'Kindlauf pausiert.',failed:'Kindlauf fehlgeschlagen / unterbrochen.',unavailable:'Innerer Status momentan nicht verlässlich lesbar; Analyse kann weiterlaufen.'};
+    const state=Object.hasOwn(states,current.state)?current.state:'unavailable';section.append(el('p',states[state],'hint'));
+    const labels={clusterer:'Clusteranalyse',code_verification:'Code-Prüfung',blind_coding:'Blind-Coding',coding_agreement:'Codierübereinstimmung',summarizer:'Cluster-Zusammenfassungen',swot:'SWOT',meta_swot:'Meta-SWOT',person_analysis:'Personenanalyse',person_comparison:'Personenvergleich',contrast_analysis:'Kontrastanalyse',relation_analysis:'Zusammenhangsanalyse',ambiguity_analysis:'Ambivalenzanalyse',evidence_audit:'Evidence-Audit',review_queue:'Prüfliste',overall_synthesis:'Gesamtsynthese'};
+    const mid=typeof current.module==='string'&&Object.hasOwn(labels,current.module)?current.module:null;
+    if(mid)section.append(el('p','Aktuelles Modul darin: '+labels[mid]));
+    const raw=current.detail,inner={};
+    if(mid&&state!=='unavailable'&&raw&&typeof raw==='object'){
+      for(const key of ['completed','total','requests','active_requests','reused','failed','phase_level','detail_completed','detail_total','context_required','context_limit'])if(Number.isInteger(raw[key])&&raw[key]>=0&&raw[key]<=10000000)inner[key]=raw[key];
+      for(const key of ['updated_at','last_response_at','request_started_at'])if(Number.isFinite(raw[key])&&raw[key]>0&&raw[key]<=Date.now()/1000)inner[key]=raw[key];
+      for(const key of ['request_active','context_blocked'])if(typeof raw[key]==='boolean')inner[key]=raw[key];
+      if(['preparation','analysis','person_reduction','comparison','synthesis','reduction_level','finished','cluster_summaries','overall_summary','paused'].includes(raw.phase))inner.phase=raw.phase;
+      if(['passages','rows','batches','categories','persons','summaries','dimensions','pairs','steps'].includes(raw.unit))inner.unit=raw.unit;
+      if(inner.completed===undefined||inner.completed>inner.total)delete inner.total;
+    }
+    if(Object.keys(inner).length){inner.module=mid;renderProgressDetails(section,inner,status==='running'&&state==='running'?'running':state,'Arbeitseinheiten der aktuellen Wiederholung');}
+    else section.append(el('p','Noch keine verlässliche Arbeitseinheitenmeldung für diese Wiederholung; kein innerer Prozentwert.','hint'));
+    card.append(section);
+  }
   if(Number.isInteger(d.detail_total)&&d.detail_total>0)card.append(el('p',`${Math.min(count(d.detail_completed),d.detail_total)} von ${d.detail_total} Prüfblöcken der aktuellen Einheit abgeschlossen`,'hint'));
   if(known)card.append(el('p','Der Prozentwert bezieht sich auf die angezeigten Arbeitseinheiten dieser Phase, nicht auf die benötigte Zeit.','hint'));
   if(d.reused)card.append(el('p',`${count(d.reused)} davon aus geprüften Zwischenergebnissen wiederverwendet`,'hint'));
   if(d.failed)card.append(el('p',`${count(d.failed)} Teilaufgabe(n) fehlgeschlagen. ${status==='running'?'Bereits laufende Anfragen werden noch abgeschlossen und erfolgreiche Ergebnisse gespeichert. Neue Teilaufgaben starten nicht.':'Erfolgreiche Zwischenergebnisse bleiben für die Wiederaufnahme erhalten.'}`,'error'));
   if(d.context_blocked)card.append(el('p',`Kontext reicht für die entstandenen Eingaben nicht: konservative Rechengrenze ${d.context_required}, eingestellt ${d.context_limit}. Kontext und Speicherbedarf erneut prüfen und mit geänderten Einstellungen einen neuen Lauf starten.`,'error'));
   const active=Number.isInteger(d.active_requests)?count(d.active_requests):(d.request_active?1:0);
-  card.append(el('p',`${count(d.requests)} Modellantworten empfangen`+(status==='running'?(active?(Number.isInteger(d.active_requests)?` · ${active} Modellanfrage(n) aktiv`:' · Modellanfrage läuft'):' · nächste Arbeitsschritte werden vorbereitet'):''),'hint'));
+  if(!series)card.append(el('p',`${count(d.requests)} Modellantworten empfangen`+(status==='running'?(active?(Number.isInteger(d.active_requests)?` · ${active} Modellanfrage(n) aktiv`:' · Modellanfrage läuft'):' · nächste Arbeitsschritte werden vorbereitet'):''),'hint'));
   if(d.last_response_at)card.append(el('p','Letzte Modellantwort: '+new Date(d.last_response_at*1000).toLocaleTimeString('de-DE'),'hint'));
   if(d.updated_at)card.append(el('p','Fortschrittsmeldung: '+new Date(d.updated_at*1000).toLocaleTimeString('de-DE')+(status==='running'&&Date.now()/1000-d.updated_at>180?' · seit über drei Minuten unverändert; eine Anfrage kann länger dauern.':''),'hint'));
 }

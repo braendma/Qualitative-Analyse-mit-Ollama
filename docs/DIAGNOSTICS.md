@@ -15,7 +15,7 @@ Beispielhilfe und Berichte integriert. Die Codebook-Diagnostik ist ebenfalls in
 Modulauswahl, Berichte, Fortschritt und Beispielhilfe eingebunden. Stabilität ist
 mit Zielauswahl, Aufwandvorschau, Wiederholungen, Pause/Resume und Gesamtbericht integriert.
 Die Sensitivität ist mit Variantenwahl, Vorprüfung, Aufwandvorschau und Teilberichten integriert.
-Die Verknüpfung ihrer Befunde mit der Codebook-Diagnostik folgt in S10. Dieser Abschnitt
+Ihre verifizierten Codierbefunde sind optional mit der Codebook-Diagnostik verknüpft. Dieser Abschnitt
 beschreibt den überprüfbaren Datenvertrag und die technische Schnittstelle.
 
 ## Entwicklungsstand der Wiederholungsplanung
@@ -632,7 +632,7 @@ angebunden. Ein Pause-Exit des Moduls wird vom Runner als `paused` übernommen;
 Teilberichte sind keine abgeschlossenen Ausgaben. Der eigene Serienordner ist für
 separate Ausgabeziele gesperrt. Die Bedienung steht im
 [Handbuch](HANDBUCH.html#stabilitaet-kontrollierter-wiederholungen).
-Die spätere Anbindung von Stabilitätsbefunden an die Codebook-Diagnostik folgt in S10.
+Die Codebook-Diagnostik kann diese verifizierten Codierbefunde verwenden, wenn sie und die jeweilige Wiederholungsdiagnose ausgewählt sind.
 
 ## Geprüfter Sensitivitätsvergleich
 
@@ -703,3 +703,46 @@ Fingerprints als Erklärung. Lange Auszüge sind als gekürzt markiert, der Verg
 verwendet vollständige Projektionen. HTML-/Markdown-Zeichen werden maskiert.
 CLI, Oberfläche und interaktiver Gesamtbericht sind angebunden. Bedienung und
 synthetisches Beispiel stehen im [Handbuch](HANDBUCH.html#sensitivitaet-einstellungen-vergleichen).
+
+
+## Diagnoseübergreifende Prüfung und Fortschritt
+
+### Codebook-Hinweise aus kontrollierten Wiederholungen
+
+`codebook_diagnostics` berücksichtigt optional `stability` und `sensitivity` über
+die bestehende deklarierte Artefaktprüfung. Die Reihenfolge `after_if_enabled`
+aktiviert keine zusätzlichen Module. Fehlende oder ungültige ausgewählte Quellen
+bleiben sichtbar und machen die Diagnose vorläufig. Ein abgeschlossener Bericht
+ohne Blindcodier- oder Verifikationsvergleich wird ausdrücklich als ungeeignete
+Vergleichsquelle benannt. Andere Läufe werden nicht automatisch eingelesen.
+
+`codebook_repetition_links.py` prüft Material-/Codebookbindung, Einheiten,
+Personenzuordnung und Vergleichsschema. Die Projektion trennt Blindzuordnungen
+von vorgeschlagenen Verifikationsalternativen. Je Code/Einstellung werden
+schwankende Einheiten durch Einheiten mit mindestens zwei entscheidbaren
+Wiederholungen geteilt. Technische Fehler, Enthaltungen und fehlende Wiederholungen
+bleiben separat. Bei Sensitivität werden zusätzlich unterschiedliche beobachtete
+Anteile zwischen auswertbaren Einstellungen gezeigt; vollständig und nur
+teilweise beobachtete Wiederholungen sind in den Einzelzählern nachvollziehbar.
+Das sind weder Fehlerquoten des Kategoriensystems noch kausale Parametereffekte.
+Die Diagnose verändert keine Codes oder menschlichen Entscheidungen.
+
+### Innerer Fortschritt und konkrete Fehlerhilfe
+
+Der Serienbalken zählt abgeschlossene, geprüfte Wiederholungen. Ein separater Bereich zeigt die aktuelle Einstellung und Wiederholung, das aktive Modul sowie dessen gemeldete Arbeitseinheiten und aktive Modellanfragen. Browser und Telegram halten diese Ebenen getrennt: Drei von acht Arbeitseinheiten einer Wiederholung sind kein zusätzlicher Anteil am Serienbalken und keine Schätzung der verbleibenden Zeit. Ist eine Gesamtzahl unbekannt, wird sie nicht als null ausgegeben.
+
+Die innere Statusmeldung behält ihren ursprünglichen Zeitpunkt. Fehlt sie oder kann sie dem Unterlauf nicht sicher zugeordnet werden, bleiben die inneren Zahlen unbeziffert. Eine länger unveränderte Meldung bleibt an ihrem ursprünglichen Zeitpunkt erkennbar. Das bedeutet allein noch keinen Abbruch. Nach Ende des Kindprozesses kann kurz die Prüfung der Ergebnisse angezeigt werden; erst danach gilt die Wiederholung als abgeschlossen. Telegram überträgt nur technische Statusfelder, keine Interviewtexte, Personennamen oder Bezeichnungen der Varianten.
+
+Scheitert eine kontrollierte Wiederholung, zeigen Laufkarte und Teilbericht die gesicherte Fehlerkategorie und passende Schritte, beispielsweise bei zu kleinem Kontextfenster, Speichermangel oder einem Anbieterkontingent. Der Teilbericht nennt die betroffene Wiederholung und das Modul. Alte oder unvollständige Fehlerdaten werden ausdrücklich als unbekannt gekennzeichnet. Rohprotokolle, Eingabetexte und Zugangsdaten werden nicht in diese Hinweise übernommen. Fortsetzen erhält die ursprünglichen Einstellungen; geänderte Einstellungen benötigen einen neuen Lauf.
+
+Der Status wird über die vorhandene Seriensteuerung aus dem zugehörigen
+Kindlauf gelesen. Run-ID, gespeicherte Laufgrundlage und Fortschrittsidentität
+müssen passen; fehlerhafte oder fremde Meldungen liefern keine inneren Zahlen.
+Die Statusabfrage ersetzt nicht die vollständige Prozess-/Artefaktprüfung nach
+Abschluss oder vor Resume. Gespeicherte Fehler werden ausschließlich über
+bekannte Kategorien auf fest hinterlegte Hilfe projiziert, nicht als Rohtext
+in Oberfläche oder Bericht kopiert.
+
+### Umfang des HTML-Exports
+
+Der HTML-Gesamtbericht lässt sich als einzelne Datei offline lesen, durchsuchen und über die Druckfunktion als PDF speichern; seine eingebetteten Bilder bleiben enthalten. Die vollständigen Diagnose-JSON-Dateien sind jedoch separate Dateien. Bei langen Diagnosen enthält HTML dieselbe gekennzeichnete Auswahl wie der Markdown-Bericht. Weitere Befunde und Einzelzähler findest du in der Oberfläche unter „Ergebnisse → Einzelberichte und Datendateien“ bei der jeweiligen JSON-Datei. Wer nur die HTML-Datei erhält, erhält diese zusätzlichen JSON-Daten nicht. Für eine vollständige Detailprüfung die benötigten JSON-Dateien gezielt mitgeben; ein PDF enthält nur die gedruckte Ansicht.

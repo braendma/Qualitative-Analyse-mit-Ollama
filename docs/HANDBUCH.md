@@ -183,6 +183,8 @@ Unter **Lokales Modell auswählen** den installierten Namen eintragen. **Install
 
 ## 8. Berichte öffnen und später wiederfinden
 
+Der HTML-Gesamtbericht lässt sich als einzelne Datei offline lesen, durchsuchen und über die Druckfunktion als PDF speichern; seine eingebetteten Bilder bleiben enthalten. Die vollständigen Diagnose-JSON-Dateien sind jedoch separate Dateien. Bei langen Diagnosen enthält HTML dieselbe gekennzeichnete Auswahl wie der Markdown-Bericht. Weitere Befunde und Einzelzähler findest du in der Oberfläche unter „Ergebnisse → Einzelberichte und Datendateien“ bei der jeweiligen JSON-Datei. Wer nur die HTML-Datei erhält, erhält diese zusätzlichen JSON-Daten nicht. Für eine vollständige Detailprüfung die benötigten JSON-Dateien gezielt mitgeben; ein PDF enthält nur die gedruckte Ansicht.
+
 Unter **Ergebnisse** bleiben die Läufe des ausgewählten Projekts gespeichert. Nach einem erfolgreichen Abschluss erscheint **Interaktiven Bericht öffnen**. Der Gesamtbericht enthält die Markdown-Berichtsteile der ausgeführten Module und eingebettete unterstützte Diagramme. Rohdaten, Excel-Exporte und die bearbeitbare Prüfliste werden separat geöffnet.
 
 ![Interaktiver Gesamtbericht mit Navigation und Suche](screenshots/08-interaktiver-bericht.jpg)
@@ -513,7 +515,11 @@ Weniger als drei Einheiten und ungenutzte Codes sind Prüfhinweise, keine Lösch
 
 Wenn eine gewählte Quelle fehlt oder fehlgeschlagen ist, bleibt die Diagnose vorläufig. Prüfe die Fehlerhilfe der Vorstufe und setze den Lauf nach Behebung fort. Bei geänderten Eingaben oder Kategorien beginne einen neuen Lauf. Bearbeite die gespeicherten Prüfsummen nicht manuell.
 
-Sehr lange Definitionen werden vollständig verglichen; die JSON-Vorschau ist auf 600 Zeichen begrenzt und als gekürzt gekennzeichnet. Überschreitet eine Mehrfachcodierung insgesamt 100.000 Paarereignisse, wird die Paaranalyse ausdrücklich nicht berechnet; die Einzelzahlen bleiben. Stabilitäts- und Sensitivitätsbefunde folgen erst mit diesen noch ausstehenden Modulen.
+Sehr lange Definitionen werden vollständig verglichen; die JSON-Vorschau ist auf 600 Zeichen begrenzt und als gekürzt gekennzeichnet. Überschreitet eine Mehrfachcodierung insgesamt 100.000 Paarereignisse, wird die Paaranalyse ausdrücklich nicht berechnet; die Einzelzahlen bleiben.
+
+Für zusätzliche Hinweise aus Wiederholungen wähle Codebook-Diagnostik und bei Bedarf Stabilität oder Sensitivität. Als Wiederholungsziel muss Blind-Coding oder Code-Verifikation enthalten sein. Die Codebook-Diagnose wartet auf die ausgewählten Diagnosen und verwendet nur abgeschlossene, verifizierte Berichte desselben Laufs mit passendem Material und Kategoriensystem. Sie startet selbst keine weiteren Wiederholungen. Nicht ausgewählte, fehlende oder ungültige Quellen werden benannt und ergeben keine erfundenen Nullwerte.
+
+Die neue Übersicht zeigt je Code und Einstellung, bei wie vielen vergleichbaren Einheiten das Code-Vorkommen zwischen Wiederholungen schwankt. Beispiel: Eine von vier vergleichbaren Textstellen erhält einen Code nur in einer von zwei auswertbaren Wiederholungen; die Tabelle zeigt für diesen Code 1/4 schwankende Einheiten. Technische Fehler und inhaltliche Enthaltungen bleiben getrennt; Verifikationsalternativen zählen nicht als Blindzuordnungen. Unterschiede zwischen Einstellungen sind ein Prüfhinweis, kein Beweis für eine Parameterursache oder einen fehlerhaften Code. Prüfe die angezeigten Originalauszüge und den zugehörigen Stabilitäts- oder Sensitivitätsabschnitt. Die vollständigen Einzelzähler stehen in der separaten JSON-Datei.
 
 [Methodik, Nenner und technische Details](DIAGNOSTICS.md) · [Konfigurationsreferenz](CONFIGURATION.md)
 
@@ -537,7 +543,11 @@ Im Bericht werden Codeentscheidungen, Unsicherheiten, technische Fehler, Cluster
 
 Parameterprofile zeigen die tatsächlich übertragenen Einstellungen und bekannte Reparaturvarianten. Sie beweisen nicht die serverinterne Durchsetzung. Cloud-Modellgewichte sind nicht unabhängig prüfbar; veränderte beobachtete lokale Modelldigests sperren den gemeinsamen Vergleich. Bei geänderten Daten, Einstellungen, Code oder Abhängigkeiten einen neuen Lauf verwenden und keine Prüfsummen manuell anpassen.
 
-Die Fortschrittsanzeige zählt fertiggestellte Wiederholungen; innerhalb einer laufenden Wiederholung kann die Zahl länger unverändert bleiben. Daraus wird keine erfundene Restzeit berechnet. Allgemeine Telegram-Meldungen können diese Phase und Zählung anzeigen; Rohtexte werden dafür nicht versendet.
+Der Serienbalken zählt abgeschlossene, geprüfte Wiederholungen. Ein separater Bereich zeigt die aktuelle Einstellung und Wiederholung, das aktive Modul sowie dessen gemeldete Arbeitseinheiten und aktive Modellanfragen. Browser und Telegram halten diese Ebenen getrennt: Drei von acht Arbeitseinheiten einer Wiederholung sind kein zusätzlicher Anteil am Serienbalken und keine Schätzung der verbleibenden Zeit. Ist eine Gesamtzahl unbekannt, wird sie nicht als null ausgegeben.
+
+Die innere Statusmeldung behält ihren ursprünglichen Zeitpunkt. Fehlt sie oder kann sie dem Unterlauf nicht sicher zugeordnet werden, bleiben die inneren Zahlen unbeziffert. Eine länger unveränderte Meldung bleibt an ihrem ursprünglichen Zeitpunkt erkennbar. Das bedeutet allein noch keinen Abbruch. Nach Ende des Kindprozesses kann kurz die Prüfung der Ergebnisse angezeigt werden; erst danach gilt die Wiederholung als abgeschlossen. Telegram überträgt nur technische Statusfelder, keine Interviewtexte, Personennamen oder Bezeichnungen der Varianten.
+
+Scheitert eine kontrollierte Wiederholung, zeigen Laufkarte und Teilbericht die gesicherte Fehlerkategorie und passende Schritte, beispielsweise bei zu kleinem Kontextfenster, Speichermangel oder einem Anbieterkontingent. Der Teilbericht nennt die betroffene Wiederholung und das Modul. Alte oder unvollständige Fehlerdaten werden ausdrücklich als unbekannt gekennzeichnet. Rohprotokolle, Eingabetexte und Zugangsdaten werden nicht in diese Hinweise übernommen. Fortsetzen erhält die ursprünglichen Einstellungen; geänderte Einstellungen benötigen einen neuen Lauf.
 
 **Bei Problemen:** Den Stabilitäts-Teilbericht, die Fehlerhilfe und das Serienlog im Unterordner prüfen. Ziel-/Vorstufenauswahl korrigieren oder den technischen Fehler beheben. Nur bei unveränderter Laufgrundlage fortsetzen. Eine neue Konfiguration benötigt einen neuen Lauf.
 
@@ -630,7 +640,7 @@ Fehlgeschlagene Läufe zählen nicht als fehlendes Thema. Der Bericht nennt gepl
 
 Exakte Textprojektionen sind keine semantisch geprüften Themen. Die Quellenverteilung beschreibt ausgewählte Belege, nicht sämtliche thematischen Nennungen. Wiederholtes Vorkommen zählt Einstellungen oder Läufe, nicht Interviewpersonen. Bei mehreren Dokumentteilen derselben bestätigten Person bleibt die Personenzuordnung unverändert.
 
-Mit **Nach diesem Modul pausieren** kann zwischen den Modulen einer Wiederholung pausiert werden. Fertige Wiederholungen bleiben erhalten. Nach Behebung eines Fehlers verwendet **Diesen Lauf fortsetzen** dieselben unveränderten Einstellungen und setzt fehlende Teile fort. Geänderte Eingaben, Modellgewichte, Vorlagen oder Programmdateien benötigen einen neuen Lauf. Bei Problemen die Fehlerhilfe, den Teilbericht und die Serienlogs prüfen. Die Fortschrittsanzeige zählt abgeschlossene Wiederholungen; einzelne Anfragen eines laufenden Unterlaufs werden dort derzeit noch nicht separat gezählt.
+Mit **Nach diesem Modul pausieren** kann zwischen den Modulen einer Wiederholung pausiert werden. Fertige Wiederholungen bleiben erhalten. Nach Behebung eines Fehlers verwendet **Diesen Lauf fortsetzen** dieselben unveränderten Einstellungen und setzt fehlende Teile fort. Geänderte Eingaben, Modellgewichte, Vorlagen oder Programmdateien benötigen einen neuen Lauf. Bei Problemen die Fehlerhilfe, den Teilbericht und die Serienlogs prüfen. Der Serienbalken und die aktuelle Wiederholung werden getrennt angezeigt, einschließlich gemeldeter innerer Arbeitseinheiten und Anfragen. Die Anzeige entspricht der oben erklärten Stabilitätsanzeige; alle Zähler beschreiben Arbeitseinheiten, keine Restzeit.
 
 ## Aufwandprofile
 
