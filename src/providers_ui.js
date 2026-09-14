@@ -12,6 +12,7 @@ function renderProvider(){
   $('persist-provider-key').disabled=!state?.provider_keys?.can_persist;
   $('persist-provider-key').checked=Boolean(info?.persist);
   if(typeof scheduleCapacity==='function')scheduleCapacity();
+  if(typeof scheduleOllamaStatus==='function')scheduleOllamaStatus();
 }
 function loadProviderFields(){
   const s=project.settings||{};$('gdpr-relevant').checked=s.gdpr_relevant!==false;

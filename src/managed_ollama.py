@@ -132,16 +132,15 @@ def supervise(program):
 def supervise_command(command, receipt_path=None, ticket=None):
     """Reuse the stdin lease for model servers and diagnostic runner trees."""
     from runtime_support import atomic_json, fingerprint
-    job = None
-    if os.name == 'nt':
-        from windows_process_job import SupervisorJob
-        job = SupervisorJob()  # Containment must succeed before spawning children.
+    import errno
+    job = child = None
+    spawn_attempted = no_child_started = False
+    primary_error = None
     record = {'schema_version': 1, 'ticket': ticket, 'command_sha256': fingerprint(command),
               'supervisor_pid': os.getpid(), 'status': 'starting', 'cleanup_confirmed': False}
     def save():
         if receipt_path:
             atomic_json(receipt_path, record)
-    save()
     released = threading.Event()
     def lease():
         try:
@@ -149,41 +148,77 @@ def supervise_command(command, receipt_path=None, ticket=None):
                 pass
         finally:
             released.set()
-    threading.Thread(target=lease, daemon=True).start()
-    child = subprocess.Popen(command, stdin=subprocess.DEVNULL,
-        start_new_session=os.name != 'nt', creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
-    record.update(child_pid=child.pid, status='running'); save()
     code = 130
     try:
+        save()
+        if os.name == 'nt':
+            from windows_process_job import SupervisorJob
+            job = SupervisorJob()  # Containment must succeed before spawning children.
+        threading.Thread(target=lease, daemon=True).start()
+        spawn_attempted = True
+        try:
+            child = subprocess.Popen(command, stdin=subprocess.DEVNULL,
+                start_new_session=os.name != 'nt', creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
+        except OSError as exc:
+            # These OS launch failures cannot leave an executed command behind.
+            # An arbitrary constructor exception is not such a proof; Windows
+            # can still authoritatively inspect its already established job.
+            no_child_started = isinstance(exc, (FileNotFoundError, PermissionError, NotADirectoryError)) or exc.errno == errno.ENOEXEC
+            raise
+        record.update(child_pid=child.pid, status='running'); save()
         while not released.wait(.2):
             if child.poll() is not None:
                 code = child.returncode
                 break
+    except BaseException as exc:
+        primary_error, code = exc, 1
     finally:
-        if job:
-            job.stop_descendants()
-        else:
-            # The leader may have exited while a module in its process group remains.
-            try: os.killpg(child.pid, signal.SIGTERM)
-            except ProcessLookupError: pass
-            try: child.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                try: os.killpg(child.pid, signal.SIGKILL)
+        cleanup_error = None
+        confirmed = False
+        try:
+            if job:
+                job.stop_descendants()
+            elif child:
+                # The leader may have exited while a module in its group remains.
+                try: os.killpg(child.pid, signal.SIGTERM)
                 except ProcessLookupError: pass
-        child.wait(timeout=10)
-        if not job:
-            deadline = time.monotonic() + 5
-            while True:
-                try: os.killpg(child.pid, 0)
-                except ProcessLookupError: break
-                if time.monotonic() >= deadline:
-                    raise RuntimeError('Prozessgruppe noch nicht vollständig beendet; Abschluss nicht bestätigt.')
-                try: os.killpg(child.pid, signal.SIGKILL)
-                except ProcessLookupError: break
-                time.sleep(.05)
-        record.update(status='finished', exit_code=code, cleanup_confirmed=True,
-                      cleanup_scope='windows_job' if job else 'process_group', parent_released=released.is_set())
-        save()
+                try: child.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    try: os.killpg(child.pid, signal.SIGKILL)
+                    except ProcessLookupError: pass
+            if child:
+                child.wait(timeout=10)
+                if not job:
+                    deadline = time.monotonic() + 5
+                    while True:
+                        try: os.killpg(child.pid, 0)
+                        except ProcessLookupError: break
+                        if time.monotonic() >= deadline:
+                            raise RuntimeError('Prozessgruppe noch nicht vollständig beendet; Abschluss nicht bestätigt.')
+                        try: os.killpg(child.pid, signal.SIGKILL)
+                        except ProcessLookupError: break
+                        time.sleep(.05)
+            confirmed = bool(job or child or not spawn_attempted or no_child_started)
+        except BaseException as exc:
+            cleanup_error = exc
+        record.update(status='finished' if confirmed else 'cleanup_unconfirmed', exit_code=code,
+                      cleanup_confirmed=confirmed, cleanup_scope='windows_job' if os.name == 'nt' else 'process_group',
+                      parent_released=released.is_set())
+        if child is None:
+            record['child_start'] = 'not_started' if not spawn_attempted or no_child_started else 'unknown'
+        try:
+            save()
+        except BaseException as exc:
+            cleanup_error = cleanup_error or exc
+        if primary_error is not None and cleanup_error is not None:
+            # Python 3.10 remains supported; notes were introduced in 3.11.
+            add_note = getattr(primary_error, 'add_note', None)
+            if add_note:
+                add_note('Zusätzlich konnte der Abschlussnachweis nicht sicher geschrieben oder bestätigt werden.')
+        elif cleanup_error is not None:
+            primary_error = cleanup_error
+    if primary_error is not None:
+        raise primary_error
     return code
 
 

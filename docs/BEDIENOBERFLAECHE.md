@@ -23,6 +23,12 @@ Falls eine passende Python-Umgebung bereits eingerichtet ist, reicht `python -X 
 
 Die Oberfläche ist nur an `127.0.0.1` gebunden und wird nicht veröffentlicht. Ein zufälliger Sitzungsschlüssel schützt ihre API. Die angezeigte Startadresse gehört ausschließlich auf diesen PC. Standardmäßig gilt die DSGVO-Sperre mit lokalem Ollama. Cloud-Anbieter sind nach ausdrücklicher Freigabe im Projekt verfügbar; siehe [Handbuch](HANDBUCH.md#datenfreigabe-anbieter-und-schlussel) und [Anbieterhinweise](KI_ANBIETER.md).
 
+## Ollama-Erreichbarkeit (Entwicklungsstand P03)
+
+Die Oberfläche lässt sich ohne Ollama-Server starten. Beim lokalen Anbieter liest eine kurze Hintergrundabfrage nur die Modellliste; **Ollama erneut prüfen** wiederholt sie bewusst. **Ollama erreichbar** mit leerer Liste bedeutet, dass noch kein lokales Modell vorhanden ist. Bei **Ollama nicht erreichbar** werden alte Listenvorschläge entfernt, dein eingetragener Modellname bleibt jedoch erhalten. Ollama starten bzw. Modell bereitstellen und erneut prüfen.
+
+Nur ausgewählte lokale Schritte mit Modellbedarf werden bei diesem Zustand gesperrt. Reine Diagnosen ohne modellabhängige Vorstufen und ausdrücklich freigegebene Cloud-Anbieter bleiben nutzbar. Die Statusprüfung installiert und startet nichts; sie ist weder Speicherschätzung noch Modelltest. Anbieter und Modell werden weiterhin im Projekt ausgewählt. Neue Standalone-Pakete sind mit dieser Entwicklungsfunktion noch nicht freigegeben.
+
 ## Ein Projekt bearbeiten
 
 - Ein eigenes Projekt anlegen oder die mitgelieferte künstliche Demo laden. Die Demo liegt separat in `demo/` und enthält 50 Codierzeilen, 43 Passagen und 12 Codepfade.
@@ -30,7 +36,7 @@ Die Oberfläche ist nur an `127.0.0.1` gebunden und wird nicht veröffentlicht. 
 - Interviewdaten und Kategoriensystem als XLSX oder UTF-8-CSV mit Semikolon auswählen (jeweils maximal 20 MB). Die ersten fünf Datensätze werden als Vorschau angezeigt. Originaldateien werden nicht verändert.
 - Text, Person, Code und gegebenenfalls Zeilen-/Passage-ID zuordnen. Das Kategoriensystem unterstützt Codepfad oder vier Hierarchieebenen, Definition, Ein-/Ausschlussregeln, weitere Codierhinweise und Ankerbeispiele. Nach der Vorschau werden die Spalten manuell zugeordnet; Code/Kategorie und Definition sind Pflicht. Fehlende Pflichtzuordnungen sperren den Start. Optionale Spalten können leer bleiben. Vollständige Codepfade müssen zu den menschlichen Codierungen passen.
 - Bei Mehrfachcodierung eine verlässliche Passage-ID verwenden. Dieselbe Passage-ID muss dieselbe Textstelle derselben Person bezeichnen. Ohne solche IDs kann der Zeilenvergleich ohne Kappa verwendet werden. Über „Passage-IDs vorbereiten“ lassen sich IDs aus MAXQDA-Positionsspalten und exaktem Text vorbereiten. Mögliche Gruppen werden erst nach Bestätigung zusammengeführt; es gibt keine Ähnlichkeitsheuristik.
-- Projektbeschreibung, Teilnehmende und Methodik prüfen. Modell, Kontextfenster, Antwortlimit, Temperatur und Thinking sind über Felder einstellbar. **Installierte Modelle anzeigen** fragt lediglich installierte Modelle ab und startet keine Inferenz.
+- Projektbeschreibung, Teilnehmende und Methodik prüfen. Modell, Kontextfenster, Antwortlimit, Temperatur und Thinking sind über Felder einstellbar. **Ollama erneut prüfen** aktualisiert Erreichbarkeit und lokale Modellliste ohne Inferenz.
 - Unter **Analyse → 1. Analysemodule auswählen** einzelne Module per Häkchen auswählen. **Auswahl leeren** entfernt alle Häkchen für eine eigene Zusammenstellung. Unter jedem Modul stehen Funktion und Abhängigkeiten. Die Anzeige unter der Liste nennt die Gesamtzahl auszuführender Module sowie automatisch benötigte Vorstufen. Diese Vorstufen werden auch dann ausgeführt, wenn sie selbst kein Häkchen haben. **Einstellungen speichern & Eingaben prüfen** prüft die Daten ohne Modellaufruf und zeigt die aktiven Schritte an.
 
 Mit **Prüfen & neuen Lauf starten** werden die aktuellen Einstellungen gespeichert, die Eingaben nochmals geprüft und die lokale Analyse gestartet. Pro Oberfläche ist jeweils ein Lauf aktiv. Der Fortschritt zeigt abgeschlossene Module und das aktuell laufende Modul; es gibt keine geschätzte Restlaufzeit.
@@ -89,7 +95,21 @@ Nach erfolgreichem Lauf wird `gesamtbericht.html` automatisch erzeugt. **Interak
 
 Die [bebilderte Anleitung zu Prüfung und Folgelauf](PRUEFUNG_UND_FOLGELAUF.md) erklärt Speicherung, Konflikte, Kategorienvergleich, Einrichtungstest und detaillierten Fortschritt.
 
-Bestehende CLI-Läufe außerhalb der Projektverwaltung werden in dieser ersten Version nicht automatisch importiert. Wird das Startfenster beendet, können laufende Prozesse weiterarbeiten; Telegram-Updates sind dann nicht mehr garantiert. Nach einem Neustart erkennt die Oberfläche aktive Runner-Prozesse und lässt keine parallele Wiederaufnahme zu. Das Startfenster deshalb bis zum Abschluss bzw. zur Pause geöffnet lassen.
+Bestehende CLI-Läufe außerhalb der Projektverwaltung werden nicht automatisch importiert. Ein geschlossenes Browserfenster beendet die Anwendung nicht. Zum Beenden die folgende Funktion verwenden.
+
+### Programm beenden (Entwicklungsstand P02b)
+
+In der Seitenleiste **Programm beenden** öffnen. Der Dialog prüft zunächst den aktuellen Programmstatus:
+
+- Ohne aktive Analyse: **Programm jetzt beenden**.
+- Mit aktiver Analyse: **Nach aktuellem Modul pausieren und beenden**. Die Oberfläche bleibt während des Wartens erreichbar und zeigt die angeforderte Pause bzw. Bereinigung an. Bei Wiederholungsdiagnosen gelten deren Pausegrenzen.
+- Nur für einen sofortigen Abbruch: **Sofort abbrechen** aufklappen, die Unterbrechung ausdrücklich bestätigen und **Jetzt abbrechen und beenden** wählen. Gespeicherte Ergebnisse bleiben erhalten; nicht gespeicherte Arbeit muss bei Resume gegebenenfalls erneut ausgeführt werden.
+
+**Abbrechen** vor einer Anforderung verändert nichts. Während der Übergabe ist Abbrechen gesperrt. **Dialog schließen** nach einer angenommenen Anforderung nimmt diese nicht zurück. Der gewählte aktive Lauf wird beim Bestätigen erneut geprüft; ein inzwischen anderer Lauf wird nicht still mitbeendet. Nach dem Neustart erfolgt die Wiederaufnahme über **Diesen Lauf fortsetzen**.
+
+Solange das Programm beendet wird oder der Status ungeklärt ist, startet kein neuer Lauf. Bei einer blockierten Bereinigung bleibt die Oberfläche geöffnet und nennt den Fehler. Startfenster und Laufprotokoll prüfen; **Status erneut prüfen** liest eine neue Rückmeldung. Die Rückmeldung „Bereinigung bestätigt. Das Programm wird geschlossen.“ bestätigt die Bereinigung eigener Analyseprozesse; das Programm schließt anschließend. Eine verschwundene Verbindung allein beweist weder Erfolg noch abgeschlossene Bereinigung. Nach bestätigter Anforderung kann das Browserfenster geschlossen werden; die Oberfläche kennzeichnet, wenn sie den Abschluss nicht mehr überprüfen kann.
+
+Beim Source-Start der Oberfläche fordert **Strg+C** mit aktivem Lauf die Pause und anschließendes Beenden an. Wiederholtes Strg+C ist kein Sofortabbruch; dafür die bestätigte Aktion im Dialog verwenden. Ohne aktiven Lauf schließt das Programm geordnet. Andere Anwendungen werden nicht beendet. Neue eigenständige Installationspakete sind durch diesen Entwicklungsstand noch nicht freigegeben. [Ausführliche Anleitung](HANDBUCH.md#programm-kontrolliert-beenden).
 
 ## Telegram optional einrichten
 

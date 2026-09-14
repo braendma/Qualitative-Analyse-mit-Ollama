@@ -6,7 +6,7 @@ const path=require('node:path');
 const vm=require('node:vm');
 
 function setup(){
-  const nodes=new Map(), requests=[];
+  const nodes=new Map(), requests=[],timers=new Map();let timerId=0;
   function element(){return {
     value:'',hidden:false,checked:false,disabled:false,open:false,textContent:'',children:[],listeners:{},
     addEventListener(type,fn){this.listeners[type]=fn;},
@@ -21,12 +21,14 @@ function setup(){
     document:{addEventListener(){},getElementById:node,createElement:element,querySelectorAll:()=>[]},
     location:{port:'1234',hash:''},sessionStorage:{getItem:()=>''},history:{},
     Option:function(text,value){this.text=text;this.value=value;},
-    setInterval(){},setTimeout(){},URL,URLSearchParams,
-    fetch(url,options){return new Promise(resolve=>requests.push({url,options,reply(data,ok=true){resolve({ok,json:async()=>data,blob:async()=>data});}}));}
+    setInterval(){},setTimeout(fn){const id=++timerId;timers.set(id,fn);return id;},clearTimeout(id){timers.delete(id);},URL,URLSearchParams,
+    fetch(url,options){return new Promise((resolve,reject)=>requests.push({url,options,reply(data,ok=true){resolve({ok,json:async()=>data,blob:async()=>data});},fail(text='Connection failed'){reject(new Error(text));}}));}
   });
   vm.runInContext(fs.readFileSync(path.join(__dirname,'../src/local_app.js'),'utf8'),context);
   vm.runInContext("state={defaults:{llm:{},context:{},columns:{}},modules:[],projects:[]};project={id:'first',settings:{output_dir:'/synthetic/results'},uploads:{}};document.getElementById('output-dir').value=project.settings.output_dir;outputDirMode='explicit';",context);
-  return {node,requests,run:code=>vm.runInContext(code,context),loadIdentity:()=>vm.runInContext(fs.readFileSync(path.join(__dirname,'../src/person_identity_ui.js'),'utf8'),context)};
+  return {node,requests,run:code=>vm.runInContext(code,context),loadIdentity:()=>vm.runInContext(fs.readFileSync(path.join(__dirname,'../src/person_identity_ui.js'),'utf8'),context),
+    loadProviders:()=>vm.runInContext(fs.readFileSync(path.join(__dirname,'../src/providers_ui.js'),'utf8'),context),
+    flushTimers:()=>{const ready=[...timers.values()];timers.clear();for(const fn of ready)fn();}};
 }
 const checkResult={segments:2,passages:1,persons:1,codes:1,modules:[]};
 const settle=()=>new Promise(resolve=>setImmediate(resolve));
@@ -533,4 +535,170 @@ test('late folder-check failures remain silent after the user chooses another de
   const app=setup(),pending=app.node('output-check').click();app.node('output-dir').value='/new';app.node('message').textContent='Current';
   lastRequest(app,'/api/output-check').reply({error:'Stale folder failure'},false);await pending;
   assert.equal(app.node('message').textContent,'Current');assert.equal(app.node('output-dir').value,'/new');
+});
+
+const runtimeReply=(state='open',active=null,error='')=>({state,active,error});
+const activeAttempt={project:'first',job:'synthetic-job',attempt:'attempt-1'};
+async function shutdownView(app,data=runtimeReply()){
+  const pending=app.node('shutdown-open').click();lastRequest(app,'/api/runtime').reply(data);await pending;
+}
+
+test('shutdown dialog reads current state and cancellation never requests shutdown',async()=>{
+  const app=setup();await shutdownView(app);
+  assert.equal(app.node('shutdown-dialog').open,true);assert.equal(app.node('shutdown-idle').hidden,false);
+  assert.equal(app.node('shutdown-idle').disabled,false);assert.equal(app.node('shutdown-active-actions').hidden,true);
+  await app.node('shutdown-cancel').click();assert.equal(app.node('shutdown-dialog').open,false);
+  assert.equal(app.requests.some(r=>r.url==='/api/shutdown'),false);
+  const html=fs.readFileSync(path.join(__dirname,'../src/local_app.html'),'utf8');
+  assert.match(html,/Das Schließen dieses Browsertabs beendet das Programm und laufende Analysen nicht/);
+});
+
+test('idle shutdown waits for an explicit request and only confirmed closed state reports cleanup before closing',async()=>{
+  const app=setup();await shutdownView(app);
+  const pending=app.node('shutdown-idle').click();assert.deepEqual(JSON.parse(lastRequest(app,'/api/shutdown').options.body),{mode:'idle'});
+  assert.equal(app.node('shutdown-cancel').disabled,true);
+  let prevented=false;app.node('shutdown-dialog').listeners.cancel({preventDefault(){prevented=true;}});assert.equal(prevented,true);
+  lastRequest(app,'/api/shutdown').reply(runtimeReply('stopping'));await pending;
+  assert.match(app.node('shutdown-state').textContent,/Beenden angefordert/);
+  assert.doesNotMatch(app.node('shutdown-state').textContent,/Bereinigung bestätigt/);
+  assert.equal(app.node('start').disabled,true);
+  const poll=app.run('refreshRuntime()');lastRequest(app,'/api/runtime').reply(runtimeReply('closed'));await poll;
+  assert.match(app.node('shutdown-state').textContent,/Bereinigung bestätigt/);assert.match(app.node('shutdown-state').textContent,/Programm wird geschlossen/);assert.doesNotMatch(app.node('shutdown-state').textContent,/Programm beendet/);
+});
+
+test('pause-and-exit targets the displayed job attempt and closing the dialog does not undo the request',async()=>{
+  const app=setup();await shutdownView(app,runtimeReply('open',activeAttempt));
+  assert.equal(app.node('shutdown-idle').hidden,true);assert.equal(app.node('shutdown-active-actions').hidden,false);
+  const pending=app.node('shutdown-pause').click();
+  assert.deepEqual(JSON.parse(lastRequest(app,'/api/shutdown').options.body),{mode:'pause',...activeAttempt});
+  lastRequest(app,'/api/shutdown').reply(runtimeReply('waiting_for_pause',activeAttempt));await pending;
+  assert.match(app.node('shutdown-state').textContent,/aktuelle Modul wird abgeschlossen/);
+  assert.equal(app.node('shutdown-pause').disabled,true);assert.equal(app.node('start').disabled,true);
+  assert.equal(app.node('shutdown-cancel').textContent,'Dialog schließen');await app.node('shutdown-cancel').click();
+  assert.equal(app.requests.filter(r=>r.url==='/api/shutdown').length,1);
+  assert.match(app.node('runtime-status').textContent,/Pause angefordert/);
+});
+
+test('abort requires fresh explicit confirmation after the active attempt changes',async()=>{
+  const app=setup();await shutdownView(app,runtimeReply('open',activeAttempt));
+  await app.node('shutdown-abort').click();assert.equal(app.requests.some(r=>r.url==='/api/shutdown'),false);
+  app.node('shutdown-abort-confirmed').checked=true;app.node('shutdown-abort-confirmed').listeners.change();
+  const next={...activeAttempt,attempt:'attempt-2'},poll=app.run('refreshRuntime()');lastRequest(app,'/api/runtime').reply(runtimeReply('open',next));await poll;
+  assert.equal(app.node('shutdown-abort-confirmed').checked,false);assert.equal(app.node('shutdown-abort').disabled,true);
+  await app.node('shutdown-abort').click();assert.equal(app.requests.some(r=>r.url==='/api/shutdown'),false);
+  app.node('shutdown-abort-confirmed').checked=true;app.node('shutdown-abort-confirmed').listeners.change();
+  const abort=app.node('shutdown-abort').click();assert.deepEqual(JSON.parse(lastRequest(app,'/api/shutdown').options.body),{mode:'abort',...next,confirmed:true});
+  lastRequest(app,'/api/shutdown').reply(runtimeReply('stopping',next));await abort;
+});
+
+test('a runtime reply requested before shutdown cannot reopen the start gate',async()=>{
+  const app=setup();await shutdownView(app);
+  const old=app.run('refreshRuntime()'),stale=lastRequest(app,'/api/runtime');
+  const shutdown=app.node('shutdown-idle').click();lastRequest(app,'/api/shutdown').reply(runtimeReply('stopping'));await shutdown;
+  stale.reply(runtimeReply());await old;
+  assert.equal(app.run('runtimeState.state'),'stopping');assert.equal(app.node('start').disabled,true);
+});
+
+test('disconnect after accepted shutdown does not claim successful cleanup',async()=>{
+  const app=setup();await shutdownView(app);
+  const shutdown=app.node('shutdown-idle').click();lastRequest(app,'/api/shutdown').reply(runtimeReply('stopping'));await shutdown;
+  const poll=app.run('pollApp()');lastRequest(app,'/api/runtime').fail();await poll;
+  assert.match(app.node('runtime-status').textContent,/Beenden angefordert/);
+  assert.match(app.node('runtime-status').textContent,/nicht mehr überprüfbar/);
+  assert.doesNotMatch(app.node('runtime-status').textContent,/Bereinigung bestätigt|Programm beendet/);
+});
+
+test('unconfirmed shutdown failure blocks starting until a fresh server state resolves it',async()=>{
+  const app=setup();await shutdownView(app);
+  const shutdown=app.node('shutdown-idle').click();lastRequest(app,'/api/shutdown').fail('Network unavailable');await shutdown;
+  assert.match(app.node('shutdown-state').textContent,/Beenden nicht bestätigt/);assert.equal(app.run('shutdownUncertain'),true);
+  assert.equal(app.node('start').disabled,true);assert.equal(app.run('shutdownAccepted'),false);
+  const refresh=app.node('shutdown-refresh').click();lastRequest(app,'/api/runtime').reply(runtimeReply('open'));await refresh;
+  assert.equal(app.run('shutdownUncertain'),false);assert.equal(app.run('runtimeBlocksStart()'),false);
+});
+
+test('blocked shutdown remains visible and a shutdown during preflight prevents dispatch',async()=>{
+  const app=setup();app.run(`applyRuntime(${JSON.stringify(runtimeReply('blocked',activeAttempt,'Synthetic cleanup failure'))})`);
+  assert.match(app.node('runtime-status').textContent,/bleibt geöffnet/);assert.match(app.node('runtime-status').textContent,/Synthetic cleanup failure/);
+  assert.equal(app.node('start').disabled,true);
+  app.run(`applyRuntime(${JSON.stringify(runtimeReply())})`);
+  const start=app.node('start').click();
+  app.run(`applyRuntime(${JSON.stringify(runtimeReply('stopping'))})`);
+  lastRequest(app,'/api/save').reply(checkResult);await start;
+  assert.equal(app.requests.some(r=>r.url==='/api/start'),false);
+  assert.match(app.node('message').textContent,/Programm wird beendet/);
+});
+
+test('Ollama status is a metadata-only check and leaves the selected model untouched',async()=>{
+  const app=setup();app.node('provider').value='ollama_local';app.node('model').value='chosen-model';
+  const checking=app.node('check-ollama').click();assert.match(app.node('ollama-status').textContent,/wird geprüft/);
+  assert.equal(lastRequest(app,'/api/models').options.method,'GET');
+  lastRequest(app,'/api/models').reply({models:['installed-a','installed-b']});await checking;
+  assert.match(app.node('ollama-status').textContent,/Ollama erreichbar.*2 lokale Modelle/);
+  assert.equal(app.node('model').value,'chosen-model');assert.equal(app.node('model-list').children.length,2);
+  assert.equal(app.requests.some(r=>/model-test|start|ollama-capacity|provider-key/.test(r.url)),false);
+  assert.ok(app.run('ollamaStatus.checkedAt')>0);
+});
+
+test('Ollama offline clears stale model choices, sanitizes errors and can be rechecked without installation',async()=>{
+  const app=setup();app.node('provider').value='ollama_local';app.node('model').value='keep-model';
+  const first=app.run('checkOllamaStatus()');lastRequest(app,'/api/models').reply({models:['old-model']});await first;
+  const second=app.run('checkOllamaStatus()');lastRequest(app,'/api/models').fail('PRIVATE_NETWORK_STACK http://credential@host/');await second;
+  assert.match(app.node('ollama-status').textContent,/Ollama nicht erreichbar/);
+  assert.doesNotMatch(app.node('ollama-status').textContent,/PRIVATE|credential|http:/);
+  assert.equal(app.node('model-list').children.length,0);assert.equal(app.node('model').value,'keep-model');
+  const retry=app.node('check-ollama').click();lastRequest(app,'/api/models').reply({models:[]});await retry;
+  assert.match(app.node('ollama-status').textContent,/Ollama erreichbar.*noch kein lokales Modell/);
+  assert.equal(app.run('ollamaStatus.state'),'reachable');assert.equal(app.node('model').value,'keep-model');
+});
+
+test('old status replies cannot overwrite newer requests, another project or provider/host selection',async()=>{
+  const app=setup();app.node('provider').value='ollama_local';
+  const old=app.run('checkOllamaStatus()'),oldRequest=lastRequest(app,'/api/models');
+  const newer=app.run('checkOllamaStatus()');lastRequest(app,'/api/models').reply({models:['new']});await newer;
+  oldRequest.reply({models:['old']});await old;assert.equal(app.node('model-list').children[0].value,'new');
+  for(const transition of ['project','provider','host']){
+    app.run("project={id:'first',settings:{},uploads:{}};document.getElementById('provider').value='ollama_local';function providerSelection(){return {host:'http://127.0.0.1:11434'};}");
+    const pending=app.run('checkOllamaStatus()');
+    if(transition==='project')app.run("project={id:'next',settings:{},uploads:{}};");
+    if(transition==='provider')app.node('provider').value='openai';
+    if(transition==='host')app.run("providerSelection=()=>({host:'http://127.0.0.1:11435'});");
+    app.node('ollama-status').textContent='Current status';app.node('model').value='new-choice';app.node('message').textContent='Current message';
+    lastRequest(app,'/api/models').reply({error:'STALE ERROR'},false);await pending;
+    assert.equal(app.node('ollama-status').textContent,'Current status');assert.equal(app.node('message').textContent,'Current message');
+    assert.equal(app.node('model').value,'new-choice');
+  }
+});
+
+test('offline Ollama blocks only selected local generative work, including its prerequisites',async()=>{
+  const app=setup();app.node('provider').value='ollama_local';
+  app.run("state.modules=[{id:'clusterer',name:'Cluster',depends_on:[],requires_model:true},{id:'summarizer',name:'Summary',depends_on:['clusterer'],requires_model:true},{id:'coverage',name:'Coverage',depends_on:[],requires_model:false}];project.uploads={segments:{headers:['Segment','Person','Code'],rows:[]},codebook:{headers:['Code','Definition'],rows:[]}};renderFiles();");
+  app.node('segment-columns-segment').value='Segment';app.node('segment-columns-person').value='Person';app.node('segment-columns-code').value='Code';app.node('book-columns-code').value='Code';app.node('book-columns-definition').value='Definition';
+  app.run("document.querySelectorAll=()=>[{value:'summarizer'}];updateModuleSelection();");
+  const checking=app.run('checkOllamaStatus()');lastRequest(app,'/api/models').fail();await checking;
+  assert.equal(app.node('start').disabled,true);assert.match(app.node('start-requirements').textContent,/erreichbares Ollama/);
+  app.run("document.querySelectorAll=()=>[{value:'coverage'}];updateModuleSelection();");assert.equal(app.node('start').disabled,false);
+  app.node('provider').value='openai';app.run("document.querySelectorAll=()=>[{value:'summarizer'}];updateModuleSelection();");assert.equal(app.node('start').disabled,false);
+  app.node('provider').value='ollama_local';app.run('updateStartGate()');assert.equal(app.node('start').disabled,true);
+  const retry=app.run('checkOllamaStatus()');lastRequest(app,'/api/models').reply({models:['installed']});await retry;assert.equal(app.node('start').disabled,false);
+});
+
+test('provider hook schedules a lightweight check after asynchronous privacy return to local',async()=>{
+  const app=setup();app.loadProviders();app.node('provider').value='openai';app.node('gdpr-relevant').checked=false;
+  app.run("project.settings.gdpr_relevant=false;state.defaults.llm.model='local-default';renderProvider();");app.flushTimers();
+  assert.equal(app.requests.some(r=>r.url==='/api/models'),false);assert.equal(app.node('ollama-status').hidden,true);
+  app.node('gdpr-relevant').checked=true;const privacy=app.node('gdpr-relevant').listeners.change();
+  assert.equal(app.node('provider').value,'openai');lastRequest(app,'/api/privacy').reply({gdpr_relevant:true});await privacy;
+  assert.equal(app.node('provider').value,'ollama_local');app.flushTimers();
+  assert.ok(lastRequest(app,'/api/models'));lastRequest(app,'/api/models').reply({models:['local-default']});await settle();
+  assert.match(app.node('ollama-status').textContent,/Ollama erreichbar/);assert.equal(app.node('ollama-status').hidden,false);
+  assert.equal(app.requests.some(r=>r.url==='/api/model-test'||r.url==='/api/ollama-capacity'),false);
+});
+
+test('scheduled status does not block field rendering or repeat for an unchanged selection',async()=>{
+  const app=setup();app.node('provider').value='ollama_local';app.run('loadFields()');
+  assert.equal(app.node('output-dir').value,'/synthetic/results');assert.equal(app.requests.some(r=>r.url==='/api/models'),false);
+  app.flushTimers();assert.equal(app.requests.filter(r=>r.url==='/api/models').length,1);
+  lastRequest(app,'/api/models').reply({models:['one']});await settle();
+  app.run('scheduleOllamaStatus()');app.flushTimers();assert.equal(app.requests.filter(r=>r.url==='/api/models').length,1);
 });

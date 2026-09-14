@@ -27,7 +27,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from project_paths import DEFAULT_CONFIG, DEMO_DIR, default_data_dir, resolve_output_parent
 from process_commands import python_command, validate_script
 import yaml
-from runtime_support import atomic_json, atomic_text
+from runtime_support import atomic_json, atomic_text, exclusive_file_lock, fingerprint, file_hash
+from app_lifecycle import ActiveRun, confirmed_cleanup, supervision_paths
 from review_workspace import ReviewWorkspace, decisions_xlsx
 from telegram_notifications import Telegram, NoRedirect
 from llm_providers import PROVIDERS, KEY_ENVS, selection
@@ -133,7 +134,146 @@ class App(ReviewWorkspace):
         self.provider_keys = ProviderKeys(self.directory)
         self.lock = threading.RLock()
         self.active = None
+        self._session = None
+        self._runtime_state = 'open'
+        self._runtime_error = ''
+        self._shutdown_callback = None
+        self._shutdown_worker = None
+        self._shutdown_responses = []
+        self._shutdown_http = False
+        self._shutdown_delivery = threading.Event()
+        self._shutdown_delivery_timeout = 20
         self.local_imports = {}
+
+    def runtime_status(self):
+        with self.lock:session=self._session
+        # A failed monitor must not leave a finished, now verifiable session
+        # locked forever. Never wait here while the owned process is alive.
+        if session is not None and session.process.poll() is not None:
+            self._finish_session(session)
+        with self.lock:
+            return self._runtime_snapshot()
+
+    def _runtime_snapshot(self):
+        return {'state':self._runtime_state,
+                'active':self._session.public() if self._session else None,
+                'error':self._runtime_error}
+
+    def runtime_delivered(self, status):
+        # Called only after the authenticated HTTP response was sent and flushed.
+        # An earlier stopping snapshot cannot acknowledge the final cleanup.
+        with self.lock:
+            if status.get('state')=='closed' and self._runtime_state=='closed':
+                self._shutdown_delivery.set()
+
+    def shutdown(self, mode='idle', job=None, attempt=None, confirmed=False, project=None, *, response_sent=None):
+        if mode not in ('idle','pause','abort'):
+            raise ValueError('Unbekannte Aktion zum Beenden.')
+        with self.lock:
+            session=self._session
+            if self._runtime_state=='closed':return self._runtime_snapshot()
+            if session is None:
+                if mode!='idle':raise ValueError('Der angezeigte Lauf ist nicht mehr aktiv. Status aktualisieren.')
+                self._runtime_state='stopping'
+            else:
+                if mode=='idle':raise ValueError('Eine Analyse ist aktiv. Zuerst Pause oder bestätigten Abbruch wählen.')
+                if (job,attempt)!=(session.job,session.binding['attempt']) or (project is not None and project!=session.project):
+                    raise ValueError('Der angezeigte Startversuch ist nicht mehr aktuell. Status aktualisieren.')
+                if mode=='abort' and confirmed is not True:
+                    raise ValueError('Den Abbruch des eigenen aktiven Laufs ausdrücklich bestätigen.')
+                if mode=='pause':
+                    atomic_text(session.folder/'pause.request','pause after current module\n')
+                    self._runtime_state='waiting_for_pause'
+                else:
+                    session.stop_requested=True
+                    session.release()
+                    self._runtime_state='stopping'
+            self._runtime_error=''
+            event=response_sent or threading.Event()
+            if response_sent is None:event.set()
+            else:self._shutdown_http=True
+            self._shutdown_responses.append(event)
+            # An abort may supersede an already pending pause. Both workers share
+            # the same owned session and cannot act on a later start attempt.
+            if not self._shutdown_worker or not self._shutdown_worker.is_alive():
+                self._shutdown_worker=threading.Thread(target=self._wait_shutdown,args=(session,event),daemon=True)
+                self._shutdown_worker.start()
+            return self._runtime_snapshot()
+
+    def _wait_shutdown(self, session, response_sent):
+        response_sent.wait()
+        if session is not None:
+            # Keep the lease open while the runner reaches a real pause boundary.
+            while not session.finished.wait(.2):
+                if session.process.poll() is not None:
+                    if not self._finish_session(session):return
+                with self.lock:
+                    if self._runtime_state=='blocked':return
+        while True:
+            with self.lock:responses=list(self._shutdown_responses)
+            for response in responses:response.wait()
+            with self.lock:
+                if len(responses)!=len(self._shutdown_responses):continue
+                if self._session is not None or self._runtime_state=='blocked':return
+                self._runtime_state='closed'
+                callback=self._shutdown_callback
+                wait_for_delivery=self._shutdown_http
+                break
+        # Keep the confirmed terminal status reachable for the browser. This is
+        # an event handshake, not a fixed delay; a departed browser cannot keep
+        # the application alive indefinitely. Direct console/API calls need no
+        # browser acknowledgement and do not wait here.
+        if wait_for_delivery:self._shutdown_delivery.wait(self._shutdown_delivery_timeout)
+        if callback:callback()
+
+    def _notify(self,*args,**kwargs):
+        # Notification problems must never abandon an owned analysis process.
+        try:self.telegram.send(*args,**kwargs)
+        except Exception:pass
+
+    def _finish_session(self, session):
+        try:
+            receipt=session.finish()
+        except (OSError,ValueError,subprocess.TimeoutExpired) as exc:
+            with self.lock:
+                if self._session is session:
+                    self._runtime_state='blocked'
+                    self._runtime_error='Prozessende ist noch nicht bestätigt. Nicht erneut starten; Prozessstatus und lokale Protokolle prüfen. '+str(exc)
+            return False
+        with self.lock:
+            if self._session is not session:return True
+            try:job=read_json(session.folder/'job.json')
+            except (OSError,ValueError) as exc:
+                self._runtime_state='blocked';self._runtime_error='Prozess ist beendet, aber der Jobindex ist nicht lesbar: '+str(exc)
+                return False
+            if not isinstance(job,dict):
+                self._runtime_state='blocked';self._runtime_error='Jobindex fehlt. Prozess ist beendet, aber der Laufstatus konnte nicht gespeichert werden.'
+                return False
+            try:
+                run=job_storage.run_path(session.folder,job)
+                manifest=read_json(run/'workflow_manifest.json',{}) if run else {}
+                status=manifest.get('status','failed')
+                if session.stop_requested or receipt.get('parent_released'):
+                    status='interrupted'
+                elif receipt['exit_code'] or status not in ('success','paused'):
+                    status='failed'
+                error=manifest.get('error','')
+                if status=='interrupted':error='Lauf auf Wunsch unterbrochen. Geprüfte Zwischenergebnisse bleiben erhalten.'
+                elif status=='failed' and not error:error='Lauf fehlgeschlagen. Details im lokalen Laufprotokoll.'
+            except (OSError,ValueError,KeyError,TypeError) as exc:
+                status='interrupted';error='Ergebnisse derzeit nicht lesbar. Ergebnisordner erneut verbinden: '+str(exc)
+            job.update(status=status,error=error,cleanup_confirmed=True,
+                       supervision=session.binding,pid=session.process.pid)
+            try:atomic_json(session.folder/'job.json',job)
+            except OSError as exc:
+                self._runtime_state='blocked';self._runtime_error='Prozess ist beendet, aber der Jobindex konnte nicht gespeichert werden: '+str(exc)
+                return False
+            self._session=None;self.active=None
+            if self._runtime_state=='blocked':self._runtime_state='open'
+            self._runtime_error=''
+            session.finished.set()
+        self._notify(status)
+        return True
 
     def project_dir(self, pid):
         directory = safe_child(self.projects_dir, identifier(pid))
@@ -600,14 +740,49 @@ class App(ReviewWorkspace):
                     job['status']='interrupted'
             job.pop('storage',None)
             job['pause_requested']=(folder/'pause.request').exists() and job['status']=='running'
+            if 'supervision' in job:
+                try:
+                    confirmed_cleanup(folder,job['supervision'])
+                    job['cleanup_pending']=False
+                except (ValueError,OSError,KeyError,TypeError):
+                    job['cleanup_pending']=True
+                    if not pid_alive(job.get('pid')):
+                        job['status']='interrupted'
+                        job['error']='Prozessende noch nicht sicher bestätigt. Lokale Prozessbestätigung prüfen; noch nicht neu starten.'
             job.pop('pid',None)
             job.pop('config',None)
+            job.pop('supervision',None)
             results.append(job)
         return sorted(results,key=lambda j:j['created'],reverse=True)
 
     def start(self, pid, resume=None, prepared_config=None):
         with self.lock:
-            if self.active is not None or any(j['status']=='running' for p in self.projects() for j in self.jobs(p['id'])):
+            previous=self._session
+            try:return self._start(pid,resume,prepared_config)
+            except Exception:
+                failure=sys.exc_info()
+                session=self._session if self._session is not previous else None
+        # Publication/thread failures release only this call's newly created
+        # process. Never kill another request's active session after a race.
+        if session is not None:
+            session.stop_requested=True
+            session.release()
+            self._finish_session(session)
+        raise failure[1].with_traceback(failure[2])
+
+    def runner_command(self, config, output_dir, pause_file, resume=None):
+        command=python_command(ROOT/'00_WORKFLOW_RUNNER.py',['--config',str(config),
+            '--output-dir',str(output_dir),'--pause-file',str(pause_file)])
+        if resume:command.extend(['--resume',str(resume)])
+        return command
+
+    def _start(self, pid, resume=None, prepared_config=None):
+        with self.lock:
+            if self._runtime_state!='open':raise ValueError('Programm wird beendet oder wartet auf Prozessbestätigung. Zuerst den Laufstatus prüfen.')
+            known=[j for p in self.projects() for j in self.jobs(p['id'])]
+            if any(j.get('cleanup_pending') for j in known):
+                raise ValueError('Prozessende eines früheren Startversuchs ist noch nicht bestätigt. Lokale Prozessbestätigung prüfen; noch nicht neu starten.')
+            if self.active is not None or any(j['status']=='running' for j in known):
                 raise ValueError('Es läuft bereits eine Analyse. Zuerst deren Abschluss oder Pause abwarten.')
             directory=self.project_dir(pid)
             if resume:
@@ -644,28 +819,43 @@ class App(ReviewWorkspace):
                 job['storage']=job_storage.create_binding(folder,config,parent)
             pause=folder/'pause.request'
             pause.unlink(missing_ok=True)
-            command=python_command(ROOT/'00_WORKFLOW_RUNNER.py',['--config',str(config),
-                     '--output-dir',str(job_storage.runs_root(folder,job)),'--pause-file',str(pause)])
-            if resume: command.extend(['--resume',str(run)])
+            run_parent=job_storage.runs_root(folder,job)
+            command=self.runner_command(config,run_parent,pause,run if resume else None)
             env={k:v for k,v in os.environ.items() if k not in KEY_ENVS and not k.startswith('WORKFLOW_') and k not in ('QUALITATIVE_MANAGED_OLLAMA_HOST','OLLAMA_API_KEY','OLLAMA_HOST')}
             if needs_model and selected['provider']!='ollama_local':
                 env[selected['api_key_env']]=self.provider_keys.keys[selected['provider']]
             env.update(PYTHONUTF8='1',PYTHONIOENCODING='utf-8',MPLBACKEND='Agg')
             job.update(modules=checked['modules'],error='',provider=selected['provider'],model=selected['model'])
+            attempt=uuid.uuid4().hex
+            binding={'attempt':attempt,'ticket':secrets.token_hex(24),'command_sha256':fingerprint(command),
+                     'config_sha256':file_hash(config),'run_parent':str(run_parent),'job_folder':str(folder.resolve())}
+            request_path,receipt_path=supervision_paths(folder,binding)
+            atomic_json(request_path,binding)
+            job['supervision']=binding
+            job['cleanup_confirmed']=False
             atomic_json(folder/'job.json',job)
-            log=open(folder/'console.log','ab')
+            log=None;process=None
             try:
-                process=subprocess.Popen(command,cwd=str(ROOT),env=env,stdout=log,stderr=subprocess.STDOUT,
-                                         creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
-            except OSError:
-                job.update(status='failed',error='Analyseprozess konnte nicht gestartet werden. Lokale Installation prüfen.')
-                atomic_json(folder/'job.json',job)
+                log=open(folder/'console.log','ab')
+                supervised=python_command(ROOT/'managed_ollama.py',['--command',str(receipt_path),binding['ticket'],*command])
+                process=subprocess.Popen(supervised,cwd=str(ROOT),env=env,stdin=subprocess.PIPE,stdout=log,stderr=subprocess.STDOUT,
+                                         start_new_session=os.name!='nt',creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
+                binding={**binding,'launcher_pid':process.pid}
+                session=ActiveRun(pid,jid,folder,process,binding)
+                self._session=session;self.active=jid
+            except (OSError,ValueError):
+                if process is None:
+                    job.pop('supervision',None)
+                    job.update(status='failed',error='Analyseprozess konnte nicht gestartet werden. Lokale Installation prüfen.')
+                    atomic_json(folder/'job.json',job)
                 raise
-            finally: log.close()
+            finally:
+                if log:log.close()
+            job['supervision']=binding
             job.update(status='running',pid=process.pid,modules=checked['modules'],error='',provider=selected['provider'],model=selected['model'])
             atomic_json(folder/'job.json',job)
-            self.active=jid
-            threading.Thread(target=self.monitor,args=(folder,process,len(checked['modules'])),daemon=True).start()
+            session.thread=threading.Thread(target=self.monitor,args=(folder,process,len(checked['modules'])),daemon=True)
+            session.thread.start()
             return {'id':jid,'status':'running'}
 
     def privacy(self, pid, private):
@@ -717,12 +907,15 @@ class App(ReviewWorkspace):
         return {'ok': True, 'message': PROVIDERS[selected['provider']]['name'] + ': kurze künstliche Testanfrage beantwortet. Kein vollständiger Analysetest.'}
 
     def monitor(self, folder, process, total):
+        session=self._session
+        if session is None or session.process is not process or session.folder!=Path(folder):
+            raise ValueError('Keine eigene Prozessaufsicht für diesen Monitor vorhanden.')
         last_count=0
         last_detail=None
         last_failure=None
         last_detail_sent=time.monotonic()
         try:
-            self.telegram.send('start')
+            self._notify('start')
             while process.poll() is None:
                 try:
                     run=job_storage.run_path(folder,read_json(folder/'job.json'))
@@ -751,7 +944,7 @@ class App(ReviewWorkspace):
                              current.get('sample_number'),current.get('module'),child_detail.get('failed'),
                              child_detail.get('context_blocked'))
                     if (detail.get('failed') or detail.get('context_blocked') or child_failed) and failure!=last_failure:
-                        self.telegram.send('partial_failed')
+                        self._notify('partial_failed')
                         last_failure=failure
                     marker=tuple(detail.get(k) for k in ('module','completed','total','unit','phase','phase_level',
                         'detail_completed','detail_total','requests','active_requests','request_active',
@@ -765,24 +958,17 @@ class App(ReviewWorkspace):
                     tick=time.monotonic()
                     age=tick-last_detail_sent
                     if count>last_count or (marker!=last_detail and age>=120) or (detail.get('module') and age>=600):
-                        self.telegram.send('progress',count,total,detail=detail)
+                        self._notify('progress',count,total,detail=detail)
                         last_detail,last_detail_sent=marker,tick
                         last_count=count
                 time.sleep(1)
-            job=read_json(folder/'job.json')
-            try:
-                run=job_storage.run_path(folder,job)
-                manifest=read_json(run/'workflow_manifest.json',{}) if run else {}
-                status=manifest.get('status','failed')
-                if process.returncode or status not in ('success','paused'): status='failed'
-            except (OSError,ValueError,KeyError,TypeError) as exc:
-                manifest={'error':'Ergebnisse derzeit nicht lesbar. Ergebnisordner erneut verbinden: '+str(exc)}
-                status='interrupted'
-            job.update(status=status,error=manifest.get('error','') or ('Lauf fehlgeschlagen. Details im lokalen Laufprotokoll.' if status == 'failed' else ''))
-            atomic_json(folder/'job.json',job)
-            self.telegram.send(status)
+        except Exception as exc:
+            # Leave the owned handle/lease available for explicit cleanup.
+            with self.lock:
+                if self._session is session:
+                    self._runtime_state='blocked';self._runtime_error='Fortschrittsüberwachung unterbrochen. Laufstatus prüfen: '+str(exc)
         finally:
-            with self.lock: self.active=None
+            if process.poll() is not None:self._finish_session(session)
 
     def pause(self, pid, jid):
         folder=safe_child(self.project_dir(pid)/'jobs',identifier(jid))
@@ -861,7 +1047,7 @@ class Handler(BaseHTTPRequestHandler):
                 cfg=app.template
                 diagnostics=cfg.get('diagnostics')
                 if not isinstance(diagnostics,dict):diagnostics={}
-                return self.json({'projects':app.projects(),'telegram':app.telegram.public(),'providers':PROVIDERS,'provider_keys':app.provider_keys.public(),
+                return self.json({'projects':app.projects(),'runtime':app.runtime_status(),'telegram':app.telegram.public(),'providers':PROVIDERS,'provider_keys':app.provider_keys.public(),
                     'defaults':{'llm':{**{k:cfg['llm'].get(k) for k in ('model','num_ctx','max_tokens','temperature','think')},'synthesis_max_calls':cfg['llm'].get('hierarchical_synthesis',{}).get('max_calls',64)},'context':cfg['context'],'columns':cfg['columns'],
                                 'analysis_perspectives':thematic_pipeline.default_modes(cfg),
                                 'stability':diagnostics.get('stability',{'modules':[],'repetitions':3}),
@@ -869,6 +1055,12 @@ class Handler(BaseHTTPRequestHandler):
                     'modules':[{k:m[k] for k in ('id','name','depends_on','enabled','requires_model','starts_child_runs','after_if_enabled')} |
                         {'cost_profile':m.get('cost_profile'), 'perspective_capability':thematic_pipeline.capability(m)} for m in RUNNER.normalize_modules(cfg)]})
             if parsed.path=='/api/project': return self.json(app.project(get('project')))
+            if parsed.path=='/api/runtime':
+                status=app.runtime_status()
+                self.json(status)
+                self.wfile.flush()
+                app.runtime_delivered(status)
+                return
             if parsed.path=='/api/prompts': return self.json(app.prompt_templates(get('project'),get('job') or None))
             if parsed.path=='/api/jobs': return self.json({'jobs':app.jobs(get('project')),'telegram':app.telegram.public()})
             if parsed.path=='/api/models': return self.json(app.models())
@@ -909,6 +1101,12 @@ class Handler(BaseHTTPRequestHandler):
                 return self.json(check(data['selection']))
             if path=='/api/local-browse':
                 return self.json(app.local_browse(data['project'],data.get('path',''),data.get('kind','directory')))
+            if path=='/api/shutdown':
+                sent=threading.Event()
+                result=app.shutdown(data.get('mode','idle'),data.get('job'),data.get('attempt'),
+                                    data.get('confirmed',False),data.get('project'),response_sent=sent)
+                try:return self.json(result)
+                finally:sent.set()
             with app.lock:
                 if path=='/api/create': result=app.create(data.get('name',''),data.get('demo',False))
                 elif path=='/api/upload': result=app.upload(data['project'],data['kind'],data['name'],data['data'],data.get('sheet'))
@@ -960,6 +1158,7 @@ def make_server(app,port=0):
     server=LocalHTTPServer(('127.0.0.1',port),Handler)
     server.app=app
     server.token=secrets.token_urlsafe(32)
+    app._shutdown_callback=server.shutdown
     return server
 
 
@@ -974,14 +1173,28 @@ def main():
         data_dir = args.data_dir if args.data_dir is not None else default_data_dir()
     except ValueError as exc:
         parser.error(str(exc))
-    server=make_server(App(data_dir,args.config),args.port)
-    url=f'http://127.0.0.1:{server.server_port}/#'+server.token
-    print('Lokale Oberfläche: '+url,flush=True)
-    print('Dieses Fenster während der Analyse geöffnet lassen. Beenden mit Strg+C.',flush=True)
-    if not args.no_browser: webbrowser.open(url)
-    try: server.serve_forever()
-    except KeyboardInterrupt: pass
-    finally: server.server_close()
+    data_dir=Path(data_dir).resolve();data_dir.mkdir(parents=True,exist_ok=True)
+    instance=exclusive_file_lock(data_dir/'.app-instance.lock')
+    try:instance.__enter__()
+    except RuntimeError:
+        parser.error('Diese Projektablage ist bereits geöffnet. Vorhandene Oberfläche verwenden oder zuerst beenden.')
+    try:
+        app=App(data_dir,args.config);server=make_server(app,args.port)
+        try:
+            url=f'http://127.0.0.1:{server.server_port}/#'+server.token
+            print('Lokale Oberfläche: '+url,flush=True)
+            print('Programm über die Oberfläche beenden. Strg+C fordert bei laufender Analyse eine sichere Pause an.',flush=True)
+            if not args.no_browser:webbrowser.open(url)
+            while app.runtime_status()['state']!='closed':
+                try:server.serve_forever()
+                except KeyboardInterrupt:
+                    current=app.runtime_status();active=current['active']
+                    if active:
+                        app.shutdown('pause',active['job'],active['attempt'])
+                        print('Pause angefordert. Die Oberfläche bleibt bis zum bestätigten Prozessende verfügbar. Für sofortigen Abbruch die bestätigte Aktion in der Oberfläche verwenden.',flush=True)
+                    else:app.shutdown('idle')
+        finally:server.server_close()
+    finally:instance.__exit__(None,None,None)
 
 
 if __name__=='__main__': main()

@@ -16,6 +16,12 @@ Schlüssel im separaten Feld speichern, ersetzen oder entfernen. Ohne Windows-Sp
 
 Die lokale Projektsperre wird auch vor Wiederaufnahme und Kategorienvorschlägen kontrolliert. Alte Cloud-Konfigurationen können sie nicht übergehen. Vor erneuter Aktivierung der Sperre einen aktiven Lauf abschließen oder nach dem aktuellen Modul pausieren. Bereits übermittelte Inhalte werden nicht zurückgerufen. Ein Anbieterwechsel erfordert einen neuen Lauf; die Wiederaufnahme bleibt an die bisherige Konfiguration gebunden.
 
+## Lokaler Ollama-Status (Entwicklungsstand P03)
+
+Die Anwendung startet auch ohne installierten oder laufenden Ollama-Server. Beim lokalen Anbieter prüft sie im Hintergrund die Erreichbarkeit; **Ollama erneut prüfen** aktualisiert den Status und die lokale Modellliste. Ein erreichbarer Server ohne Modell wird von einem nicht erreichbaren Server unterschieden. Alte Listenvorschläge werden bei fehlender Erreichbarkeit entfernt; der eingegebene Modellname bleibt erhalten. Netzwerkdetails und interne Fehlermeldungen werden nicht in die Statusanzeige übernommen.
+
+Die Abfrage liest nur Metadaten des lokalen Servers und startet oder installiert nichts. Sie ersetzt weder die Speicherschätzung noch den ausdrücklich bestätigten kurzen Modelltest. Ist lokales Ollama nicht erreichbar oder ohne Modell, bleiben die Oberfläche, reine Diagnosen ohne modellabhängige Vorstufen und freigegebene Cloud-Anbieter verfügbar. Nur ausgewählte lokale Modellanalysen benötigen wieder einen erreichbaren Server mit installiertem Modell. Cloud-Freigabe und Schlüsselpflicht gelten unverändert; es gibt keinen automatischen Wechsel in die Cloud.
+
 ## Kommandozeile
 
 Eine eigene YAML-Kopie erstellen. Beispiel für ausdrücklich freigegebene künstliche Daten:

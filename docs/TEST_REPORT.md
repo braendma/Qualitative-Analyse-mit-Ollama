@@ -1,3 +1,36 @@
+# Windows-Prozessverwaltung und Ollama-Status · 14. September 2026
+
+Die vollständige Regression führte **888 Python-Tests in 414,254 Sekunden**
+aus: 879 bestanden, ein Windows-Symlinktest wurde übersprungen, acht alte
+Telegram-Testfixtures scheiterten an ihrer unvollständigen Appinitialisierung.
+Nach Anpassung dieser Fixtures bestanden **59 betroffene App-, Telegram-,
+Start-/Beenden-, Pfad- und Wiederaufnahmetests in 39,743 Sekunden**. Die
+bestehenden Fortschritts- und Datenschutzassertionen blieben erhalten.
+**82 JavaScript-Tests bestanden.** Eine zweite vollständig grüne
+888-Test-Ausführung wird damit nicht behauptet.
+
+Geprüft wurden sichere Pause, bestätigter Abbruch, Bereinigung eigener
+Unterprozesse, Weiterlaufen fremder Prozesse, Instanzschutz, beschädigte oder
+fehlende Abschlussnachweise, veraltete Startversuche sowie der Start ohne
+Ollama. Ein im echten Windows-Test entdeckter Unterschied zwischen Python-
+Startprozess und Supervisor wurde korrigiert. Der Browser erhält den
+bestätigten Abschluss vor dem Serverende; ein Verbindungsabbruch gilt nicht
+als erfolgreicher Abschluss. Diese Anzeige und die Ollama-Modellliste wurden
+zusätzlich in einer isolierten Browserinstanz geprüft.
+
+Die neue Mac-Distribution wurde zurückgestellt. 14 in der Vollprüfung
+enthaltene reine Tests gehörten zu noch unbenutzten POSIX-Vorarbeiten; diese
+Dateien wurden danach getrennt vom Windows-Repository gesichert. Die 59
+abschließenden Tests liefen bereits auf diesem bereinigten Stand. Alle
+Analysedaten und Modellantworten waren künstlich; keine Telegramnachrichten
+oder echten Modellanfragen wurden versendet. 213 lokale Dokumentationslinks
+wurden geprüft, ohne fehlendes Dateiziel.
+
+Dies bestätigt den Windows-Sourcebetrieb. Ausführbare Pakete, ihre tatsächlich
+geladenen Quellen und die frische Installation folgen als separate Abnahme.
+
+---
+
 # Gemeinsamer Programmeinstieg / P02a · 14. September 2026
 
 **61 gezielte Python-Tests bestanden** (76,752 Sekunden). Geprüft wurden der

@@ -275,19 +275,15 @@ def _execute(command, directory, log, env):
 
 
 def _confirmed_supervision(log, identity, parent):
+    from supervision_receipts import UNCONFIRMED, validate_receipt
     request_path = log.with_suffix('.supervision.request.json')
     receipt_path = log.with_suffix('.supervision.json')
     for path in (request_path, receipt_path):
         _inside(path, log.parent)
     request, receipt = _read_json(request_path), _read_json(receipt_path)
-    if (receipt.get('schema_version') != 1 or request.get('execution_fingerprint') != identity or request.get('run_parent') != parent
-            or not re.fullmatch('[a-f0-9]{64}', str(request.get('command_sha256', '')))
-            or receipt.get('cleanup_scope') not in ('windows_job', 'process_group')
-            or not request.get('ticket') or receipt.get('ticket') != request['ticket']
-            or receipt.get('command_sha256') != request.get('command_sha256')
-            or receipt.get('status') != 'finished' or receipt.get('cleanup_confirmed') is not True):
-        raise ValueError('Prozessende ist noch nicht sicher bestätigt; keine parallele Wiederaufnahme. Aufräumen abwarten oder Prozessstatus prüfen.')
-    return receipt
+    if request.get('execution_fingerprint') != identity or request.get('run_parent') != parent:
+        raise ValueError(UNCONFIRMED)
+    return validate_receipt(receipt, ticket=request.get('ticket'), command_sha256=request.get('command_sha256'))
 
 
 def _child_environment(config):

@@ -1,9 +1,25 @@
-import json,sys,tempfile,threading,unittest
+import json,sys,tempfile,unittest
 from pathlib import Path
 from unittest.mock import Mock,patch
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT/'src'))
 from telegram_progress import format_progress
 from local_app import App
+from test_local_app import attach_supervision
+
+
+def monitored_app(folder, iterations, update=None):
+    """Real App, synthetic owned process/receipt and mocked notification transport."""
+    app=App(folder);app.telegram=Mock()
+    process=Mock(returncode=None)
+    process.poll.side_effect=lambda:process.returncode
+    attach_supervision(app,folder,process)
+    remaining=iterations
+    def advance(*args):
+        nonlocal remaining
+        if update is not None:update()
+        remaining-=1
+        if remaining==0:process.returncode=0
+    return app,process,advance
 
 
 class TelegramProgressTests(unittest.TestCase):
@@ -33,10 +49,9 @@ class TelegramProgressTests(unittest.TestCase):
             (run/'workflow_manifest.json').write_text(json.dumps({'status':'success','completed_steps':['swot'],'current_module':'meta_swot'}))
             detail={'module':'meta_swot','completed':1,'total':4,'requests':5,'detail_completed':1,'detail_total':8}
             (run/'progress.json').write_text(json.dumps(detail))
-            def advance(*args):
+            def update():
                 (run/'progress.json').write_text(json.dumps({**detail,'detail_completed':2}))
-            app=object.__new__(App);app.telegram=Mock();app.lock=threading.RLock();app.active=True
-            process=Mock(returncode=0);process.poll.side_effect=[None,None,0]
+            app,process,advance=monitored_app(folder,2,update)
             with patch('local_app.time.sleep',side_effect=advance),patch('local_app.time.monotonic',side_effect=itertools.count(0,121)):
                 app.monitor(folder,process,15)
             calls=[c for c in app.telegram.send.call_args_list if c.args[0]=='progress']
@@ -79,9 +94,8 @@ class TelegramProgressTests(unittest.TestCase):
             (run/'workflow_manifest.json').write_text(json.dumps({'status':'success','completed_steps':['clusterer'],'current_module':'blind_coding'}))
             (run/'progress.json').write_text(json.dumps({'module':'clusterer' if old_detail else 'blind_coding',
                  'completed':7,'total':10,'requests':9}))
-            app=object.__new__(App);app.telegram=Mock();app.lock=threading.RLock();app.active=True
-            process=Mock(returncode=0);process.poll.side_effect=[None,0]
-            with patch('local_app.time.sleep'),patch('local_app.time.monotonic',side_effect=[0,121]):
+            app,process,advance=monitored_app(folder,1)
+            with patch('local_app.time.sleep',side_effect=advance),patch('local_app.time.monotonic',side_effect=[0,121]):
                 app.monitor(folder,process,15)
             calls=[c for c in app.telegram.send.call_args_list if c.args[0]=='progress']
             self.assertEqual(len(calls),1);self.assertIsNone(app.active)
@@ -103,9 +117,8 @@ class TelegramProgressTests(unittest.TestCase):
             (run/'workflow_manifest.json').write_text(json.dumps({'status':'success','completed_steps':['swot'],'current_module':'overall_synthesis'}))
             detail={'module':'overall_synthesis','requests':43,'request_active':True,'request_started_at':800}
             (run/'progress.json').write_text(json.dumps(detail))
-            app=object.__new__(App);app.telegram=Mock();app.lock=threading.RLock();app.active=True
-            process=Mock(returncode=0);process.poll.side_effect=[None,None,None,0]
-            with patch('local_app.time.sleep'),patch('local_app.time.monotonic',side_effect=[0,121,240,721]):
+            app,process,advance=monitored_app(folder,3)
+            with patch('local_app.time.sleep',side_effect=advance),patch('local_app.time.monotonic',side_effect=[0,121,240,721]):
                 app.monitor(folder,process,15)
             calls=[c for c in app.telegram.send.call_args_list if c.args[0]=='progress']
             self.assertEqual(len(calls),2)
@@ -126,11 +139,10 @@ class TelegramProgressTests(unittest.TestCase):
                 (run/'progress.json').write_text(json.dumps({**base,'series_current':frame}))
             write(frames[0])
             remaining=iter(frames[1:])
-            def advance(*args):
+            def update():
                 frame=next(remaining,None)
                 if frame is not None:write(frame)
-            app=object.__new__(App);app.telegram=Mock();app.lock=threading.RLock();app.active=True
-            process=Mock(returncode=0);process.poll.side_effect=[None]*len(frames)+[0]
+            app,process,advance=monitored_app(folder,len(frames),update)
             with patch('local_app.time.sleep',side_effect=advance),patch('local_app.time.monotonic',side_effect=[0]+ticks):
                 app.monitor(folder,process,20)
             return app.telegram.send.call_args_list

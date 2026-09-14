@@ -5,7 +5,9 @@ const token = location.hash.slice(1) || sessionStorage.getItem(tokenKey) || '';
 if (location.hash) { sessionStorage.setItem(tokenKey, token); history.replaceState(null, '', '/'); }
 let settingsRevision=0;
 let outputDirMode='input';
+let ollamaStatus={state:'unknown',models:[],checkedAt:null,snapshot:''},ollamaStatusGeneration=0,ollamaStatusTimer,ollamaViewSnapshot='',selectedModelRequired=false;
 let state, project, jobs = [], viewing = 'project', objectUrl = null, polling = false, projectRequest = 0, artifactRequest = 0;
+let runtimeState={state:'open',active:null,error:''},runtimeRequest=0,shutdownSnapshot=null,shutdownInFlight=false,shutdownUncertain=false,shutdownAccepted=false,shutdownNotice='';
 const names = {project:'Projekt & Dateien',check:'Eingaben prüfen',analysis:'Analyse',results:'Ergebnisse',telegram:'Telegram-Updates'};
 const moduleHelp = {
   clusterer:'Gruppiert Textstellen innerhalb eines Codepfads zu inhaltlichen Clustern.',
@@ -92,6 +94,7 @@ function updateModuleSelection(){
   let changed=true;
   while(changed){changed=false;state.modules.forEach(m=>{if(required.has(m.id))m.depends_on.forEach(id=>{if(!required.has(id)){required.add(id);changed=true;}});});}
   const added=state.modules.filter(m=>required.has(m.id)&&!selected.has(m.id)).map(m=>m.name);
+  selectedModelRequired=state.modules.some(m=>required.has(m.id)&&m.requires_model!==false);
   $('module-selection').textContent=selected.size?`${selected.size} ${selected.size===1?"Modul":"Module"} ausgewählt · ${required.size} ${required.size===1?"Modul wird":"Module werden"} ausgeführt.`+(added.length?' Automatisch benötigte Vorstufen: '+added.join(', ')+'.':' Keine zusätzlichen Vorstufen erforderlich.'):'Noch kein Modul ausgewählt. Setze mindestens ein Häkchen.';
   if(selected.size && state.modules.filter(m=>required.has(m.id)).every(m=>m.requires_model===false)){
     $('module-selection').textContent+=' Reiner Diagnoselauf: Kein Modell oder API-Schlüssel nötig. Ohne analytische Vorstufen ist nur der Materialbestand auswertbar.';
@@ -331,7 +334,7 @@ function loadFields(){
   loadStabilityFields();loadSensitivityFields();
   renderFiles();
   if(typeof loadProviderFields==='function')loadProviderFields();
-  updateModuleSelection();
+  updateModuleSelection();scheduleOllamaStatus();
 }
 async function openProject(id){
   if(!id){$('projects').value=project?.id||'';return;}
@@ -453,7 +456,7 @@ function runCard(job,results=false){
     blocked.forEach(([id,deps])=>box.append(el('p',title(id)+': benötigt '+deps.map(title).join(', '))));card.append(box);}
   const actions=el('div',undefined,'actions');
   if(job.status==='running'&&!job.pause_requested){const b=el('button','Nach diesem Modul pausieren','secondary');action(b,async()=>{const r=await api('pause',{project:project.id,job:job.id});message(r.message);await refreshJobs();});actions.append(b);}
-  if(!job.output_error&&['failed','paused','interrupted'].includes(job.status)){const b=el('button','Diesen Lauf fortsetzen');action(b,async()=>{await api('start',{project:project.id,resume:job.id});message('Wiederaufnahme mit der ursprünglichen Dateiversion und den ursprünglichen Einstellungen gestartet.');await refreshJobs();});actions.append(b);}
+  if(!job.output_error&&!runtimeBlocksStart()&&['failed','paused','interrupted'].includes(job.status)){const b=el('button','Diesen Lauf fortsetzen');action(b,async()=>{if(runtimeBlocksStart())throw new Error('Das Programm wird beendet. Kein neuer Lauf möglich.');await api('start',{project:project.id,resume:job.id});message('Wiederaufnahme mit der ursprünglichen Dateiversion und den ursprünglichen Einstellungen gestartet.');await refreshJobs();});actions.append(b);}
   const prompts=el('button','Prompt-Vorlagen dieses Laufs','small secondary');prompts.type='button';prompts.addEventListener('click',()=>showModulePrompts(job.current||job.modules?.[0]?.id,job.id));actions.append(prompts);
   const log=el('button','Laufprotokoll herunterladen','small secondary');action(log,()=>artifact(job,'console.log',false));actions.append(log);card.append(actions);
   if(results){
@@ -673,8 +676,52 @@ action($('output-input-folder'),async()=>{
   }catch(error){if(current())throw error;}
 });
 action($('validate'),async()=>{const pid=needProject(),r=await saveAndValidate(pid);if(project?.id!==pid)return;message(`Prüfung bestanden: ${r.segments} Codierzeilen, ${r.codes} Codepfade. Kein Modellaufruf.`);});
-action($('start'),async()=>{const pid=needProject();await saveAndValidate(pid);if(project?.id!==pid)throw new Error('Projekt wurde während der Prüfung gewechselt. Bitte im gewünschten Projekt erneut starten.');await api('start',{project:pid});message('Analyse gestartet. Den Fortschritt findest du unten.');await refreshJobs();});
-action($('check-ollama'),async()=>{const r=await api('models');$('model-list').replaceChildren();r.models.forEach(m=>$('model-list').append(new Option(m,m)));$('ollama-status').textContent=r.models.length?`${r.models.length} lokale Modelle gefunden. Im Modellfeld auswählen oder Namen eingeben.`:'Ollama ist erreichbar, aber kein lokales Modell installiert.';});
+action($('start'),async()=>{if(runtimeBlocksStart())throw new Error('Das Programm wird beendet. Kein neuer Lauf möglich.');const pid=needProject();await saveAndValidate(pid);if(project?.id!==pid)throw new Error('Projekt wurde während der Prüfung gewechselt. Bitte im gewünschten Projekt erneut starten.');if(runtimeBlocksStart())throw new Error('Das Programm wird beendet. Kein neuer Lauf möglich.');await api('start',{project:pid});message('Analyse gestartet. Den Fortschritt findest du unten.');await refreshJobs();});
+function ollamaSelectionSnapshot(){
+  const selected=typeof providerSelection==='function'?providerSelection():{};
+  return JSON.stringify({project:project?.id||null,provider:$('provider').value||'ollama_local',host:selected.host||'http://127.0.0.1:11434'});
+}
+function currentProviderIsLocal(){return ($('provider').value||'ollama_local')==='ollama_local';}
+function ollamaBlocksStart(){
+  return selectedModelRequired&&currentProviderIsLocal()&&ollamaStatus.snapshot===ollamaSelectionSnapshot()&&
+    (ollamaStatus.state==='unreachable'||(ollamaStatus.state==='reachable'&&!ollamaStatus.models.length));
+}
+function renderOllamaStatus(){
+  const local=currentProviderIsLocal();$('ollama-status').hidden=!local;$('ollama-status-help').hidden=!local;$('check-ollama').hidden=!local;
+  if(!local)return;
+  const descriptions={unknown:'Ollama wurde noch nicht geprüft.',checking:'Ollama-Erreichbarkeit wird geprüft …',
+    reachable:ollamaStatus.models.length?`Ollama erreichbar · ${ollamaStatus.models.length} lokale Modelle verfügbar.`:'Ollama erreichbar · noch kein lokales Modell vorhanden.',
+    unreachable:'Ollama nicht erreichbar. Starte Ollama und wähle „Ollama erneut prüfen“. Die lokale Modellliste ist derzeit nicht verfügbar.'};
+  $('ollama-status').textContent=descriptions[ollamaStatus.state]+(ollamaStatus.checkedAt?' Stand: '+new Date(ollamaStatus.checkedAt).toLocaleTimeString('de-DE')+'.':'');
+  $('ollama-status').className='hint ollama-status-'+ollamaStatus.state;
+}
+function scheduleOllamaStatus(){
+  const snapshot=ollamaSelectionSnapshot();
+  if(snapshot===ollamaViewSnapshot){renderOllamaStatus();updateStartGate();return;}
+  ollamaViewSnapshot=snapshot;ollamaStatusGeneration++;
+  if(ollamaStatusTimer!==undefined)clearTimeout(ollamaStatusTimer);
+  ollamaStatus={state:'unknown',models:[],checkedAt:null,snapshot};$('model-list').replaceChildren();renderOllamaStatus();updateStartGate();
+  if(currentProviderIsLocal())ollamaStatusTimer=setTimeout(()=>{ollamaStatusTimer=undefined;void checkOllamaStatus();},0);
+}
+async function checkOllamaStatus(){
+  if(!currentProviderIsLocal())return;
+  if(ollamaStatusTimer!==undefined){clearTimeout(ollamaStatusTimer);ollamaStatusTimer=undefined;}
+  const generation=++ollamaStatusGeneration,snapshot=ollamaSelectionSnapshot();
+  const current=()=>generation===ollamaStatusGeneration&&snapshot===ollamaSelectionSnapshot()&&currentProviderIsLocal();
+  ollamaViewSnapshot=snapshot;ollamaStatus={state:'checking',models:[],checkedAt:null,snapshot};$('model-list').replaceChildren();renderOllamaStatus();
+  try{
+    const result=await api('models');if(!current())return;
+    if(!Array.isArray(result.models)||result.models.some(name=>typeof name!=='string'||!name.trim()))throw new Error('Invalid model metadata');
+    ollamaStatus={state:'reachable',models:[...result.models],checkedAt:Date.now(),snapshot};
+    result.models.forEach(name=>$('model-list').append(new Option(name,name)));
+  }catch(error){
+    if(!current())return;
+    // The status panel deliberately omits raw transport errors and addresses.
+    ollamaStatus={state:'unreachable',models:[],checkedAt:Date.now(),snapshot};$('model-list').replaceChildren();
+  }
+  renderOllamaStatus();updateStartGate();
+}
+action($('check-ollama'),checkOllamaStatus);
 action($('clear-modules'),async()=>{document.querySelectorAll('[name=module]').forEach(n=>n.checked=false);updateModuleSelection();});
 action($('final-validation'),async()=>applyFinalValidation());
 action($('all-modules'),async()=>{document.querySelectorAll('[name=module]').forEach(n=>n.checked=true);updateModuleSelection();});
@@ -686,8 +733,78 @@ for(const id of ['new-project','welcome-create'])$(id).addEventListener('click',
 $('cancel-create').addEventListener('click',()=>$('create-dialog').close());
 $('create-form').addEventListener('submit',async e=>{e.preventDefault();try{if(typeof finishReviewSave==='function')await finishReviewSave();const p=await api('create',{name:$('project-name').value});state.projects.unshift(p);project=p;renderProjects();await openProject(p.id);$('create-dialog').close();show('project');message('Projekt angelegt. Wähle jetzt deine beiden Dateien (XLSX oder CSV).');}catch(err){message(err.message,true);$('create-dialog').close();}});
 action($('demo'),async()=>{if(typeof finishReviewSave==='function')await finishReviewSave();const p=await api('create',{name:'Demo · Künstliche Interviews',demo:true});state.projects.unshift(p);project=p;renderProjects();await openProject(p.id);message('Demo geladen: 50 künstliche Codierzeilen und 43 Passagen. Du kannst zuerst die Eingaben prüfen.');});
-async function init(){try{state=await api('state');renderProjects();renderTelegram(state.telegram);if(state.projects.length)await openProject(state.projects[0].id);}catch(e){message(e.message,true);}}
-setInterval(async()=>{if(!project||polling||!['analysis','results'].includes(viewing))return;polling=true;try{await refreshJobs();}catch(e){message('Verbindung zur lokalen Oberfläche unterbrochen. Startfenster prüfen.',true);}finally{polling=false;}},4000);
+async function init(){try{state=await api('state');if(state.runtime)applyRuntime(state.runtime);renderProjects();renderTelegram(state.telegram);if(state.projects.length)await openProject(state.projects[0].id);else scheduleOllamaStatus();}catch(e){message(e.message,true);}}
+async function pollApp(){
+  if(polling||shutdownInFlight||runtimeState.state==='closed')return;polling=true;
+  try{await refreshRuntime();if(project&&['analysis','results'].includes(viewing)&&runtimeState.state!=='closed')await refreshJobs();}
+  catch(error){
+    if(shutdownAccepted){shutdownNotice='Beenden angefordert. Die Verbindung zum Programm ist nicht mehr erreichbar. Dieses Browserfenster kannst du schließen; der Abschluss der Bereinigung ist hier nicht mehr überprüfbar.';renderShutdown();}
+    else message('Verbindung zur lokalen Oberfläche unterbrochen. Startfenster prüfen.',true);
+  }finally{polling=false;}
+}
+setInterval(pollApp,4000);
+function runtimeBlocksStart(){return shutdownInFlight||shutdownUncertain||runtimeState.state!=='open';}
+function runtimeIdentity(active){return JSON.stringify(active?{project:active.project,job:active.job,attempt:active.attempt}:null);}
+function applyRuntime(data){
+  if(!data||!['open','waiting_for_pause','stopping','blocked','closed'].includes(data.state))throw new Error('Programmstatus konnte nicht geprüft werden.');
+  if(runtimeIdentity(runtimeState.active)!==runtimeIdentity(data.active))$('shutdown-abort-confirmed').checked=false;
+  runtimeState=data;shutdownUncertain=false;
+  if(['open','blocked'].includes(data.state))shutdownAccepted=false;
+  if($('shutdown-dialog').open)shutdownSnapshot={state:data.state,active:data.active?{...data.active}:null};
+  renderShutdown();updateStartGate();
+}
+async function refreshRuntime(){
+  const request=++runtimeRequest,data=await api('runtime');if(request!==runtimeRequest)return;
+  shutdownNotice='';applyRuntime(data);
+}
+function renderShutdown(){
+  const active=runtimeState.active,known=Boolean(shutdownSnapshot),closing=['waiting_for_pause','stopping','closed'].includes(runtimeState.state);
+  const descriptions={open:active?'Ein Analyselauf ist aktiv. Wähle, wie das Programm beendet werden soll.':'Es ist kein Analyselauf aktiv.',
+    waiting_for_pause:'Pause angefordert. Das aktuelle Modul wird abgeschlossen; danach beendet sich das Programm. Dies kann noch dauern.',
+    stopping:'Beenden angefordert. Eigene Analyseprozesse werden beendet und Ressourcen freigegeben.',
+    blocked:'Das Programm konnte nicht sicher beendet werden und bleibt geöffnet. '+(runtimeState.error||'Startfenster und Laufprotokoll prüfen.'),
+    closed:'Bereinigung bestätigt. Das Programm wird geschlossen. Dieses Browserfenster kannst du schließen.'};
+  const text=shutdownNotice||descriptions[runtimeState.state];
+  $('shutdown-state').textContent=text;$('runtime-status').textContent=runtimeState.state==='open'&&!shutdownNotice?'':text;
+  $('shutdown-idle').hidden=Boolean(active);$('shutdown-active-actions').hidden=!active;
+  $('shutdown-idle').disabled=!known||shutdownInFlight||shutdownUncertain||closing;
+  $('shutdown-pause').disabled=!known||!active||shutdownInFlight||shutdownUncertain||closing;
+  $('shutdown-abort').disabled=!known||!active||shutdownInFlight||shutdownUncertain||['stopping','closed'].includes(runtimeState.state)||!$('shutdown-abort-confirmed').checked;
+  $('shutdown-cancel').disabled=shutdownInFlight;$('shutdown-refresh').disabled=shutdownInFlight;
+  $('shutdown-cancel').textContent=shutdownAccepted?'Dialog schließen':'Abbrechen';
+}
+async function openShutdown(){
+  shutdownSnapshot=null;$('shutdown-abort-confirmed').checked=false;shutdownNotice='Aktueller Programmstatus wird geprüft …';
+  $('shutdown-dialog').showModal();renderShutdown();
+  try{await refreshRuntime();}catch(error){if($('shutdown-dialog').open){shutdownNotice='Status nicht verfügbar. Es wurde nichts beendet. '+error.message;renderShutdown();}}
+}
+async function submitShutdown(mode){
+  if(!shutdownSnapshot||shutdownInFlight||shutdownUncertain)return;
+  const active=shutdownSnapshot.active,payload={mode};
+  if(mode==='idle'){if(active||['waiting_for_pause','stopping','closed'].includes(runtimeState.state))return;}
+  else{
+    if(!active||runtimeIdentity(active)!==runtimeIdentity(runtimeState.active))return;
+    payload.project=active.project;payload.job=active.job;payload.attempt=active.attempt;
+    if(mode==='abort'){if(!$('shutdown-abort-confirmed').checked)return;payload.confirmed=true;}
+    if(mode==='pause'&&runtimeState.state!=='open'&&runtimeState.state!=='blocked')return;
+  }
+  shutdownInFlight=true;shutdownNotice='Anforderung wird an das Programm übergeben …';runtimeRequest++;renderShutdown();updateStartGate();
+  try{
+    const result=await api('shutdown',payload);shutdownAccepted=result.state!=='open'&&result.state!=='blocked';
+    shutdownNotice='';applyRuntime(result);
+  }catch(error){
+    shutdownUncertain=true;shutdownNotice='Beenden nicht bestätigt: '+error.message+' Status erneut prüfen. Eine Unterbrechung der Verbindung allein bestätigt keine Beendigung.';
+  }finally{shutdownInFlight=false;renderShutdown();updateStartGate();}
+}
+$('shutdown-open').addEventListener('click',openShutdown);
+$('shutdown-idle').addEventListener('click',()=>submitShutdown('idle'));
+$('shutdown-pause').addEventListener('click',()=>submitShutdown('pause'));
+$('shutdown-abort').addEventListener('click',()=>submitShutdown('abort'));
+$('shutdown-abort-confirmed').addEventListener('change',renderShutdown);
+$('shutdown-refresh').addEventListener('click',async()=>{try{await refreshRuntime();}catch(error){shutdownNotice='Status nicht verfügbar. '+error.message;renderShutdown();}});
+$('shutdown-cancel').addEventListener('click',()=>{if(!shutdownInFlight)$('shutdown-dialog').close();});
+$('shutdown-dialog').addEventListener('cancel',event=>{if(shutdownInFlight)event.preventDefault();});
+$('shutdown-dialog').addEventListener('close',()=>{if(!$('shutdown-dialog').open)shutdownSnapshot=null;});
 function mappingProblems(){
   if(!project)return ['Projekt auswählen.'];
   const issues=[],uploads=project.uploads||{};
@@ -706,7 +823,7 @@ function mappingProblems(){
   return issues;
 }
 function updateStartGate(){
-  const issues=mappingProblems();if(!$('output-dir').value.trim())issues.push('Speicherort für Analyseergebnisse unter Projekt & Dateien eintragen.');if(stabilityIssue)issues.push(stabilityIssue);if(sensitivityIssue)issues.push(sensitivityIssue);if(perspectiveIssue)issues.push(perspectiveIssue);$('start').disabled=issues.length>0;
+  const issues=mappingProblems();if(runtimeBlocksStart())issues.push('Das Programm wird beendet oder wartet auf eine Statusprüfung. Kein neuer Lauf möglich.');if(ollamaBlocksStart())issues.push('Für die gewählten Analysen ist ein erreichbares Ollama mit lokalem Modell nötig. Ollama starten bzw. Modell bereitstellen und erneut prüfen.');if(!$('output-dir').value.trim())issues.push('Speicherort für Analyseergebnisse unter Projekt & Dateien eintragen.');if(stabilityIssue)issues.push(stabilityIssue);if(sensitivityIssue)issues.push(sensitivityIssue);if(perspectiveIssue)issues.push(perspectiveIssue);$('start').disabled=issues.length>0;
   $('start-requirements').textContent=issues.length?'Start gesperrt: '+issues.join(' '):'Spalten zugeordnet. Beim Start werden alle Eingaben erneut geprüft.';
   $('mapping-requirements').textContent=$('start-requirements').textContent;
 }

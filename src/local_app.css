@@ -24,3 +24,9 @@
 #local-picker-list button { width: 100%; text-align: left; white-space: normal; overflow-wrap: anywhere; }
 #local-picker-selection { overflow-wrap: anywhere; }
 #local-picker-dialog { width: min(740px, calc(100% - 32px)); max-width: 740px; }
+#shutdown-dialog { width: min(640px, calc(100% - 32px)); max-width: 640px; }
+#runtime-status { overflow-wrap: anywhere; }
+
+/* Ollama availability has its own text label; color is only supplementary. */
+.ollama-status-reachable { color: var(--primary, #23614d); }
+.ollama-status-unreachable { color: #963a29; }

@@ -7,7 +7,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from local_app import App, read_json
-from test_local_app import settings
+from test_local_app import settings,attach_supervision
 from runtime_support import file_hash
 
 
@@ -83,14 +83,19 @@ class ExternalAppTests(unittest.TestCase):
             folder=app.project_dir(pid)/'jobs'/('d'*20);folder.mkdir(parents=True)
             config=app.project_dir(pid)/'revisions'/app.project(pid)['revision']/'config.yaml'
             (folder/'job.json').write_text(json.dumps({'id':folder.name,'config':str(config),'status':'running'}),encoding='utf-8')
-            process=MagicMock();process.poll.side_effect=[None,0];process.returncode=0
+            alive={'value':True}
+            process=MagicMock();process.poll.side_effect=lambda:None if alive['value'] else 0;process.returncode=0
             app.active=folder.name
-            def sleep(_):self.assertEqual(app.active,folder.name)
+            attach_supervision(app,folder,process)
+            def sleep(_):
+                self.assertEqual(app.active,folder.name);alive['value']=False
             with patch('local_app.job_storage.run_path',side_effect=ValueError('synthetic offline')), \
                  patch('local_app.time.sleep',side_effect=sleep),patch.object(app.telegram,'send'):
                 app.monitor(folder,process,1)
             self.assertIsNone(app.active)
             self.assertEqual(read_json(folder/'job.json')['status'],'interrupted')
+            self.assertTrue(read_json(folder/'job.json')['cleanup_confirmed'])
+            self.assertTrue(process.stdin.closed)
 
     def test_process_start_failure_retains_displayable_bound_job(self):
         with tempfile.TemporaryDirectory() as tmp:

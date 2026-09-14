@@ -41,6 +41,19 @@ class SupervisionTests(unittest.TestCase):
             self.assertTrue(record['cleanup_confirmed'])
             self.assertEqual(record['exit_code'],code)
 
+    def test_missing_child_executable_has_confirmed_failed_receipt(self):
+        from supervision_receipts import validate_receipt
+        from runtime_support import fingerprint
+        command=[str(self.root/'missing-synthetic-executable')]
+        result=_execute(command,self.root,self.root/'missing.log',dict(os.environ))
+        self.assertNotEqual(result,0)
+        record=self.wait_json('missing.supervision.json')
+        request=self.wait_json('missing.supervision.request.json')
+        validate_receipt(record,ticket=request['ticket'],command_sha256=fingerprint(command))
+        self.assertEqual(record['child_start'],'not_started')
+        self.assertNotIn('child_pid',record)
+        self.assertNotEqual(record['exit_code'],0)
+
     def test_parent_death_reaps_owned_tree_without_killing_unrelated_process(self):
         outsider=subprocess.Popen([sys._base_executable,'-c','import time;time.sleep(120)'],creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
         controller=subprocess.Popen([sys.executable,str(ROOT/'tests/supervisor_probe.py'),'controller',str(self.root)],

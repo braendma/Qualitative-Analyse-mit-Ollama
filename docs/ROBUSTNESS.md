@@ -1,5 +1,35 @@
 # Fehlerbehandlung und reproduzierbare Läufe
 
+## Kontrolliertes Beenden und lokale Prozessaufsicht
+
+Die Oberfläche bietet **Programm beenden** an. Eine laufende Analyse kann erst
+nach dem aktuellen Modul pausieren oder nach ausdrücklicher Bestätigung sofort
+abgebrochen werden. Das Schließen des Browsertabs löst keinen Abbruch aus.
+Neue Starts und veraltete Abbruchanfragen sind während des Beendens gesperrt.
+Pro technischer Projektablage darf nur eine Appinstanz laufen; getrennte Ablagen
+können unabhängig geöffnet werden.
+
+Die App steuert ausschließlich den eigenen gestarteten Prozess und dessen
+Verbindung zur bestehenden Prozessaufsicht. Sie beendet keine Prozesse allein
+anhand einer gespeicherten Prozessnummer. Ein Abschlussnachweis muss zum
+aktuellen Startversuch, Auftrag und Kommando passen. Fehlt er oder sind lokale
+Statusdateien vorübergehend nicht lesbar, bleibt der Startschutz erhalten.
+Windows-Python kann einen separaten Startprozess verwenden; dessen Nummer und
+die Nummer der eigentlichen Prozessaufsicht werden deshalb getrennt behandelt.
+
+Nach bestätigter Bereinigung erhält der Browser die Abschlussmeldung, bevor
+der lokale Webserver endet. Ist der Browser nicht mehr verbunden, wartet der
+Server begrenzt auf die Zustellung. Ein bloßer Verbindungsverlust wird in der
+Oberfläche weiterhin nicht als bestätigter Abschluss dargestellt. Gespeicherte
+Ergebnisse bleiben erhalten; die normalen Herkunftsprüfungen gelten auch bei
+der Wiederaufnahme.
+
+Diese Prozessfälle sind im Windows-Sourcebetrieb mit künstlichen Aufgaben
+geprüft. Die neue Mac-Distribution ist vorerst zurückgestellt. Vorarbeiten
+für verschachtelte POSIX-Prozessgruppen sind getrennt gesichert; ihre
+Einbindung und native Abnahme stehen aus. Auch das ausführbare Windows-Paket
+benötigt noch seine eigene Installations- und Laufzeitprüfung.
+
 ## Paketvorbereitung: Aufrufe und Grenzen (P02a)
 
 Die gemeinsame Startlogik erhält im Sourcebetrieb das bisherige Python-Kommando einschließlich eigener Skripte. Im vorbereiteten Paketbetrieb sind ausschließlich 24 festgelegte Programmeinstiege zulässig. Geprüft wird die genaue gebündelte Datei, nicht nur ihr Name; fremde Skriptpfade werden vor dem Modellstart abgewiesen. Interne Modulaufrufe öffnen keine zusätzliche Oberfläche. Argumente, Arbeitsordner und Modul-Rückgabecodes bleiben erhalten, insbesondere `75` für die kontrollierte Pause.

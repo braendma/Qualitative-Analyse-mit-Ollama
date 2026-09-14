@@ -90,12 +90,20 @@ class EntryPointPathsTests(unittest.TestCase):
         import local_app
         server = MagicMock(); server.server_port=12345; server.token='synthetic'
         server.serve_forever.side_effect=KeyboardInterrupt
-        with patch.object(sys, 'argv', ['app', '--no-browser', '--data-dir', 'chosen']), \
-             patch.object(local_app, 'default_data_dir', side_effect=AssertionError('Explicit wins')), \
-             patch.object(local_app, 'App') as app, patch.object(local_app, 'make_server', return_value=server), \
-             contextlib.redirect_stdout(io.StringIO()):
-            local_app.main()
-        app.assert_called_once_with('chosen', None)
+        with tempfile.TemporaryDirectory() as tmp:
+            chosen=Path(tmp)/'chosen'
+            with patch.object(sys, 'argv', ['app', '--no-browser', '--data-dir', str(chosen)]), \
+                 patch.object(local_app, 'default_data_dir', side_effect=AssertionError('Explicit wins')), \
+                 patch.object(local_app, 'App') as app, patch.object(local_app, 'make_server', return_value=server), \
+                 contextlib.redirect_stdout(io.StringIO()):
+                app.return_value.runtime_status.return_value={'state':'open','active':None}
+                def close_idle(mode):
+                    self.assertEqual(mode,'idle')
+                    app.return_value.runtime_status.return_value={'state':'closed','active':None}
+                app.return_value.shutdown.side_effect=close_idle
+                local_app.main()
+            app.assert_called_once_with(chosen.resolve(), None)
+            app.return_value.shutdown.assert_called_once_with('idle')
         server.server_close.assert_called_once()
 
     def test_frozen_explicit_output_does_not_create_directory_inside_bundle(self):

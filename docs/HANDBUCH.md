@@ -7,12 +7,20 @@ Du erreichst die bebilderte Fassung jederzeit über **Handbuch** neben **Telegra
 ## 1. Einrichten und starten
 
 1. Das vollständige Programm von GitHub herunterladen und entpacken. Einzelne Python-Dateien reichen nicht aus.
-2. Python ab Version 3.10 und Ollama installieren. Ein lokales Modell in Ollama bereitstellen; dessen Namen anschließend in der Oberfläche eintragen. Der Speicherbedarf hängt vom Modell und vom Kontextfenster ab.
+2. Für die Source-Version Python ab Version 3.10 installieren. Für lokale KI-Analysen zusätzlich Ollama und ein lokales Modell bereitstellen; dessen Namen anschließend in der Oberfläche eintragen. Der Speicherbedarf hängt vom Modell und vom Kontextfenster ab.
 3. Unter Windows einmal `Einrichtung.cmd` starten. Der Schritt installiert Python-Pakete und benötigt Internet, führt aber keine Interviewanalyse aus.
 4. `Start_Oberflaeche.cmd` öffnen. Die Bedienung erfolgt im Browser; das Startfenster während eines Laufs geöffnet lassen.
 5. Unter **Analyse → Systemprüfung ohne Modellaufruf** die Einrichtung prüfen. **Kurzen Modelltest vorbereiten** ist eine getrennte, optionale Aktion, die eine künstliche Anfrage beim gewählten Anbieter ausführt.
 
 Die Standardkonfiguration verwendet lokales Ollama. Optional lassen sich Cloud-Anbieter je Projekt freigeben; die Datenfreigabe wird im folgenden Abschnitt erklärt. Für eine reine Cloud-Nutzung ist kein lokales Modell nötig. Die API-Zugangsdatei gehört weder ins Repository noch in Beispielprojekte.
+
+### Ollama-Status ohne Modellstart (Entwicklungsstand P03)
+
+Die Oberfläche startet auch ohne installierten oder laufenden Ollama-Server. Nach Auswahl eines lokalen Anbieters wird seine Erreichbarkeit im Hintergrund geprüft. **Ollama erneut prüfen** wiederholt die Abfrage und aktualisiert die lokale Modellliste. Die Anzeige unterscheidet **Ollama erreichbar**, einen erreichbaren Server ohne lokales Modell und **Ollama nicht erreichbar**; der Zeitpunkt kennzeichnet die Momentaufnahme.
+
+Bei Nichterreichbarkeit verschwinden veraltete Vorschläge aus der Modellliste. Dein eingetragener Modellname und die Projekteinstellungen bleiben erhalten. Starte Ollama bzw. stelle ein lokales Modell bereit und prüfe erneut. Bis dahin sind ausgewählte lokale Analysen mit Modellbedarf gesperrt. Reine Coverage-, Information-Loss- und Codebook-Diagnosen bleiben ausführbar, sofern keine modellabhängigen Vorstufen ausgewählt sind. Ausdrücklich freigegebene Cloud-Anbieter sind von der lokalen Erreichbarkeit unabhängig; das Programm wechselt den Anbieter nicht selbst.
+
+Die Statusprüfung liest ausschließlich lokale Modellmetadaten. Sie installiert nichts und startet weder den Server noch ein Modell oder eine Testanfrage. Die separate Speicherschätzung und der ausdrücklich bestätigte kurze Modelltest erfüllen andere Zwecke. Es gibt keine zusätzliche Modellauswahl beim Programmstart und keine neue Paketfreigabe durch diese Statusfunktion.
 
 ### Speicher und parallele Anfragen
 
@@ -189,11 +197,31 @@ Bei OpenAI, Anthropic und Hugging Face gelten die jeweiligen Modellstandards fü
 
 ## 7. Start, Fortschritt und Wiederaufnahme
 
-Unter **Lokales Modell auswählen** den installierten Namen eintragen. **Installierte Modelle anzeigen** fragt nur die Liste ab. Kontextfenster und Antwortlimit zunächst aus der passenden Konfiguration übernehmen. Das Antwortlimit muss kleiner als das Kontextfenster sein; Thinking muss zum Modell passen.
+Unter **Lokales Modell auswählen** den installierten Namen eintragen. **Ollama erneut prüfen** liest den Status und die lokale Modellliste ohne Modellaufruf neu ein. Kontextfenster und Antwortlimit zunächst aus der passenden Konfiguration übernehmen. Das Antwortlimit muss kleiner als das Kontextfenster sein; Thinking muss zum Modell passen.
 
 **Prüfen & neuen Lauf starten** speichert die aktuellen Einstellungen, prüft nochmals und erzeugt einen eigenen Lauf. In der Browseransicht siehst du abgeschlossene Module, das aktuelle Modul und – sofern vom Modul gemeldet – bearbeitete Fälle und Modellantworten. Eine längere Modellantwort kann Zeit beanspruchen, ohne dass die Fallzahl steigt.
 
 **Nach diesem Modul pausieren** beendet zuerst das laufende Modul. **Diesen Lauf fortsetzen** verwendet dessen gespeicherte Eingaben und Einstellungen. Ein neuer Lauf verwendet dagegen den aktuellen Projektstand. Erfolgreiche Teilschritte werden bei zulässiger Wiederaufnahme weiterverwendet; geänderte Eingaben oder Programmstände können eine Wiederaufnahme ausschließen. Dann einen neuen Lauf starten und die vorherigen Ergebnisse behalten.
+
+### Programm kontrolliert beenden
+
+Im Entwicklungsstand P02b findest du **Programm beenden** in der Seitenleiste neben Handbuch und Telegram-Updates. Das Schließen eines Browsertabs lässt das Programm und laufende Analysen weiterlaufen. Öffne deshalb diese Funktion, wenn du auch das Programm beenden möchtest.
+
+| Situation | Aktion | Was geschieht? |
+|---|---|---|
+| Kein Analyselauf aktiv | **Programm jetzt beenden** | Das Programm schließt nach der Prüfung, dass keine eigene Analyse mehr läuft. |
+| Analyse soll einen sicheren Zwischenstand erreichen | **Nach aktuellem Modul pausieren und beenden** | Die Pause wird angefordert. Warte auf den Abschluss des aktuellen Moduls; bei Wiederholungsdiagnosen gilt deren dokumentierte Pausegrenze. Danach werden eigene Prozesse aufgeräumt und das Programm beendet. |
+| Lauf sofort unterbrechen | **Sofort abbrechen** aufklappen, Bestätigung anhaken und **Jetzt abbrechen und beenden** wählen | Die aktuelle Berechnung wird unterbrochen. Vollständig gespeicherte Ergebnisse bleiben erhalten; nicht gespeicherte Arbeit muss gegebenenfalls erneut berechnet werden. |
+
+**Abbrechen** schließt den Dialog, solange du noch keine Aktion angefordert hast. Während die Anforderung übergeben wird, ist Abbrechen gesperrt. **Dialog schließen** nach einer angenommenen Pause nimmt die Pause nicht zurück. Für eine spätere Wiederaufnahme das Programm neu öffnen und **Diesen Lauf fortsetzen** verwenden; die vorhandenen Eingabe- und Ergebnisprüfungen gelten weiterhin.
+
+Die Auswahl bezieht sich auf den aktuell angezeigten aktiven Lauf, auch wenn du gerade ein anderes Projekt geöffnet hast. Ändert sich der Lauf während der Auswahl, prüfe den aktuellen Status erneut; die Bestätigung für einen Sofortabbruch muss gegebenenfalls neu gesetzt werden. Es wird nicht still ein anderer Lauf abgebrochen.
+
+Der Status unterscheidet **Pause angefordert**, laufende Bereinigung und ein blockiertes Beenden. Eine lange Modulberechnung ist noch kein Fehler. Bei einer Meldung, dass das Programm nicht sicher beendet werden konnte, bleibt es geöffnet: den genannten Hinweis sowie Startfenster und Laufprotokoll prüfen und **Status erneut prüfen** wählen. Während des Beendens oder einer ungeklärten Anforderung startet kein neuer Lauf.
+
+Eine angenommene Anforderung ist noch kein bestätigter Abschluss. Erst die Rückmeldung „Bereinigung bestätigt. Das Programm wird geschlossen.“ bestätigt, dass eigene Analyseprozesse aufgeräumt sind; die Anwendung schließt anschließend. Wenn anschließend die Verbindung verschwindet, nennt die Oberfläche die Anforderung und weist darauf hin, dass der Abschluss dort nicht mehr überprüfbar ist. Eine beliebige Verbindungsunterbrechung wird nicht als erfolgreiche Beendigung ausgegeben. Die Prozessaufsicht räumt nur die vom Programm gestarteten Prozesse auf; andere Anwendungen werden nicht beendet.
+
+Beim Source-Start der Oberfläche im Terminal fordert **Strg+C** bei einer aktiven Analyse ebenfalls eine Pause mit anschließendem Beenden an. Die Oberfläche bleibt während des Wartens erreichbar. Wiederholtes Strg+C löst keinen versteckten Sofortabbruch aus; dafür die bestätigte Aktion in der Oberfläche verwenden. Ohne aktive Analyse beendet Strg+C das Programm geordnet. Diese Beschreibung betrifft den Entwicklungsstand; neue eigenständige Windows-/macOS-Pakete sind damit noch nicht freigegeben.
 
 ## 8. Berichte öffnen und später wiederfinden
 
@@ -282,7 +310,7 @@ Die technische Projektverwaltung, Einstellungen und unveränderlichen Eingabe-/K
 
 **CLI-Ergebnisordner:** Ohne `--output-dir` erstellt die CLI neben der tatsächlich verwendeten Eingabedatei einen neuen Ordner `QualitativeAnalyse_<Lauf-ID>`. Maßgeblich ist `--csv`, falls angegeben, sonst `paths.input_csv` aus der Konfiguration; relative Konfigurations-Eingaben werden gegen deren Ordner aufgelöst. Ein explizites `--output-dir` bleibt relativ zum aktuellen Arbeitsordner, wird bei Bedarf angelegt und enthält wie bisher Unterordner `<Lauf-ID>`. Vor dem neuen Lauf wird die Beschreibbarkeit geprüft. Bei einem ungültigen oder nicht beschreibbaren Ziel erfolgt eine Fehlermeldung, kein Ausweichen in AppData oder einen temporären Ordner. `--validate-only` prüft die Analysedaten, noch nicht die spätere Schreibbarkeit des Ergebnisziels. Resume verwendet unverändert den ausdrücklich angegebenen bestehenden Laufordner und prüft dessen Herkunft.
 
-Für eine Sicherung die Anwendung nach Ende aller Läufe schließen und den vollständigen technischen Datenordner sowie die zugehörigen Forschungsordner sichern. Einzelne Ergebnisdateien enthalten nicht alle Eingabe- und Prüfversionen. Das Löschen von Programm-/Projektordnern entfernt möglicherweise gespeicherte Arbeit.
+Für eine Sicherung nach Ende aller Läufe **Programm beenden** verwenden und anschließend den vollständigen technischen Datenordner sowie die zugehörigen Forschungsordner sichern. Einzelne Ergebnisdateien enthalten nicht alle Eingabe- und Prüfversionen. Das Löschen von Programm-/Projektordnern entfernt möglicherweise gespeicherte Arbeit.
 
 | Situation | Nächster Schritt |
 |---|---|
@@ -291,7 +319,7 @@ Für eine Sicherung die Anwendung nach Ende aller Läufe schließen und den voll
 | Code unbekannt | Vollständigen Pfad einschließlich aller Ebenen und Schreibweise mit dem Kategoriensystem vergleichen. |
 | Passage-IDs fehlen | Assistent mit MAXQDA-Positionsspalten verwenden oder Zeilenvergleich wählen. |
 | Gleiche Passage-ID mit abweichendem Text | Gruppierung im Export korrigieren; überlappende Ausschnitte nicht künstlich gleichsetzen. |
-| Ollama nicht erreichbar | Ollama starten, Systemprüfung ausführen und installierten Modellnamen prüfen. |
+| Ollama nicht erreichbar | Ollama starten, **Ollama erneut prüfen** wählen und den installierten Modellnamen prüfen. |
 | Lauf fehlgeschlagen | Laufprotokoll speichern und Fehlermeldung prüfen; nach Behebung fortsetzen oder neuen Lauf starten. |
 | Gesamtbericht fehlt | Status prüfen: HTML entsteht nach erfolgreichem Abschluss; ältere Läufe gegebenenfalls nacherstellen. |
 | Bild fehlt im HTML | Hinweis im Bericht lesen und einzelne Grafik öffnen; Exportgrenzen bzw. fehlende Datei prüfen. |

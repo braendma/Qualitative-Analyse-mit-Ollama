@@ -2,6 +2,7 @@ import base64
 import copy
 import http.client
 import json
+import io
 import os
 from pathlib import Path
 import subprocess
@@ -35,6 +36,26 @@ def settings(app):
             'output_dir':str(output_dir)}
 
 
+def attach_supervision(app,folder,process):
+    """Explicit current-attempt cleanup evidence for focused monitor tests."""
+    from app_lifecycle import ActiveRun,supervision_paths
+    from runtime_support import atomic_json
+    process.pid=424242;process.stdin=io.BytesIO();process.wait.return_value=0
+    binding={'attempt':'a'*32,'ticket':'synthetic-current-attempt','command_sha256':'b'*64,
+             'config_sha256':'c'*64,'run_parent':str(folder/'runs'),'supervisor_pid':process.pid,
+             'job_folder':str(folder.resolve())}
+    request,receipt=supervision_paths(folder,binding);request.parent.mkdir(parents=True,exist_ok=True)
+    atomic_json(request,binding)
+    atomic_json(receipt,{'schema_version':1,'ticket':binding['ticket'],'command_sha256':binding['command_sha256'],
+                        'supervisor_pid':process.pid,'status':'finished','cleanup_confirmed':True,
+                        'cleanup_scope':'windows_job' if os.name=='nt' else 'process_group',
+                        'exit_code':0,'parent_released':False})
+    job=read_json(folder/'job.json');job['supervision']=binding;atomic_json(folder/'job.json',job)
+    session=ActiveRun('e'*20,app.active or folder.name,folder,process,binding)
+    app._session=session;app.active=session.job
+    return session
+
+
 class DesktopTests(unittest.TestCase):
     def test_json_read_retries_short_file_lock_but_preserves_errors(self):
         path=MagicMock()
@@ -56,7 +77,9 @@ class DesktopTests(unittest.TestCase):
             (folder/'job.json').write_text('{"status":"running"}',encoding='utf-8')
             manifest=run/'workflow_manifest.json'
             manifest.write_text('{"status":"success","completed_steps":[]}',encoding='utf-8')
-            process=MagicMock();process.poll.side_effect=[None,None,0];process.returncode=0
+            alive={'value':True,'sleeps':0}
+            process=MagicMock();process.poll.side_effect=lambda:None if alive['value'] else 0;process.returncode=0
+            attach_supervision(app,folder,process)
             first=True
             def locked(path,default=None):
                 nonlocal first
@@ -64,11 +87,16 @@ class DesktopTests(unittest.TestCase):
                     first=False
                     raise PermissionError('synthetic transient file lock')
                 return read_json(path,default)
-            def still_active(_):self.assertEqual(app.active,'synthetic-job')
+            def still_active(_):
+                self.assertEqual(app.active,'synthetic-job')
+                alive['sleeps']+=1
+                if alive['sleeps']>=2:alive['value']=False
             with patch('local_app.read_json',side_effect=locked),patch('local_app.time.sleep',side_effect=still_active),patch.object(app.telegram,'send'):
                 app.monitor(folder,process,1)
             self.assertIsNone(app.active)
             self.assertEqual(read_json(folder/'job.json')['status'],'success')
+            self.assertTrue(read_json(folder/'job.json')['cleanup_confirmed'])
+            self.assertTrue(process.stdin.closed)
 
     def test_invalid_save_keeps_last_valid_revision_and_settings(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -172,20 +200,21 @@ class DesktopTests(unittest.TestCase):
             app.template['prompts']['cluster_summary']={'system':'cluster_summary','user':'{clusters}'}
             app.template['prompts']['category_summary']={'system':'category_summary','user':'{subcats}'}
             app.save(pid,opts)
-            real_popen=subprocess.Popen
+            real_command=app.runner_command
             first=True
-            def launch(command,**kwargs):
+            def launch(config,output_dir,pause_file,resume=None):
                 nonlocal first
-                command=list(command);command[1]=str(ROOT/'tests/mock_pipeline.py')
+                command=real_command(config,output_dir,pause_file,resume)
+                command[1]=str(ROOT/'tests/mock_pipeline.py')
                 if first:
                     Path(command[command.index('--pause-file')+1]).write_text('pause')
                     first=False
-                return real_popen(command,**kwargs)
+                return command
             def settle():
                 deadline=time.monotonic()+40
                 while app.active is not None and time.monotonic()<deadline:time.sleep(.1)
-                self.assertIsNone(app.active,'Workflow monitor failed to finish')
-            with patch.object(app,'models',return_value={'models':['mock']}),patch('local_app.subprocess.Popen',side_effect=launch):
+                self.assertIsNone(app.active,'Workflow monitor failed to finish: '+str(app.runtime_status()))
+            with patch.object(app,'models',return_value={'models':['mock']}),patch.object(app,'runner_command',side_effect=launch):
                 started=app.start(pid);settle()
                 job=app.jobs(pid)[0];self.assertEqual(job['status'],'paused')
                 research_path=Path(job['research_path'])
