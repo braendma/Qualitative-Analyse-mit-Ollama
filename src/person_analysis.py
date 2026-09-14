@@ -9,6 +9,7 @@ import logging
 import yaml
 
 from person_analysis_core import build_person_analysis
+from thematic_pipeline import prepare, finish
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -26,6 +27,7 @@ from progress_events import track_module
 @track_module
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Qualitative Personenanalyse")
+    parser.add_argument('--csv', help='Normalisierter Segmentexport für die optionale Analyseperspektive')
     parser.add_argument("--config", "-c", default=str(DEFAULT_CONFIG))
     parser.add_argument("--clusters-json", "-j", default="clusters_output.json")
     parser.add_argument("--idmap-json", "-m", default="id_to_text.json")
@@ -47,6 +49,9 @@ def main(argv=None):
         "log_thinking": bool(llm_cfg.get("log_thinking", False)),
     }
 
+    prepared = prepare('person_analysis', args.config, input_path=args.csv,
+                       cluster_path=args.clusters_json, idmap_path=args.idmap_json,
+                       summary_path=args.summary_json)
     md, json_output = build_person_analysis(
         clusters_json_path=args.clusters_json,
         id_to_text_path=args.idmap_json,
@@ -56,6 +61,7 @@ def main(argv=None):
         context=config.get("context", {}),
     )
 
+    md, json_output = finish(prepared, json_output, md, ollama_params)
     atomic_text(args.out_md, md)
     atomic_json(args.out_json, json_output)
 
@@ -65,4 +71,3 @@ def main(argv=None):
 
 if __name__ == "__main__":
     main()
-

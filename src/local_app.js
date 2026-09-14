@@ -79,7 +79,7 @@ function updatePerspectivePlan(required){
   }
   if(!issues.length){
     const active=state.modules.filter(m=>required.has(m.id)&&['frequency','both'].includes(perspectiveSelections[m.id]));
-    if(active.length)box.append(el('p','Zusätzliche Häufigkeitsperspektive: '+active.map(m=>(m.name||m.id)+' ('+perspectiveLabels[perspectiveSelections[m.id]]+')').join(', ')+'. Bestehende Clusterzuordnungen werden verwendet; SWOT benötigt eine vollständige Themenzuordnung im jeweiligen Materialumfang. Je Modul wird eine Zählbasis einmal erstellt und eine zusätzliche Interpretation erzeugt. „Beide“ teilt diese Basis.','selection-summary'));
+    if(active.length)box.append(el('p','Zusätzliche Häufigkeitsperspektive: '+active.map(m=>(m.name||m.id)+' ('+perspectiveLabels[perspectiveSelections[m.id]]+')').join(', ')+'. Bestehende Clusterzuordnungen werden verwendet; SWOT, Meta-SWOT, Personen- und Ambivalenzanalyse benötigen vollständige Themenzuordnungen im jeweiligen Materialumfang. Je Modul wird eine Zählbasis einmal erstellt und eine zusätzliche Interpretation erzeugt. „Beide“ teilt diese Basis.','selection-summary'));
     if(active.length)box.append(el('p','Zusätzliche Modellanfragen, Laufzeit und Kosten hängen von Themen, Materialmenge, Kontext und Reparaturen ab. Wiederholungsserien führen auch diese Zusatzarbeit erneut aus. Die bisherige qualitative Analyse bleibt gemeinsame Grundlage nachfolgender Module.','hint'));
   }
   box.hidden=!box.children.length;

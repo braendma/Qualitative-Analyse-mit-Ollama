@@ -52,18 +52,18 @@ def check_context(config, segments, codebook, modules):
     for module,key in keys.items():
         if module in enabled:pair(module,key)
     if 'summarizer' in enabled:pair('summarizer','category_summary')
-    from thematic_pipeline import modes as thematic_modes
+    from thematic_pipeline import modes as thematic_modes, FULL_ASSIGNMENT_MODULES
     extra = {mid for mid, mode in thematic_modes(config).items() if mid in enabled and mode != 'qualitative'}
     if extra:
         from thematic_interpretation import SYSTEM as interpretation_system, CORRECTION as interpretation_correction
         for mid in extra:
             record(mid, [{'content': interpretation_system}, {'content': '{}'}, {'content': interpretation_correction}])
-        if 'swot' in extra:
+        for mid in sorted(extra.intersection(FULL_ASSIGNMENT_MODULES)):
             from thematic_assignment import SYSTEM as assignment_system, CORRECTION as assignment_correction
             for segment in segments:
                 # This is a lower bound before candidate themes exist. The actual
                 # full matrix/definition/response plan is checked again at runtime.
-                record('swot', [{'content': assignment_system}, {'content': segment.text + assignment_correction}])
+                record(mid, [{'content': assignment_system}, {'content': segment.text + assignment_correction}])
     blocked=[{'module':module,'required_bound':needed} for module,needed in maxima.items() if needed>context]
     warnings=[]
     if extra:

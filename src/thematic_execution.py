@@ -10,7 +10,7 @@ from coverage_core import markdown_escape as escape
 from analysis_perspectives import MODES
 from thematic_adapters import build_cluster_topics, build_summary_topics, build_swot_topics
 from thematic_counts import count_topics
-from thematic_interpretation import interpret_counts
+from thematic_interpretation import interpret_counts, comparison_basis
 
 
 ADAPTER_MODULES = ('clusterer', 'summarizer', 'swot', 'meta_swot',
@@ -63,6 +63,7 @@ The qualitative default has no new material, model or output requirements.
         'downstream_contract': 'Original source fields remain the unweighted candidate basis; '
             'named interpretations are separate results of this module, never implicit replacements.',
         'assignment_origin': origin, 'counting': counted,
+        'interpretation_comparison_basis': comparison_basis(module),
         'source_links': deepcopy(prepared['source_links']), 'interpretations': outputs,
         'unassigned_context': deepcopy(prepared.get('unassigned_context', {})),
         'methodological_note': 'Gezählt werden Zuordnungen im exportierten codierten Material. '
@@ -83,6 +84,9 @@ def perspective_markdown(result):
     qualitative = {r['topic_id']: r for r in outputs.get('qualitative', [])}
     lines = ['\n\n## Häufigkeitsinformierte Analyseperspektive\n', escape(result['methodological_note']),
              '\nDie folgenden Zahlen werden aus den Zuordnungen berechnet. Die Interpretation darunter ist ein Modellvorschlag.']
+    if result.get('interpretation_comparison_basis') == 'same_person_scope':
+        lines.append('\nDie Interpretation vergleicht sämtliche festen Themen innerhalb derselben Einzelperson. '
+                     'Themen anderer Personen sind kein Teil dieses Vergleichs; ein Personenvergleich ist eine eigene Analyse.')
     meanings = {'explicit': 'Äußerungsbezogene Themenzuordnung', 'derived': 'Materialbasis einer analytischen Ableitung',
                 'membership': 'Clusterzuordnung; keine Zählung jeder Zusammenfassungsaussage'}
 

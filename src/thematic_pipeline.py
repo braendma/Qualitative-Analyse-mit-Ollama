@@ -9,7 +9,9 @@ import yaml
 from analysis_perspectives import normalize_analysis_perspectives, perspective_capabilities, perspective_effort
 
 
-IMPLEMENTED = ('clusterer', 'summarizer', 'swot')
+IMPLEMENTED = ('clusterer', 'summarizer', 'swot', 'meta_swot',
+               'person_analysis', 'ambiguity_analysis')
+FULL_ASSIGNMENT_MODULES = ('swot', 'meta_swot', 'person_analysis', 'ambiguity_analysis')
 
 
 def modes(config):
@@ -49,12 +51,13 @@ def validate_material(config_path, config, modules, input_path=None):
     return None
 
 
-def prepare(module, config_path, *, input_path=None, cluster_path=None, idmap_path=None, summary_path=None):
+def prepare(module, config_path, *, input_path=None, cluster_path=None, idmap_path=None,
+            summary_path=None, swot_path=None, person_path=None):
     """Verify inputs and source files before the existing core makes any call."""
     from coding_validation_common import resolve_config_path
     from runtime_support import file_hash
     from thematic_material import load_counting_material
-    from thematic_adapters import build_cluster_topics, build_summary_topics
+    from thematic_adapters import build_cluster_topics, build_summary_topics, build_swot_topics
     config_path = Path(config_path).resolve()
     config = yaml.safe_load(config_path.read_text(encoding='utf-8-sig'))
     mode = modes(config)[module]
@@ -62,9 +65,12 @@ def prepare(module, config_path, *, input_path=None, cluster_path=None, idmap_pa
         return None
     run_path = os.environ.get('WORKFLOW_RUN_DIR')
     runner_input = os.environ.get('WORKFLOW_INPUT_CSV')
-    in_runner = bool(os.environ.get('WORKFLOW_FINGERPRINT') or os.environ.get('WORKFLOW_MODULE'))
+    in_runner = any(os.environ.get(key) for key in
+                    ('WORKFLOW_FINGERPRINT', 'WORKFLOW_MODULE', 'WORKFLOW_RUN_DIR', 'WORKFLOW_INPUT_CSV'))
     if in_runner and (not run_path or not runner_input or not os.environ.get('WORKFLOW_FINGERPRINT')):
         raise ValueError('Perspektivprüfung benötigt den vollständigen Eingabe- und Laufnachweis des Runners.')
+    if os.environ.get('WORKFLOW_MODULE') and os.environ['WORKFLOW_MODULE'] != module:
+        raise ValueError('Perspektivprüfung passt nicht zum aktuellen Runner-Modul.')
     actual_input = resolve_config_path(config_path, input_path or runner_input, config.get('paths', {}).get('input_csv'))
     material = load_counting_material(config_path, actual_input, run_dir=run_path if in_runner else None)
     book = resolve_config_path(config_path, None, config['paths']['category_system_csv'])
@@ -101,21 +107,36 @@ def prepare(module, config_path, *, input_path=None, cluster_path=None, idmap_pa
         files[str(path)] = digest
         return payload
 
-    clusters = None
-    if module != 'clusterer':
-        if cluster_path is None or idmap_path is None:
+    clusters = swot = persons = None
+    if module in ('summarizer', 'swot', 'person_analysis'):
+        if cluster_path is None:
             raise ValueError('Cluster und Originaltext-Zuordnung werden für die Perspektivprüfung benötigt.')
         clusters = source(cluster_path, 'clusterer')
         build_cluster_topics(material, clusters)
+    if module in ('summarizer', 'swot', 'person_analysis', 'ambiguity_analysis'):
+        if idmap_path is None:
+            raise ValueError('Vollständige Originaltext-Zuordnung fehlt für die Perspektivprüfung.')
         mapping = source(idmap_path)
         expected = {sid: material['units'][row['unit_id']]['text'] for sid, row in material['segment_index'].items()}
         if mapping != expected:
             raise ValueError('Originaltext-Zuordnung stimmt nicht vollständig mit der bestätigten CSV überein. Clusterung neu ausführen.')
-        if module == 'swot':
+        if module in ('swot', 'person_analysis'):
             if summary_path is None:
-                raise ValueError('Geprüfte Clusterzusammenfassungen fehlen für die SWOT-Perspektive.')
+                raise ValueError('Geprüfte Clusterzusammenfassungen fehlen für die Analyseperspektive.')
             build_summary_topics(material, clusters, source(summary_path, 'summarizer'))
-    return {'module_id': module, 'mode': mode, 'material': material, 'clusters': clusters, 'files': files}
+    if module == 'meta_swot':
+        if swot_path is None:
+            raise ValueError('Geprüfte originale SWOT-Analyse fehlt für die Meta-SWOT-Perspektive.')
+        swot = source(swot_path, 'swot')
+        build_swot_topics(material, swot)
+    if module == 'ambiguity_analysis':
+        from thematic_person_adapters import build_person_topics
+        if person_path is None:
+            raise ValueError('Geprüfte originale Personenanalyse fehlt für die Ambivalenzperspektive.')
+        persons = source(person_path, 'person_analysis')
+        build_person_topics(material, persons)
+    return {'module_id': module, 'mode': mode, 'material': material, 'clusters': clusters,
+            'swot': swot, 'persons': persons, 'files': files}
 
 
 def finish(prepared, payload, markdown, params, *, llm=None):
@@ -128,7 +149,8 @@ def finish(prepared, payload, markdown, params, *, llm=None):
             raise ValueError('Eingaben oder Vorstufen wurden während der Analyse verändert; neuen Lauf mit geprüften Daten starten.')
     unchanged()
     result = execute_perspective(prepared['module_id'], prepared['mode'], prepared['material'], payload, params,
-                                 cluster_payload=prepared['clusters'], llm=llm)
+                                 cluster_payload=prepared['clusters'], swot_payload=prepared.get('swot'),
+                                 person_payload=prepared.get('persons'), llm=llm)
     unchanged()
     output = deepcopy(payload)
     output['analysis_perspective'] = result

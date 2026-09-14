@@ -29,7 +29,7 @@ def _overlap(left, right):
     return _ratio(sum((left & right).values()), sum((left | right).values()))
 
 
-def _samples(samples, project):
+def _samples(samples, project, *, include_sample=False):
     if not isinstance(samples, list) or not 2 <= len(samples) <= 20:
         raise ValueError('Stabilität benötigt 2 bis 20 ausdrücklich benannte Wiederholungen.')
     valid, excluded, ids = {}, [], set()
@@ -47,7 +47,7 @@ def _samples(samples, project):
             payload = sample['payload']
             if not isinstance(payload, dict) or payload.get('processing_status', 'completed') != 'completed':
                 raise ValueError('Unvollständiges Ergebnis.')
-            valid[sid] = project(payload)
+            valid[sid] = project(payload, sample) if include_sample else project(payload)
         except (ValueError, TypeError, KeyError, AttributeError, RecursionError):
             # No raw exception/prompt/research text in the exclusion reason.
             excluded.append({'sample_id': sid, 'reason': 'invalid_artifact'})
@@ -135,8 +135,9 @@ def analyze_stage_repetitions(segments, module_id, samples):
     # Validate original IDs even when all samples fail.
     baseline = analyze_coverage(make_snapshot(segments, {}))
 
-    def project(payload):
-        projected = project_stage(module_id, payload, segments=segments)
+    def project(payload, sample):
+        projected = project_stage(module_id, payload, segments=segments,
+                                  upstream_payloads=sample.get('upstream_payloads'))
         projected['status'] = 'available'
         snapshot = make_snapshot(segments, {module_id: projected})
         checked = snapshot['stages'][module_id]
@@ -145,7 +146,7 @@ def analyze_stage_repetitions(segments, module_id, samples):
         checked['coverage'] = analyze_coverage(snapshot)['stages'][module_id]
         return checked
 
-    valid, excluded = _samples(samples, project)
+    valid, excluded = _samples(samples, project, include_sample=True)
     result = {**_base(samples, valid, excluded), 'module_id': module_id,
               'material': baseline['material'], 'unit_basis': baseline['unit_basis'],
               'pairs': [], 'record_occurrences': [], 'sample_details': [],

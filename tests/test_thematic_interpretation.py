@@ -17,6 +17,34 @@ def response(tid='T'):
 
 
 class ThematicInterpretationTests(unittest.TestCase):
+    def test_case_register_contains_every_same_person_topic_and_no_other_case(self):
+        basis = material(['P1','P1','P2'])
+        topics = [topic('A',['u0','u1']),topic('B',['u0','u1']),topic('C',['u2'])]
+        counted = count_topics(basis,topics,[])
+        llm=MockLLM([response('A'),response('B'),response('C')])
+        interpret_counts(basis,counted,{'A':'First case side A','B':'First case side B','C':'Other case'},
+                         {'model':'synthetic','num_ctx':16000,'max_tokens':512,'partial_checkpoints':False},
+                         module='ambiguity_analysis',llm=llm)
+        payloads=[json.loads(call[1]['content']) for call in llm.calls]
+        self.assertEqual([len(p['comparison_register']) for p in payloads],[2,2,1])
+        self.assertEqual(payloads[0]['comparison_register'],payloads[1]['comparison_register'])
+        self.assertEqual({r['topic_id'] for r in payloads[2]['comparison_register']},{'C'})
+        for payload in payloads:
+            self.assertEqual(payload['comparison_basis'],'same_person_scope')
+            self.assertEqual(payload['module_topic_count'],3)
+            self.assertEqual(payload['comparison_topic_count'],len(payload['comparison_register']))
+
+    def test_case_comparison_cannot_use_subset_or_multiple_people_as_full_case(self):
+        basis=material(['P1','P1','P2'])
+        for scope in (['u0'],['u0','u1','u2']):
+            counted=count_topics(basis,[topic('T',scope)],[])
+            llm=MockLLM([])
+            with self.assertRaises(ValueError):
+                interpret_counts(basis,counted,{'T':'Synthetic'},
+                                 {'model':'synthetic','num_ctx':16000,'max_tokens':512,'partial_checkpoints':False},
+                                 module='person_analysis',llm=llm)
+            self.assertEqual(llm.calls,[])
+
     def setUp(self):
         self.material = material(['P1', 'P1', 'P2'])
         self.topics = [topic('T', self.material['units'], kind='derived')]

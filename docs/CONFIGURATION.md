@@ -306,14 +306,19 @@ in diesem Fall ist `total_module_executions: null`. Keine Zeit-/Preisprognose.
 ## Analyseperspektiven je Modul
 
 Der aktuelle Entwicklungsstand erlaubt zusätzliche Perspektiven für die
-unveränderten Standardmodule `clusterer`, `summarizer` und `swot`. Die Modi werden
-unabhängig je Modul gewählt:
+sechs unveränderten Standardmodule `clusterer`, `summarizer`, `swot`,
+`meta_swot`, `person_analysis` und `ambiguity_analysis`. Die Modi werden unabhängig
+je Modul gewählt; die folgende Auswahl ist ein Beispiel, keine automatische
+Aktivierung aller sechs Module:
 
 ```yaml
 analysis_perspectives:
   clusterer: qualitative
   summarizer: both
   swot: frequency
+  meta_swot: both
+  person_analysis: frequency
+  ambiguity_analysis: both
 ```
 
 Dieser optionale Abschnitt ergänzt eine vorhandene Konfiguration; er aktiviert
@@ -330,8 +335,10 @@ dieselbe Zuordnung. Abgewählte Module behalten gespeicherte Modi.
 
 Ein fehlender oder `null` gesetzter gesamter Abschnitt bedeutet qualitativ.
 Null-Einzelwerte, Listen, unbekannte Modi und unbekannte Modul-IDs werden
-abgewiesen. Die Eignung weiterer analytischer Module bedeutet noch keine
-Freigabe ihrer zusätzlichen Modi. Codiervergleich, Review und Diagnosen erhalten
+abgewiesen. Die vier übrigen geeigneten Module `person_comparison`,
+`contrast_analysis`, `relation_analysis` und `overall_synthesis` bleiben für
+`frequency`/`both` gesperrt. Ihre methodische Eignung bedeutet keine
+Ausführungsfreigabe. Codiervergleich, Review und Diagnosen erhalten
 keine künstlichen Interpretationsmodi. Eigene Skripte können keine Freigabe durch
 Wiederverwendung einer Standard-ID erlangen. Alle gespeicherten Einträge werden
 geprüft, auch bei gerade abgewählten Modulen; ungültige Werte bewusst korrigieren.
@@ -358,11 +365,44 @@ Eingaben und Programmversion; passende Teilblöcke können wiederverwendet werde
 
 Die Aufwandübersicht nennt gemeinsame Zählbasen und zusätzliche
 Interpretationsphasen. Eine Basis ist keine einzelne Modellanfrage. SWOT führt
-zusätzlich die vollständige Thema-Einheit-Zuordnung im jeweiligen Codepfad aus;
-Cluster und Zusammenfassungen verwenden vollständige Clusterzuordnungen.
+die vollständige Thema-Einheit-Zuordnung im jeweiligen Codepfad aus, Meta-SWOT
+im gesamten ausgewerteten SWOT-Material. Personenbefunde und jede einzelne
+Ambivalenzseite werden gegen den vollständigen Einzelfall geprüft. Cluster und
+Zusammenfassungen verwenden vollständige Clusterzuordnungen.
 Matrixumfang, Themen und Reparaturen bestimmen die tatsächliche Zusatzarbeit;
 Wiederholungsserien führen sie erneut aus. `both` teilt die Matrix pro Modul.
 Der Kern zählt selbst; Modelltexte können die berechneten Werte dennoch falsch
 interpretieren. Materialeinheiten, bestätigte Personen, Prüfstatus und Nenner
 bleiben deshalb explizit. Siehe [Bedienung und Fehlerhilfe](HANDBUCH.md#analyseperspektiven-je-modul)
 und [Entwicklervertrag](THEMATIC_COUNTING.md).
+
+
+Bei Meta-SWOT werden bestehende SWOT-Häufigkeiten nicht addiert oder als exakte
+Themenunion übernommen: Die neuen analytischen Meta-Befunde benötigen eine
+neue Matrix. Die Personenanalyse hat je Befund einen Personennenner von eins;
+mehrere Dokumente derselben bestätigten Person erhöhen diesen nicht. Bei
+Ambivalenz bezeichnet `both` als **Zuordnungsstatus** Stützung und Widerspruch
+gegenüber einer Seite, während `both` als **Konfigurationsmodus** die beiden
+Analyseperspektiven auswählt. Seiten A/B werden unabhängig geprüft; B wird
+nicht automatisch zur Gegenposition von A.
+
+Die Quellenprüfung benötigt bei Meta-SWOT die originale SWOT-Vorstufe, bei
+Personenanalyse Cluster, Originaltext-Zuordnung und Clusterzusammenfassungen,
+bei Ambivalenz die Personenanalyse und Originaltext-Zuordnung. Im Runner gelten
+deklarierte Artefakte, Abschlussstatus und Dateihashes; Eingaben und Vorstufen
+müssen auch nach der Ausführung unverändert sein. Semantische Fingerprints der
+ungewichteten Befunde ersetzen diese Dateiprüfungen nicht. Vorhandene
+`analysis_perspective`-Zusätze beeinflussen die Originalkandidaten nicht.
+Für Diagnoseprojektionen werden abhängige Quellen ebenfalls geprüft; fehlende
+oder beschädigte Vorstufen liefern keine vermeintlich gültigen Nullwerte.
+
+
+Der Vergleichsraum der Häufigkeitsinterpretation ist fachlich festgelegt, kein
+zusätzliches Feld in der YAML: Personen- und Ambivalenzanalyse übergeben sämtliche
+Themen desselben vollständigen Einzelfalls (`comparison_basis: same_person_scope`),
+einschließlich aller A-/B-Seiten. Cluster, Zusammenfassungen, SWOT und Meta-SWOT
+verwenden sämtliche Modulthemen (`all_fixed_topics`). Das Anfrageobjekt benennt
+`module_topic_count` und `comparison_topic_count` getrennt. Themen anderer Personen
+werden nicht in die Einzelfallinterpretation eingeschleust; alle Fälle und ihre
+Zähler bleiben im Gesamtergebnis. Auch das vollständige Einzelfallregister kann
+zu groß für den gewählten Kontext sein und wird dann nicht still gekürzt.

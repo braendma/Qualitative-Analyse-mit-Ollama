@@ -78,6 +78,13 @@ def fake_chat(messages, **kwargs):
                 'gesamteinordnung':'Test'}
     elif module=='ambiguity_analysis':
         result={'ambivalenzen':[],'gesamteinordnung':'Keine Ambivalenz im Test.'}
+        if os.environ.get('MOCK_AMBIGUITY_PAIRS') == '1' and len(data['originalsegmente']) >= 2:
+            ids=[row['id'] for row in data['originalsegmente']]
+            result={'ambivalenzen':[{'thema':'Planung und Flexibilität',
+                'beschreibung':'Synthetische unterschiedliche situative Bedürfnisse.',
+                'position_a':'Planbarkeit hilft.', 'position_b':'Spontane Flexibilität hilft.',
+                'segment_ids_a':[ids[0]], 'segment_ids_b':[ids[1]]}],
+                'gesamteinordnung':'Beide Bedürfnisse können innerhalb eines Falls bestehen.'}
     elif module=='evidence_audit':
         result={'zuordnungen':[{'audit_id':a['audit_id'],'gegenbeleg_ids':[c['counter_id'] for c in data['moegliche_gegenbelege']], 'einordnung':'Testgegenbeleg'} for a in data['audit_befunde']]}
     elif module=='overall_synthesis':

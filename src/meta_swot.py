@@ -9,6 +9,7 @@ import json
 from runtime_support import atomic_json, atomic_text
 
 from meta_swot_core import build_meta_swot
+from thematic_pipeline import prepare, finish
 
 
 # -----------------------------------------------------
@@ -42,6 +43,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(
         description="Meta-SWOT-Pipeline"
     )
+    parser.add_argument('--csv', help='Normalisierter Segmentexport für die optionale Analyseperspektive')
 
     parser.add_argument(
         "--config",
@@ -127,6 +129,7 @@ def main(argv=None):
     # -------------------------------------------------
     # Meta-SWOT
     # -------------------------------------------------
+    prepared = prepare('meta_swot', args.config, input_path=args.csv, swot_path=args.swot_json)
     markdown_output, json_output = build_meta_swot(
         swot_json_path=args.swot_json,
         ollama_params=ollama_params,
@@ -137,15 +140,8 @@ def main(argv=None):
     # -------------------------------------------------
     # Markdown
     # -------------------------------------------------
-    with open(
-        args.out_md,
-        "w",
-        encoding="utf-8"
-    ) as f:
-
-        f.write(
-            markdown_output
-        )
+    markdown_output, json_output = finish(prepared, json_output, markdown_output, ollama_params)
+    atomic_text(args.out_md, markdown_output)
 
     # -------------------------------------------------
     # JSON

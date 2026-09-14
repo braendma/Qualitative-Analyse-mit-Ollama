@@ -44,7 +44,7 @@ def mapping(value, key):
     return result
 
 
-def _thematic_projection(module_id, payload, segments):
+def _thematic_projection(module_id, payload, segments, upstream_payloads=None):
     """Reproduce metrics from original units; project no matrix/scope as evidence."""
     from thematic_material import build_material
     from thematic_counts import count_topics
@@ -55,9 +55,15 @@ def _thematic_projection(module_id, payload, segments):
             raise ValueError('Analyseperspektive passt nicht zu Modul, Originalmaterial oder Themenquelle.')
 
     extension = payload['analysis_perspective']
-    require(module_id in ('clusterer', 'summarizer', 'swot') and isinstance(extension, dict))
+    require(module_id in ('clusterer', 'summarizer', 'swot', 'meta_swot', 'person_analysis', 'ambiguity_analysis')
+            and isinstance(extension, dict))
+    upstream_payloads = {} if upstream_payloads is None else upstream_payloads
+    require(isinstance(upstream_payloads, dict))
     require(type(extension.get('schema_version')) is int and extension['schema_version'] == 1)
     require(extension.get('module_id') == module_id and extension.get('selected_mode') in ('frequency', 'both'))
+    from thematic_interpretation import comparison_basis
+    legacy_basis = 'all_fixed_topics' if module_id in ('clusterer', 'summarizer', 'swot') else None
+    require(extension.get('interpretation_comparison_basis', legacy_basis) == comparison_basis(module_id))
     require(extension.get('candidate_basis') == 'original_unweighted_findings' and segments is not None)
     counted = extension.get('counting')
     require(isinstance(counted, dict))
@@ -71,6 +77,17 @@ def _thematic_projection(module_id, payload, segments):
         prepared = build_cluster_topics(material, original)
     elif module_id == 'swot':
         prepared = build_swot_topics(material, original)
+    elif module_id == 'meta_swot':
+        from thematic_meta_adapter import build_meta_swot_topics
+        require(isinstance(upstream_payloads.get('swot'), dict))
+        prepared = build_meta_swot_topics(material, original, upstream_payloads['swot'])
+    elif module_id == 'person_analysis':
+        from thematic_person_adapters import build_person_topics
+        prepared = build_person_topics(material, original)
+    elif module_id == 'ambiguity_analysis':
+        from thematic_person_adapters import build_ambiguity_topics
+        require(isinstance(upstream_payloads.get('person_analysis'), dict))
+        prepared = build_ambiguity_topics(material, original, upstream_payloads['person_analysis'])
     else:
         # Summary records contain exact cluster identity and membership. Rebuild
         # that structural source without pretending to recover plots/timestamps
@@ -83,7 +100,8 @@ def _thematic_projection(module_id, payload, segments):
     require(counted['definitions'] == prepared['topics'])
     if prepared['assignments'] is not None:
         require(counted['assignments'] == prepared['assignments'])
-    origin = 'full_scoped_model_assignment' if module_id == 'swot' else 'complete_cluster_membership'
+    origin = ('complete_cluster_membership' if module_id in ('clusterer', 'summarizer')
+              else 'full_scoped_model_assignment')
     require(extension.get('assignment_origin') == origin)
     require(extension.get('unassigned_context') == prepared.get('unassigned_context', {}))
     digest = extension.get('candidate_source_fingerprint')
@@ -130,7 +148,7 @@ def _thematic_projection(module_id, payload, segments):
     return result
 
 
-def project_stage(module_id, payload, *, segments=None):
+def project_stage(module_id, payload, *, segments=None, upstream_payloads=None):
     """Project one validated artifact. No source registers are traversed wholesale."""
     if not isinstance(payload, dict):
         raise ValueError('Diagnosequelle muss ein JSON-Objekt sein.')
@@ -244,7 +262,7 @@ def project_stage(module_id, payload, *, segments=None):
     else:
         raise ValueError(f'Kein Diagnoseadapter für Modul {module_id}.')
     if 'analysis_perspective' in payload:
-        thematic = _thematic_projection(module_id, payload, segments)
+        thematic = _thematic_projection(module_id, payload, segments, upstream_payloads)
         for row in out:
             row['comparison_context'] = ['candidate_basis', *row['comparison_context']]
         out.extend(thematic)
@@ -298,11 +316,16 @@ def load_declared_artifact(directory, module, manifest):
 
 
 def load_sources(directory, config, *, segments=None):
-    """Load only completed, hash-verified declared artifacts. Never scan random files."""
+    """Two passes: verify declared files, then project using those exact sources.
+
+    Upstream mappings contain only available artifacts from this same manifest.
+    Module array order is irrelevant; selected meta registries cannot substitute
+    for a missing, incomplete or hash-mismatched original upstream artifact.
+    """
     directory = Path(directory).resolve()
     manifest_path = directory / 'workflow_manifest.json'
     manifest = json.loads(manifest_path.read_text(encoding='utf-8')) if manifest_path.exists() else {}
-    result = {}
+    result, payloads = {}, {}
     modules = config.get('pipeline', {}).get('modules', [])
     for module in modules:
         mid = module['id']
@@ -310,11 +333,16 @@ def load_sources(directory, config, *, segments=None):
             continue
         if mid in result:
             raise ValueError('Doppelte Modul-ID in Diagnosekonfiguration.')
-        item = result[mid] = {**load_declared_artifact(directory, module, manifest), 'records': [], 'warnings': []}
+        artifact = load_declared_artifact(directory, module, manifest)
+        result[mid] = {**{key: value for key, value in artifact.items() if key != 'payload'},
+                       'records': [], 'warnings': []}
+        if artifact['status'] == 'available':
+            payloads[mid] = artifact['payload']
+    for mid, item in result.items():
         if item['status'] != 'available':
             continue
         try:
-            item.update(project_stage(mid, item.pop('payload'), segments=segments))
+            item.update(project_stage(mid, payloads[mid], segments=segments, upstream_payloads=payloads))
         except (OSError, ValueError, TypeError, KeyError, AttributeError, RecursionError) as exc:
             item.update(status='invalid', reason=str(exc))
     return result

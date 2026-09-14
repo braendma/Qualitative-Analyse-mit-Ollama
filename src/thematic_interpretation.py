@@ -34,6 +34,9 @@ Auch vollständige Modellzuordnungen sind nicht menschlich validiert oder als wa
 expressed_topic_positions bezeichnet Äußerungen; material_support_for_inference bezeichnet
 stützendes Material einer analytischen Ableitung, keine wörtliche Nennung der Ableitung.
 model_assigned_group_membership zählt Gruppenmitgliedschaft, nicht jede Aussage einer Zusammenfassung.
+comparison_basis erklärt den Vergleichsraum: same_person_scope enthält sämtliche
+festen Themen desselben vollständigen Einzelfalls, keinen Personenvergleich.
+all_fixed_topics enthält das vollständige Themenregister der Modulinterpretation.
 Häufigkeit darf die Schwerpunktsetzung informieren, beweist aber weder Bedeutung,
 Repräsentativität noch Kausalität. Erhalte seltene Gegenpositionen und ambivalente Fälle.
 Begründe die häufigkeitsinformierte Einordnung gegenüber dem qualitativen Ausgangsbefund.
@@ -42,6 +45,11 @@ zurück. Die letzten drei Felder sind nicht leere deutsche Texte. Keine zusätzl
 Kennzahlfelder, neuen Themen oder Quellen. Zahlen werden daneben unverändert angezeigt."""
 CORRECTION = ('Die Antwort entsprach nicht dem Format. Nutze exakt die geplante topic_id und '
               'nur die vier verlangten nicht leeren Textfelder. Prüfe die Originaldaten erneut.')
+
+
+def comparison_basis(module):
+    """Case modules compare all findings within each complete individual scope."""
+    return 'same_person_scope' if module in ('person_analysis', 'ambiguity_analysis') else 'all_fixed_topics'
 
 
 def _summary(topic):
@@ -102,6 +110,25 @@ caller keeps qualitative texts and these frequency texts in separate fields.
     for result in counted['topics']:
         definition = topics[result['topic_id']]
         register.append({**_summary(result), 'label': definition.get('label', definition['definition'])})
+    basis = comparison_basis(module)
+    register_by_topic = {}
+    if basis == 'same_person_scope':
+        # This is an explicit methodological comparison boundary, not an
+        # adaptive truncation to make a request fit. Every finding of this
+        # complete case stays in the register, including both ambiguity sides.
+        groups = {}
+        for row, entry in zip(counted['topics'], register):
+            if counted['person_basis'] != 'confirmed' or row['scope']['person_count'] != 1:
+                raise ValueError('Einzelfallinterpretation benötigt genau eine bestätigte Person je vollständigem Themenumfang.')
+            person = row['scope']['person_ids'][0]
+            complete_case = sorted(uid for uid, unit in material['units'].items() if unit['person'] == person)
+            if row['scope']['unit_ids'] != complete_case:
+                raise ValueError('Einzelfallinterpretation benötigt den vollständigen Originalumfang dieser Person.')
+            groups.setdefault(tuple(row['scope']['unit_ids']), []).append(entry)
+        for row in counted['topics']:
+            register_by_topic[row['topic_id']] = groups[tuple(row['scope']['unit_ids'])]
+    else:
+        register_by_topic = {tid: register for tid in topics}
     items = []
     for tid, topic in topics.items():
         counter_units = sorted({a['unit_id'] for a in counted['assignments']
@@ -109,7 +136,10 @@ caller keeps qualitative texts and these frequency texts in separate fields.
         payload = {
             'topic': {key: val for key, val in topic.items() if key != 'scope_unit_ids'},
             'qualitative_finding': qualitative_by_topic[tid],
-            'comparison_register': register,
+            'comparison_register': register_by_topic[tid],
+            'comparison_basis': basis,
+            'comparison_topic_count': len(register_by_topic[tid]),
+            'module_topic_count': len(register),
             'basis_fingerprint': counted['basis_fingerprint'],
             'count_result_fingerprint': counted['result_fingerprint'],
             'assignment_review_status': counted['assignment_review_status'],

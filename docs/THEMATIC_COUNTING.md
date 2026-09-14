@@ -1,11 +1,13 @@
 # Thematische Zählung – Entwicklervertrag des gemeinsamen Kerns
 
-**Entwicklungsstand S13c:** Clusteranalyse (`clusterer`), Clusterzusammenfassungen
-(`summarizer`) und SWOT (`swot`) sind jetzt über ihre regulären Module in
+**Entwicklungsstand S13e:** Clusteranalyse (`clusterer`), Clusterzusammenfassungen
+(`summarizer`), SWOT (`swot`), Meta-SWOT (`meta_swot`), Personenanalyse
+(`person_analysis`) und Ambivalenzanalyse (`ambiguity_analysis`) sind über ihre regulären Module in
 Workflow-CLI und Oberfläche mit den Perspektiven `qualitative`, `frequency` und
 `both` verbunden. Die Auswahl gilt unabhängig je Modul; fehlende Einstellungen
-bleiben qualitativ. Für weitere Module sind die zusätzlichen Perspektiven noch
-nicht verfügbar. Dies beschreibt den aktuellen Entwicklungsstand, keine neue
+bleiben qualitativ. Die vier weiteren geeigneten Module Personenvergleich,
+Kontrastanalyse, Zusammenhangsanalyse und Gesamtsynthese haben noch keine
+zusätzlichen Perspektiven. Dies beschreibt den aktuellen Entwicklungsstand, keine neue
 veröffentlichte Version. Der gemeinsame Kern verbindet vollständige
 Themenzuordnung, deterministische Zählung und häufigkeitsinformierte Interpretation.
 
@@ -217,7 +219,7 @@ Themen beruhen oder einen gesonderten geprüften Vertrag erhalten.
 Fehlende oder `null` gesetzte Abschnitte bleiben qualitativ. Methodische Eignung
 ist von implementierter Verfügbarkeit getrennt: Nichtqualitative Modi werden
 ohne ausdrücklich freigegebenen Adapter als „noch nicht integriert“ abgewiesen.
-Die zentrale Grenze `thematic_pipeline` gibt nur die drei integrierten
+Die zentrale Grenze `thematic_pipeline` gibt nur die sechs integrierten
 Standardmodule frei. Ein eigenes Skript mit derselben Modul-ID erbt keine
 zusätzliche Verfügbarkeit. Die Oberfläche liest diese Freigabe vom Server.
 Ungültige gespeicherte Modi werden angezeigt und abgewiesen, auch bei gerade
@@ -281,9 +283,21 @@ muss genau ein qualitativer Ausgangstext vorhanden sein.
 
 Eine Interpretationsanfrage enthält das betreffende Thema, diesen
 unveränderten Ausgangstext, ein vollständiges Register der berechneten
-Themenkennzahlen und die vorhandenen entgegenstehenden Originaleinheiten.
-Das Register unterscheidet Scope, Abdeckung, Personen, Passagen und
-Codierzeilen; ein Scope-Fingerprint kennzeichnet dieselbe Bezugsmenge.
+Themenkennzahlen im ausdrücklich benannten Vergleichsraum und die vorhandenen
+entgegenstehenden Originaleinheiten. Bei Cluster, Zusammenfassungen, SWOT und
+Meta-SWOT enthält `comparison_basis: all_fixed_topics` sämtliche festgelegten
+Modulthemen. Bei Personen- und Ambivalenzanalyse enthält
+`comparison_basis: same_person_scope` dagegen sämtliche Themen desselben
+vollständigen Einzelfall-Scopes, einschließlich aller A-/B-Seiten dieses Falles.
+Themen anderer Personen gehören nicht zu diesem Vergleichsraum. Das ist eine
+fachliche Scope-Grenze, keine Kürzung auf eine beliebige Auswahl und kein
+vorweggenommener Personenvergleich. Alle Einzelfälle werden weiterhin ausgewertet.
+
+`module_topic_count` benennt die Gesamtzahl der Modulthemen,
+`comparison_topic_count` die Zahl im jeweiligen Anfrageregister. Die vollständigen
+Modulergebnisse behalten sämtliche Themen und Zähler. Das Register unterscheidet
+Scope, Abdeckung, Personen, Passagen und Codierzeilen; ein Scope-Fingerprint
+kennzeichnet dieselbe Bezugsmenge.
 Es enthält keine ungeprüften, vom Modell geschätzten Zähler. Sehr große
 Register oder Gegenbelegsammlungen können die Kontextprüfung scheitern
 lassen; sie werden derzeit nicht still gekürzt oder durch eine beliebige
@@ -305,14 +319,16 @@ die danebenstehenden berechneten Werte müssen fachlich geprüft werden.
 ## 10. Orchestrierung, Anwendungseinstiege und getrennte Ausgaben
 
 `thematic_execution.execute_perspective(module, mode, material, payload, params,
-*, cluster_payload=None, llm=None)` unterstützt `clusterer`,
-`summarizer` und `swot`:
+*, cluster_payload=None, swot_payload=None, person_payload=None, llm=None)`
+unterstützt `clusterer`, `summarizer`, `swot`, `meta_swot`, `person_analysis`
+und `ambiguity_analysis`:
 
 1. Bei `qualitative` liefert die Funktion `None` und startet keine neue
    Materialprüfung oder Modellanfrage; der bestehende Standardpfad bleibt.
 2. Der passende Adapter bereitet gemeinsame ungewichtete Themen vor.
    Cluster und Summarizer verwenden ihre vollständige Mitgliedschaft,
-   SWOT führt die zusätzliche vollständige Matrixphase aus.
+   SWOT, Meta-SWOT, Personen- und Ambivalenzanalyse führen eine zusätzliche
+   vollständige Matrixphase in ihrem ausdrücklich definierten Scope aus.
 3. Der Kern zählt die gemeinsame Zuordnung einmal und führt anschließend
    häufigkeitsinformierte Interpretationen pro Thema aus.
 4. `frequency` enthält die benannte häufigkeitsinformierte Ausgabe;
@@ -346,7 +362,8 @@ Modulbericht; vollständige strukturierte Ergebnisse bleiben in der separaten
 JSON-Datei des Moduls.
 
 Die Promptansicht ergänzt bei gespeichertem `frequency`/`both` die festen
-Systemanweisungen für Häufigkeitsinterpretation und bei SWOT für Themenzuordnung.
+Systemanweisungen für Häufigkeitsinterpretation und bei SWOT, Meta-SWOT,
+Personen- und Ambivalenzanalyse für vollständige Themenzuordnung.
 Sie beschreibt die dynamischen Eingaben, zeigt aber weder das vollständige
 Anfrageprotokoll noch automatisch Interviewmaterial. Stabilitäts-/Sensitivitätsansichten
 berücksichtigen die entsprechenden Zielmodule. Weitere Moduladapter bleiben
@@ -367,13 +384,13 @@ Bedienung, sichere Fehlerbehebung und Beispiele:
 YAML-Vertrag und CLI-Voraussetzungen:
 [Konfigurationsreferenz](CONFIGURATION.md#analyseperspektiven-je-modul).
 
-## 11. Weitere interne Adapter: Meta-SWOT und Einzelfälle
+## 11. Meta-SWOT und Einzelfälle: Adapter und Quellenverträge
 
-Die interne Ausführung unterstützt zusätzlich `meta_swot`, `person_analysis`
-und `ambiguity_analysis`. Diese drei Erweiterungen sind noch nicht in der
-öffentlichen Modusauswahl freigeschaltet. Dazu müssen ihre CLI-Quellenprüfung
-und Diagnoseprojektion vollständig angeschlossen werden. Die vorhandenen
-qualitativen Module können weiterhin wie bisher verwendet werden.
+Die integrierten Module `meta_swot`, `person_analysis` und `ambiguity_analysis`
+verwenden die bestehenden Adapter und dieselbe zentrale Ausführung wie die
+ersten drei Module. CLI-Quellenprüfung, Diagnoseprojektion und serverseitige
+Verfügbarkeitsanzeige gehören zu ihrer Anwendungsgrenze. Die qualitative
+Vorgabe bleibt unverändert; erst eine ausdrückliche Moduswahl startet Zusatzarbeit.
 
 Meta-SWOT erhält mit `swot_payload` die ursprüngliche SWOT-Vorstufe. Der Adapter
 baut deren Befundregister erneut auf und prüft alle Meta-Verweise einschließlich
@@ -400,7 +417,9 @@ kann beide Seiten stützen; Seitenzahlen werden nicht voneinander abgezogen.
 `both` innerhalb einer Seitenthemenzuordnung bedeutet Stützung und Widerspruch
 zu dieser Seite, nicht die gemeinsame Nennung der beiden Seiten. Der Bericht
 macht diese Unterscheidung ausdrücklich sichtbar. Freie Gesamteinordnungen
-erhalten keine erfundenen Häufigkeiten.
+erhalten keine erfundenen Häufigkeiten. Die bestehende Kandidatennormalisierung
+verwirft Paare mit identischen A-/B-Belegmengen. Eine neue vollständige Matrix
+zu den verbleibenden Seitenthemen hebt diese Entdeckungsgrenze nicht auf.
 
 Alle drei Adapter verwenden dieselbe flache Zuordnungs-, Zähl- und
 Interpretationsphase sowie vorhandene Teil-Checkpoints. Ein technischer Abbruch
@@ -408,3 +427,23 @@ wird nicht als inhaltlich unklare Antwort umgedeutet. Die ursprünglichen
 qualitativen Kandidaten bleiben getrennt von den zusätzlichen Interpretationen;
 bereits vorhandene `analysis_perspective`-Erweiterungen einer Vorstufe verändern
 ihre ungewichtete Kandidatenbasis nicht.
+
+
+### Zusätzliche Prüfungen an der Anwendungsgrenze
+
+Meta-SWOT benötigt das vollständig deklarierte originale SWOT-Artefakt.
+Personenanalyse benötigt Cluster, exakte Originaltext-Zuordnung und passende
+Clusterzusammenfassungen; Ambivalenz benötigt die vollständige Personenanalyse
+und Originaltext-Zuordnung. Ein CSV-Override muss zum bestätigten Material
+passen. Fehlende Runnernachweise führen nicht in einen ungeprüften
+Standalone-Fallback. Dateihashes der Eingaben und Vorstufen bleiben vor und nach
+der zusätzlichen Ausführung verbindlich. Die von gewichteten Zusatzfeldern
+bereinigte semantische Kandidatenidentität ersetzt keinen Dateinachweis.
+
+Diagnoseprojektionen dürfen Meta-/Ambivalenz-Vorstufen nicht aus ausgewählten
+Belegen oder Teilregistern erfinden. Sie verwenden die vollständig geprüften
+Quellpayloads des jeweiligen Laufs, auch wenn die Module in anderer Reihenfolge
+aufgelistet sind. Fehlt eine notwendige Quelle oder ist sie ungültig, ist die
+abhängige Projektion nicht auswertbar. Die Zuordnungsmatrix wird weiterhin nicht
+zur angeblich ausgewählten Evidenz. Wiederholungsvergleiche müssen dieselben
+Quellenregeln innerhalb des jeweiligen Kindlaufs anwenden.

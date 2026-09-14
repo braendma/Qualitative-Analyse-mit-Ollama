@@ -14,6 +14,22 @@ from failure_help import child_failure_guidance
 from stability_core import analyze_coding_repetitions, analyze_stage_repetitions
 
 
+def _thematic_upstreams(run, module_id, payload, by_id, manifest):
+    """Bind required originals to the same completed child-run manifest."""
+    if 'analysis_perspective' not in payload:
+        return {}
+    required = {'meta_swot': ('swot',), 'ambiguity_analysis': ('person_analysis',)}.get(module_id, ())
+    result = {}
+    for mid in required:
+        if mid not in by_id:
+            raise ValueError('Thematische Wiederholung benötigt eine deklarierte Originalvorstufe: ' + mid)
+        source = load_declared_artifact(run, by_id[mid], manifest)
+        if source['status'] != 'available':
+            raise ValueError('Thematische Wiederholung enthält keine verifizierte Originalvorstufe: ' + mid)
+        result[mid] = source['payload']
+    return result
+
+
 def _parameters(value, provider):
     """Validate and retain only the content-free fields emitted by RequestReceipt."""
     if not isinstance(value, dict):
@@ -170,6 +186,9 @@ def _load_series(directory, *, kind):
                     if artifact['status'] != 'available':
                         raise ValueError('Abgeschlossene Wiederholung enthält kein verifiziertes Modulergebnis: ' + mid)
                     item['payload'] = artifact['payload']
+                    upstreams = _thematic_upstreams(run, mid, item['payload'], by_id, manifest)
+                    if upstreams:
+                        item['upstream_payloads'] = upstreams
                 samples[mid].append(item)
         if any(len(digests) > 1 for digests in model_digests.values()):
             raise ValueError('Verschiedene lokale Modellgewichte: keine gemeinsame Stabilitätsbewertung.')

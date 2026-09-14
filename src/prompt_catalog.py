@@ -76,8 +76,9 @@ def catalog(config, modules):
         if extra_targets:
             from thematic_interpretation import SYSTEM as frequency_system
             from thematic_assignment import SYSTEM as assignment_system
+            from thematic_pipeline import FULL_ASSIGNMENT_MODULES
             for target in extra_targets:
-                if target == 'swot':
+                if target in FULL_ASSIGNMENT_MODULES:
                     templates.append({'key':target+' / thematic_assignment', 'system':assignment_system,
                                       'user':'Zur Laufzeit: feste Themen, vollständige Originaleinheiten und angeforderte Matrixzellen.', 'placeholders':[]})
                 templates.append({'key':target+' / frequency_interpretation', 'system':frequency_system,
