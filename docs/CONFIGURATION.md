@@ -2,13 +2,21 @@
 
 ## Sensitivität: interner Entwicklungsvertrag
 
-**Noch keine auswählbare Sensitivitätsanalyse in der Oberfläche.** Planung,
-kontrollierte Ausführung, geprüfter Vergleich und Markdownbericht sind vorhanden;
-die Bedienintegration folgt. Für die interne Entwicklung ist der Einstieg
+**Sensitivität ist jetzt optional in Oberfläche, Runner und Gesamtbericht integriert.**
+Das Modul `sensitivity` ist standardmäßig aus. `diagnostics.sensitivity` enthält
+`modules` (gelieferte Vorgabe `[blind_coding]`), `repetitions` (Default 2) und
+`variants` (Default `[]`, vor Aktivierung ausdrücklich 1–9 Varianten festlegen).
+Die Oberfläche speichert diese Werte pro Projekt. Leere Variantenfelder übernehmen
+die Basis; mehrere Änderungen bleiben in derselben Variante erhalten. Startprüfung
+und Ausführung verwenden denselben Planer. Für die interne Entwicklung ist der Einstieg
 `diagnostic_sensitivity.prepare_sensitivity(config_path, module_ids, variants, repetitions=2)`.
 Er liest Eingaben, schreibt keine Dateien und fragt kein Modell ab. Der vorhandene
 `diagnostic_series.execute_repetitions` führt einen solchen Plan aus; dabei entstehen
-zusätzliche Modellanfragen und eigene Laufordner. Das ist kein öffentlicher CLI-Befehl.
+zusätzliche Modellanfragen und eigene Laufordner. Das öffentliche Modul
+`sensitivity_analysis.py` wird wie Stabilität über den regulären Workflow-Runner
+mit aktivierter Pipeline-Konfiguration gestartet. Ausgaben sind `sensitivity.json`
+und `sensitivity.md`; letztere wird in den Gesamtbericht eingebunden. Der eigene
+Serienordner `_sensitivity_repetitions` ist als alternatives Berichtsziel gesperrt.
 
 | Feld | Typ / Vorgabe | Bedeutung und Grenze |
 |---|---|---|
@@ -77,8 +85,8 @@ spätere Modellbefunde und GPU-Kapazität sind dadurch nicht freigegeben.
 Mehrere geänderte Parameter werden als gemeinsame Veränderung (`joint_changes`)
 markiert: Unterschiede können keinem einzelnen Parameter zugeschrieben werden.
 Die Planung beweist weder tatsächliche Parameterübertragung noch deren Durchsetzung
-im Modell. Der Vergleich muss später die Anfragequittungen und Wiederholungsstreuung
-berücksichtigen. Sensitivität wird nicht automatisch als methodischer Fehler bewertet.
+im Modell. Der Vergleich berücksichtigt Anfragequittungen und Wiederholungsstreuung
+getrennt. Sensitivität wird nicht automatisch als methodischer Fehler bewertet.
 
 Diese Referenz wird mit jedem neuen Diagnosemodul erweitert. Bisherige Optionen:
 [EXTENSIONS](EXTENSIONS.md), [ROBUSTNESS](ROBUSTNESS.md) und die kommentierte

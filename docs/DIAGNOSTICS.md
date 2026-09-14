@@ -4,7 +4,7 @@ Sensitivität, interner Teilstand: Ein reiner Variantenplaner prüft tatsächlic
 verdrahtete Parameter, unveränderte Datenbasis und Kontextgrenzen. Der gemeinsame
 Serienexecutor kann getrennte Konfigurationen mit eigenen Wiederholungen ausführen,
 unter derselben Prozessaufsicht und Wiederaufnahmelogik. Ein geprüfter Reader,
-Vergleichskern und Markdownbericht sind vorhanden; CLI-Modul und Oberfläche folgen. Der
+Vergleichskern und Markdownbericht sind in CLI-Modul, Oberfläche und Gesamtbericht eingebunden. Der
 [Konfigurationsvertrag](CONFIGURATION.md#sensitivität-interner-entwicklungsvertrag)
 beschreibt Aufwand, Grenzen und die Trennung zwischen Plan und Laufzeitnachweis.
 
@@ -14,7 +14,8 @@ Der Information-Loss-Audit ist ebenfalls in CLI, Modulauswahl, Fortschritt,
 Beispielhilfe und Berichte integriert. Die Codebook-Diagnostik ist ebenfalls in
 Modulauswahl, Berichte, Fortschritt und Beispielhilfe eingebunden. Stabilität ist
 mit Zielauswahl, Aufwandvorschau, Wiederholungen, Pause/Resume und Gesamtbericht integriert.
-Die Bedienintegration der Sensitivität und die Verknüpfung ihrer Befunde folgen. Dieser Abschnitt
+Die Sensitivität ist mit Variantenwahl, Vorprüfung, Aufwandvorschau und Teilberichten integriert.
+Die Verknüpfung ihrer Befunde mit der Codebook-Diagnostik folgt in S10. Dieser Abschnitt
 beschreibt den überprüfbaren Datenvertrag und die technische Schnittstelle.
 
 ## Entwicklungsstand der Wiederholungsplanung
@@ -57,8 +58,8 @@ noch nicht feststehen. `parameter_status: configured_not_runtime_verified`
 verhindert die Behauptung, Modellgewichte oder tatsächlich wirksame Parameter
 seien bereits geprüft. Reguläre Läufe können bei nicht unterstütztem Thinking
 auf den Modellstandard zurückfallen; kontrollierte Diagnosekinder stoppen stattdessen.
-Die eigentliche Stabilitäts-/Sensitivitätsauswertung folgt in den nächsten
-technischen Einheiten. Keine Stabilitätskennzahl wird aus dem Plan abgeleitet.
+Die implementierten Stabilitäts-/Sensitivitätsvergleiche lesen anschließend nur
+geprüfte Serienergebnisse. Keine Stabilitätskennzahl wird aus dem Plan abgeleitet.
 
 ### Interne Serienausführung
 
@@ -700,4 +701,5 @@ Zählern, Nennern und Binnenvergleichen. Er enthält höchstens 80 Befunde und
 Die Befunde verwenden verständliche Texte, Personen und Codes statt technischer
 Fingerprints als Erklärung. Lange Auszüge sind als gekürzt markiert, der Vergleich
 verwendet vollständige Projektionen. HTML-/Markdown-Zeichen werden maskiert.
-Die Einbindung in CLI, Oberfläche und den interaktiven Gesamtbericht ist noch offen.
+CLI, Oberfläche und interaktiver Gesamtbericht sind angebunden. Bedienung und
+synthetisches Beispiel stehen im [Handbuch](HANDBUCH.html#sensitivitaet-einstellungen-vergleichen).

@@ -3,7 +3,8 @@ Mehrfachcodierung, Prüfliste und mehrstufige Gesamtsynthese: [EXTENSIONS.md](EX
 # Erweiterung: Coding-Validierung
 
 Die 15 Basismodule bleiben verfügbar. Optional ergänzen `coverage` und
-`information_loss` sowie `codebook_diagnostics` ihre Ergebnisse:
+`information_loss` sowie `codebook_diagnostics` ihre Ergebnisse. Zusätzlich können
+`stability` und `sensitivity` ausdrücklich neue kontrollierte Modellläufe anfordern:
 
 ```mermaid
 flowchart LR
@@ -17,12 +18,21 @@ flowchart LR
   Codebook --> Bericht
   Audit --> Bericht
   Coverage --> Bericht[Markdown / JSON / HTML]
+  Input -. optional: gleiche Einstellungen .-> Wiederholungen[Frische kontrollierte Unterläufe]
+  Wiederholungen --> Stabilitaet[Stabilitätsvergleich]
+  Input -. optional: Basis und Varianten .-> Varianten[Wiederholungen je Einstellung]
+  Varianten --> Sensitivitaet[Sensitivitätsvergleich]
+  Stabilitaet --> Bericht
+  Sensitivitaet --> Bericht
 ```
 
-Die gestrichelte Verbindung schaltet keine Analyse zusätzlich ein. Technische
+Die gestrichelten Quellenverbindungen zu Coverage, Audit und Codebook schalten
+keine Analyse zusätzlich ein. Wiederholungen werden dagegen nur durch die
+ausdrücklich aktivierten Diagnosemodule mit ausgewählten Zielen angefordert. Technische
 Ausfälle werden im vorläufigen Bericht ausgewiesen und bei Resume erneut geprüft.
-Alle drei Diagnosen sind standardmäßig aus und benötigen keine zusätzlichen
-Modellaufrufe. Sie teilen die vorhandene Ausführungs-/Resume-Logik und den
+Coverage, Audit und Codebook-Diagnostik benötigen keine zusätzlichen Modellaufrufe.
+Stabilität und Sensitivität verursachen zusätzliche Modellläufe mit hohem bzw.
+sehr hohem Aufwand. Alle fünf sind standardmäßig aus und teilen die vorhandene Ausführungs-/Resume-Logik und den
 Überschreibschutz; [Felder und Beispiel](CONFIGURATION.md).
 
 Die in Entwicklung befindlichen wissenschaftlichen Diagnosen verwenden dieselben
@@ -131,3 +141,7 @@ Siehe [ROBUSTNESS.md](ROBUSTNESS.md) für Vorprüfung, vollständige Hierarchien
 ## Optionale kontrollierte Stabilitätsläufe
 
 Das off-default Modul `stability` führt ausgewählte Analysen samt Vorstufen als frische Unterläufe aus und integriert `stability.md` in Markdown- und HTML-Gesamtbericht. Es benötigt `requires_model: true` und `starts_child_runs: true`; Zielauswahl und Anzahl stehen unter `diagnostics.stability`. Der gemeinsame Runner prüft den Plan auch mit `--validate-only`. [Bedienung und Grenzen](HANDBUCH.html#stabilitaet-kontrollierter-wiederholungen), [Konfiguration](CONFIGURATION.md). Es handelt sich um zusätzliche Läufe, keine Wiederverwendung als neue unabhängige Stichprobe.
+
+## Optionale Sensitivitätsläufe
+
+`sensitivity` ist standardmäßig aus. Ziele, Varianten und Wiederholungen stehen unter `diagnostics.sensitivity`. Der bestehende Runner führt Basis und jede Variante in frischen Unterläufen aus, mit Pause/Resume und eigener Serie `_sensitivity_repetitions`. Ausgaben: `sensitivity.json` und `sensitivity.md`, letzteres automatisch im HTML-/Markdown-Gesamtbericht. Aktivierte Stabilität läuft zusätzlich und wird nicht als Sensitivitätsbasis wiederverwendet. Keine Diagnose darf rekursiv als Ziel gewählt werden.

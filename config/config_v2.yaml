@@ -1775,10 +1775,32 @@ pipeline:
         title: Stabilitätsanalyse
         markdown: stability.md
 
+    - id: sensitivity
+      name: Sensitivitätsanalyse
+      script: sensitivity_analysis.py
+      enabled: false
+      requires_model: true
+      starts_child_runs: true
+      depends_on: []
+      after_if_enabled: [clusterer, code_verification, blind_coding, coding_agreement, summarizer, swot, meta_swot, person_analysis, person_comparison, contrast_analysis, relation_analysis, ambiguity_analysis, evidence_audit, review_queue, overall_synthesis, stability]
+      cost_profile:
+        class: SEHR HOCH
+        recommendation: erst nach Abschluss wesentlicher Material- und Codebook-Iterationen
+        note: Basis und jede Variante werden mehrfach neu ausgeführt. Unterschiede sind keine automatisch erkannten Fehler. Einstellungen und Zusatzaufwand vor dem Start prüfen.
+      args: [--config, "{config}", --input-csv, "{input_csv}"]
+      outputs: [sensitivity.json, sensitivity.md]
+      report:
+        title: Sensitivitätsanalyse
+        markdown: sensitivity.md
+
 diagnostics:
   stability:
     repetitions: 3
     modules: [blind_coding]
+  sensitivity:
+    repetitions: 2
+    modules: [blind_coding]
+    variants: []  # Vor Aktivierung ausdrücklich 1–9 Varianten festlegen; Basis kommt automatisch hinzu.
 
 # Kappa requires explicit confirmation AND a configured unique columns.unit_id.
 # Multi-Label uses explicit passage IDs and independent set predictions.

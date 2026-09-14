@@ -332,11 +332,17 @@ class App(ReviewWorkspace):
             selected = expanded
         for m in cfg['pipeline']['modules']:
             m['enabled'] = m['id'] in selected
-        if 'stability' in selected:
-            stability = settings.get('stability', cfg.get('diagnostics', {}).get('stability'))
-            if not isinstance(stability, dict):
-                raise ValueError('Für Stabilität Wiederholungszahl und Zielmodule festlegen.')
-            cfg.setdefault('diagnostics', {})['stability'] = copy.deepcopy(stability)
+        for kind in ('stability', 'sensitivity'):
+            if kind in selected:
+                if cfg.get('diagnostics') is None:
+                    cfg['diagnostics'] = {}
+                diagnostics = cfg['diagnostics']
+                if not isinstance(diagnostics, dict):
+                    raise ValueError('diagnostics muss eine Zuordnung für die gewählten Diagnosemodule sein.')
+                value = settings.get(kind, diagnostics.get(kind))
+                if not isinstance(value, dict):
+                    raise ValueError('Für ' + kind + ' Wiederholungszahl, Zielmodule und gegebenenfalls Varianten festlegen.')
+                diagnostics[kind] = copy.deepcopy(value)
         RUNNER.topological_order(RUNNER.normalize_modules(cfg))
         cfg['paths']['input_csv'] = str(directory/'inputs'/(uploads['segments']['id']+'.csv'))
         original = directory/'inputs'/(uploads['codebook']['id']+'.csv')
@@ -404,12 +410,14 @@ class App(ReviewWorkspace):
         modules = RUNNER.topological_order(RUNNER.normalize_modules(cfg))
         from stability_analysis import configured_plan, planning_summary
         stability_plan = configured_plan(path)
+        sensitivity_plan = configured_plan(path, kind='sensitivity')
         from context_preflight import check_context, require_context
         context_check=check_context(cfg,segments,codes,modules)
         require_context(context_check)
         return {'valid':True,'segments':len(segments),'persons':len({s.person for s in segments}),
                 'context_check':context_check,
                 **({'stability_plan':planning_summary(stability_plan)} if stability_plan else {}),
+                **({'sensitivity_plan':planning_summary(sensitivity_plan)} if sensitivity_plan else {}),
                 'passages':len({s.unit_id for s in segments}) if cfg['columns'].get('unit_id') else None,
                 'codebook_fields':{key:sum(bool(getattr(c,key)) for c in codes.values()) for key in ('einschluss','ausschluss','abgrenzung','ankerbeispiel')},
                 'codes':len(codes),'modules':[{'id':m['id'],'name':m['name'],'requires_model':m['requires_model']} for m in modules], 'model_calls':0}
@@ -703,9 +711,12 @@ class Handler(BaseHTTPRequestHandler):
             app=self.server.app
             if parsed.path=='/api/state':
                 cfg=app.template
+                diagnostics=cfg.get('diagnostics')
+                if not isinstance(diagnostics,dict):diagnostics={}
                 return self.json({'projects':app.projects(),'telegram':app.telegram.public(),'providers':PROVIDERS,'provider_keys':app.provider_keys.public(),
                     'defaults':{'llm':{**{k:cfg['llm'].get(k) for k in ('model','num_ctx','max_tokens','temperature','think')},'synthesis_max_calls':cfg['llm'].get('hierarchical_synthesis',{}).get('max_calls',64)},'context':cfg['context'],'columns':cfg['columns'],
-                                'stability':cfg.get('diagnostics',{}).get('stability',{'modules':[],'repetitions':3})},
+                                'stability':diagnostics.get('stability',{'modules':[],'repetitions':3}),
+                                'sensitivity':diagnostics.get('sensitivity',{'modules':[],'repetitions':2,'variants':[]})},
                     'modules':[{k:m[k] for k in ('id','name','depends_on','enabled','requires_model','after_if_enabled')} |
                         {'cost_profile':m.get('cost_profile')} for m in RUNNER.normalize_modules(cfg)]})
             if parsed.path=='/api/project': return self.json(app.project(get('project')))

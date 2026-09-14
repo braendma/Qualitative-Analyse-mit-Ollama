@@ -313,8 +313,11 @@ def main(argv=None):
         raise ValueError('Ein Diagnose-Unterlauf darf keine weiteren Modell-Unterläufe starten.')
     from stability_analysis import configured_plan, planning_summary
     stability_plan = configured_plan(config_path)
+    sensitivity_plan = configured_plan(config_path, kind='sensitivity')
     if stability_plan and csv_path != Path(stability_plan['config']['paths']['input_csv']):
         raise ValueError('Stabilität benötigt dieselbe CSV wie die gespeicherte Konfiguration; paths.input_csv zuerst anpassen.')
+    if sensitivity_plan and csv_path != Path(sensitivity_plan['configurations'][0]['config']['paths']['input_csv']):
+        raise ValueError('Sensitivität benötigt dieselbe CSV wie die gespeicherte Konfiguration; paths.input_csv zuerst anpassen.')
     from coding_validation_common import load_codebook, load_segments
     codebook_config = config.get("paths", {}).get("category_system_csv")
     if not codebook_config:
@@ -339,6 +342,8 @@ def main(argv=None):
                       "modules": len(modules), "model_calls": 0}
         if stability_plan:
             validation['stability_plan'] = planning_summary(stability_plan)
+        if sensitivity_plan:
+            validation['sensitivity_plan'] = planning_summary(sensitivity_plan)
         print(json.dumps(validation))
         return
     provenance = execution_provenance(config_path, csv_path, config, script_dir)

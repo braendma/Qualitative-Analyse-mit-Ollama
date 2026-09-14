@@ -5,7 +5,7 @@ unterscheidet direkte Segmentbelege, Eingabezuordnungen, Personenreferenzen und
 Synthese-Quellengruppen. Vollständige Register zählen nicht automatisch als
 ausgewählte Evidenz. Datenvertrag und Grenzen stehen in [DIAGNOSTICS.md](DIAGNOSTICS.md).
 Coverage, Information-Loss-Audit, Codebook-Diagnostik und Stabilitätsanalyse sind
-als optionale Module in Oberfläche und CLI integriert. Sensitivität folgt gesondert.
+als optionale Module in Oberfläche und CLI integriert. Auch die Sensitivitätsanalyse ist nun optional angebunden.
 
 ### Coverage: Repräsentation in gespeicherten Analysebelegen
 
@@ -186,7 +186,7 @@ Die lokale Ausführung kann zugleich die technische Reproduzierbarkeit unterstü
 
 Für LLM-basierte Analysen sind technische Reproduzierbarkeit, Output-Stabilität und interpretative Robustheit voneinander zu unterscheiden. Technische Reproduzierbarkeit bezieht sich auf identische Daten, Softwarestände und Konfigurationen. Output-Stabilität beschreibt die Ähnlichkeit wiederholter LLM-Läufe, während interpretative Robustheit die Vergleichbarkeit von Befunden über Modelle, Prompts oder Forschende hinweg betrifft.
 
-Das Repository adressiert derzeit vor allem die technische Ebene durch YAML-Konfiguration, strukturierte Zwischenprodukte, Logs, Tests und definierte Modulabhängigkeiten [1]. Eine systematische Stabilitätsanalyse über mehrere Läufe sowie ein Vergleich verschiedener Ollama-Modelle stellen weiterführende Entwicklungsschritte dar. `quallmer` bietet für vergleichbare Fragestellungen bereits Funktionen zur Wiederholung von Codierungen mit unterschiedlichen Modellen und Einstellungen, zur Validierung gegen menschliche Goldstandards sowie zur Erstellung eines Audit-Trails [18].
+Das Repository adressiert derzeit vor allem die technische Ebene durch YAML-Konfiguration, strukturierte Zwischenprodukte, Logs, Tests und definierte Modulabhängigkeiten [1]. Der aktuelle Entwicklungsstand ergänzt kontrollierte Stabilitäts- und Sensitivitätsläufe. Ihre beschreibenden Vergleiche ersetzen keine fachliche Validierung. `quallmer` bietet für vergleichbare Fragestellungen bereits Funktionen zur Wiederholung von Codierungen mit unterschiedlichen Modellen und Einstellungen, zur Validierung gegen menschliche Goldstandards sowie zur Erstellung eines Audit-Trails [18].
 
 Auf dieser Basis erscheint für zukünftige Untersuchungen insbesondere die wiederholte Analyse identischer Stichproben mit demselben Modell, der Vergleich mehrerer lokaler Modelle sowie die Dokumentation von Prompt- und Temperatureinstellungen angezeigt. Stabilität sollte dabei nicht ausschließlich global, sondern auch auf Ebene einzelner Codes und Segmente betrachtet werden. Instabile Fälle können anschließend gezielt einer menschlichen Prüfung zugeführt werden.
 
@@ -365,3 +365,7 @@ Die optionale Stabilitätsanalyse ist nun in Runner, Oberfläche und Gesamtberic
 ### Aussagen- und Personenperspektive
 
 Das [Handbuchkapitel zur methodischen Einordnung](HANDBUCH.html#aussagen-und-personen-zaehlen) erläutert Zähleinheiten, ein künstliches Vergleichsbeispiel, Grenzen und die unterschiedlichen Positionen von Maxwell (2010), Sandelowski (2001) und Gale et al. (2013). Die Quellen begründen keine validierte LLM-Gewichtungsformel. [BibTeX und Quellenhinweise](literature/README.md) liegen separat vor. Die optionalen Analyseperspektiven sind noch in Entwicklung; die technische Umsetzung und diese Beschreibung müssen vor Veröffentlichung gemeinsam geprüft werden.
+
+## Sensitivitätsanalyse im Entwicklungsstand
+
+Die optionale Sensitivitätsanalyse untersucht Ergebnisunterschiede unter ausdrücklich variierten Einstellungen bei gleicher Daten- und Personenbasis. Wiederholungen werden zunächst innerhalb jeder Einstellung verglichen. Danach werden Vorkommen je Konfiguration mit getrennten Nennern für mindestens eine, sämtliche beobachteten und sämtliche geplanten Wiederholungen beschrieben. Enthaltungen, technische Fehler und begründete Nichtzuordnung bleiben getrennt. Textprojektionen sind keine semantische Wahrheitsprüfung; Quellenanteile keine vollständigen Themenhäufigkeiten. Mehrere Parameteränderungen erlauben keine isolierte Ursachenzuschreibung. Die Befunde begründen menschliche Prüfschritte, keine automatische Qualitätsrangfolge oder Codebookänderung. Bedienung und Rechenaufwand stehen im [Handbuch](HANDBUCH.html#sensitivitaet-einstellungen-vergleichen).

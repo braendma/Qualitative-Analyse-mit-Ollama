@@ -3,7 +3,11 @@
 
 def failure_help(text):
     value=str(text).lower()
-    if any(x in value for x in ('stabilitätsanalyse unvollständig', 'stabilität benötigt', 'diagnostics.stability', 'wiederholungsziele', 'wiederholungszahl')):
+    if any(x in value for x in ('sensitivitätsanalyse unvollständig', 'sensitivität benötigt', 'diagnostics.sensitivity', 'variante')):
+        kind='sensitivity'
+        cause='Die Vergleichsvarianten sind ungültig oder ihre Wiederholungen sind nicht vollständig.'
+        action='1–9 ausdrücklich geänderte Varianten und 2–20 Wiederholungen pro Einstellung festlegen. Zielmodule samt Vorstufen aktivieren. Anbieterunterstützung, Kontextgrenzen und unveränderte Promptplatzhalter prüfen. Bei Abbruch den Sensitivitäts-Teilbericht und _sensitivity_repetitions lesen; unveränderten Lauf nach Behebung fortsetzen. Neue Einstellungen benötigen einen neuen Lauf.'
+    elif any(x in value for x in ('stabilitätsanalyse unvollständig', 'stabilität benötigt', 'diagnostics.stability', 'wiederholungsziele', 'wiederholungszahl')):
         kind='stability'
         cause='Die kontrollierten Wiederholungen sind unvollständig oder ihre Auswahl ist ungültig.'
         action='Wiederholungszahl (2–20), ausgewählte Zielmodule und aktivierte Vorstufen prüfen. Bei einem Laufabbruch den Stabilitäts-Teilbericht und das Serienlog im Unterordner _stability_repetitions lesen. Nach Behebung ohne geänderte Einstellungen denselben Lauf fortsetzen; bei neuen Einstellungen einen neuen Lauf starten.'

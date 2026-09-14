@@ -589,3 +589,45 @@ Gale, N. K., Heath, G., Cameron, E., Rashid, S., & Redwood, S. (2013). Using the
 Maxwell, J. A. (2010). Using numbers in qualitative research. *Qualitative Inquiry, 16*(6), 475–482. [doi:10.1177/1077800410364740](https://doi.org/10.1177/1077800410364740)
 
 Sandelowski, M. (2001). Real qualitative researchers do not count: The use of numbers in qualitative research. *Research in Nursing & Health, 24*(3), 230–240. [doi:10.1002/nur.1025](https://doi.org/10.1002/nur.1025)
+
+## Sensitivität: Einstellungen vergleichen
+
+Die **Sensitivitätsanalyse** ist optional und standardmäßig aus. Sie verursacht **sehr hohen zusätzlichen Rechenaufwand** und eignet sich erst nach Abschluss wesentlicher Material- und Codebook-Iterationen. Sie untersucht, welche Ergebnisse sich unter geänderten Einstellungen zeigen. Ein Unterschied ist weder automatisch ein Fehler noch ein Qualitätsnachweis.
+
+### Schritt für Schritt
+
+- Wähle unter **Analyse** die gewünschten Basisanalysen und zusätzlich **Sensitivitätsanalyse**. Wähle unter **Diese Module vergleichen** die zu untersuchenden Module. Ihre notwendigen Vorstufen werden in jeder Wiederholung neu berechnet.
+- Stelle **Wiederholungen je Einstellung einschließlich Basis (2–20)** ein. Die aktuellen Modell- und Promptangaben bilden die Basis; der bereits vorhandene Hauptlauf ersetzt keine dieser Wiederholungen.
+- Klicke **Variante hinzufügen**. Vergib eine eindeutige Kennung, etwa `temperatur-02`. Sie beginnt mit einem Kleinbuchstaben und darf danach Kleinbuchstaben, Ziffern, Bindestriche und Unterstriche enthalten, insgesamt höchstens 40 Zeichen. `baseline` ist reserviert.
+- Trage nur geänderte Werte ein. **Leere Felder übernehmen die Basis.** Zur Auswahl stehen Modell, Temperatur, Kontextfenster, Antwortlimit und Thinking. Beginne möglichst mit einer Änderung je Variante. Bei mehreren Änderungen lässt sich ein Ergebnisunterschied keiner einzelnen Einstellung zuordnen.
+- Prüfe die Aufwandvorschau. Mit **Prüfen & neuen Lauf starten** werden zusätzlich sämtliche Varianten, Eingaben und bekannten Kontextgrenzen geprüft. Fehlende, doppelte oder wirkungslose Varianten verhindern den Start. Die Variantenprüfung startet noch kein Modell; erst der erfolgreiche reguläre Start führt die Analysen aus.
+- Öffne unter **Ergebnisse** den HTML-Gesamtbericht. Zusätzlich enthält der Laufordner `sensitivity.md` und das vollständige `sensitivity.json`. Alle Wiederholungen liegen getrennt unter `_sensitivity_repetitions`.
+
+### Ein künstliches Beispiel
+
+Basis: Temperatur 0,05. Variante `temperatur-02`: Temperatur 0,2, alle anderen Felder leer. Für Blind-Coding einschließlich Cluster-Vorstufe mit jeweils zwei Wiederholungen ergibt sich: **2 Einstellungen × 2 Wiederholungen × 2 Module = 8 zusätzliche Modulausführungen**. Das sind nicht acht Modellanfragen: Material, Aufteilung und Reparaturen können weitere Anfragen erfordern. Die Basis zählt zusätzlich zum regulären Hauptlauf. Eine zugleich aktivierte Stabilitätsanalyse erzeugt ihre eigenen zusätzlichen Wiederholungen.
+
+Angenommen, Code A erscheint in beiden Basiswiederholungen, bei der Variante aber nur einmal. Dann erscheint er mindestens einmal in **2 von 2 Einstellungen**, aber jedes Mal nur in **1 von 2 Einstellungen**. Der Bericht zeigt diese beiden Fragen getrennt und ergänzt die Schwankungen innerhalb jeder Einstellung.
+
+### Welche Änderungen sind verfügbar?
+
+- Modell und Antwortlimit: beim ausgewählten Anbieter. Ein lokales Modell muss vorhanden und mit der Hardware ausführbar sein. Modelle verschiedener Anbieter lassen sich nicht innerhalb derselben Serie mischen.
+- Temperatur und Thinking: in dieser Anwendung nur über Ollama lokal oder Ollama Cloud. Das ausgewählte Modell muss den Thinking-Wert unterstützen. Ein nicht unterstützter Wert darf bei kontrollierten Vergleichen nicht still abgeschaltet werden.
+- Kontextfenster: nur bei lokalem Ollama. Die Cloud-Kontextangabe ist eine lokale Eingabegrenze, kein übertragener Modellparameter. Eine bestandene Eingabeprüfung ist keine Zusage ausreichenden GPU-Speichers.
+- Anbieter, API-Schlüssel, Datenschutzfreigabe, Eingabedateien, Personenzuordnung und Analyseziele bleiben für alle Einstellungen gleich. Die Variantenfelder erweitern keine Datenfreigabe.
+
+### Optional: gezielte Promptvorlagen ändern
+
+Öffne zunächst beim betreffenden Modul **Prompts ansehen**. Kopiere die vollständige gewünschte Vorlage und ändere ihre Formulierung gezielt. Im Bereich **Optional: gezielte Promptvorlagen ändern** werden Änderungen als JSON mit Vorlagenschlüssel und den Feldern `system` und/oder `user` eingetragen. Dies ist eine fortgeschrittene Option; für Modell- oder Temperaturvergleiche bleibt das Feld leer.
+
+Alle vorhandenen Platzhalter müssen im jeweiligen Feld in derselben Anzahl erhalten bleiben. Nur tatsächlich verwendete Vorlagen der gewählten Analysen oder ihrer Vorstufen sind zulässig. Die YAML-Blindvorlage wird beim Mehrfachcodieren nicht verwendet und ist dort kein Variantenparameter. Bedingte Reparaturvorlagen werden nicht als gezielte Variante angeboten. Unbekannte Felder, leere Vorlagen, unveränderte Texte und unpassende Platzhalter verhindern den Start.
+
+Die Promptansicht zeigt Basisvorlagen und gespeicherte Varianten. Das belegt noch nicht, dass jeder Anfragepfad in einem Lauf tatsächlich benutzt wurde. Auch akzeptierte Parameterquittungen bestätigen die Übertragung, nicht die interne Durchsetzung jedes Parameters durch einen Anbieter.
+
+### Ergebnisse einordnen und Fehler beheben
+
+Fehlgeschlagene Läufe zählen nicht als fehlendes Thema. Der Bericht nennt geplante, auswertbare, ausgeschlossene und vorläufig auswertbare Einstellungen. Eine einzige erfolgreiche Wiederholung kann keinen stabilen Befund belegen. Die zusätzliche vollständige Auswertung berücksichtigt nur Einstellungen mit sämtlichen geplanten Wiederholungen. Enthaltungen, begründet keine Zuordnung und technische Fehler bleiben im Codiervergleich getrennt.
+
+Exakte Textprojektionen sind keine semantisch geprüften Themen. Die Quellenverteilung beschreibt ausgewählte Belege, nicht sämtliche thematischen Nennungen. Wiederholtes Vorkommen zählt Einstellungen oder Läufe, nicht Interviewpersonen. Bei mehreren Dokumentteilen derselben bestätigten Person bleibt die Personenzuordnung unverändert.
+
+Mit **Nach diesem Modul pausieren** kann zwischen den Modulen einer Wiederholung pausiert werden. Fertige Wiederholungen bleiben erhalten. Nach Behebung eines Fehlers verwendet **Diesen Lauf fortsetzen** dieselben unveränderten Einstellungen und setzt fehlende Teile fort. Geänderte Eingaben, Modellgewichte, Vorlagen oder Programmdateien benötigen einen neuen Lauf. Bei Problemen die Fehlerhilfe, den Teilbericht und die Serienlogs prüfen. Die Fortschrittsanzeige zählt abgeschlossene Wiederholungen; einzelne Anfragen eines laufenden Unterlaufs werden dort derzeit noch nicht separat gezählt.

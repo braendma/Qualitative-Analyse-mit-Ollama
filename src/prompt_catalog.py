@@ -21,6 +21,7 @@ PROMPT_KEYS = {
     'information_loss': (),
     'codebook_diagnostics': (),
     'stability': (),
+    'sensitivity': (),
 }
 
 
@@ -30,9 +31,9 @@ def catalog(config, modules):
     result=[]
     for module in modules:
         mid=module['id'];keys=PROMPT_KEYS.get(mid,(mid,));templates=[]
-        if mid == 'stability':
+        if mid in ('stability', 'sensitivity'):
             diagnostics=config.get('diagnostics',{})
-            settings=diagnostics.get('stability',{}) if isinstance(diagnostics,dict) else {}
+            settings=diagnostics.get(mid,{}) if isinstance(diagnostics,dict) else {}
             targets=settings.get('modules',[]) if isinstance(settings,dict) else []
             required=set(targets) if isinstance(targets,list) and all(isinstance(x,str) for x in targets) else set()
             while True:
@@ -47,7 +48,20 @@ def catalog(config, modules):
             if not isinstance(system,str) or not isinstance(user,str):continue
             templates.append({'key':key,'system':system,'user':user,
                 'placeholders':sorted(set(re.findall(r'\{([A-Za-z_][A-Za-z0-9_]*)\}',system+'\n'+user)))})
-        if mid == 'stability':
+        if mid == 'sensitivity':
+            variants=settings.get('variants',[]) if isinstance(settings,dict) else []
+            for variant in variants if isinstance(variants,list) else []:
+                if not isinstance(variant,dict) or not isinstance(variant.get('prompts',{}),dict):continue
+                for key, fields in variant.get('prompts',{}).items():
+                    if key not in keys or not isinstance(fields,dict):continue
+                    base=prompts.get(key,{})
+                    if not isinstance(base,dict):continue
+                    system=fields.get('system',base.get('system',''));user=fields.get('user',base.get('user',''))
+                    if not isinstance(system,str) or not isinstance(user,str):continue
+                    templates.append({'key':str(variant.get('id','Variante'))+' / '+key,'system':system,'user':user,
+                        'placeholders':sorted(set(re.findall(r'\{([A-Za-z_][A-Za-z0-9_]*)\}',system+'\n'+user)))})
+            note='Basisvorlagen und ausdrücklich gespeicherte Promptvarianten. Jede Einstellung erzeugt zusätzliche Modellaufrufe; der anschließende Vergleich benötigt keine eigene Modellanfrage. Diese Ansicht belegt nicht, dass jeder Anfragepfad tatsächlich verwendet wurde.'
+        elif mid == 'stability':
             note='Die Wiederholungen verwenden die konfigurierten Vorlagen ihrer Zielmodule und Vorstufen. Dafür entstehen zusätzliche Modellaufrufe; der anschließende Stabilitätsvergleich selbst benötigt keine Modellanfrage.'
         elif not keys:
             note='Dieses Modul arbeitet ohne eigenen LLM-Aufruf. Es verarbeitet vorhandene Codierungen oder Analyseergebnisse.'

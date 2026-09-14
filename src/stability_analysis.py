@@ -20,40 +20,54 @@ PAUSED_EXIT_CODE = 75
 def planning_summary(plan):
     if plan is None:
         return None
-    return {key: plan[key] for key in ('repetitions', 'requested_modules', 'effective_modules',
+    summary = {key: plan[key] for key in ('repetitions', 'requested_modules', 'effective_modules',
             'added_prerequisites', 'module_executions', 'model_calls')}
+    if plan['kind'] == 'sensitivity':
+        summary.update(configuration_count=plan['configuration_count'], total_repetitions=len(plan['samples']),
+            configurations=[{'id': c['configuration_id'], 'changes': c['changes'], 'joint_changes': c['joint_changes']}
+                            for c in plan['configurations']])
+    return summary
 
 
-def configured_plan(config_path):
+def configured_plan(config_path, *, kind='stability'):
     """Preflight uses the same planner as execution, before any model is started."""
+    if kind not in ('stability', 'sensitivity'):
+        raise ValueError('Unbekannte Wiederholungsdiagnose.')
+    name = 'Stabilität' if kind == 'stability' else 'Sensitivität'
     config = yaml.safe_load(Path(config_path).read_text(encoding='utf-8'))
     enabled = [m for m in config.get('pipeline', {}).get('modules', [])
-               if m.get('id') == 'stability' and m.get('enabled', True)]
+               if m.get('id') == kind and m.get('enabled', True)]
     if not enabled:
         return None
     if len(enabled) != 1 or enabled[0].get('starts_child_runs') is not True or enabled[0].get('requires_model') is not True:
-        raise ValueError('Stabilität benötigt genau ein Modellmodul mit starts_child_runs: true.')
-    if enabled[0].get('script') != 'stability_analysis.py':
-        raise ValueError('Stabilitätsmodul benötigt das mitgelieferte Modulskript.')
+        raise ValueError(name + ' benötigt genau ein Modellmodul mit starts_child_runs: true.')
+    if enabled[0].get('script') != kind + '_analysis.py':
+        raise ValueError(name + ' benötigt das mitgelieferte Modulskript.')
     diagnostics = config.get('diagnostics', {})
-    settings = diagnostics.get('stability') if isinstance(diagnostics, dict) else None
-    if not isinstance(settings, dict) or set(settings) - {'modules', 'repetitions'}:
-        raise ValueError('diagnostics.stability benötigt modules und optional repetitions (2–20).')
+    settings = diagnostics.get(kind) if isinstance(diagnostics, dict) else None
+    allowed = {'modules', 'repetitions', 'variants'} if kind == 'sensitivity' else {'modules', 'repetitions'}
+    if not isinstance(settings, dict) or set(settings) - allowed:
+        raise ValueError('diagnostics.' + kind + ' benötigt modules, repetitions (2–20)' +
+                         (' und variants (1–9).' if kind == 'sensitivity' else '.'))
+    if kind == 'sensitivity':
+        from diagnostic_sensitivity import prepare_sensitivity
+        return prepare_sensitivity(config_path, settings.get('modules'), settings.get('variants'),
+                                   repetitions=settings.get('repetitions', 2))
     return prepare_repetitions(config_path, settings.get('modules'), repetitions=settings.get('repetitions', 3))
 
 
-def _load_context(directory, config_path, input_path):
+def _load_context(directory, config_path, input_path, *, kind='stability'):
     root = Path(directory).resolve()
     config, manifest, book_path = load_input_context(root, config_path, input_path, require_codebook=True)
     if (os.environ.get('WORKFLOW_RUN_ID') != manifest.get('run_id') or
             os.environ.get('WORKFLOW_FINGERPRINT') != manifest.get('fingerprint') or
-            os.environ.get('WORKFLOW_MODULE') != 'stability' or
-            manifest.get('module_status', {}).get('stability') != 'running'):
-        raise ValueError('Stabilitätsmodul über den zugehörigen Workflow-Runner starten oder fortsetzen.')
-    plan = configured_plan(config_path)
+            os.environ.get('WORKFLOW_MODULE') != kind or
+            manifest.get('module_status', {}).get(kind) != 'running'):
+        raise ValueError('Wiederholungsdiagnose über den zugehörigen Workflow-Runner starten oder fortsetzen.')
+    plan = configured_plan(config_path, kind=kind)
     if plan is None:
-        raise ValueError('Stabilitätsmodul ist nicht aktiviert.')
-    series = root / SERIES_DIRECTORY
+        raise ValueError('Wiederholungsdiagnose ist nicht aktiviert.')
+    series = root / ('_' + kind + '_repetitions')
     _inside(series, root)
     if any(Path(path).resolve().is_relative_to(series) for path in (config_path, input_path, book_path)):
         raise ValueError('Originaleingaben dürfen nicht im internen Wiederholungsverzeichnis liegen.')
@@ -66,22 +80,34 @@ def _analyze(context):
     series = execute_repetitions(context['plan'], context['directory'],
         resume=context['directory'].exists(), pause_file=os.environ.get('WORKFLOW_PAUSE_FILE'), progress=progress)
     begin_phase('comparison')
-    result = load_stability_series(context['directory'])
+    if context['plan']['kind'] == 'sensitivity':
+        from stability_series import load_sensitivity_series
+        result = load_sensitivity_series(context['directory'])
+    else:
+        result = load_stability_series(context['directory'])
     result['series_status'] = series['status']
     if series['status'] != 'success':
         result['processing_status'] = 'incomplete'
     return result
 
 
-def main(argv=None):
+def main(argv=None, *, kind='stability'):
+    if kind not in ('stability', 'sensitivity'):
+        raise ValueError('Unbekannte Wiederholungsdiagnose.')
+    if kind == 'sensitivity':
+        from sensitivity_report import render_sensitivity
+        renderer, title = render_sensitivity, 'Sensitivität gegenüber geänderten Einstellungen'
+    else:
+        renderer, title = render_stability, 'Stabilität kontrollierter Wiederholungen'
     begin_phase('preparation')
-    result = run_diagnostic('stability', 'stability', 'Stabilität kontrollierter Wiederholungen',
-        _analyze, render_stability, argv, loader=_load_context, reserved_subdirectories=(SERIES_DIRECTORY,))
+    result = run_diagnostic(kind, kind, title, _analyze, renderer, argv,
+        loader=lambda *args: _load_context(*args, kind=kind), reserved_subdirectories=('_' + kind + '_repetitions',))
     if result['series_status'] == 'paused':
         update_progress(phase='paused')
         return PAUSED_EXIT_CODE
     if result['processing_status'] != 'completed':
-        raise RuntimeError('Stabilitätsanalyse unvollständig. Ausschlussgründe im Teilbericht und Serienlog prüfen; dann denselben Lauf fortsetzen.')
+        name = 'Stabilitätsanalyse' if kind == 'stability' else 'Sensitivitätsanalyse'
+        raise RuntimeError(name + ' unvollständig. Ausschlussgründe im Teilbericht und Serienlog prüfen; dann denselben Lauf fortsetzen.')
     update_progress(phase='finished', completed=1, total=1, unit='steps')
     return 0
 

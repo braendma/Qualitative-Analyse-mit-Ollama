@@ -142,7 +142,7 @@ if os.environ.get('MOCK_PAUSE_AFTER_FIRST_REPETITION') == '1':
     original_series_execute=diagnostic_series._execute
     def pause_after_repetition(command,directory,log,env):
         result=original_series_execute(command,directory,log,env)
-        if os.environ.get('WORKFLOW_MODULE')=='stability' and os.environ.get('WORKFLOW_PAUSE_FILE'):
+        if os.environ.get('WORKFLOW_MODULE') in ('stability','sensitivity') and os.environ.get('WORKFLOW_PAUSE_FILE'):
             Path(os.environ['WORKFLOW_PAUSE_FILE']).touch()
         return result
     diagnostic_series._execute=pause_after_repetition

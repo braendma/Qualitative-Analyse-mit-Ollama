@@ -1192,3 +1192,7 @@ Die Belegprüfung beschränkt das angeforderte JSON-Antwortformat auf die IDs de
 Fortschritt bei SWOT: Die reguläre SWOT zählt abgeschlossene Kategorien, Meta-SWOT die vier Dimensionen Stärken, Schwächen, Chancen und Risiken. Eine Kategorie oder Dimension kann mehrere Modellanfragen benötigen. Die Prozentzahl beschreibt erledigte Einheiten, nicht den Zeitanteil. Für eingefrorene ältere Läufe ohne Gesamtzahl bleibt es bei einer ausdrücklich gekennzeichneten Aktivitätsanzeige.
 
 Die Gesamtsynthese zeigt [verständliche Herkunftsdetails und Originaltextstellen](docs/HANDBUCH.md#quellen-und-originalzitate-in-der-gesamtsynthese), soweit eine Zuordnung gespeichert ist.
+
+## Sensitivität im Entwicklungsstand
+
+Die optionale **Sensitivitätsanalyse** ergänzt die vier vorhandenen Diagnosemodule. Varianten für Modell, Temperatur, Kontext, Antwortlimit, Thinking und gezielte Vorlagen werden vor dem Start geprüft. Die Basis und jede Variante erhalten eigene Wiederholungen; der Bericht trennt Binnenstreuung und Unterschiede zwischen Einstellungen. Standardmäßig aus, **sehr hoher Rechenaufwand**. [Anleitung und Beispiel](docs/HANDBUCH.html#sensitivitaet-einstellungen-vergleichen). Noch kein neues Release.

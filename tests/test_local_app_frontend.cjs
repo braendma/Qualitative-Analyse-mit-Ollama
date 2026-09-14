@@ -39,6 +39,28 @@ test('stability estimate counts fresh prerequisites and rejects invalid selectio
   for(const count of [0,1,21,2.5,NaN])assert.ok(app.run(`stabilityEstimate(state.modules,new Set(['clusterer']),['clusterer'],${count}).error`));
 });
 
+test('sensitivity counts the baseline and each variant without recursive diagnostics',()=>{
+  const app=setup();
+  app.run("state.modules=[{id:'clusterer',depends_on:[]},{id:'blind_coding',depends_on:['clusterer']},{id:'sensitivity',depends_on:[]}]; var selected=new Set(['clusterer','blind_coding','sensitivity']); var variantSettings={modules:['blind_coding'],repetitions:2,variants:[{id:'warm',llm:{temperature:.2}},{id:'context',llm:{num_ctx:12000}}]};");
+  assert.equal(app.run('sensitivityEstimate(state.modules,selected,variantSettings).executions'),12);
+  assert.equal(app.run('sensitivityEstimate(state.modules,selected,variantSettings).total_repetitions'),6);
+  assert.ok(app.run("sensitivityEstimate(state.modules,selected,variantSettings,'ollama_cloud').error"));
+  assert.ok(app.run("sensitivityEstimate(state.modules,selected,{...variantSettings,variants:[]}).error"));
+  assert.ok(app.run("sensitivityEstimate(state.modules,selected,{...variantSettings,variants:[{id:'baseline',llm:{temperature:.2}}]}).error"));
+  assert.ok(app.run("stabilityEstimate(state.modules,selected,['sensitivity'],2).error"));
+});
+
+test('sensitivity fields preserve false thinking, zero temperature and prompt placeholders',()=>{
+  const app=setup();
+  const result=JSON.parse(app.run("JSON.stringify(parseSensitivityVariant('check',{think:'false',temperature:'0',num_ctx:'',model:'mock'},JSON.stringify({blind_coding:{user:'{segment}'}})))"));
+  assert.equal(result.llm.think,false);assert.equal(result.llm.temperature,0);assert.equal(result.llm.model,'mock');
+  assert.equal(result.prompts.blind_coding.user,'{segment}');assert.equal(result.llm.num_ctx,undefined);
+  assert.throws(()=>app.run("parseSensitivityVariant('check',{},'{broken')"));
+  assert.throws(()=>app.run("parseSensitivityVariant('check',{temperature:'Infinity'},'')"));
+  assert.throws(()=>app.run("parseSensitivityVariant('check',{temperature:'-0.1'},'')"));
+  assert.throws(()=>app.run("parseSensitivityVariant('check',{num_ctx:'12.5'},'')"));
+});
+
 test('optional diagnostics stay off by default and explain their cost',()=>{
   const app=setup();
   app.run("state.modules=[{id:'clusterer',name:'Cluster',depends_on:[]},{id:'coverage',name:'Coverage',depends_on:[],enabled:false,cost_profile:{class:'NIEDRIG',recommendation:'für iterative Arbeit geeignet',note:'Keine Modellaufrufe'}}]; loadFields();");

@@ -75,6 +75,19 @@
   <p id="stability-estimate" role="status" aria-live="polite"></p>
   <p class="hint">Jede Wiederholung erhält einen eigenen Laufordner. Pausieren ist zwischen Modulen der Wiederholung möglich; beim Fortsetzen werden fertige Teile wiederverwendet. Den Stabilitätsabschnitt findest du anschließend im Gesamtbericht und als eigenes Ergebnis.</p>
   <button type="button" class="example-trigger" data-example="module-stability" aria-haspopup="dialog" aria-controls="example-dialog">Beispiel: drei Wiederholungen verstehen</button>
+</section>
+<section id="sensitivity-options" hidden aria-labelledby="sensitivity-heading">
+  <h4 id="sensitivity-heading">Sensitivität: Einstellungen vergleichen</h4>
+  <p><strong>SEHR HOHER RECHENAUFWAND – erst nach Abschluss wesentlicher Material- und Codebook-Iterationen.</strong> Die aktuellen Einstellungen bilden die Basis. Jede Variante und die Basis erhalten eigene zusätzliche Wiederholungen; ihre Vorstufen werden jeweils neu berechnet.</p>
+  <label for="sensitivity-repetitions">Wiederholungen je Einstellung einschließlich Basis (2–20)</label>
+  <input id="sensitivity-repetitions" type="number" min="2" max="20" step="1" value="2">
+  <fieldset><legend>Diese Module vergleichen</legend><div id="sensitivity-targets" class="module-grid"></div></fieldset>
+  <p>Füge mindestens eine Variante hinzu und trage nur die Änderungen gegenüber der Basis ein. Leere Felder übernehmen die Basis. Daten, Personenzuordnung und Anbieter bleiben gleich. Beginne möglichst mit einer Änderung pro Variante.</p>
+  <div id="sensitivity-variants"></div>
+  <button id="sensitivity-add" type="button" class="secondary">Variante hinzufügen</button>
+  <p id="sensitivity-estimate" role="status" aria-live="polite"></p>
+  <p class="hint">Beispiel: Basis plus eine Temperaturvariante, je zwei Wiederholungen und zwei Module einschließlich Vorstufe ergeben acht zusätzliche Modulausführungen. Das sind keine acht Modellanfragen: Materialumfang und Reparaturen können weitere Anfragen erfordern. Der Bericht trennt Schwankungen innerhalb einer Einstellung von Unterschieden zwischen Einstellungen.</p>
+  <a href="/handbuch#sensitivitaet-einstellungen-vergleichen" target="_blank" rel="noopener">Anleitung und Beispiel zur Sensitivität</a>
 </section></article>
     <div class="two-col"><article class="card"><h3>2. Datenfreigabe und Modell</h3>
 <label class="checkbox"><input id="gdpr-relevant" type="checkbox" checked> DSGVO-relevantes Material · nur lokal verarbeiten</label>

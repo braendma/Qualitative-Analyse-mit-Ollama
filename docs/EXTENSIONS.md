@@ -64,3 +64,7 @@ Die hierarchische Verarbeitung betrifft die Gesamtsynthese. Andere Module behalt
 ## Optionale Stabilitätsanalyse
 
 Das zusätzliche Modul `stability` ist standardmäßig aus, mit hohem Rechenaufwand und Empfehlung für finale Validierung. Es nutzt den bestehenden Runner für getrennte Wiederholungen, geprüftes Resume und einen deterministischen Vergleich. Auswahl, Kostenvorschau, Beispielhilfe und Parameteranzeige sind in der Oberfläche enthalten. Weitere Details stehen im [Handbuch](HANDBUCH.html#stabilitaet-kontrollierter-wiederholungen).
+
+## Optionale Sensitivitätsanalyse
+
+Modul `sensitivity`, `enabled: false`, `requires_model: true`, `starts_child_runs: true`. Dieselbe Ausführungs- und Prüfarchitektur wie Stabilität, mit getrennten Konfigurationen. `diagnostics.sensitivity` enthält `modules`, `repetitions` (Default 2) und `variants` (Default leer, vor Aktivierung 1–9 erforderlich). Basis wird automatisch ergänzt. [Vollständiger Konfigurationsvertrag](CONFIGURATION.md#sensitivität-interner-entwicklungsvertrag) und [Bedienung](HANDBUCH.html#sensitivitaet-einstellungen-vergleichen). Aufwand SEHR HOCH.
