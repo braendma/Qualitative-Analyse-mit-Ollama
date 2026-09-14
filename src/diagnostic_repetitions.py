@@ -84,6 +84,8 @@ def prepare_repetitions(config_path, module_ids, *, repetitions=3):
     for module in modules:
         module['enabled'] = module['id'] in required
         if module['enabled']:
+            if module.get('starts_child_runs'):
+                raise ValueError('Analysen mit eigenen Unterläufen sind keine zulässigen Wiederholungsziele.')
             if module['script'] != module['id'] + '.py':
                 raise ValueError('Wiederholungen unterstützen nur die unveränderten Modulskripte der Analysepipeline.')
             _check_outputs(module)

@@ -14,6 +14,12 @@ import clusterer_core
 call_counts={}
 
 def fake_chat(messages, **kwargs):
+    block = os.environ.get('MOCK_BLOCK_SIGNAL')
+    if block:
+        from runtime_support import atomic_json
+        import time
+        atomic_json(Path(block), {'pid':os.getpid()})
+        time.sleep(120)
     module=messages[0]['content'].split('\n',1)[0]
     text=messages[1]['content']
     logical_module='hierarchical_reduction' if module.startswith('Verdichte analytische Teilbefunde') else module
@@ -86,8 +92,26 @@ if os.environ.get('MOCK_RUNTIME_EVIDENCE') == '1':
 else:
     clusterer_core.ollama_chat=fake_chat
 original_run=subprocess.run
+
+if os.environ.get('MOCK_RUNTIME_TRACE'):
+    import managed_ollama
+    class TraceManaged:
+        def __init__(self,*args):self.active=False
+        def start(self):
+            self.active=True;os.environ[managed_ollama.HOST_ENV]='http://127.0.0.1:12345'
+            with open(os.environ['MOCK_RUNTIME_TRACE'],'a') as trace:trace.write('start\n')
+            return {'managed':True,'parallel_workers':2,'host':'http://127.0.0.1:12345'}
+        def close(self):
+            os.environ.pop(managed_ollama.HOST_ENV,None)
+            if self.active:
+                with open(os.environ['MOCK_RUNTIME_TRACE'],'a') as trace:trace.write('close\n')
+            self.active=False
+    managed_ollama.ManagedOllama=TraceManaged
 def execute(command, **kwargs):
     if len(command)>1 and str(command[1]).endswith('.py'):
+        if os.environ.get('MOCK_RUNTIME_TRACE'):
+            with open(os.environ['MOCK_RUNTIME_TRACE'],'a') as trace:
+                trace.write(Path(command[1]).stem+':'+str(bool(kwargs.get('env',{}).get('QUALITATIVE_MANAGED_OLLAMA_HOST')))+'\n')
         old_cwd=Path.cwd()
         old_argv=sys.argv
         old_env=dict(os.environ)

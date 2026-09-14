@@ -48,8 +48,7 @@ noch nicht feststehen. `parameter_status: configured_not_runtime_verified`
 verhindert die Behauptung, Modellgewichte oder tatsächlich wirksame Parameter
 seien bereits geprüft. Reguläre Läufe können bei nicht unterstütztem Thinking
 auf den Modellstandard zurückfallen; kontrollierte Diagnosekinder stoppen stattdessen.
-Übergabe verwalteter Modellinstanzen
-und eigentliche Stabilitäts-/Sensitivitätsauswertung folgen in den nächsten
+Die eigentliche Stabilitäts-/Sensitivitätsauswertung folgt in den nächsten
 technischen Einheiten. Keine Stabilitätskennzahl wird aus dem Plan abgeleitet.
 
 ### Interne Serienausführung
@@ -74,13 +73,32 @@ derselben Serie. Fortschritts- und Checkpointvariablen eines äußeren Laufs wer
 nicht in die Kindumgebung übernommen. Serienlogs können Analyseinhalte enthalten
 und gehören zu den geschützten Projektergebnissen.
 
-Diese API ist noch nicht in der Oberfläche aktiv. Eine vorhandene verwaltete
-Ollama-Instanz des Elternprozesses wird ausdrücklich abgewiesen, bis deren
-kontrollierte Übergabe implementiert ist. Ein normaler Tastaturabbruch beendet
-den Kindprozessbaum vor einer späteren Wiederaufnahme. Bei hart beendetem
-Elternprozess und weiter als `running` markiertem Kind wird automatisch **kein**
-zweiter Lauf gestartet: Prozessstatus und Zwischenstand müssen zuerst geprüft
-werden. Das ist noch kein vollständig beaufsichtigter App-Abbruch.
+Diese API ist noch nicht in der Oberfläche aktiv. Der Runner gibt seine eigene
+Ollama-Instanz vor Modulen mit `starts_child_runs: true` frei. Braucht ein späteres
+Modul wieder eine Instanz, startet er diese erst dann. Direkte Serienaufrufe ohne
+diese Übergabe weisen eine noch geerbte verwaltete Instanz weiterhin ab. Vollständig
+abgeschlossene Resumes starten keine neue Modellinstanz.
+
+Die vorhandene Pipe-Lease-Prozessaufsicht für Ollama wird auch für Serienkinder
+genutzt. Endet die Seriensteuerung, schließt ihre Pipe und der Supervisor beendet
+seinen Prozessbaum. Unter Windows enthält ein Jobobjekt die Aufsicht und alle
+Nachkommen bereits vor dem ersten Kindstart; auch bei getöteter Aufsicht beendet
+das Betriebssystem die enthaltenen Prozesse. Andere Anwendungen und bestehende
+Ollama-Server gehören nicht zu diesem Jobobjekt. Grundlage sind die
+[Windows-Jobobjekte](https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects).
+Auf POSIX wird die eigens erzeugte
+Prozessgruppe beendet und geprüft; diese ist kein allgemeiner Schutz gegen beliebig
+aus der Gruppe ausbrechende Fremdprogramme.
+
+Eine an den Startauftrag gebundene Abschlussquittung bestätigt das Aufräumen.
+Erst danach darf ein noch als `running` markierter Kindlauf unter derselben ID
+wiederaufgenommen werden. Das gilt auch für bereits geschriebene Erfolgsmanifeste
+und die Startphase ohne Runner-Manifest. Bei fehlender, fremder oder unvollständiger
+Quittung wird kein zweiter Prozess gestartet: Aufräumen abwarten bzw. Prozessstatus
+prüfen. Hart getötete Aufsichten können keine Abschlussquittung mehr schreiben;
+solche Fälle werden nicht automatisch übernommen. Dies ergänzt die interne
+Serienausführung; die vollständige Behandlung des Schließens der späteren
+Standalone-Oberfläche gehört weiterhin zur Distributionsphase.
 
 ### Nachweise der Modellanfragen
 

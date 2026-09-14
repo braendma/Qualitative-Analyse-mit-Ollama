@@ -125,22 +125,70 @@ def stop_tree(process):
 
 
 def supervise(program):
+    return supervise_command([program, 'serve'])
+
+
+def supervise_command(command, receipt_path=None, ticket=None):
+    """Reuse the stdin lease for model servers and diagnostic runner trees."""
+    from runtime_support import atomic_json, fingerprint
+    job = None
+    if os.name == 'nt':
+        from windows_process_job import SupervisorJob
+        job = SupervisorJob()  # Containment must succeed before spawning children.
+    record = {'schema_version': 1, 'ticket': ticket, 'command_sha256': fingerprint(command),
+              'supervisor_pid': os.getpid(), 'status': 'starting', 'cleanup_confirmed': False}
+    def save():
+        if receipt_path:
+            atomic_json(receipt_path, record)
+    save()
     released = threading.Event()
     def lease():
-        sys.stdin.buffer.read()
-        released.set()
+        try:
+            while os.read(sys.stdin.fileno(), 1024):
+                pass
+        finally:
+            released.set()
     threading.Thread(target=lease, daemon=True).start()
-    child = subprocess.Popen([program, 'serve'], stdin=subprocess.DEVNULL,
+    child = subprocess.Popen(command, stdin=subprocess.DEVNULL,
         start_new_session=os.name != 'nt', creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
+    record.update(child_pid=child.pid, status='running'); save()
+    code = 130
     try:
         while not released.wait(.2):
-            if child.poll() is not None: return child.returncode
+            if child.poll() is not None:
+                code = child.returncode
+                break
     finally:
-        stop_tree(child)
+        if job:
+            job.stop_descendants()
+        else:
+            # The leader may have exited while a module in its process group remains.
+            try: os.killpg(child.pid, signal.SIGTERM)
+            except ProcessLookupError: pass
+            try: child.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                try: os.killpg(child.pid, signal.SIGKILL)
+                except ProcessLookupError: pass
         child.wait(timeout=10)
-    return 0
+        if not job:
+            deadline = time.monotonic() + 5
+            while True:
+                try: os.killpg(child.pid, 0)
+                except ProcessLookupError: break
+                if time.monotonic() >= deadline:
+                    raise RuntimeError('Prozessgruppe noch nicht vollständig beendet; Abschluss nicht bestätigt.')
+                try: os.killpg(child.pid, signal.SIGKILL)
+                except ProcessLookupError: break
+                time.sleep(.05)
+        record.update(status='finished', exit_code=code, cleanup_confirmed=True,
+                      cleanup_scope='windows_job' if job else 'process_group', parent_released=released.is_set())
+        save()
+    return code
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 3 or sys.argv[1] != '--serve': raise SystemExit(2)
-    raise SystemExit(supervise(sys.argv[2]))
+    if len(sys.argv) == 3 and sys.argv[1] == '--serve':
+        raise SystemExit(supervise(sys.argv[2]))
+    if len(sys.argv) >= 5 and sys.argv[1] == '--command':
+        raise SystemExit(supervise_command(sys.argv[4:], sys.argv[2], sys.argv[3]))
+    raise SystemExit(2)

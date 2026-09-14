@@ -164,8 +164,19 @@ Pause vor dem Start und innerhalb des Kind-Runners, veränderte Outputs/Berichte
 beschädigte Manifeste, Code-/Konfigurationsänderungen, mehrdeutige Ordner,
 eine echte Prozesssperre und das Entfernen äußerer Checkpoint-/Fortschrittsvariablen.
 Ein kompletter Versuch wird beim Resume ohne Prozess-/Modellstart übernommen.
-Ein Kind mit ungeklärtem `running`-Status wird nicht erneut gestartet. Normale
-Tastaturunterbrechungen räumen den Kindprozess auf; harter Elternprozessabbruch
-benötigt noch die geplante Prozessaufsicht. Ebenso ist die Übergabe einer äußeren
-verwalteten Ollama-Instanz noch offen; gegenwärtig wird diese Konstellation vor
-einem Start verständlich abgewiesen. Siehe den API-Vertrag in `DIAGNOSTICS.md`.
+Ein Kind mit ungeklärtem `running`-Status wird nicht erneut gestartet. Die gemeinsam
+genutzte Pipe-Lease-Aufsicht beendet Serienkinder bei Elternabbruch. Unter Windows
+schließt ein Kernel-Jobobjekt Nachkommen ein, auch wenn der direkte Elternprozess
+schon beendet ist; auf POSIX wird die eigene Prozessgruppe geprüft. Erst eine zum
+Startauftrag passende Aufräumquittung erlaubt die Wiederaufnahme. Tests töten einen
+eigenen Controller, prüfen verwaiste Nachkommen, lassen einen unabhängigen Prozess
+unberührt und setzen eine unterbrochene echte Testserie unter gleicher Lauf-ID fort.
+Eine getötete Aufsicht ohne Quittung erlaubt keine automatische Übernahme.
+
+Der Runner startet seine Modellinstanz erst vor einem tatsächlich anstehenden
+Modellmodul. Vor `starts_child_runs: true` wird sie freigegeben, bei späterem Bedarf
+neu gestartet. Ein vollständig abgeschlossener Resume startet sie nicht. Ein
+Integrationstest führt tatsächliche verschachtelte Serien mit künstlichen
+Modellservern aus und prüft die Übergabe. Native Windows-Abbruchtests bestehen;
+native macOS-Prüfung bleibt Bestandteil der dortigen CI-/Distributionsprüfung.
+Siehe den vollständigen API-Vertrag und die Grenzen in `DIAGNOSTICS.md`.

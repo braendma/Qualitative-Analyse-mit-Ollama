@@ -4,6 +4,8 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import signal
+import time
 import tempfile
 import unittest
 from unittest.mock import MagicMock, patch
@@ -97,6 +99,32 @@ class SeriesTests(unittest.TestCase):
         self.assertEqual(self.manifest()[1]['status'], 'success')
         self.assertNotEqual(self.manifest('repeat-002')[1]['run_id'], before['run_id'])
 
+    def test_hard_parent_death_reaps_runner_and_resumes_same_series(self):
+        marker=self.w.root/'blocked.json'
+        controller=subprocess.Popen([sys.executable,str(ROOT/'tests/supervisor_probe.py'),'series',str(self.w.root)],
+            env={**os.environ,'MOCK_BLOCK_SIGNAL':str(marker)},stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,
+            creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
+        try:
+            deadline=time.monotonic()+20
+            while not marker.exists() and time.monotonic()<deadline:time.sleep(.03)
+            self.assertTrue(marker.exists(),'Synthetic module did not start')
+            before=self.manifest()[1]['run_id']
+            owner=json.loads((self.w.root/'controller.json').read_text())['pid']
+            os.kill(owner,signal.SIGTERM)
+            path=self.root/'repeat-001.supervision.json'
+            deadline=time.monotonic()+20
+            while time.monotonic()<deadline:
+                receipt=json.loads(path.read_text())
+                if receipt.get('cleanup_confirmed'):break
+                time.sleep(.03)
+            self.assertTrue(receipt.get('cleanup_confirmed'))
+            controller.wait(timeout=10)
+            self.assertEqual(self.execute(resume=True)['status'],'success')
+            self.assertEqual(self.manifest()[1]['run_id'],before)
+        finally:
+            if controller.poll() is None:series.stop_tree(controller)
+            controller.wait(timeout=10)
+
     def test_pause_before_dispatch_and_inside_child_runner(self):
         pause = self.w.root/'pause'
         pause.touch()
@@ -158,8 +186,12 @@ class SeriesTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'beschädigt'):
             self.execute(resume=True)
         data = copy.deepcopy(original); data['status'] = 'running'; atomic_json(path, data)
-        with self.assertRaisesRegex(ValueError, 'Doppelstart'):
+        receipt_path = self.root/'repeat-001.supervision.json'
+        receipt=json.loads(receipt_path.read_text());receipt['cleanup_confirmed']=False;atomic_json(receipt_path,receipt)
+        with self.assertRaisesRegex(ValueError, 'Prozessende'):
             self.execute(resume=True)
+        receipt['cleanup_confirmed']=True;atomic_json(receipt_path,receipt)
+        self.assertEqual(self.execute(resume=True)['status'],'success')
         data['status'] = 'success'; data['completed_steps'] = []; atomic_json(path, data)
         with self.assertRaisesRegex(ValueError, 'Erfolg ohne'):
             self.execute(resume=True)
@@ -182,6 +214,13 @@ class SeriesTests(unittest.TestCase):
                 self.execute()
         self.assertFalse(self.root.exists())
 
+    def test_dispatched_but_not_yet_registered_child_is_not_started_twice(self):
+        pause=self.w.root/'pause';pause.touch();self.execute(pause_file=pause);pause.unlink()
+        atomic_json(self.root/'repeat-001.supervision.request.json',{'ticket':'starting'})
+        with patch.object(series,'_execute',side_effect=AssertionError('Duplicate dispatch')):
+            with self.assertRaisesRegex(ValueError,'fehlt|bestätigt'):
+                self.execute(resume=True)
+
     def test_lock_excludes_other_process_and_releases_after_exception(self):
         lock = self.w.root/'lock'
         command = [sys.executable, '-c',
@@ -198,10 +237,11 @@ class SeriesTests(unittest.TestCase):
     def test_process_tree_is_reaped_on_keyboard_interrupt(self):
         process = MagicMock(); process.wait.side_effect = [KeyboardInterrupt(), 0]
         process.poll.return_value = None
-        with patch.object(series.subprocess, 'Popen', return_value=process), patch.object(series, 'stop_tree') as stop:
+        with patch.object(series.subprocess, 'Popen', return_value=process), patch.object(series, 'stop_tree') as stop,patch.object(series,'_confirmed_supervision'):
             with self.assertRaises(KeyboardInterrupt):
                 series._execute(['synthetic'], self.w.root, self.w.root/'log', dict(os.environ))
-        stop.assert_called_once_with(process)
+        stop.assert_not_called()
+        process.stdin.close.assert_called_once()
         self.assertEqual(process.wait.call_count, 2)
 
 

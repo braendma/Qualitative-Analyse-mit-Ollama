@@ -82,6 +82,11 @@ def normalize_modules(config: dict) -> list[dict]:
         if type(raw.get('requires_model', True)) is not bool:
             raise ValueError('requires_model muss true oder false sein.')
         item['requires_model'] = raw.get('requires_model', True)
+        if type(raw.get('starts_child_runs', False)) is not bool:
+            raise ValueError('starts_child_runs muss true oder false sein.')
+        item['starts_child_runs'] = raw.get('starts_child_runs', False)
+        if item['starts_child_runs'] and not item['requires_model']:
+            raise ValueError('Module mit Modell-Unterläufen müssen requires_model: true ausweisen.')
         normalized.append(item)
 
     return normalized
@@ -298,6 +303,8 @@ def main(argv=None):
         raise FileNotFoundError(f"CSV nicht gefunden: {csv_path}")
 
     modules = topological_order(normalize_modules(config))
+    if config.get('_diagnostic_child') and any(m['starts_child_runs'] for m in modules):
+        raise ValueError('Ein Diagnose-Unterlauf darf keine weiteren Modell-Unterläufe starten.')
     from coding_validation_common import load_codebook, load_segments
     codebook_config = config.get("paths", {}).get("category_system_csv")
     if not codebook_config:
@@ -364,8 +371,11 @@ def main(argv=None):
     atomic_json(output_dir / "workflow_manifest.json", manifest)
     needs_model = any(m.get('requires_model', True) for m in modules)
     managed = ManagedOllama(config.get("llm", {}), output_dir)
+    managed_started = False
+    from managed_ollama import HOST_ENV
+    os.environ.pop(HOST_ENV, None)
     try:
-        manifest["ollama_runtime"] = managed.start() if needs_model else {'managed': False, 'model_required': False}
+        manifest["ollama_runtime"] = {'managed': False, 'model_required': needs_model, 'started': False}
         atomic_json(output_dir / "workflow_manifest.json", manifest)
         failures=[]
         for module in modules:
@@ -389,6 +399,15 @@ def main(argv=None):
             manifest.setdefault('module_status', {})[module['id']] = 'running'
             atomic_json(output_dir / "workflow_manifest.json", manifest)
             try:
+                if module['starts_child_runs']:
+                    managed.close()
+                    managed_started = False
+                    manifest['ollama_runtime'] = {'managed': False, 'released_for_child_runs': module['id']}
+                elif module['requires_model'] and not managed_started:
+                    manifest['ollama_runtime'] = managed.start()
+                    manifest.setdefault('ollama_runtime_sessions', []).append(manifest['ollama_runtime'])
+                    managed_started = True
+                atomic_json(output_dir / 'workflow_manifest.json', manifest)
                 script_path = resolve_path(script_dir, module["script"])
                 if not script_path.is_file():
                     raise FileNotFoundError(script_path)

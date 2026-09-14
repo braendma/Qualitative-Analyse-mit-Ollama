@@ -6,9 +6,11 @@ UI integration, runtime parameter evidence and managed-server handoff follow sep
 import importlib
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
+import uuid
 
 import yaml
 
@@ -107,24 +109,59 @@ def _sample_run(parent, identity, modules):
 
 
 def _execute(command, directory, log, env):
-    """Normal interruption terminates the child tree before permitting a retry."""
+    """Keep a pipe lease; the shared supervisor owns and reaps the child tree."""
+    request_path = log.with_suffix('.supervision.request.json')
+    receipt_path = log.with_suffix('.supervision.json')
+    for path in (request_path, receipt_path):
+        _inside(path, Path(directory))
+    ticket = uuid.uuid4().hex
+    plan_path = Path(directory) / 'repetition_plan.json'
+    identity = _read_json(plan_path).get('execution_fingerprint') if plan_path.is_file() else None
+    parent = command[command.index('--output-dir') + 1] if '--output-dir' in command else None
+    atomic_json(request_path, {'ticket': ticket, 'command_sha256': fingerprint(command),
+        'execution_fingerprint': identity, 'run_parent': parent})
+    supervised = [sys.executable, str(Path(__file__).with_name('managed_ollama.py')),
+                  '--command', str(receipt_path), ticket, *command]
     with open(log, 'ab') as output:
-        process = subprocess.Popen(command, cwd=directory, env=env, stdin=subprocess.DEVNULL,
+        process = subprocess.Popen(supervised, cwd=directory, env=env, stdin=subprocess.PIPE,
             stdout=output, stderr=subprocess.STDOUT, start_new_session=os.name != 'nt',
             creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
         try:
             return process.wait()
         finally:
+            if process.stdin:
+                process.stdin.close()
             if process.poll() is None:
-                stop_tree(process)
-                process.wait(timeout=15)
+                try:
+                    process.wait(timeout=25)
+                except subprocess.TimeoutExpired:
+                    stop_tree(process)
+                    process.wait(timeout=10)
+                    raise RuntimeError('Prozessaufsicht musste beendet werden; Aufräumen nicht bestätigt. Zwischenstand prüfen.')
+            _confirmed_supervision(log, identity, parent)
+
+
+def _confirmed_supervision(log, identity, parent):
+    request_path = log.with_suffix('.supervision.request.json')
+    receipt_path = log.with_suffix('.supervision.json')
+    for path in (request_path, receipt_path):
+        _inside(path, log.parent)
+    request, receipt = _read_json(request_path), _read_json(receipt_path)
+    if (receipt.get('schema_version') != 1 or request.get('execution_fingerprint') != identity or request.get('run_parent') != parent
+            or not re.fullmatch('[a-f0-9]{64}', str(request.get('command_sha256', '')))
+            or receipt.get('cleanup_scope') not in ('windows_job', 'process_group')
+            or not request.get('ticket') or receipt.get('ticket') != request['ticket']
+            or receipt.get('command_sha256') != request.get('command_sha256')
+            or receipt.get('status') != 'finished' or receipt.get('cleanup_confirmed') is not True):
+        raise ValueError('Prozessende ist noch nicht sicher bestätigt; keine parallele Wiederaufnahme. Aufräumen abwarten oder Prozessstatus prüfen.')
+    return receipt
 
 
 def execute_repetitions(plan, directory, *, resume=False, pause_file=None):
     """Run samples sequentially; stop on first failure/pause, preserving all outputs.
 
-    Abruptly abandoned children with status 'running' require investigation rather
-    than a potentially concurrent automatic restart. A supervising app is not yet
+    Abruptly abandoned children require the supervisor's cleanup receipt before
+    a restart. A supervising app is not yet
     supported: release its managed Ollama server before dispatching this API.
     """
     _check_plan(plan)
@@ -170,9 +207,16 @@ def execute_repetitions(plan, directory, *, resume=False, pause_file=None):
             if _identity(config_path, plan['config']) != identity:
                 raise ValueError('Laufgrundlage während der Serie geändert; keine weiteren Wiederholungen gestartet.')
             parent = root / sample['sample_id']
+            supervision_log = root / (sample['sample_id'] + '.log')
+            has_dispatch = supervision_log.with_suffix('.supervision.request.json').exists()
+            if has_dispatch:
+                _confirmed_supervision(supervision_log, identity, str(parent))
             run, manifest = _sample_run(parent, identity, modules)
+            if manifest and not has_dispatch:
+                raise ValueError('Vorhandener Lauf hat keine zugehörige Prozessaufsicht; keine automatische Übernahme.')
             if manifest and manifest['status'] == 'running':
-                raise ValueError(f"{sample['sample_id']}: Lauf ist noch aktiv oder unkontrolliert beendet. Prozessstatus prüfen; kein automatischer Doppelstart.")
+                manifest['status'] = 'interrupted'
+                atomic_json(run / 'workflow_manifest.json', manifest)
             if not manifest or manifest['status'] != 'success':
                 if pause and pause.is_file():
                     result['status'] = 'paused'
