@@ -135,6 +135,26 @@ def supervise(program):
     return supervise_command([program, 'serve'])
 
 
+def _wait_for_posix_group_exit(pgid, timeout=5):
+    """Only ESRCH proves absence; Darwin can return EPERM during zombie reaping.
+
+    XNU killpg1 filters SZOMB members and returns EPERM when none can be
+    signalled. Retry within the existing deadline, never accept EPERM itself
+    as a cleanup receipt (a genuinely inaccessible live group also yields it).
+    """
+    deadline = time.monotonic() + timeout
+    while True:
+        try: os.killpg(pgid, 0)
+        except ProcessLookupError: return
+        except PermissionError: pass
+        if time.monotonic() >= deadline:
+            raise RuntimeError('Prozessgruppe noch nicht vollständig beendet; Abschluss nicht bestätigt.')
+        try: os.killpg(pgid, signal.SIGKILL)
+        except ProcessLookupError: return
+        except PermissionError: pass
+        time.sleep(.05)
+
+
 def supervise_command(command, receipt_path=None, ticket=None):
     """Reuse the stdin lease for model servers and diagnostic runner trees."""
     from runtime_support import atomic_json, fingerprint
@@ -187,23 +207,15 @@ def supervise_command(command, receipt_path=None, ticket=None):
             elif child:
                 # The leader may have exited while a module in its group remains.
                 try: os.killpg(child.pid, signal.SIGTERM)
-                except ProcessLookupError: pass
+                except (ProcessLookupError, PermissionError): pass
                 try: child.wait(timeout=5)
                 except subprocess.TimeoutExpired:
                     try: os.killpg(child.pid, signal.SIGKILL)
-                    except ProcessLookupError: pass
+                    except (ProcessLookupError, PermissionError): pass
             if child:
                 child.wait(timeout=10)
                 if not job:
-                    deadline = time.monotonic() + 5
-                    while True:
-                        try: os.killpg(child.pid, 0)
-                        except ProcessLookupError: break
-                        if time.monotonic() >= deadline:
-                            raise RuntimeError('Prozessgruppe noch nicht vollständig beendet; Abschluss nicht bestätigt.')
-                        try: os.killpg(child.pid, signal.SIGKILL)
-                        except ProcessLookupError: break
-                        time.sleep(.05)
+                    _wait_for_posix_group_exit(child.pid)
             confirmed = bool(job or child or not spawn_attempted or no_child_started)
         except BaseException as exc:
             cleanup_error = exc

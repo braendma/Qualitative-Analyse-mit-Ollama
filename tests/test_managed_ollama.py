@@ -15,6 +15,26 @@ import pandas as pd
 
 
 class ManagedTests(unittest.TestCase):
+    def test_posix_transient_permission_error_needs_later_absence_proof(self):
+        with patch.object(runtime.os,'killpg',create=True,side_effect=[PermissionError(),PermissionError(),ProcessLookupError()]) as kill, \
+                patch.object(runtime.signal,'SIGKILL',9,create=True), \
+                patch.object(runtime.time,'monotonic',side_effect=[0,0.1]), patch.object(runtime.time,'sleep') as sleep:
+            runtime._wait_for_posix_group_exit(12345)
+            self.assertEqual(kill.call_count,3)
+            self.assertEqual(kill.call_args_list[-1].args,(12345,0))
+            sleep.assert_called_once()
+
+    def test_posix_permanent_permission_error_never_confirms_cleanup(self):
+        with patch.object(runtime.os,'killpg',create=True,side_effect=PermissionError()), \
+                patch.object(runtime.time,'monotonic',side_effect=[0,6]):
+            with self.assertRaisesRegex(RuntimeError,'Abschluss nicht bestätigt'):
+                runtime._wait_for_posix_group_exit(12345)
+
+    def test_posix_live_group_never_confirms_cleanup(self):
+        with patch.object(runtime.os,'killpg',create=True), patch.object(runtime.time,'monotonic',side_effect=[0,6]):
+            with self.assertRaisesRegex(RuntimeError,'Abschluss nicht bestätigt'):
+                runtime._wait_for_posix_group_exit(12345)
+
     def test_workers_validation_and_cloud_guard(self):
         for invalid in (True, 0, 9, 1.5, '2'):
             with self.assertRaises(ValueError): runtime.workers({'parallel_workers': invalid})
