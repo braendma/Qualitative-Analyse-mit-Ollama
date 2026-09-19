@@ -45,6 +45,8 @@ jobs:
         run: for script in start/macos/*.command start/macos/launcher.sh; do bash -n "$script"; done
       - name: Fresh installation through the user launcher
         run: bash start/macos/Einrichtung.command
+      - name: Check owned process pause, resume and cleanup first
+        run: PYTHONPATH=src:tests .venv-macos/bin/python3 -m unittest test_app_lifecycle.LifecycleProcessTests -v
       - name: Python regression tests (synthetic data, mocked models)
         run: .venv-macos/bin/python3 -m unittest discover -s tests -p 'test_*.py'
       - name: JavaScript regression tests

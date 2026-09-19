@@ -58,12 +58,13 @@ def complete(session,status='paused',receipt=True):
             'exit_code':0,'parent_released':session.stop_requested})
 
 
-def wait_for(predicate,timeout=12):
+def wait_for(predicate,timeout=12,diagnostic=None):
     deadline=time.monotonic()+timeout
     while time.monotonic()<deadline:
         if predicate():return
         time.sleep(.05)
-    raise AssertionError('Synthetic lifecycle did not reach its expected state')
+    detail=diagnostic() if diagnostic else ''
+    raise AssertionError('Synthetic lifecycle did not reach its expected state\n'+detail)
 
 
 class LifecycleStateTests(unittest.TestCase):
@@ -242,17 +243,32 @@ class LifecycleProcessTests(unittest.TestCase):
             session.stop_requested=True;session.release();app._finish_session(session)
             if session.thread:session.thread.join(3)
 
+    def diagnostic(self,app):
+        """Preserve synthetic failure evidence before TemporaryDirectory cleanup."""
+        result={'active':app.active,'state':app._runtime_state,'error':app._runtime_error}
+        session=app._session
+        if session:
+            result['supervisor_returncode']=session.process.poll()
+            try:
+                _,receipt_path=supervision_paths(session.folder,session.binding)
+                receipt=read_json(receipt_path,{})
+                result['receipt']={k:receipt.get(k) for k in ('status','cleanup_confirmed','exit_code','parent_released','child_pid')}
+                log=session.folder/'console.log'
+                result['synthetic_console_tail']=log.read_text(encoding='utf8',errors='replace')[-4000:] if log.exists() else ''
+            except (OSError,ValueError) as exc:result['diagnostic_error']=str(exc)
+        return json.dumps(result,indent=2)
+
     def test_real_pause_resume_new_attempt_and_confirmed_child_cleanup(self):
         with tempfile.TemporaryDirectory() as tmp:
             app,pid=self.project(tmp)
             try:
                 first=app.start(pid);session=app._session;child=self.child(app,session)
                 app.pause(pid,first['id'])
-                wait_for(lambda:app.active is None)
+                wait_for(lambda:app.active is None,diagnostic=lambda:self.diagnostic(app))
                 self.assertFalse(pid_alive(child));self.assertEqual(app.jobs(pid)[0]['status'],'paused')
                 old_attempt=session.binding['attempt'];app.start(pid,resume=first['id']);second=app._session
                 self.assertNotEqual(second.binding['attempt'],old_attempt)
-                wait_for(lambda:app.active is None)
+                wait_for(lambda:app.active is None,diagnostic=lambda:self.diagnostic(app))
                 self.assertEqual(app.jobs(pid)[0]['status'],'success')
                 self.assertTrue(confirmed_cleanup(second.folder,second.binding)['cleanup_confirmed'])
             finally:self.cleanup(app)
