@@ -1,6 +1,6 @@
 # Konfigurationsreferenz der wissenschaftlichen Diagnosen
 
-**Version 0.5.0-beta.1.** Prüfungen und Grenzen stehen im [Testbericht](TEST_REPORT.md).
+**Version 0.5.0-beta.2.** Prüfungen und Grenzen stehen im [Testbericht](TEST_REPORT.md).
 
 ## Programmeinstiege in Paket und Source
 

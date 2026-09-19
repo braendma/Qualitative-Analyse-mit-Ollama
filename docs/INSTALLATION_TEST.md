@@ -1,3 +1,7 @@
+# Windows-Paket 0.5.0-beta.2 · Freigabe in Vorbereitung
+
+Der Bugfix-Code bestand die Windows-Paketregression und die native Mac-Sourceprüfung. Das endgültige Paket mit eingebauter Versionsnummer beta.2 muss noch gebaut und abgenommen werden. Aktueller [Testbericht](TEST_REPORT.md). Die folgenden Angaben dokumentieren ältere Pakete und ersetzen diese Abnahme nicht.
+
 # Eigenständiges Windows-Paket 0.5.0-beta.1 · 14. September 2026
 
 Das Windows-Paket enthält Python 3.12.14 und wurde mit PyInstaller 6.22.3 gebaut.

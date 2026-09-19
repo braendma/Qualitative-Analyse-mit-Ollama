@@ -1,8 +1,10 @@
 # Qualitative Analyse mit Ollama
 
-**Version 0.5.0-beta.1.** Prüfungen und Grenzen stehen im [Testbericht](docs/TEST_REPORT.md).
+**Entwicklungsstand 0.5.0-beta.2 · Veröffentlichung in Vorbereitung.** Prüfungen und Grenzen stehen im [Testbericht](docs/TEST_REPORT.md).
 
 [Technischer Kurzbericht (PDF, 3 Seiten)](docs/technical_report/technical_report.pdf) · [Methodischer Überblick](docs/METHODOLOGY.md) · [Handbuch](docs/HANDBUCH.md)
+
+Die folgenden Downloads gehören zur zuletzt veröffentlichten **0.5.0-beta.1**. Das geprüfte neue Paket wird nach Abschluss der Freigabe hier verlinkt.
 
 | Download | Voraussetzung | Start |
 |---|---|---|
@@ -12,7 +14,9 @@
 
 Alle ZIPs vollständig entpacken. Die beiden Python-Pakete enthalten denselben geprüften Quellstand und jeweils eine passende Startanleitung. Ollama und Modelle werden separat eingerichtet. Ein natives Mac-Paket ist noch nicht enthalten.
 
-Diese Version ergänzt ein **Windows-Paket mit enthaltener Python-Laufzeit**, lokale Datei- und Ergebnisordnerauswahl sowie kontrolliertes Beenden und technische Fehlerprotokolle. [Windows-Kurzanleitung](docs/WINDOWS_STANDALONE.txt) · [Build und Paketprüfung](packaging/README.md).
+**Bugfixrunde 0.5.0-beta.2:** Startfehler erscheinen direkt am Startknopf und bleiben bei abgewiesenen Startversuchen in der Laufübersicht. Die Speicherprüfung erklärt unbekannte Architekturen und bereits geladene Modelle genauer. Der macOS-Prozessabschluss wartet bei kurzzeitig verweigerter Statusabfrage weiter auf einen eindeutigen Abschlussnachweis. Die bewusste Personenkontrolle bleibt erforderlich. [Änderungen und Grenzen](docs/RELEASE_NOTES.md).
+
+Die 0.5-Reihe ergänzt ein **Windows-Paket mit enthaltener Python-Laufzeit**, lokale Datei- und Ergebnisordnerauswahl sowie kontrolliertes Beenden und technische Fehlerprotokolle. [Windows-Kurzanleitung](docs/WINDOWS_STANDALONE.txt) · [Build und Paketprüfung](packaging/README.md).
 
 In dieser Version ergänzen **Coverage und Blind Spots**, der
 **Information-Loss-Audit** und die **Codebook-Diagnostik** die 15 Basismodule. Alle drei sind optional, standardmäßig

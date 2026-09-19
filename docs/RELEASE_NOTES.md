@@ -1,3 +1,15 @@
+# Version 0.5.0-beta.2 · Bugfixrunde in Vorbereitung
+
+- Abgewiesene Starts nennen den Grund direkt am Startknopf. Serverseitige Startprüfungen hinterlassen einen nachvollziehbaren Eintrag statt eines leeren Jobordners; ohne gestartete Analyse gibt es keine unbrauchbare Fortsetzen-Aktion.
+- Die Parallelprüfung unterscheidet unbekannte Modellarchitekturen, bereits geladene Modelle und geschätzte Speichergrenzen. Sie beendet keine fremden Aufgaben und hebt keine Speichersperren ungeprüft auf.
+- Gespeicherte Personenzuordnungen müssen nach dem Öffnen weiterhin bewusst angezeigt und geprüft werden. Der Hinweis nennt den passenden Bedienungsschritt.
+- Unter macOS führt eine vorübergehend verweigerte Prozessgruppenabfrage beim Aufräumen nicht mehr sofort zum Abbruch. Die bisherige Wartefrist bleibt begrenzt; nur die nachgewiesene Abwesenheit der Gruppe bestätigt den Abschluss.
+- Der Fortschrittstest für Wiederholungsserien verwendet eine begrenzte Beobachtungsbestätigung statt einer zufällig passenden Verzögerung.
+
+Lokal wurden Start und Fehlerkorrektur über die Oberfläche sowie zwei gleichzeitig arbeitende Slots mit `granite4.2:8b` und je 32.768 Tokens an künstlichen Beispielen geprüft. Das ist kein Belastungs- oder Qualitätsnachweis für beliebige Modelle und Daten. Die ursprünglich gemeldete individuelle Startblockade war nach dem Ollama-Update nicht mehr reproduzierbar. Unbekannte Architekturen, etwa `qwen35`, erhalten weiterhin keine automatische Parallelfreigabe.
+
+Nach dem Update einen neuen Lauf beginnen. Vorhandene Ergebnisse bleiben erhalten; eine Wiederaufnahme setzt unveränderte Programmquellen voraus. Die Paketfreigabe dieser Version erfolgt erst nach ihren Abschlussprüfungen; [Prüfstand](TEST_REPORT.md). Native Mac-App und neue Funktionen bleiben zurückgestellt.
+
 # Version 0.5.0-beta.1
 
 Diese Version ergänzt ein eigenständiges Windows-Paket mit enthaltener

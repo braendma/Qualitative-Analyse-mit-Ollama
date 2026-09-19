@@ -1,3 +1,17 @@
+# Bugfix-Prüfstand für 0.5.0-beta.2 · 19. September 2026
+
+**Noch keine Veröffentlichung oder Freigabe des endgültigen beta.2-Pakets.** Der folgende Nachweis betrifft den Bugfix-Code vor der abschließenden Versions-/Dokumentationsänderung.
+
+Auf `bec08197ba4e885fe6604eb10dd233839af7eddc` bestand der [Windows-Paketlauf](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/actions/runs/35456518555) 951 Python-Tests, 84 JavaScript-Tests sowie Paketidentität, normale und lange Ergebnisordner und den modellfreien Paketworkflow. Das dabei gebaute Paket trägt noch die Versionsnummer beta.1 und wird nicht als beta.2 veröffentlicht.
+
+Der [native Mac-Test](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/actions/runs/35456518561/job/105932656199) bestand den gezielten Pause-/Resume-/Cleanup-Zyklus sowie 951 Python-Tests (18 vorgesehene plattformabhängige Skips), 69 JavaScript-Tests und den HTTP-Start. Damit ist der konkret diagnostizierte EPERM-Fehler geprüft; eine native Mac-Distribution oder ein vollständiger Modelllauf auf physischer Mac-Hardware ist daraus nicht abzuleiten.
+
+Die Windows-Sourceprüfung desselben Desktop-Laufs bestand ebenfalls 951 Python-Tests, 69 JavaScript-Tests und den HTTP-Start. Damit sind beide Installationswege zusätzlich zum gebündelten Windows-Paket geprüft.
+
+Lokal bestanden 43 gezielte App-/Parallelitäts-/Prozesstests und 69 JavaScript-Tests. Zusätzlich wurden die veröffentlichte Windows-EXE und die gepatchte Python-Oberfläche per Browser-Klick geprüft. Mit synthetischen Daten startete Granite 4.2:8b bei 32.768 Tokens und zwei Slots. Im zweiten UI-Lauf bearbeiteten beide Slots tatsächlich gleichzeitig zwei Kategorien; beide Antworten waren vollständig. Eine absichtlich zu hohe Einstellung wurde verständlich abgewiesen und ließ sich in der Oberfläche korrigieren. Alle Testprozesse wurden kontrolliert beendet.
+
+Alle Analysedaten sind künstlich. Dies ist kein Nachweis empirischer Modellqualität und keine allgemeine Zusage für Hardware, Modellarchitekturen oder Virenschutz. Historische Testzahlen unten gehören ausschließlich zu den jeweils genannten älteren Ständen.
+
 # Abschlussprüfung für 0.5.0-beta.1 · 14. September 2026
 
 ## Veröffentlichtes Release
@@ -403,3 +417,4 @@ Date: 2026-09-10. Baseline: `6f5c9f5b959156fbd224baef68a3f5de171ad797`.
 - No local Ollama inference was used. No real interviews or private study configuration were sent to Ollama Cloud.
 
 The earlier stage's metrics were row-based. The extension above replaces that behavior in multi-label mode with independent passage-level predictions and set metrics. Refer to `ROBUSTNESS.md` and `EXTENSIONS.md` for current behavior.
+
