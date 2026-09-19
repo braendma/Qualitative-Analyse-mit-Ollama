@@ -11,6 +11,7 @@ from unittest.mock import patch
 
 from test_diagnostic_repetitions import Workspace, ROOT
 from stability_analysis import configured_plan, planning_summary, main
+from owned_workflow_process import run_owned
 
 
 def enable_stability(w):
@@ -40,7 +41,9 @@ class StabilityModuleTests(unittest.TestCase):
                  '--output-dir',str(self.output),'--pause-file',str(self.pause)]
         if resume:command+=['--resume',str(resume)]
         if validate:command+=['--validate-only']
-        result=subprocess.run(command,env={**self.env,**(env or {})},capture_output=True,text=True,encoding='utf-8',timeout=45)
+        # Combined stability/sensitivity starts six child workflows. On a cold
+        # Windows CI host imports alone can exceed the old 45-second deadline.
+        result=run_owned(command,env={**self.env,**(env or {})},directory=self.w.root,timeout=180)
         return result
 
     def run_dir(self):
