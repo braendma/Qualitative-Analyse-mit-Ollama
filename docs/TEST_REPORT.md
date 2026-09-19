@@ -1,3 +1,11 @@
+# Lokaler Volltest und Registerdarstellung · 19. September 2026
+
+Ein vollständiger lokaler Funktionstest mit 50 synthetischen Codierzeilen, sechs bestätigten Personen, zwölf Kategorien, allen 20 Modulen und beiden Analyseperspektiven zeigte eine Kontextgrenze bei der Häufigkeitsinterpretation. Die Clusterbildung selbst war erfolgreich; das vollständige Vergleichsregister überschritt anschließend mit 8.192 Antworttokens die konservative Grenze von 32.768 Tokens (Rechengrenze 40.266). Blockierte Folgeanalysen und fehlgeschlagene Wiederholungen gelten nicht als erfolgreiche Stabilitätsmessung.
+
+Die Promptdarstellung verwendet bei Bedarf eine verlustfreie Tabelle: Feldpfade stehen einmal im Kopf, alle ursprünglichen Werte bleiben je Thema erhalten. Die Bezugsräume werden nicht eingeschränkt, Originalbefunde nicht gekürzt und Kontextgrenzen nicht angehoben. Kleine Register behalten ihre Objektdarstellung. Die Promptansicht zeigt beide Vorlagen.
+
+231 gezielte Tests der thematischen Pipeline bestanden nach der Änderung, darunter der vollständige Rückvergleich eines großen Tabellenregisters mit seiner ursprünglichen Objektdarstellung. Unterschiede zwischen null, null Nennungen und unvollständiger Zuordnung bleiben erhalten. Unverändert zu große Einzeltexte werden weiterhin vor dem ersten Modellaufruf abgewiesen. Diese Regressionstests ersetzen keinen vollständigen Modelllauf; dessen tatsächlich geprüfter Stand und eventuelle weitere Korrekturen werden beim jeweiligen Release ausgewiesen.
+
 # Bugfix-Prüfstand für 0.5.0-beta.2 · 19. September 2026
 
 **Quellenbindung:** Der folgende Nachweis betrifft den Bugfix-Code vor der abschließenden Versions-/Dokumentationsänderung. Das mitgelieferte Buildmanifest nennt den exakten Quellcommit des jeweiligen Windows-Pakets. Dessen abschließende Regression und Paketprüfungen sind im [Windows-Buildverlauf](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/actions/workflows/windows-package.yml) an diesem Commit nachvollziehbar; die [Release-Seite](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/tag/v0.5.0-beta.2) nennt den freigegebenen Download und seine Prüfsumme. Ein grüner Test eines früheren Commits ersetzt diese Paketprüfung nicht.

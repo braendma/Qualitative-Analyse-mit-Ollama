@@ -17,6 +17,51 @@ def response(tid='T'):
 
 
 class ThematicInterpretationTests(unittest.TestCase):
+    def test_large_register_fits_losslessly_without_changing_topics_counts_or_scope(self):
+        basis = material(['P1', 'P1', 'P2'])
+        topics = [topic('T'+str(i), ['u0', 'u1'] if i % 2 else list(basis['units']),
+                        definition='Unverändertes Thema ä 🧪 '+str(i)) for i in range(30)]
+        assignments = [assignment(t['topic_id'], uid, 'unclear' if uid == 'u1' else 'supported')
+                       for t in topics for uid in t['scope_unit_ids']]
+        counted = count_topics(basis, topics, assignments)
+        findings = {t['topic_id']: 'Vollständiger Befund '+t['topic_id'] for t in topics}
+        params = {'max_tokens': 512, 'partial_checkpoints': False}
+        ordered = sorted(topics, key=lambda t: t['topic_id'])
+        wide, small = MockLLM([response(t['topic_id']) for t in ordered]), MockLLM([response(t['topic_id']) for t in ordered])
+        expected = interpret_counts(basis, counted, findings, {**params, 'num_ctx': 200000}, module='swot', llm=wide)
+        actual = interpret_counts(basis, counted, findings, {**params, 'num_ctx': 24000}, module='swot', llm=small)
+        self.assertEqual(actual, expected)
+        from runtime_context import message_bound
+        for original, compact in zip(wide.calls, small.calls):
+            self.assertGreater(message_bound(original, params), 24000)
+            self.assertLess(message_bound(compact, params), 24000)
+            original_payload, payload = json.loads(original[1]['content']), json.loads(compact[1]['content'])
+            table = payload['comparison_register']
+            self.assertEqual(table['encoding'], 'field_paths_rows_v1')
+            rebuilt = []
+            for values in table['rows']:
+                row = {}
+                self.assertEqual(len(table['columns']), len(values))
+                for path, value in zip(table['columns'], values):
+                    cursor = row
+                    for name in path[:-1]:
+                        cursor = cursor.setdefault(name, {})
+                    cursor[path[-1]] = value
+                rebuilt.append(row)
+            payload['comparison_register'] = rebuilt
+            self.assertEqual(payload, original_payload)
+            self.assertEqual(payload['comparison_topic_count'], 30)
+            self.assertIn('null bleibt nicht bestimmbar', compact[0]['content'])
+
+    def test_register_encoding_preserves_empty_and_null_values_without_padding_missing_fields(self):
+        from thematic_interpretation import _register_table
+        rows = [{'id': 'ä', 'nested': {'empty': {}, 'unknown': None, 'zero': 0, 'flag': False}, 'values': []}]
+        before = copy.deepcopy(rows)
+        table = _register_table(rows)
+        self.assertEqual(rows, before)
+        self.assertEqual(table['rows'][0], ['ä', {}, False, None, 0, []])
+        self.assertIsNone(_register_table([{'id': 'A'}, {'id': 'B', 'extra': None}]))
+
     def test_equal_labels_keep_full_distinct_definitions_and_rules_in_every_register(self):
         basis = material(['P1'])
         topics = [{**topic(tid, ['u0'], definition=definition), 'label': 'Sicherheit',

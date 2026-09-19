@@ -10,7 +10,7 @@ import re
 
 from analysis_work import analyze_items
 from coding_validation_common import default_llm
-from runtime_context import require_messages
+from runtime_context import require_messages, message_bound
 from runtime_support import fingerprint
 from progress_events import begin_phase
 from thematic_counts import count_topics
@@ -50,6 +50,45 @@ zurück. Die letzten drei Felder sind nicht leere deutsche Texte. Keine zusätzl
 Kennzahlfelder, neuen Themen oder Quellen. Zahlen werden daneben unverändert angezeigt."""
 CORRECTION = ('Die Antwort entsprach nicht dem Format. Nutze exakt die geplante topic_id und '
               'nur die vier verlangten nicht leeren Textfelder. Prüfe die Originaldaten erneut.')
+TABLE_GUIDANCE = ('\nDas comparison_register ist bei encoding=field_paths_rows_v1 eine verlustfreie Tabelle. '
+                  'columns enthält vollständige Feldpfade, rows die Werte in genau dieser Spaltenreihenfolge. '
+                  'Jede Zeile ist ein vollständiges Thema; verschachtelte Feldpfade gehören zu demselben '
+                  'Datensatz. Alle Themen, Definitionen, Bezugsgrößen und Kennzahlen bleiben enthalten. '
+                  'null bleibt nicht bestimmbar; false und 0 sind davon verschieden. Keine Zeile weglassen.')
+
+
+def _register_table(register):
+    """Share field names, never summarize values or change comparison scopes."""
+    def leaves(value, path=()):
+        if isinstance(value, dict) and value:
+            return {p: v for key in sorted(value) for p, v in leaves(value[key], (*path, key)).items()}
+        return {path: value}
+    flattened = [leaves(row) for row in register]
+    if not flattened:
+        return None
+    columns = sorted(flattened[0])
+    if any(set(row) != set(columns) for row in flattened):
+        # A different schema must not acquire fabricated null/default fields.
+        return None
+    return {'encoding': 'field_paths_rows_v1', 'columns': [list(p) for p in columns],
+            'rows': [[row[p] for p in columns] for row in flattened]}
+
+
+def _interpretation_prompt(payload, params):
+    def dump(value):
+        return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(',', ':'))
+    def size(system, user):
+        return message_bound([{'content': system}, {'content': user}, {'content': CORRECTION}], params)
+    system, user = SYSTEM, dump(payload)
+    if size(system, user) > int(params.get('num_ctx', 32768)):
+        table = _register_table(payload['comparison_register'])
+        if table is not None:
+            candidate = dump({**payload, 'comparison_register': table})
+            if size(SYSTEM + TABLE_GUIDANCE, candidate) < size(system, user):
+                system, user = SYSTEM + TABLE_GUIDANCE, candidate
+    # The caller checks EVERY complete prompt before the first model call.
+    # Oversized values still fail; no truncation, weaker bound or extra window.
+    return system, user
 
 
 def comparison_basis(module):
@@ -162,8 +201,8 @@ caller keeps qualitative texts and these frequency texts in separate fields.
         }
         if basis == 'contrast_scoped':
             payload.update({key: contrast[tid][key] for key in ('comparison_scope', 'reference_context')})
-        user = json.dumps(payload, ensure_ascii=False, sort_keys=True)
-        items.append({'key': 'frequency_interpretation:' + tid, 'system': SYSTEM,
+        system, user = _interpretation_prompt(payload, params)
+        items.append({'key': 'frequency_interpretation:' + tid, 'system': system,
                       'user': user, 'texts': [qualitative_by_topic[tid]], 'topic_id': tid})
 
     def compute(item):

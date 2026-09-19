@@ -11,11 +11,17 @@ MAXIMUM = 0
 SCOPE = None
 
 
+def message_bound(messages, settings, answer=None):
+    """Pure sizing for lossless prompt planning, with the execution boundary."""
+    reserve = int(settings.get('max_tokens', 2048) if answer is None else answer)
+    return sum(len(m['content'].encode('utf-8')) + 32 for m in messages) + reserve + 256
+
+
 def require_messages(messages, settings, answer=None):
     global MAXIMUM, SCOPE
     limit = int(settings.get('num_ctx', 32768))
     reserve = int(settings.get('max_tokens', 2048) if answer is None else answer)
-    needed = sum(len(m['content'].encode('utf-8')) + 32 for m in messages) + reserve + 256
+    needed = message_bound(messages, settings, answer)
     with LOCK:
         scope = (os.environ.get('WORKFLOW_PROGRESS_FILE'), os.environ.get('WORKFLOW_MODULE'))
         if scope != SCOPE:

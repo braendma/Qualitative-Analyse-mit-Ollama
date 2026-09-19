@@ -74,7 +74,7 @@ def catalog(config, modules):
         perspective_targets = required if mid in ('stability', 'sensitivity') else {mid}
         extra_targets = sorted(target for target in perspective_targets if perspectives.get(target, 'qualitative') != 'qualitative')
         if extra_targets:
-            from thematic_interpretation import SYSTEM as frequency_system
+            from thematic_interpretation import SYSTEM as frequency_system, TABLE_GUIDANCE
             from thematic_assignment import SYSTEM as assignment_system
             from thematic_pipeline import FULL_ASSIGNMENT_MODULES
             for target in extra_targets:
@@ -89,6 +89,8 @@ def catalog(config, modules):
                                       'user':'Zur Laufzeit: feste Themen, vollständige Originaleinheiten und angeforderte Matrixzellen.', 'placeholders':[]})
                 templates.append({'key':target+' / frequency_interpretation', 'system':frequency_system,
                                   'user':'Zur Laufzeit: Thema, qualitativer Ausgangsbefund, berechnete Kennzahlen und Gegenpositionsmaterial.', 'placeholders':[]})
+                templates.append({'key':target+' / frequency_interpretation_compact', 'system':frequency_system+TABLE_GUIDANCE,
+                                  'user':'Nur wenn die normale Darstellung zu groß ist: vollständiges Vergleichsregister mit einmaligen Feldpfaden und unveränderten Werten je Themenzeile. Keine Themen, Zahlen oder Originaltexte werden entfernt.', 'placeholders':[]})
             note += ' Zusätzliche Perspektiven verwenden diese festen Programmanweisungen; beide Perspektiven teilen eine Zuordnungsmatrix.'
             if 'overall_synthesis' in extra_targets:
                 note += ' Die Gesamtsynthese teilt zusätzlich eine modellseitige Auswahlphase. Diese Klassifikation ist menschlich unbestätigt; Quellenreferenzen werden nicht als Nennungen gezählt.'
