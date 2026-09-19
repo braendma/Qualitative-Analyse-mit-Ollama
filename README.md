@@ -1,16 +1,14 @@
 # Qualitative Analyse mit Ollama
 
-**Entwicklungsstand 0.5.0-beta.2 · Veröffentlichung in Vorbereitung.** Prüfungen und Grenzen stehen im [Testbericht](docs/TEST_REPORT.md).
+**Version 0.5.0-beta.2.** Prüfungen und Grenzen stehen im [Testbericht](docs/TEST_REPORT.md).
 
 [Technischer Kurzbericht (PDF, 3 Seiten)](docs/technical_report/technical_report.pdf) · [Methodischer Überblick](docs/METHODOLOGY.md) · [Handbuch](docs/HANDBUCH.md)
 
-Die folgenden Downloads gehören zur zuletzt veröffentlichten **0.5.0-beta.1**. Das geprüfte neue Paket wird nach Abschluss der Freigabe hier verlinkt.
-
 | Download | Voraussetzung | Start |
 |---|---|---|
-| [Windows Standalone](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/download/v0.5.0-beta.1/QualitativeAnalyse-windows-x64.zip) | Python ist enthalten | ZIP entpacken, `QualitativeAnalyse.exe` öffnen |
-| [Windows mit Python](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/download/v0.5.0-beta.1/QualitativeAnalyse-0.5.0-beta.1-windows-python.zip) | Eigene Python-Installation | `Einrichtung.cmd`, dann `Start_Oberflaeche.cmd` |
-| [macOS mit Python](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/download/v0.5.0-beta.1/QualitativeAnalyse-0.5.0-beta.1-macos-python.zip) | Eigene Python-Installation | `start/macos/Einrichtung.command`, dann `Start_Oberflaeche.command` |
+| [Windows Standalone](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/download/v0.5.0-beta.2/QualitativeAnalyse-windows-x64.zip) | Python ist enthalten | ZIP entpacken, `QualitativeAnalyse.exe` öffnen |
+| [Windows mit Python](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/download/v0.5.0-beta.2/QualitativeAnalyse-0.5.0-beta.2-windows-python.zip) | Eigene Python-Installation | `Einrichtung.cmd`, dann `Start_Oberflaeche.cmd` |
+| [macOS mit Python](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/download/v0.5.0-beta.2/QualitativeAnalyse-0.5.0-beta.2-macos-python.zip) | Eigene Python-Installation | `start/macos/Einrichtung.command`, dann `Start_Oberflaeche.command` |
 
 Alle ZIPs vollständig entpacken. Die beiden Python-Pakete enthalten denselben geprüften Quellstand und jeweils eine passende Startanleitung. Ollama und Modelle werden separat eingerichtet. Ein natives Mac-Paket ist noch nicht enthalten.
 

@@ -1,6 +1,6 @@
 # Bugfix-Prüfstand für 0.5.0-beta.2 · 19. September 2026
 
-**Noch keine Veröffentlichung oder Freigabe des endgültigen beta.2-Pakets.** Der folgende Nachweis betrifft den Bugfix-Code vor der abschließenden Versions-/Dokumentationsänderung.
+**Quellenbindung:** Der folgende Nachweis betrifft den Bugfix-Code vor der abschließenden Versions-/Dokumentationsänderung. Das mitgelieferte Buildmanifest nennt den exakten Quellcommit des jeweiligen Windows-Pakets. Dessen abschließende Regression und Paketprüfungen sind im [Windows-Buildverlauf](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/actions/workflows/windows-package.yml) an diesem Commit nachvollziehbar; die [Release-Seite](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/tag/v0.5.0-beta.2) nennt den freigegebenen Download und seine Prüfsumme. Ein grüner Test eines früheren Commits ersetzt diese Paketprüfung nicht.
 
 Auf `bec08197ba4e885fe6604eb10dd233839af7eddc` bestand der [Windows-Paketlauf](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/actions/runs/35456518555) 951 Python-Tests, 84 JavaScript-Tests sowie Paketidentität, normale und lange Ergebnisordner und den modellfreien Paketworkflow. Das dabei gebaute Paket trägt noch die Versionsnummer beta.1 und wird nicht als beta.2 veröffentlicht.
 

@@ -1,4 +1,4 @@
-# Version 0.5.0-beta.2 · Bugfixrunde in Vorbereitung
+# Version 0.5.0-beta.2 · Bugfixrunde
 
 - Abgewiesene Starts nennen den Grund direkt am Startknopf. Serverseitige Startprüfungen hinterlassen einen nachvollziehbaren Eintrag statt eines leeren Jobordners; ohne gestartete Analyse gibt es keine unbrauchbare Fortsetzen-Aktion.
 - Die Parallelprüfung unterscheidet unbekannte Modellarchitekturen, bereits geladene Modelle und geschätzte Speichergrenzen. Sie beendet keine fremden Aufgaben und hebt keine Speichersperren ungeprüft auf.

@@ -17,7 +17,7 @@ Neue technische Appdaten liegen unter `~/Library/Application Support/Qualitative
 
 ## Grenzen dieser Ausgabe
 
-- Gemeinsamer Source-Code der Version **0.5.0-beta.2**, noch keine neue veröffentlichte Mac-Distribution. Die gemeinsame Analyseimplementierung ersetzt keine Prüfung der betriebssystemspezifischen Funktionen.
+- Gemeinsamer Python-Source-Code der Version **0.5.0-beta.2**, kein natives Mac-App-Paket. Die gemeinsame Analyseimplementierung ersetzt keine Prüfung der betriebssystemspezifischen Funktionen.
 - Auf dem Mac **eine gleichzeitige Modellanfrage** verwenden. Die automatische Speicherprüfung für mehrere Anfragen benötigt derzeit NVIDIA und kann Apple Unified Memory nicht zuverlässig beurteilen.
 - API- und Telegram-Schlüssel sind unter macOS nur für die aktuelle Anwendungssitzung verfügbar. Die dauerhafte verschlüsselte Ablage verwendet unter Windows DPAPI; eine macOS-Schlüsselbundanbindung ist noch nicht implementiert.
 - Der GitHub-Workflow prüft Einrichtung, Programmtests und den Start des lokalen Webservers auf macOS. Ein vollständiger Ollama-Analyselauf auf einem physischen Mac und der Finder-Doppelklick sind noch nicht geprüft. Den aktuellen Prüflauf findest du unter [GitHub Actions](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/actions/workflows/macos.yml).
