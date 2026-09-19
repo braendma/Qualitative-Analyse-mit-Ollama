@@ -37,6 +37,26 @@ def valid(messages, settings):
 
 
 class ThematicAssignmentTests(unittest.TestCase):
+    def test_schema_is_scoped_to_each_block_and_does_not_mutate_shared_template(self):
+        from thematic_assignment import SCHEMA
+        before = copy.deepcopy(SCHEMA)
+        basis, topics = fixture(3)
+        calls = []
+        def llm(messages, settings):
+            cells = payload(messages)['cells']
+            array = settings['response_schema']['properties']['assignments']
+            self.assertEqual(array['minItems'], len(cells))
+            self.assertEqual(array['maxItems'], len(cells))
+            self.assertEqual(array['items']['properties']['topic_id']['enum'], sorted({c['topic_id'] for c in cells}))
+            self.assertEqual(array['items']['properties']['unit_id']['enum'], sorted({c['unit_id'] for c in cells}))
+            calls.append(settings['response_schema'])
+            return valid(messages, settings)
+        rows = execute_assignments(basis, topics, {**PARAMS, 'batch_items': 2}, module='swot', llm=llm)
+        self.assertEqual(len(rows), 6)
+        self.assertGreater(len(calls), 1)
+        self.assertEqual(SCHEMA, before)
+        self.assertIsNot(calls[0], calls[1])
+
     def setUp(self):
         for name in ('analysis_work.update_progress', 'runtime_context.update_progress'):
             handle = patch(name)

@@ -54,6 +54,14 @@ def repetition_failure_marker(result):
 
 def failure_help(text):
     value=str(text).lower()
+    # Transport debug lines contain e.g. timeout=180 even after successful HTTP
+    # calls. Classify the final traceback exception, not earlier prompt/log text.
+    exceptions = re.findall(r'^\s*(?:[a-z_]\w*\.)*[a-z_]\w*(?:error|exception|timeout):[^\r\n]*',
+                            value, flags=re.MULTILINE)
+    if exceptions:
+        value = exceptions[-1].strip()
+    else:
+        value = '\n'.join(line for line in value.splitlines() if '[debug]' not in line)
     repeated = re.search(r'wiederholungsfehler \[([a-z_]+)\]', value)
     if repeated and repeated[1] in _KIND_MARKERS:
         guidance = fixed_failure_help(repeated[1])
@@ -116,6 +124,11 @@ def failure_help(text):
         kind='response'
         cause='Die Belegprüfung erhielt ungültige oder unvollständige Belegverweise vom Modell.'
         action='Gültige Teilprüfungen bleiben gespeichert. Bei einem einmaligen Fehler diesen Lauf fortsetzen. Wiederholt sich der Fehler, Modell und Unterstützung strukturierter Antworten prüfen und das bereinigte Modulprotokoll melden. Ungültige IDs nicht von Hand löschen oder die Prüfung deaktivieren.'
+    elif any(x in value for x in ('llmresponseerror', 'jsondecodeerror',
+                                 'thematische zuordnung bleibt nach korrektur', 'clusterantwort unvollständig')):
+        kind='response'
+        cause='Das Modell hat trotz Antwortkorrektur eine ungültige oder unvollständige Antwort geliefert.'
+        action='Erfolgreiche Teilanalysen bleiben gespeichert. Bei einem einzelnen Modellfehler denselben Lauf fortsetzen. Bei wiederholten Fehlern Modell, Unterstützung strukturierter Antworten und Antwortlimit prüfen; geänderte Einstellungen benötigen einen neuen Lauf. Fehlende Zuordnungen nicht als negative Befunde zählen und die Vollständigkeitsprüfung nicht abschalten.'
     elif any(x in value for x in ('timeout','timed out','connection','connecterror','llmtransporterror','nicht erreichbar')):
         kind='connection'
         cause='Eine Modellanfrage konnte nicht rechtzeitig abgeschlossen oder die Verbindung nicht hergestellt werden.'

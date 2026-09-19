@@ -55,6 +55,10 @@ TABLE_GUIDANCE = ('\nDas comparison_register ist bei encoding=field_paths_rows_v
                   'Jede Zeile ist ein vollständiges Thema; verschachtelte Feldpfade gehören zu demselben '
                   'Datensatz. Alle Themen, Definitionen, Bezugsgrößen und Kennzahlen bleiben enthalten. '
                   'null bleibt nicht bestimmbar; false und 0 sind davon verschieden. Keine Zeile weglassen.')
+SHARED_GUIDANCE = (TABLE_GUIDANCE + '\nBei encoding=shared_fields_rows_v1 gelten alle shared_fields '
+                   '(path, value) unverändert für JEDE Tabellenzeile. columns und rows enthalten die '
+                   'übrigen Felder. Gemeinsame Felder sind keine fehlenden Angaben: Rekonstruiere jeden '
+                   'Datensatz aus seinen Zeilenwerten und sämtlichen gemeinsamen Feldern.')
 
 
 def _register_table(register):
@@ -86,9 +90,26 @@ def _interpretation_prompt(payload, params):
             candidate = dump({**payload, 'comparison_register': table})
             if size(SYSTEM + TABLE_GUIDANCE, candidate) < size(system, user):
                 system, user = SYSTEM + TABLE_GUIDANCE, candidate
+            if size(system, user) > int(params.get('num_ctx', 32768)):
+                candidate = dump({**payload, 'comparison_register': _share_table_fields(table)})
+                if size(SYSTEM + SHARED_GUIDANCE, candidate) < size(system, user):
+                    system, user = SYSTEM + SHARED_GUIDANCE, candidate
     # The caller checks EVERY complete prompt before the first model call.
     # Oversized values still fail; no truncation, weaker bound or extra window.
     return system, user
+
+
+def _share_table_fields(table):
+    """Factor identical fields without equating false/zero or inventing defaults."""
+    def encoded(value):
+        return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(',', ':'))
+    common = [i for i in range(len(table['columns']))
+              if len({encoded(row[i]) for row in table['rows']}) == 1]
+    variable = [i for i in range(len(table['columns'])) if i not in common]
+    return {'encoding': 'shared_fields_rows_v1',
+            'shared_fields': [{'path': table['columns'][i], 'value': table['rows'][0][i]} for i in common],
+            'columns': [table['columns'][i] for i in variable],
+            'rows': [[row[i] for i in variable] for row in table['rows']]}
 
 
 def comparison_basis(module):

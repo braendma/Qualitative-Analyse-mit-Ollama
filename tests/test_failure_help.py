@@ -6,6 +6,22 @@ from failure_help import failure_help
 
 
 class FailureHelpTests(unittest.TestCase):
+    def test_transport_debug_does_not_hide_final_response_failure(self):
+        prefix = ('2026-09-19 [DEBUG] connect_tcp.started timeout=180.0\n'
+                  '2026-09-19 [INFO] HTTP Request: POST /api/chat "HTTP/1.1 200 OK"\n'
+                  'Traceback (most recent call last):\n')
+        for error in ('llm_client.LLMResponseError: Clusterantwort unvollständig: 1 Segmente fehlen.',
+                      'ValueError: Thematische Zuordnung bleibt nach Korrektur ungültig oder unvollständig; Teilanalyse erneut starten.'):
+            result = failure_help(prefix + error + ' PRIVATE_TEST')
+            self.assertEqual(result['kind'], 'response')
+            self.assertNotIn('PRIVATE_TEST', str(result))
+            self.assertIn('Vollständigkeitsprüfung', result['action'])
+
+    def test_final_exception_overrides_earlier_failure_or_prompt_keywords(self):
+        self.assertEqual(failure_help('LLMResponseError: failed\nhttpx.ReadTimeout: timed out')['kind'], 'connection')
+        self.assertEqual(failure_help('Interview: CUDA out of memory\nValueError: unbekannter Fehler')['kind'], 'unknown')
+        self.assertEqual(failure_help('[DEBUG] connect_tcp.started timeout=180.0\nUnbekannter Fehler')['kind'], 'unknown')
+
     def test_diagnostic_failures_explain_sources_and_integrity_without_model_tuning(self):
         for marker, kind in [('Diagnose abgelehnt', 'diagnostic_integrity'),
                              ('Diagnoseausgabe existiert bereits', 'diagnostic_output'),

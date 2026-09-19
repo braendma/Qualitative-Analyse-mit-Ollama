@@ -125,11 +125,20 @@ def execute_assignments(material, topics, params, *, module, llm=None):
 
     def compute(item):
         expected = {(cell['topic_id'], cell['unit_id']) for cell in item['cells']}
+        schema = copy.deepcopy(SCHEMA)
+        array = schema['properties']['assignments']
+        array.update(minItems=len(expected), maxItems=len(expected))
+        fields = array['items']['properties']
+        fields['topic_id']['enum'] = sorted({tid for tid, _ in expected})
+        fields['unit_id']['enum'] = sorted({uid for _, uid in expected})
+        # The schema constrains identifiers/count; the validator still checks
+        # every exact pair, uniqueness and status. No missing cell is inferred.
         for attempt in range(2):
             messages = [{'role': 'system', 'content': item['system']},
                         {'role': 'user', 'content': item['user'] + (CORRECTION if attempt else '')}]
             require_messages(messages, settings)
-            raw = backend(messages, {**settings, **({'temperature': 0.0} if attempt else {})})
+            raw = backend(messages, {**settings, 'response_schema': schema,
+                                     **({'temperature': 0.0} if attempt else {})})
             try:
                 return _validate(raw, expected)
             except ValueError:

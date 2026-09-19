@@ -17,6 +17,47 @@ def response(tid='T'):
 
 
 class ThematicInterpretationTests(unittest.TestCase):
+    def test_shared_register_fields_preserve_every_typed_value_and_row(self):
+        from thematic_interpretation import _register_table, _share_table_fields
+        rows = [{'topic_id': str(i), 'rules': {'inclusion': 'Gleiche Regel', 'exclusion': None},
+                 'mixed': [False, 0, 0.0, None][i], 'empty': {}, 'list': [],
+                 'scope': {'fingerprint': 'scope-' + str(i % 2)}} for i in range(4)]
+        before = copy.deepcopy(rows)
+        table = _share_table_fields(_register_table(rows))
+        rebuilt = []
+        for values in table['rows']:
+            row = {}
+            pairs = [(field['path'], field['value']) for field in table['shared_fields']]
+            pairs += list(zip(table['columns'], values))
+            for path, value in pairs:
+                cursor = row
+                for name in path[:-1]:
+                    cursor = cursor.setdefault(name, {})
+                cursor[path[-1]] = value
+            rebuilt.append(row)
+        self.assertEqual(json.dumps(rebuilt, sort_keys=True), json.dumps(before, sort_keys=True))
+        self.assertIn(['mixed'], table['columns'])
+        self.assertEqual(rows, before)
+
+    def test_repeated_long_rules_fit_without_removing_comparison_topics(self):
+        from thematic_interpretation import _interpretation_prompt, SHARED_GUIDANCE, SYSTEM, CORRECTION
+        from runtime_context import require_messages
+        rows = [{'topic_id': 'T'+str(i), 'definition': 'Befund '+str(i),
+                 'inclusion': 'Vollständige Einschlussregel ä ' * 25,
+                 'exclusion': 'Vollständige Ausschlussregel 🧪 ' * 25,
+                 'scope_fingerprint': 'scope-'+str(i % 12),
+                 'counts': {'supported': i, 'unclear': None}} for i in range(55)]
+        payload = {'comparison_register': rows, 'comparison_topic_count': 55}
+        params = {'num_ctx': 18000, 'max_tokens': 2048}
+        system, user = _interpretation_prompt(payload, params)
+        compact = json.loads(user)
+        self.assertEqual(system, SYSTEM + SHARED_GUIDANCE)
+        self.assertEqual(compact['comparison_register']['encoding'], 'shared_fields_rows_v1')
+        self.assertEqual(len(compact['comparison_register']['rows']), 55)
+        self.assertEqual(compact['comparison_topic_count'], 55)
+        self.assertIn(rows[0]['inclusion'], user)
+        require_messages([{'content': system}, {'content': user}, {'content': CORRECTION}], params)
+
     def test_large_register_fits_losslessly_without_changing_topics_counts_or_scope(self):
         basis = material(['P1', 'P1', 'P2'])
         topics = [topic('T'+str(i), ['u0', 'u1'] if i % 2 else list(basis['units']),
