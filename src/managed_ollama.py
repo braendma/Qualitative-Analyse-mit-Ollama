@@ -47,8 +47,14 @@ def preflight(settings):
         result = check(settings)
         maximum = result.get('estimated_parallel')
         if maximum is None or count > maximum:
-            raise ValueError('Parallelstart nicht freigegeben: ' + result['reason'] +
-                             ' Eine Anfrage wählen oder Speicherbelegung, Modell und Kontext prüfen.')
+            prefix = f"Parallelstart mit {count} Anfragen für {settings.get('model', '')} nicht freigegeben: "
+            detail = result['reason']
+            if maximum is not None:
+                detail += (f" Gewählt: {settings.get('num_ctx', '?')} Tokens je Anfrage; "
+                           f'aktuell geschätzt: {maximum} gleichzeitige Anfragen. '
+                           'Parallelität reduzieren oder Kontext und Speicherbelegung prüfen. '
+                           'Die Eingabeprüfung muss auch mit einem kleineren Kontext bestehen.')
+            raise ValueError(prefix + detail)
     return count
 
 

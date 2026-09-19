@@ -811,12 +811,20 @@ class App(ReviewWorkspace):
                 folder.mkdir(parents=True)
                 job={'id':jid,'created':time.time(),'config':str(config),'status':'starting'}
                 config=job_storage.config_path(folder,job)
-            checked=self.validate_config(config)
-            llm=yaml.safe_load(config.read_text(encoding='utf-8'))['llm']
-            needs_model=any(m.get('requires_model',True) for m in checked['modules'])
-            selected=self.authorize_llm(pid,llm) if needs_model else {'provider':'not_required','model':''}
-            from managed_ollama import preflight
-            if needs_model: preflight(llm)
+            try:
+                checked=self.validate_config(config)
+                llm=yaml.safe_load(config.read_text(encoding='utf-8'))['llm']
+                needs_model=any(m.get('requires_model',True) for m in checked['modules'])
+                selected=self.authorize_llm(pid,llm) if needs_model else {'provider':'not_required','model':''}
+                from managed_ollama import preflight
+                if needs_model: preflight(llm)
+            except (ValueError, OSError) as exc:
+                # Keep rejected new starts inspectable without allocating a
+                # research folder or replacing an existing resume checkpoint.
+                if not resume:
+                    job.update(status='failed',error=str(exc),start_rejected=True,modules=[])
+                    atomic_json(folder/'job.json',job)
+                raise
             if not resume:
                 job['storage']=job_storage.create_binding(folder,config,parent)
             pause=folder/'pause.request'

@@ -99,7 +99,11 @@ def estimate(model, context, tag, show, running, machine):
         return result
     cache = kv_bytes_per_token(show.get('model_info', {}))
     if cache is None:
-        result['reason'] = 'Für diese Modellarchitektur fehlen verlässliche Angaben zum Kontextspeicher.'
+        arch = show.get('model_info', {}).get('general.architecture', 'unbekannt')
+        result['reason'] = (f'Die Speicherprüfung unterstützt die Architektur {arch} noch nicht ausreichend. '
+                            'Das ist kein Nachweis für zu wenig Speicher. Vorerst eine Anfrage wählen; '
+                            'ein kleineres Kontextfenster hebt diese Architektursperre nicht auf.')
+        result['reason_code'] = 'unsupported_architecture'
         return result
     weights = tag.get('size', 0)
     if not isinstance(weights, (int, float)) or not math.isfinite(weights) or weights <= 0:
@@ -109,7 +113,12 @@ def estimate(model, context, tag, show, running, machine):
     # Do not treat occupied model memory as free: allocation across devices and
     # active sessions cannot be reconstructed reliably from /api/ps.
     if matches:
-        result['reason'] = 'Das gewählte Modell ist bereits geladen. Seine belegten Slots und die Speicherverteilung sind nicht auslesbar. Nach regulärem Entladen erneut prüfen.'
+        result['reason'] = ('Das gewählte Modell ist bereits im bestehenden Ollama-Server geladen. '
+                            'Für mehrere Anfragen wird eine zusätzliche eigene Instanz benötigt. '
+                            'Erst andere Anfragen an dieses Modell beenden und das Modell in Ollama entladen '
+                            '(oder das automatische Entladen abwarten), dann „Speicherschätzung aktualisieren“ wählen. '
+                            'Das Programm entlädt keine fremden Modelle automatisch. Alternativ eine Anfrage wählen.')
+        result['reason_code'] = 'model_already_loaded'
         result['loaded'] = True
         return result
     maximum_context = show.get('model_info', {}).get(show.get('model_info', {}).get('general.architecture', '') + '.context_length')
@@ -126,6 +135,7 @@ def estimate(model, context, tag, show, running, machine):
     result.update(status='estimate', estimated_parallel=count, weights_bytes=weights,
                   cache_per_request_bytes=math.ceil(per_request), reserve_bytes=math.ceil(reserve),
                   free_vram_bytes=free)
+    result['reason_code'] = 'estimated_capacity'
     result['notes'] += ['Berechnung mit f16-Kontextcache, 20 % Cache-Zuschlag, 10 % Modell-Zuschlag und GPU-Reserve.',
                         'Mehrere GPUs werden zusammengezählt. Ollamas GPU-Auswahl und Verteilung können die Zahl verringern.',
                         'Ab 2 gewählten Anfragen startet der Workflow eine eigene lokale Ollama-Instanz mit passenden Verarbeitungsplätzen.',

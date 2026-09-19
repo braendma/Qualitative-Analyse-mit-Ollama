@@ -33,6 +33,20 @@ function setup(){
 const checkResult={segments:2,passages:1,persons:1,codes:1,modules:[]};
 const settle=()=>new Promise(resolve=>setImmediate(resolve));
 
+test('start rejection stays visible beside the start button and clears on the next attempt',async()=>{
+  const app=setup();let scrolled=false;
+  app.node('start-error').scrollIntoView=()=>{scrolled=true;};
+  app.run("action(document.getElementById('start'),async()=>{throw new Error('Parallelstart nicht freigegeben');})");
+  await app.node('start').click();
+  assert.equal(app.node('start-error').hidden,false);
+  assert.match(app.node('start-error').textContent,/Parallelstart nicht freigegeben/);
+  assert.equal(scrolled,true);
+  app.run("action(document.getElementById('start'),async()=>{})");
+  await app.node('start').click();
+  assert.equal(app.node('start-error').hidden,true);
+  assert.equal(app.node('start-error').textContent,'');
+});
+
 test('an empty research destination blocks otherwise ready inputs and explicit selection clears that gate',()=>{
   const app=setup();
   app.run("project.uploads={segments:{headers:['Segment','Person','Code'],rows:[]},codebook:{headers:['Code','Definition'],rows:[]}};renderFiles();");
@@ -104,6 +118,16 @@ test('unavailable research storage explains recovery and hides resume until the 
     delete job.output_error;
     assert.match(allText(app.run(`runCard(${JSON.stringify(job)})`)),/Diesen Lauf fortsetzen/);
   }
+});
+
+test('rejected start explains new start and offers no nonexistent log or resume',()=>{
+  const app=setup();
+  const card=app.run("runCard({created:0,status:'failed',start_rejected:true,error:'Nur eine Anfrage freigegeben.',modules:[]})");
+  const allText=n=>[n,...n.children.flatMap(function visit(c){return [c,...c.children.flatMap(visit)];})].map(c=>c.textContent||'').join(' ');
+  const text=allText(card);
+  assert.match(text,/Start abgewiesen/);assert.match(text,/Nur eine Anfrage/);
+  assert.match(text,/keine Analyse gestartet/);assert.match(text,/neuen Lauf starten/);
+  assert.doesNotMatch(text,/Diesen Lauf fortsetzen|Laufprotokoll herunterladen|0 von 0/);
 });
 
 test('stability estimate counts fresh prerequisites and rejects invalid selection',()=>{

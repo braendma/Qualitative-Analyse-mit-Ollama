@@ -49,6 +49,12 @@ Die eigene Instanz wird nach Abschluss, Fehler oder einer Pause zwischen Modulen
 
 Die Anzeige bleibt eine **Speicherschätzung**, keine garantierte Höchstleistung. Andere Prozesse können Speicher belegen, und Ollamas GPU-Verteilung kann die nutzbare Parallelität begrenzen. Zwei echte parallele Slots wurden mit Granite 4.2:8b getestet; andere Modelle und höhere Werte sind damit nicht als Belastungsgrenze bestätigt. Für einen ersten Versuch 2 wählen. Nach einem Programmupdate einen neuen Lauf beginnen, da sich die Code-Prüfsumme ändert.
 
+**Wenn der Start nicht bestätigt wird:** Der Grund erscheint direkt am Startknopf. Ein von der serverseitigen Startprüfung abgewiesener Versuch bleibt zusätzlich in der Laufübersicht mit seinem Grund sichtbar. Er hat noch keinen Analysezwischenstand; nach der Korrektur einen neuen Lauf starten. Bei einer unterbrochenen Verbindung zuerst die Laufübersicht prüfen, bevor du erneut startest.
+
+**Unbekannte Kapazität ist kein Nachweis für zu wenig Speicher.** Bei einer nicht unterstützten Modellarchitektur kann die Anwendung deren Kontextcache noch nicht zuverlässig schätzen. Ein kleineres Kontextfenster hebt diese Sperre nicht auf; zunächst eine Anfrage wählen. Ist im bestehenden Ollama bereits ein Modell geladen, wartet die Prüfung auf dessen Entladung, damit eine zusätzliche Modellinstanz nicht denselben Speicher beansprucht. Andere Modellanfragen beenden und die automatische Entladung abwarten oder das Modell selbst in Ollama entladen; anschließend die Schätzung aktualisieren. Die Anwendung beendet keine fremden Aufgaben.
+
+**Personenzuordnung erneut ansehen:** Nach dem Öffnen eines Projekts unter **Eingaben prüfen → Dokumentzuordnung anzeigen / prüfen** die Zuordnungen und Personenzahl kontrollieren. Gespeicherte bestätigte Zuordnungen werden wiederhergestellt, sofern der Fingerabdruck der Eingabe weiterhin passt. Geänderte Dateien, Spalten oder Zuordnungen erfordern eine erneute Bestätigung. Diese Kontrollstufe bleibt auch bei nur einer Modellanfrage bestehen.
+
 Grundlagen: [Ollama: parallele Anfragen und Speicher](https://docs.ollama.com/faq#how-does-ollama-handle-concurrent-requests), [Modellmetadaten](https://docs.ollama.com/api-reference/show-model-details).
 
 ## 2. Zuerst die Demo kennenlernen

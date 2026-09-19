@@ -11,6 +11,7 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import Mock,patch
 
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'src'))
 from app_lifecycle import ActiveRun,confirmed_cleanup,supervision_paths
 from local_app import App,Handler,pid_alive,read_json
 from runtime_support import atomic_json,file_hash,fingerprint

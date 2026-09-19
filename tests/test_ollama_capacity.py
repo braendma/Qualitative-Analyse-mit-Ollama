@@ -31,10 +31,17 @@ class CapacityTests(unittest.TestCase):
     def test_loaded_model_is_not_double_counted_or_unloaded(self):
         result=self.estimate(running={'models':[{'digest':'abc','size_vram':7*c.GIB}]})
         self.assertIsNone(result['estimated_parallel']);self.assertTrue(result['loaded'])
+        self.assertEqual(result['reason_code'],'model_already_loaded')
+        self.assertIn('entlädt keine fremden Modelle',result['reason'])
 
     def test_unknown_and_hybrid_architectures_do_not_guess(self):
-        self.show['model_info']['general.architecture']='granitehybrid'
-        self.assertIsNone(self.estimate()['estimated_parallel'])
+        for architecture in ('granitehybrid','qwen35'):
+            self.show['model_info']['general.architecture']=architecture
+            result=self.estimate()
+            self.assertIsNone(result['estimated_parallel'])
+            self.assertEqual(result['reason_code'],'unsupported_architecture')
+            self.assertIn(architecture,result['reason'])
+            self.assertIn('kein Nachweis',result['reason'])
 
     def test_missing_metadata_no_gpu_and_oversized_context(self):
         self.assertIsNone(self.estimate(65536)['estimated_parallel'])

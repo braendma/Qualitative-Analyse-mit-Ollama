@@ -267,7 +267,17 @@ async function api(path, data) {
   const response=await fetch('/api/'+path,{method:data===undefined?'GET':'POST',headers:{'X-App-Token':token,...(data===undefined?{}:{'Content-Type':'application/json'})},body:data===undefined?undefined:JSON.stringify(data)});
   const result=await response.json(); if(!response.ok)throw new Error(result.error || 'Anfrage fehlgeschlagen.'); return result;
 }
-function action(button, fn) { button.addEventListener('click',async e=>{ e.preventDefault();button.disabled=true;try{await fn();}catch(err){message(err.message,true);}finally{button.disabled=false;if(button.id==='start')updateStartGate();} }); }
+function action(button, fn) { button.addEventListener('click',async e=>{
+  e.preventDefault();button.disabled=true;
+  if(button.id==='start'){$('start-error').hidden=true;$('start-error').textContent='';}
+  try{await fn();}catch(err){
+    message(err.message,true);
+    if(button.id==='start'){
+      const box=$('start-error');box.textContent='Start nicht bestätigt: '+err.message;box.hidden=false;
+      box.scrollIntoView({block:'center'});
+    }
+  }finally{button.disabled=false;if(button.id==='start')updateStartGate();}
+}); }
 function show(view) {
   viewing=view; document.querySelectorAll('.view').forEach(n=>n.hidden=n.id!=='view-'+view);
   document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.view===view));
@@ -433,6 +443,10 @@ function renderProgressDetails(card,d,status,label='Modulfortschritt'){
 function badge(status){const labels={running:'Läuft',success:'Abgeschlossen',failed:'Fehler',paused:'Pausiert',interrupted:'Unterbrochen',starting:'Startet'};return el('span',labels[status]||status,'badge '+status);}
 function runCard(job,results=false){
   const card=el('article',undefined,'card run-card'),head=el('div',undefined,'section-heading'),date=new Date(job.created*1000).toLocaleString('de-DE');head.append(el('h3','Lauf vom '+date),badge(job.status));card.append(head);
+  if(job.start_rejected){
+    card.append(el('h4','Start abgewiesen'),el('p',job.error||'Die Startprüfung ist fehlgeschlagen.','error'),el('p','Es wurde keine Analyse gestartet. Ursache beheben und oben „Prüfen & neuen Lauf starten“ wählen. Dieser Versuch hat keinen Zwischenstand zum Fortsetzen.','hint'));
+    return card;
+  }
   const completed=job.completed?.length||0,total=job.modules?.length||0,progress=el('progress');progress.max=total||1;progress.value=completed;
   progress.setAttribute('aria-label','Abgeschlossene Module');
   card.append(el('h4','Abgeschlossene Module'),progress,el('p',`${completed} von ${total} Modulen abgeschlossen`,'hint'));
@@ -819,7 +833,7 @@ function mappingProblems(){
       if(used.some(v=>!info.headers.includes(v)))issues.push('Eine zugeordnete Kategoriensystem-Spalte fehlt in der Datei.');
     }
   }
-  if(typeof personIdentityReady==='function'&&!personIdentityReady())issues.push('Dokumente Personen zuordnen und Personenzahl bestätigen.');
+  if(typeof personIdentityReady==='function'&&!personIdentityReady())issues.push('Unter „Eingaben prüfen“ zuerst „Dokumentzuordnung anzeigen / prüfen“ öffnen, Zuordnungen und Personenzahl kontrollieren und bestätigen. Gespeicherte Zuordnungen bleiben erhalten.');
   return issues;
 }
 function updateStartGate(){

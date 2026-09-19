@@ -58,6 +58,25 @@ def attach_supervision(app,folder,process):
 
 
 class DesktopTests(unittest.TestCase):
+    def test_rejected_parallel_start_is_saved_without_spawning_or_research_folder(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            app=App(tmp);pid=app.create('Synthetic start rejection',True)['id']
+            app.save(pid,{**settings(app),'parallel_workers':2})
+            before=set((app.directory/'chosen-results').iterdir())
+            with patch.object(app,'authorize_llm',return_value={'provider':'ollama_local','model':'mock'}), \
+                    patch('managed_ollama.preflight',side_effect=ValueError('Parallelstart nicht freigegeben: Test')), \
+                    patch('local_app.subprocess.Popen') as spawn:
+                with self.assertRaisesRegex(ValueError,'Parallelstart'):
+                    app.start(pid)
+                spawn.assert_not_called()
+            jobs=app.jobs(pid)
+            self.assertEqual(len(jobs),1)
+            self.assertEqual(jobs[0]['status'],'failed')
+            self.assertTrue(jobs[0]['start_rejected'])
+            self.assertIn('Parallelstart',jobs[0]['error'])
+            self.assertIsNone(app.active)
+            self.assertEqual(set((app.directory/'chosen-results').iterdir()),before)
+
     def test_loopback_server_starts_without_dns_resolution(self):
         with tempfile.TemporaryDirectory() as tmp:
             app = App(tmp)

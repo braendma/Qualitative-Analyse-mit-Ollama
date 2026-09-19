@@ -21,7 +21,19 @@ class SeriesProgressIntegrationTests(unittest.TestCase):
             harness = root / 'slow_synthetic_pipeline.py'
             source = (ROOT / 'tests/mock_pipeline.py').read_text(encoding='utf-8')
             source = source.replace('ROOT=Path(__file__).resolve().parents[1]', 'ROOT=Path(' + repr(str(ROOT)) + ')')
-            source = source.replace('def fake_chat(messages, **kwargs):', 'def fake_chat(messages, **kwargs):\n    import time\n    time.sleep(0.6)')
+            # A 0.6s request can fall entirely between the production 2s polls.
+            # Hold the first request until the real parent observer sees it;
+            # missing progress still fails, but machine speed cannot hide it.
+            acknowledgement = root / 'progress-observed'
+            source = source.replace('def fake_chat(messages, **kwargs):',
+                'def fake_chat(messages, **kwargs):\n'
+                '    import time\n'
+                f'    acknowledgement = Path({str(acknowledgement)!r})\n'
+                '    deadline = time.monotonic() + 30\n'
+                '    while not acknowledgement.exists():\n'
+                '        if time.monotonic() >= deadline:\n'
+                '            raise RuntimeError("Parent did not observe active request")\n'
+                '        time.sleep(0.05)')
             harness.write_text(source, encoding='utf-8')
             env = {k: v for k, v in os.environ.items() if not k.startswith(('MOCK_', 'WORKFLOW_'))
                    and k != 'QUALITATIVE_MANAGED_OLLAMA_HOST'}
@@ -30,6 +42,9 @@ class SeriesProgressIntegrationTests(unittest.TestCase):
             inner = []
             def capture(detail):
                 inner.append({'series_completed': outer[-1][0], **detail})
+                if (detail.get('sample_number') == 1 and
+                        detail.get('detail', {}).get('active_requests', 0) > 0):
+                    acknowledgement.touch()
             with patch.dict(os.environ, env, clear=True), patch.object(series, '_runner_command',
                     return_value=[sys.executable, str(harness)]):
                 result = series.execute_repetitions(plan, root / 'series', progress=lambda *args: outer.append(args),
