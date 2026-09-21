@@ -42,7 +42,7 @@ def resource_paths(repository, packaging):
         # obvious accidental private/build roots, even if added to the JSON.
         parts = PurePosixPath(relative).parts
         if not (parts[0] in {'src', 'config', 'demo', 'docs'} or relative in
-                {'VERSION', 'LICENSE', 'README.md', 'requirements.txt'}):
+                {'VERSION', 'LICENSE', 'README.md', 'requirements.txt', 'requirements-transcription.txt'}):
             raise ValueError('Resource outside public roots: ' + relative)
         if any(part.lower() in {'__pycache__', '.git', '.venv', 'app_data', 'runs',
                                'uploads', 'workflow_output', 'secrets'} for part in parts):

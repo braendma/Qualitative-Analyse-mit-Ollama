@@ -1,0 +1,26 @@
+/* Pure project/CSV functions shared by the browser and offline tests. */
+(function(root){'use strict';
+const fail=(ok,msg)=>{if(!ok)throw Error(msg)};
+const str=x=>typeof x==='string'&&x.trim().length>0;
+const slice=(text,start,end)=>Array.from(text).slice(start,end).join('');
+const canonical=x=>x===null||typeof x!=='object'?JSON.stringify(x):Array.isArray(x)?'['+x.map(canonical).join(',')+']':'{'+Object.keys(x).sort().map(k=>JSON.stringify(k)+':'+canonical(x[k])).join(',')+'}';
+const codePath=x=>{fail(str(x),'Codepfad fehlt.');const p=x.split('>').map(y=>y.trim());fail(p.length<=4&&p.every(str),'Codepfad benötigt 1 bis 4 nichtleere Ebenen.');return p.join(' > ')};
+function validate(p){fail(p&&p.schema===1&&p.kind==='coded_documents'&&Array.isArray(p.documents)&&Array.isArray(p.categories)&&Array.isArray(p.annotations)&&Array.isArray(p.history),'Ungültige Projektdatei.');
+const docs=new Map(),cats=new Set(),codes=new Set(),anns=new Set();
+for(const d of p.documents){fail(str(d.id)&&!docs.has(d.id)&&str(d.title)&&str(d.transcript_sha256)&&Array.isArray(d.segments)&&d.segments.length&&d.transcript_confirmed===true,'Dokument ungültig oder Transkript nicht bestätigt.');const segs=new Map();for(const s of d.segments){fail(str(s.id)&&!segs.has(s.id)&&str(s.text)&&((s.start===null&&s.end===null)||(Number.isFinite(s.start)&&Number.isFinite(s.end)&&0<=s.start&&s.start<=s.end))&&typeof s.person==='string'&&typeof s.exclude==='boolean','Ungültiges Segment.');segs.set(s.id,s)}docs.set(d.id,segs)}
+for(const c of p.categories){fail(str(c.id)&&!cats.has(c.id)&&codePath(c.code)===c.code&&!codes.has(c.code.toLowerCase())&&str(c.definition)&&typeof c.inclusion==='string'&&typeof c.exclusion==='string'&&typeof c.anchors==='string','Kategorie fehlt, ist doppelt oder unvollständig.');cats.add(c.id);codes.add(c.code.toLowerCase())}
+const signatures=new Set();for(const a of p.annotations){const s=docs.get(a.document_id)?.get(a.segment_id);fail(str(a.id)&&!anns.has(a.id)&&s&&cats.has(a.category_id)&&Number.isInteger(a.start)&&Number.isInteger(a.end)&&a.start>=0&&a.end>a.start&&a.end<=Array.from(s.text).length&&slice(s.text,a.start,a.end)===a.quote&&['manual','llm_reviewed'].includes(a.origin)&&typeof a.memo==='string','Ungültige Codierung oder Textbeleg verändert.');const k=JSON.stringify([a.document_id,a.segment_id,a.start,a.end,a.category_id]);fail(!signatures.has(k),'Doppelte Codierung derselben Textstelle.');signatures.add(k);anns.add(a.id)}return p}
+function addAnnotation(p,a){const next=structuredClone(p);next.annotations.push(a);validate(next);return next}
+function csv(rows){return '\ufeff'+rows.map(row=>row.map(x=>'"'+String(x??'').replaceAll('"','""')+'"').join(';')).join('\r\n')+'\r\n'}
+function exportsFor(p){validate(p);fail(p.categories.length&&p.annotations.length,'Vor dem Export mindestens eine Kategorie und Codierung anlegen.');
+const cat=new Map(p.categories.map(c=>[c.id,c])),docs=new Map(p.documents.map(d=>[d.id,d]));
+const rows=[['segment_id','PassageID','Dokumentname','Code','Segment','Quelldokument','PersonID','Zeitbeginn','Zeitende','Zeichenbeginn','Zeichenende','Herkunft','Memo']];
+for(const a of p.annotations){const d=docs.get(a.document_id),s=d.segments.find(s=>s.id===a.segment_id);if(s.exclude)continue;fail(str(s.person),'Personenzuordnung fehlt für eine codierte Textstelle. Vor Export bestätigen; Interviewfragen ggf. ausschließen.');
+const passage='PASS-'+JSON.stringify([d.id,s.id,a.start,a.end]);rows.push([a.id,passage,s.person,cat.get(a.category_id).code,a.quote,d.title,s.person,s.start,s.end,a.start,a.end,a.origin,a.memo])}
+fail(rows.length>1,'Alle codierten Stellen sind ausgeschlossen.');
+const book=[['Code','Definition','Einschluss','Ausschluss','Ankerbeispiele']];for(const c of p.categories){const anchors=c.anchors||[...new Set(p.annotations.filter(a=>a.category_id===c.id&&!docs.get(a.document_id).segments.find(s=>s.id===a.segment_id).exclude).map(a=>a.quote))].join('\n');book.push([c.code,c.definition,c.inclusion,c.exclusion,anchors])}
+return {segments:csv(rows),categories:csv(book),count:rows.length-1}}
+function suggestionsFor(p,documentId,result){validate(p);const d=p.documents.find(x=>x.id===documentId);fail(d&&result.kind==='reviewed_coding'&&result.review?.confirmed===true&&result.source_transcript_sha256===d.transcript_sha256&&Array.isArray(result.coding),'Codierungsvorschläge gehören nicht zum bestätigten Dokument.');const output=[];
+for(const item of result.coding){fail(p.categories.some(c=>c.id===item.category_id),'Kategorie des Vorschlags fehlt.');for(const e of item.evidence){const s=d.segments.find(s=>s.id===e.segment_id);fail(s&&str(e.quote),'Belegsegment fehlt.');const index=s.text.indexOf(e.quote);fail(index>=0&&s.text.indexOf(e.quote,index+1)===-1,'Zitat kommt nicht eindeutig vor. Textstelle bitte manuell markieren.');const start=Array.from(s.text.slice(0,index)).length;output.push({document_id:d.id,segment_id:s.id,start,end:start+Array.from(e.quote).length,quote:e.quote,category_id:item.category_id,origin:'llm_reviewed',memo:item.reason})}}return output}
+const api={validate,addAnnotation,exportsFor,suggestionsFor,codePath,slice,canonical,csv};if(typeof module!=='undefined')module.exports=api;else root.Coding=api;
+})(globalThis);

@@ -1,0 +1,66 @@
+{
+  "schema": 1,
+  "kind": "coded_documents",
+  "id": "test",
+  "history": [],
+  "documents": [
+    {
+      "id": "D1",
+      "title": "Synthetisch",
+      "transcript_sha256": "abc",
+      "transcript_confirmed": true,
+      "segments": [
+        {
+          "id": "1",
+          "start": 0,
+          "end": 3,
+          "text": "🙂 Spaß; \"ja\"\nNein",
+          "person": "P01",
+          "exclude": false
+        }
+      ]
+    }
+  ],
+  "categories": [
+    {
+      "id": "C1",
+      "code": "Motivation > Freude",
+      "definition": "Freude",
+      "inclusion": "Positiv",
+      "exclusion": "Negativ",
+      "anchors": ""
+    },
+    {
+      "id": "C2",
+      "code": "Motivation > Lernen",
+      "definition": "Lernen",
+      "inclusion": "",
+      "exclusion": "",
+      "anchors": ""
+    }
+  ],
+  "annotations": [
+    {
+      "id": "A1",
+      "document_id": "D1",
+      "segment_id": "1",
+      "start": 2,
+      "end": 6,
+      "quote": "Spaß",
+      "category_id": "C1",
+      "origin": "manual",
+      "memo": ""
+    },
+    {
+      "id": "A2",
+      "document_id": "D1",
+      "segment_id": "1",
+      "start": 2,
+      "end": 6,
+      "quote": "Spaß",
+      "category_id": "C2",
+      "origin": "manual",
+      "memo": ""
+    }
+  ]
+}

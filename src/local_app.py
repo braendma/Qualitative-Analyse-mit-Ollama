@@ -126,11 +126,18 @@ def pid_alive(pid):
 
 
 class App(ReviewWorkspace):
-    def __init__(self, directory, template=None):
+    def __init__(self, directory, template=None, project_root=None):
         self.directory = Path(directory).resolve()
         if os.name == 'nt' and not str(self.directory).startswith('\\\\?\\'):
             self.directory = Path('\\\\?\\'+str(self.directory))
-        self.projects_dir = self.directory / 'projects'
+        legacy_projects=self.directory/'projects'
+        self.projects_dir = Path(project_root).resolve() if project_root else legacy_projects
+        self.project_roots=[]
+        seen_roots=set()
+        for root in (self.projects_dir,legacy_projects):
+            key=os.path.normcase(str(root.resolve()).removeprefix('\\\\?\\'))
+            if key not in seen_roots:
+                seen_roots.add(key);self.project_roots.append(root)
         self.projects_dir.mkdir(parents=True, exist_ok=True)
         self.template = yaml.safe_load((Path(template) if template else DEFAULT_CONFIG).read_text(encoding='utf-8'))
         self.telegram = Telegram(self.directory)
@@ -170,6 +177,8 @@ class App(ReviewWorkspace):
                 self._shutdown_delivery.set()
 
     def shutdown(self, mode='idle', job=None, attempt=None, confirmed=False, project=None, *, response_sent=None):
+        from preparation_host import require_idle
+        require_idle(self)
         if mode not in ('idle','pause','abort'):
             raise ValueError('Unbekannte Aktion zum Beenden.')
         with self.lock:
@@ -279,10 +288,11 @@ class App(ReviewWorkspace):
         return True
 
     def project_dir(self, pid):
-        directory = safe_child(self.projects_dir, identifier(pid))
-        if not (directory/'project.json').is_file():
+        matches=[safe_child(root,identifier(pid)) for root in self.project_roots if (safe_child(root,identifier(pid))/'project.json').is_file()]
+        if len(matches)>1:raise ValueError('Dieses Projekt liegt doppelt in den Ablagen. Keine Kopie automatisch gewählt; Projektordner zuerst eindeutig zuordnen.')
+        if not matches:
             raise ValueError('Projekt wurde nicht gefunden.')
-        return directory
+        return matches[0]
 
     def job_config(self, pid, jid):
         folder=safe_child(self.project_dir(pid)/'jobs',identifier(jid))
@@ -297,7 +307,9 @@ class App(ReviewWorkspace):
         return job_storage.review_root(folder,job)
 
     def projects(self):
-        return sorted([read_json(p) for p in self.projects_dir.glob('*/project.json')], key=lambda p:p['created'], reverse=True)
+        rows=[read_json(p) for root in self.project_roots for p in root.glob('*/project.json')]
+        if len({p['id'] for p in rows})!=len(rows):raise ValueError('Doppelte Projektkennungen in alter und neuer Ablage. Keine Kopie automatisch gewählt.')
+        return sorted(rows,key=lambda p:p['created'],reverse=True)
 
     def create(self, name, demo=False):
         name = str(name).strip()
@@ -327,6 +339,7 @@ class App(ReviewWorkspace):
         data = read_json(directory/'project.json')
         data['uploads'] = read_json(directory/'uploads.json', {})
         data['settings'] = read_json(directory/'settings.json', {})
+        data['storage_path']=str(directory).removeprefix('\\\\?\\')
         return data
 
     def upload(self, pid, kind, name, encoded, sheet=None):
@@ -1045,8 +1058,10 @@ class Handler(BaseHTTPRequestHandler):
         return not auth or secrets.compare_digest(self.headers.get('X-App-Token',''),self.server.token)
 
     def do_GET(self):
+        from preparation_host import dispatch
+        if dispatch(self):return
         parsed=urllib.parse.urlparse(self.path)
-        assets={'/':'local_app.html','/app.js':'local_app.js','/app.css':'local_app.css',
+        assets={'/model-setup.js':'model_setup.js','/audio-model-setup':'../docs/TRANSKRIPTIONSMODELL.md','/workflow-nav.css':'workflow_nav.css','/workflow-nav.js':'workflow_nav.js','/':'local_app.html','/app.js':'local_app.js','/app.css':'local_app.css',
                 '/review.js':'review_ui.js','/reports.js':'report_viewer.js',
                 '/prompt-view.js':'prompt_view.js','/failure-guide.js':'failure_guide.js','/context-help.js':'context_help.js','/context-help.css':'context_help.css',
                 '/BEISPIELE.html':'../docs/BEISPIELE.html',
@@ -1111,6 +1126,8 @@ class Handler(BaseHTTPRequestHandler):
         except (ValueError,OSError,KeyError) as exc: self.json({'error':str(exc)},400)
 
     def do_POST(self):
+        from preparation_host import dispatch
+        if dispatch(self):return
         # Rejected uploads may leave unread request bytes. Do not reuse that socket.
         self.close_connection = True
         if not self.allowed(): return self.json({'error':'Zugriff abgelehnt.'},403)
@@ -1220,7 +1237,8 @@ def main():
     app_log=AppLog(data_dir,ROOT.parent/'VERSION')
     try:
         app_log.event('start')
-        app=App(data_dir,args.config);server=make_server(app,args.port)
+        project_root=Path.home()/'Documents'/'Qualitative Analyse'/'Projekte' if args.data_dir is None else None
+        app=App(data_dir,args.config,project_root=project_root);server=make_server(app,args.port)
         try:
             url=f'http://127.0.0.1:{server.server_port}/#'+server.token
             print('Lokale Oberfläche: '+url,flush=True)

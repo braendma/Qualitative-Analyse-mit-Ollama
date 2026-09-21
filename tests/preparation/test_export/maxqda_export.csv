@@ -1,0 +1,3 @@
+﻿"segment_id";"PassageID";"Dokumentname";"Code";"Segment";"Quelldokument";"PersonID";"Zeitbeginn";"Zeitende";"Zeichenbeginn";"Zeichenende";"Herkunft";"Memo"
+"A1";"PASS-[""D1"",""1"",2,6]";"P01";"Motivation > Freude";"Spaß";"Synthetisch";"P01";"0";"3";"2";"6";"manual";""
+"A2";"PASS-[""D1"",""1"",2,6]";"P01";"Motivation > Lernen";"Spaß";"Synthetisch";"P01";"0";"3";"2";"6";"manual";""

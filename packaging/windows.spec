@@ -7,7 +7,7 @@ from pathlib import Path
 import shutil
 import sys
 
-from PyInstaller.utils.hooks import copy_metadata
+from PyInstaller.utils.hooks import copy_metadata, collect_data_files, collect_dynamic_libs, collect_submodules
 
 PACKAGING = Path(SPECPATH).resolve()
 REPOSITORY = PACKAGING.parent
@@ -36,8 +36,8 @@ project_sources = [(relative, path) for relative, path in resources
                    if relative.startswith('src/') and relative.endswith('.py')]
 project_modules = {path.stem for _, path in project_sources}
 # Fail closed if a new Python helper was added but not publicly reviewed/listed.
-actual_sources = {path.name for path in (REPOSITORY / 'src').glob('*.py')}
-if actual_sources != {path.name for _, path in project_sources}:
+actual_sources = {path.relative_to(REPOSITORY).as_posix() for path in (REPOSITORY / 'src').rglob('*.py')}
+if actual_sources != {relative for relative, _ in project_sources}:
     raise SystemExit('Source inventory differs from the reviewed resource allowlist.')
 
 # runpy-loaded project sources are intentionally invisible to static application
@@ -54,19 +54,24 @@ for _, path in project_sources:
             if name.split('.')[0] in sys.stdlib_module_names:
                 stdlib_imports.add(name)
             elif name.split('.')[0] not in project_modules | {
-                    'pandas', 'numpy', 'matplotlib', 'yaml', 'ollama', 'openpyxl'}:
+                    'pandas', 'numpy', 'matplotlib', 'yaml', 'ollama', 'openpyxl','av','faster_whisper','onnxruntime','huggingface_hub','httpx','striprtf'}:
                 unknown_imports.add(name)
 if unknown_imports:
     raise SystemExit('Review new third-party imports before build: ' + ', '.join(sorted(unknown_imports)))
 
-THIRD_PARTY_IMPORTS = [
+THIRD_PARTY_IMPORTS = ['av','faster_whisper','faster_whisper.audio','onnxruntime','huggingface_hub','httpx','striprtf.striprtf',
     'pandas', 'numpy', 'matplotlib', 'matplotlib.pyplot',
     'matplotlib.backends.backend_agg', 'matplotlib.backends.backend_svg',
     'matplotlib.backends.backend_pdf', 'yaml', 'ollama', 'openpyxl',
     'openpyxl.cell._writer', 'openpyxl.reader.excel', 'openpyxl.writer.excel',
 ]
-METADATA_DISTRIBUTIONS = ['pandas', 'numpy', 'matplotlib', 'PyYAML', 'ollama', 'openpyxl']
+METADATA_DISTRIBUTIONS = ['pandas', 'numpy', 'matplotlib', 'PyYAML', 'ollama', 'openpyxl','faster-whisper','ctranslate2','av','onnxruntime','huggingface-hub','tokenizers','striprtf']
 datas = [(str(path), str(Path(relative).parent)) for relative, path in resources]
+# Runtime library assets (including the library's small bundled VAD model),
+# never external Whisper/Sortformer checkpoints or the user's model directory.
+datas += collect_data_files('faster_whisper')
+binaries = collect_dynamic_libs('ctranslate2')
+THIRD_PARTY_IMPORTS += collect_submodules('ctranslate2')
 datas += [(str(PACKAGING / name), 'packaging') for name in BUILD_FILES]
 datas.append((str(manifest_path), 'packaging'))
 for distribution in METADATA_DISTRIBUTIONS:
@@ -79,7 +84,7 @@ datas.append((str(Path(sys.base_prefix) / 'LICENSE.txt'), 'third_party_licenses/
 
 a = Analysis(
     [str(PACKAGING / 'bootstrap.py')],
-    pathex=[], binaries=[], datas=datas,
+    pathex=[], binaries=binaries, datas=datas,
     hiddenimports=sorted(stdlib_imports | set(THIRD_PARTY_IMPORTS)),
     hookspath=[], runtime_hooks=[],
     excludes=sorted(project_modules),

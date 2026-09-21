@@ -64,7 +64,10 @@ class BuiltinModulePathTests(unittest.TestCase):
         return str(io_path((base or self.run) / path))
 
     def test_registry_covers_exactly_twenty_analysis_clis(self):
+        self.assertEqual(len(adapter.BUILTIN_PATH_OPTIONS),20)
         self.assertEqual(set(adapter.BUILTIN_PATH_OPTIONS), APPROVED_SCRIPTS - {
+            'preparation/download_models.py', 'preparation/download_diarization_model.py',
+            'preparation/transcription_pipeline.py', 'preparation/transcribe_local.py', 'preparation/diarize_sortformer.py',
             '00_WORKFLOW_RUNNER.py', 'local_app.py', 'managed_ollama.py',
             'codebook_refinement.py'})
 

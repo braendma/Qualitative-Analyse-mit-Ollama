@@ -102,7 +102,7 @@ class EntryPointPathsTests(unittest.TestCase):
                     app.return_value.runtime_status.return_value={'state':'closed','active':None}
                 app.return_value.shutdown.side_effect=close_idle
                 local_app.main()
-            app.assert_called_once_with(chosen.resolve(), None)
+            app.assert_called_once_with(chosen.resolve(), None, project_root=None)
             app.return_value.shutdown.assert_called_once_with('idle')
         server.server_close.assert_called_once()
 

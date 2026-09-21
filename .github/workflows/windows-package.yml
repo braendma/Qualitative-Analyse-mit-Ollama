@@ -60,6 +60,15 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Complete Python regression suite (synthetic data, mocked models)
         run: ./.venv/Scripts/python.exe -u -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Audio and coding Python tests (no model downloads)
+        run: |
+          $env:PYTHONPATH='src;src/preparation;tests'
+          ./.venv/Scripts/python.exe -m unittest discover -s tests/preparation -p 'test_*.py' -v
+      - name: Audio and coding JavaScript tests
+        run: |
+          $testFiles = @(Get-ChildItem tests/preparation -Filter 'test_*.js' | Sort-Object Name | ForEach-Object FullName)
+          node --test @testFiles
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Complete JavaScript regression suite
         run: |
           $testFiles = @(Get-ChildItem -LiteralPath tests -Filter 'test_*.cjs' | Sort-Object Name | ForEach-Object FullName)

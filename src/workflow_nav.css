@@ -1,0 +1,22 @@
+/* Persistent workflow switcher, shared by the analysis and preparation pages. */
+#workflow-toggle{position:fixed;left:12px;top:10px;z-index:40;margin:0;padding:9px 14px;background:#fff;color:#235940;border:1px solid #adc3b6;border-radius:8px;cursor:pointer;font:15px system-ui}
+.workflow-links{display:flex;flex-direction:column;gap:6px;margin:18px 0}
+.workflow-links a,.workflow-links button{display:block;text-align:left;text-decoration:none;font:15px/1.4 system-ui;color:#235940;background:white;border:1px solid #bfd0c6;border-radius:8px;padding:12px;margin:0;cursor:pointer}
+.workflow-links [aria-current=page]{background:#22664f;color:white}
+body .sidebar{padding-top:62px;overflow-y:auto;z-index:30}
+body.workflow-collapsed .sidebar{display:none}
+body.workflow-collapsed main{margin-left:0;width:100%;padding-top:65px}
+body.preparation-page{box-sizing:border-box;max-width:none;margin:0;padding:60px 32px 30px 302px}
+.preparation-page .sidebar{box-sizing:border-box;position:fixed;top:0;bottom:0;left:0;width:270px;padding:62px 18px 22px;background:#edf3ef;border-right:1px solid #bfd0c6;font:15px/1.5 system-ui;color:#19392e}
+.preparation-page .sidebar h2{font-size:19px}
+.preparation-page .sidebar p{font-size:13px}
+body.preparation-page.workflow-collapsed{padding-left:32px}
+#audio-picker{font:16px system-ui;max-width:760px;width:85%;max-height:80vh;overflow:auto;border:1px solid #adc3b6;border-radius:12px;padding:24px;color:#19392e}
+#audio-picker::backdrop{background:#172b2270}
+#audio-picker input{box-sizing:border-box;width:95%}
+#audio-picker-list{display:flex;flex-direction:column;max-height:40vh;overflow:auto;gap:3px}
+#audio-picker-list button{text-align:left}
+#audio-picker [aria-pressed=true]{background:#22664f;color:white}
+@media(max-width:850px){body.preparation-page{padding:65px 18px 24px}body .sidebar{position:fixed;top:0;bottom:0;left:0;width:270px;padding:62px 18px 22px;background:#edf3ef;box-shadow:10px 0 30px #19392e30}body main{margin-left:0;width:100%;padding-top:65px}body.preparation-page.workflow-collapsed{padding-left:18px}}
+
+#model-setup-dialog{width:min(850px,90vw);max-height:85vh;overflow:auto;padding:1.5rem;border:1px solid #a9bfb5;border-radius:12px}#model-setup-dialog::backdrop{background:#0006}#model-setup-dialog label{display:block;margin:1rem 0}#model-setup-dialog input[type=text],#model-setup-dialog select{display:block;box-sizing:border-box;width:100%;margin:.5rem 0;padding:.5rem}#model-folders{max-height:180px;overflow:auto}#model-folders button{display:block}#model-setup-dialog button{margin:.3rem;padding:.5rem}#audio-model-setup p,#audio-library-path,.project-storage-path{overflow-wrap:anywhere}.project-storage-path{font-size:.85rem}

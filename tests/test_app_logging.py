@@ -92,7 +92,7 @@ class AppLoggingTests(unittest.TestCase):
                     patch.object(local_app, 'make_server', return_value=server), \
                     contextlib.redirect_stdout(io.StringIO()):
                 local_app.main()
-            construct.assert_called_once_with(directory.resolve(), None)
+            construct.assert_called_once_with(directory.resolve(), None, project_root=Path.home()/"Documents"/"Qualitative Analyse"/"Projekte")
             self.assertEqual([row['event'] for row in self.read_logs(directory)], ['start', 'closed'])
             self.assertNotIn(server.token, (directory / 'logs' / 'app.log').read_text())
             server.server_close.assert_called_once()

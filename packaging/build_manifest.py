@@ -18,6 +18,7 @@ from resource_contract import inventory
 
 DISTRIBUTIONS = (
     'pandas', 'numpy', 'matplotlib', 'PyYAML', 'ollama', 'openpyxl',
+    'faster-whisper','ctranslate2','av','onnxruntime','huggingface-hub','tokenizers','striprtf',
     'pyinstaller', 'pyinstaller-hooks-contrib',
 )
 
@@ -25,11 +26,13 @@ DISTRIBUTIONS = (
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--repository', required=True, type=Path)
-    parser.add_argument('--source-commit', required=True,
+    parser.add_argument('--private-snapshot',action='store_true',help='Private uncommitted source snapshot; never claim a Git commit')
+    parser.add_argument('--source-commit',
                         help='Exact reviewed public Git commit (40 or 64 hexadecimal characters)')
     parser.add_argument('--output', required=True, type=Path)
     args = parser.parse_args(argv)
-    if not re.fullmatch(r'(?:[0-9a-f]{40}|[0-9a-f]{64})', args.source_commit):
+    if args.private_snapshot and args.source_commit:parser.error('Private snapshots do not claim a source commit')
+    if not args.private_snapshot and not re.fullmatch(r'(?:[0-9a-f]{40}|[0-9a-f]{64})', args.source_commit or ''):
         parser.error('source-commit must be an exact lowercase Git object identifier')
     repository = args.repository.resolve(strict=True)
     packaging = Path(__file__).resolve().parent
@@ -41,15 +44,17 @@ def main(argv=None):
     def git(*arguments):
         return subprocess.check_output(['git', '-C', str(repository), *arguments],
                                        encoding='utf-8', stderr=subprocess.PIPE).strip()
-    if git('rev-parse', 'HEAD') != args.source_commit:
-        parser.error('source-commit must equal the checked-out HEAD')
-    if git('status', '--porcelain', '--untracked-files=no'):
-        parser.error('Commit tracked source changes before creating the build manifest')
-    for relative in resources:
-        git('ls-files', '--error-unmatch', '--', relative)
+    if not args.private_snapshot:
+        if git('rev-parse', 'HEAD') != args.source_commit:
+            parser.error('source-commit must equal the checked-out HEAD')
+        if git('status', '--porcelain', '--untracked-files=no'):
+            parser.error('Commit tracked source changes before creating the build manifest')
+        for relative in resources:
+            git('ls-files', '--error-unmatch', '--', relative)
     version = (repository / 'VERSION').read_text(encoding='utf-8').strip()
     if not re.fullmatch(r'[0-9][0-9A-Za-z.+-]{0,63}', version):
         parser.error('VERSION is not a portable version identifier')
+    if args.private_snapshot and 'private' not in version:parser.error('Private snapshot needs a clearly private VERSION')
     dependencies = {name: importlib.metadata.version(name) for name in DISTRIBUTIONS}
     if dependencies['pyinstaller'] != '6.22.3':
         parser.error('Build requires the reviewed PyInstaller 6.22.3 pin')
@@ -57,7 +62,7 @@ def main(argv=None):
         parser.error('This build targets native Windows x64 only')
     manifest = {
         'schema': 1,
-        'kind': 'build-input-manifest',
+        'kind': 'private-build-input-manifest' if args.private_snapshot else 'build-input-manifest',
         'version': version,
         'source_commit': args.source_commit,
         'python': '.'.join(map(str, sys.version_info[:3])),

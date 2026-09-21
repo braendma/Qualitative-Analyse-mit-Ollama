@@ -1,59 +1,7 @@
-Qualitative Analyse – Windows-Paket
+Qualitative Analyse – Windows Beta 8.0.0-beta.1
 
-1. Das gesamte ZIP in einen neuen Ordner entpacken.
-2. QualitativeAnalyse.exe doppelklicken. Das Startfenster geöffnet lassen.
-3. Im Browser ein Projekt anlegen oder künstliche Beispieldaten laden.
-4. „Handbuch“ neben „Telegram-Updates“ erklärt Import, Einstellungen und Ergebnisse.
-5. Zum Beenden „Programm beenden“ in der Oberfläche verwenden. Bei einer laufenden
-   Analyse eine Pause nach dem aktuellen Modul oder den bestätigten Abbruch wählen.
-
-Python ist enthalten. Eigene Python-Installation, pip, Kommandozeile und
-Administratorrechte sind für dieses entpackte Paket nicht erforderlich.
-EXE und _internal-Ordner zusammenlassen. Ollama und Modelle werden nicht gebündelt
-oder automatisch installiert. Ohne Ollama sind Vorbereitung, modellfreie
-Diagnosen und nach Datenfreigabe konfigurierte Cloud-Anbieter weiter nutzbar.
-
-Die Anwendung ist nicht digital signiert. Windows kann deshalb eine Warnung
-anzeigen. Quelle und SHA256-Prüfsumme mit dem GitHub-Release vergleichen;
-bei unbekannter Herkunft oder abweichender Prüfsumme nicht starten. Es wird
-keine Abschaltung von Windows-Sicherheitsfunktionen benötigt oder empfohlen.
-Kurze Windows-Dateisperren beim Speichern werden automatisch für höchstens
-etwa eine Sekunde erneut geprüft. Bleibt die Sperre bestehen, wird sie angezeigt.
-Wenn das Speichern mit „Zugriff verweigert“ scheitert, offene Dateien, die
-Ordnerrechte und Meldungen des Virenschutzes prüfen. Eine Schreibsperre kann
-auch eine bereits gestartete EXE betreffen. Freigaben nur für das überprüfte
-Programmpaket setzen; anschließend denselben Vorgang erneut ausführen.
-
-Die Standardmodule verwenden den gewählten Ergebnisordner auch bei langen
-Windows-Pfaden. Programmstart und Ergebnisablage sind dafür getrennt; Daten
-werden nicht in einen Ersatzordner verschoben. Das vollständige Programmpaket
-selbst in einen kurzen Ordner entpacken, falls Windows den Startpfad ablehnt.
-Sehr lange Kategorien erhalten begrenzte, eindeutig gekennzeichnete Grafiknamen.
-Eigene Source-Skripte behalten ihren bisherigen Arbeitsordnervertrag und können
-einen kürzeren Ergebnisordner benötigen. Vollständige CLI-Optionsnamen verwenden.
-
-Technische Projektablage: %LOCALAPPDATA%\QualitativeAnalyse (vorhandene ältere
-Ablagen werden erkannt). Ergebnisordner vor der Analyse auswählen; bei Auswahl
-über den lokalen Dateidialog wird der Ordner der Eingabedatei vorgeschlagen.
-Jeder neue Lauf erhält einen eigenen Ordner. Originaldateien bleiben unverändert.
-Technische Start-/Ende-/Fehlerereignisse stehen unter logs\app.log innerhalb
-der Projektablage, begrenzt auf vier Dateien zu je etwa 1 MiB. Schlüssel,
-Interviewtexte und vollständige Fehlermeldungen werden dort nicht gespeichert.
-Ausführliche wissenschaftliche Laufprotokolle bleiben im jeweiligen Ergebnisordner.
-
-Updates in einen neuen Programmordner entpacken, nachdem laufende Analysen beendet
-sind. Forschungs- und Projektordner behalten. Es gibt keinen automatischen Updater.
-Alte Ergebnisse bleiben lesbar; Fortsetzen verlangt denselben geprüften
-Programmstand, dieselben Eingaben und dieselbe Konfiguration.
-
-Version und Buildnachweis: _internal\VERSION sowie
-_internal\packaging\build-manifest.json. Das Manifest dient der Nachvollziehbarkeit
-und ist keine digitale Signatur. Offline-Handbuch: _internal\docs\HANDBUCH.html.
-Projektlizenz: _internal\LICENSE. Fremdbibliotheken behalten ihre jeweiligen
-Lizenzen in den mitgelieferten *.dist-info-Ordnern; Python unter
-_internal\third_party_licenses\python\LICENSE.txt.
-
-Download und Quellcode:
-https://github.com/braendma/Qualitative-Analyse-mit-Ollama
-
-Die mitgelieferten Beispieldaten sind vollständig erfunden.
+ZIP vollständig entpacken und QualitativeAnalyse.exe öffnen. _internal muss daneben bleiben.
+Anleitung: _internal/docs/BETA_V8.md. Modelle nach ausdrücklicher Auswahl zentral installieren.
+Projekte und Modelle: Dokumente/Qualitative Analyse. Frühere Projekte bleiben erhalten.
+Audio bis 120 Minuten/2 GiB; Text und Sprecherzuordnung immer prüfen.
+Kein vollständiger zweistündiger Whisper-Praxistest; Grenzen in der Beta-Anleitung.

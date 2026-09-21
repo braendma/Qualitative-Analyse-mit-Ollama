@@ -64,6 +64,17 @@ class PackageIdentityTests(unittest.TestCase):
             self.assertEqual(set(checkpoint_identity([], [], {}, {}, {})),
                              {'segments', 'codebook', 'prompts', 'context', 'params', 'code'})
 
+    def test_private_snapshot_has_no_invented_commit_and_still_binds_files(self):
+        changed=copy.deepcopy(self.manifest)
+        changed.update(kind='private-build-input-manifest',version='8.0.0-private1',source_commit=None)
+        (self.root/'VERSION').write_text(changed['version'],encoding='utf-8')
+        changed['resources']['VERSION']=package._digest(self.root/'VERSION')
+        manifest_write(self.root,changed)
+        self.assertIsNone(self.identity()['source_commit'])
+        for altered in ({'source_commit':'a'*40},{'kind':'build-input-manifest'},{'version':'8.0.0'}):
+            manifest_write(self.root,{**changed,**altered})
+            with self.assertRaises(ValueError):self.identity()
+
     def test_frozen_missing_manifest_fails_instead_of_using_source_fallback(self):
         (self.root / 'packaging/build-manifest.json').unlink()
         with patch.object(sys, 'frozen', True, create=True), patch.object(sys, '_MEIPASS', str(self.root), create=True), \

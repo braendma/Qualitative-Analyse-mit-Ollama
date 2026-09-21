@@ -38,6 +38,7 @@ def main(argv=None):
         # The packaging step must prevent a second project implementation in
         # PYZ; sys.path precedence alone cannot provide that guarantee.
         sys.path.insert(0, str(Path(SOURCE_DIR)))
+        if script.parent != Path(SOURCE_DIR):sys.path.insert(0,str(script.parent))
         runpy.run_path(str(script), run_name='__main__')
     finally:
         sys.argv = original_argv

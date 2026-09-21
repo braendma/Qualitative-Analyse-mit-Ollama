@@ -1,6 +1,6 @@
-# Windows-Paket 0.5.1
+# Windows-Paket 0.5.0-beta.2
 
-Das Paket enthält die Python-Laufzeit; Ollama und Modelle werden separat eingerichtet. Die Freigabe erfolgt nach Regression, Prüfung der Paketidentität und Tests am tatsächlich entpackten ZIP (Oberfläche, lange Ausgabepfade und modellfreier Workflow). Der exakte Quellcommit steht unter `_internal/packaging/build-manifest.json`; der zugehörige [Buildverlauf](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/actions/workflows/windows-package.yml) und die [Release-Seite](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/tag/v0.5.1) dokumentieren die jeweilige Abnahme. Der [Testbericht](TEST_REPORT.md) unterscheidet Bugfix- und Paketnachweise. Die folgenden Angaben dokumentieren ältere Pakete und ersetzen keine Prüfung eines neuen ZIP.
+Das Paket enthält die Python-Laufzeit; Ollama und Modelle werden separat eingerichtet. Die Freigabe erfolgt nach Regression, Prüfung der Paketidentität und Tests am tatsächlich entpackten ZIP (Oberfläche, lange Ausgabepfade und modellfreier Workflow). Der exakte Quellcommit steht unter `_internal/packaging/build-manifest.json`; der zugehörige [Buildverlauf](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/actions/workflows/windows-package.yml) und die [Release-Seite](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/tag/v0.5.0-beta.2) dokumentieren die jeweilige Abnahme. Der [Testbericht](TEST_REPORT.md) unterscheidet Bugfix- und Paketnachweise. Die folgenden Angaben dokumentieren ältere Pakete und ersetzen keine Prüfung eines neuen ZIP.
 
 # Eigenständiges Windows-Paket 0.5.0-beta.1 · 14. September 2026
 

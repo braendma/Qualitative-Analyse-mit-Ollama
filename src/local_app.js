@@ -357,9 +357,13 @@ async function openProject(id){
   if(typeof closeFailureGuide==='function')closeFailureGuide();
   if(typeof closePromptView==='function')closePromptView();
   closeLocalPicker();if(pendingUpload){pendingUpload=null;$('sheet-dialog').close();uploadBusy(false);}
-  project=loaded;closeViewer();jobs=null;$('projects').value=id;$('welcome').hidden=true;
+  project=loaded;sessionStorage.setItem('qa-active-project',id);
+  const draftKey='qa-analysis-draft-'+id;
+  try{const draft=JSON.parse(sessionStorage.getItem(draftKey));if(draft){for(const [key,value]of Object.entries(draft.values)){if(JSON.stringify(value)!==JSON.stringify(draft.baseline[key])&&JSON.stringify(project.settings[key])===JSON.stringify(draft.baseline[key]))project.settings[key]=value;}sessionStorage.removeItem(draftKey);}}catch{}
+  closeViewer();jobs=null;$('projects').value=id;$('welcome').hidden=true;
   document.querySelectorAll('.project-content').forEach(n=>n.hidden=false);
   $('project-subtitle').textContent=project.name+(project.demo?' · Künstliche Beispieldaten':' · Lokales Projekt');
+  let folder=document.getElementById('project-storage-path');if(!folder){folder=document.createElement('p');folder.id='project-storage-path';folder.className='muted';$('project-subtitle').after(folder);}folder.textContent='Projektordner: '+(project.storage_path||'');folder.style.overflowWrap='anywhere';
   $('validation-result').hidden=true;$('category-result').replaceChildren();$('category-baseline').replaceChildren(new Option('Letzte gültige Version',''));loadFields();
   $('lineage-note').hidden=!project.review_provenance;$('lineage-note').textContent=project.review_provenance?.note||'';await refreshJobs();
 }
@@ -753,7 +757,7 @@ for(const id of ['new-project','welcome-create'])$(id).addEventListener('click',
 $('cancel-create').addEventListener('click',()=>$('create-dialog').close());
 $('create-form').addEventListener('submit',async e=>{e.preventDefault();try{if(typeof finishReviewSave==='function')await finishReviewSave();const p=await api('create',{name:$('project-name').value});state.projects.unshift(p);project=p;renderProjects();await openProject(p.id);$('create-dialog').close();show('project');message('Projekt angelegt. Wähle jetzt deine beiden Dateien (XLSX oder CSV).');}catch(err){message(err.message,true);$('create-dialog').close();}});
 action($('demo'),async()=>{if(typeof finishReviewSave==='function')await finishReviewSave();const p=await api('create',{name:'Demo · Künstliche Interviews',demo:true});state.projects.unshift(p);project=p;renderProjects();await openProject(p.id);message('Demo geladen: 50 künstliche Codierzeilen und 43 Passagen. Du kannst zuerst die Eingaben prüfen.');});
-async function init(){try{state=await api('state');if(state.runtime)applyRuntime(state.runtime);renderProjects();renderTelegram(state.telegram);if(state.projects.length)await openProject(state.projects[0].id);else scheduleOllamaStatus();}catch(e){message(e.message,true);}}
+async function init(){try{state=await api('state');if(state.runtime)applyRuntime(state.runtime);renderProjects();renderTelegram(state.telegram);if(state.projects.length)await openProject(state.projects.find(p=>p.id===(new URLSearchParams(location.search).get('project')||sessionStorage.getItem('qa-active-project')))?.id||state.projects[0].id);else scheduleOllamaStatus();}catch(e){message(e.message,true);}}
 async function pollApp(){
   if(polling||shutdownInFlight||runtimeState.state==='closed')return;polling=true;
   try{await refreshRuntime();if(project&&['analysis','results'].includes(viewing)&&runtimeState.state!=='closed')await refreshJobs();}
@@ -871,3 +875,13 @@ action($('category-refresh'),async()=>{const pid=needProject(),r=await api('cate
 action($('category-compare'),async()=>{const pid=needProject(),r=await api('category-compare',{project:pid,settings:settings(),baseline:$('category-baseline').value||null});if(project?.id!==pid)return;const box=$('category-result');box.replaceChildren(el('p',r.note));if(!r.baseline)return;box.append(el('p',`${r.added.length} neue, ${r.removed.length} entfernte, ${r.changed.length} geänderte Kategorien · ${r.affected_count} betroffene Codierzeilen`));r.added.forEach(c=>box.append(el('p','Neu: '+c.code+' — '+c.definition)));r.removed.forEach(c=>box.append(el('p','Entfernt: '+c.code)));r.changed.forEach(c=>{const d=el('details');d.append(el('summary','Geändert: '+c.code),el('p','Bisher: '+bookDescription(c.before)),el('p','Jetzt: '+bookDescription(c.after)));box.append(d);});if(r.affected.length){const d=el('details');d.append(el('summary','Betroffene Codierzeilen (maximal 200)'));r.affected.forEach(c=>d.append(el('p',c.segment_id+' · '+c.code)));box.append(d);}});
 if(typeof initReviews==='function')initReviews();
 init();
+
+window.openPreparation=async()=>{
+ try{if(!project){$('create-dialog').showModal();message('Zuerst ein Projekt anlegen oder auswählen. Danach Transkription und Codierung öffnen.');return}
+ if(uploading||pendingUpload)throw Error('Den laufenden Dateiimport zuerst abschließen.');
+ if(typeof finishReviewSave==='function')await finishReviewSave();
+ sessionStorage.setItem('qa-analysis-draft-'+project.id,JSON.stringify({baseline:project.settings,values:settings()}));
+ location.href='/preparation/'+encodeURIComponent(project.id)+'/';
+ }catch(e){message(e.message,true)}
+};
+$('open-preparation').onclick=window.openPreparation;

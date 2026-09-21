@@ -233,6 +233,9 @@ def main(argv=None):
     require(os.name == 'nt', 'Native Windows is required')
     exe = (args.package/'QualitativeAnalyse.exe').resolve(strict=True)
     root = BASE / 'build' / 'smoke-frozen-workflow' / (time.strftime('%Y%m%d-%H%M%S') + '-' + uuid.uuid4().hex[:8])
+    # Keep the harness able to inspect outputs in deeply nested checkouts too.
+    # The real application already writes these paths through its long-path layer.
+    root = Path('\\\\?\\' + str(root.resolve()))
     root.mkdir(parents=True)
     logs = root / 'logs'; logs.mkdir()
     foreign = root / 'Fremder Arbeitsordner ü'; foreign.mkdir()

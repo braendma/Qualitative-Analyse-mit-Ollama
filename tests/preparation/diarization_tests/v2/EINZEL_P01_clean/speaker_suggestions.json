@@ -1,0 +1,175 @@
+{
+  "schema": 1,
+  "kind": "speaker_suggestions",
+  "audio_sha256": "synthetic-no-audio",
+  "duration": 20,
+  "turns": [],
+  "segments": [
+    {
+      "id": 1,
+      "text": "Eine erfundene Frage zum Lernen heute",
+      "start": 4.0,
+      "end": 5.75,
+      "words": [
+        {
+          "word": "Eine",
+          "start": 4.0,
+          "end": 4.25,
+          "speaker": null,
+          "reason": "synthetic-fixture"
+        },
+        {
+          "word": " erfundene",
+          "start": 4.3,
+          "end": 4.55,
+          "speaker": null,
+          "reason": "synthetic-fixture"
+        },
+        {
+          "word": " Frage",
+          "start": 4.6,
+          "end": 4.85,
+          "speaker": null,
+          "reason": "synthetic-fixture"
+        },
+        {
+          "word": " zum",
+          "start": 4.9,
+          "end": 5.15,
+          "speaker": null,
+          "reason": "synthetic-fixture"
+        },
+        {
+          "word": " Lernen",
+          "start": 5.2,
+          "end": 5.45,
+          "speaker": null,
+          "reason": "synthetic-fixture"
+        },
+        {
+          "word": " heute",
+          "start": 5.5,
+          "end": 5.75,
+          "speaker": null,
+          "reason": "synthetic-fixture"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "text": "Ich lerne gern mit praktischen Beispielen im Unterricht",
+      "start": 8.0,
+      "end": 10.35,
+      "words": [
+        {
+          "word": "Ich",
+          "start": 8.0,
+          "end": 8.25,
+          "speaker": "SYNTHETIC_A",
+          "reason": "synthetic-fixture"
+        },
+        {
+          "word": " lerne",
+          "start": 8.3,
+          "end": 8.55,
+          "speaker": "SYNTHETIC_A",
+          "reason": "synthetic-fixture"
+        },
+        {
+          "word": " gern",
+          "start": 8.6,
+          "end": 8.85,
+          "speaker": "SYNTHETIC_A",
+          "reason": "synthetic-fixture"
+        },
+        {
+          "word": " mit",
+          "start": 8.9,
+          "end": 9.15,
+          "speaker": "SYNTHETIC_A",
+          "reason": "synthetic-fixture"
+        },
+        {
+          "word": " praktischen",
+          "start": 9.2,
+          "end": 9.45,
+          "speaker": "SYNTHETIC_A",
+          "reason": "synthetic-fixture"
+        },
+        {
+          "word": " Beispielen",
+          "start": 9.5,
+          "end": 9.75,
+          "speaker": "SYNTHETIC_A",
+          "reason": "synthetic-fixture"
+        },
+        {
+          "word": " im",
+          "start": 9.8,
+          "end": 10.05,
+          "speaker": "SYNTHETIC_A",
+          "reason": "synthetic-fixture"
+        },
+        {
+          "word": " Unterricht",
+          "start": 10.1,
+          "end": 10.35,
+          "speaker": "SYNTHETIC_A",
+          "reason": "synthetic-fixture"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "text": "Manchmal brauche ich dabei zusätzliche Hilfe",
+      "start": 12.0,
+      "end": 13.75,
+      "words": [
+        {
+          "word": "Manchmal",
+          "start": 12.0,
+          "end": 12.25,
+          "speaker": "SYNTHETIC_A",
+          "reason": "synthetic-fixture"
+        },
+        {
+          "word": " brauche",
+          "start": 12.3,
+          "end": 12.55,
+          "speaker": "SYNTHETIC_A",
+          "reason": "synthetic-fixture"
+        },
+        {
+          "word": " ich",
+          "start": 12.6,
+          "end": 12.85,
+          "speaker": "SYNTHETIC_A",
+          "reason": "synthetic-fixture"
+        },
+        {
+          "word": " dabei",
+          "start": 12.9,
+          "end": 13.15,
+          "speaker": "SYNTHETIC_A",
+          "reason": "synthetic-fixture"
+        },
+        {
+          "word": " zusätzliche",
+          "start": 13.2,
+          "end": 13.45,
+          "speaker": "SYNTHETIC_A",
+          "reason": "synthetic-fixture"
+        },
+        {
+          "word": " Hilfe",
+          "start": 13.5,
+          "end": 13.75,
+          "speaker": "SYNTHETIC_A",
+          "reason": "synthetic-fixture"
+        }
+      ]
+    }
+  ],
+  "person_mapping_confirmed": false,
+  "fixture_origin": "Hand-authored synthetic text and timestamps; no generated audio or model outputs."
+}

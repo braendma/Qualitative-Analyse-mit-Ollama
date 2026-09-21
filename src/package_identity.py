@@ -11,7 +11,7 @@ import re
 import sys
 
 
-RUNTIME_DEPENDENCIES = ('pandas', 'numpy', 'matplotlib', 'PyYAML', 'ollama', 'openpyxl')
+RUNTIME_DEPENDENCIES = ('pandas', 'numpy', 'matplotlib', 'PyYAML', 'ollama', 'openpyxl', 'faster-whisper','ctranslate2','av','onnxruntime','huggingface-hub','tokenizers','striprtf')
 BUILD_DEPENDENCIES = ('pyinstaller', 'pyinstaller-hooks-contrib')
 BUILD_FILES = ('bootstrap.py', 'windows.spec', 'resources.json', 'resource_contract.py',
                'build_manifest.py', 'requirements-build.txt')
@@ -87,11 +87,10 @@ def validate_frozen_package(root, executable):
         claimed = manifest['build_input_id']
         payload = {key: value for key, value in manifest.items() if key != 'build_input_id'}
         if (type(manifest['schema']) is not int or manifest['schema'] != 1
-                or manifest['kind'] != 'build-input-manifest'
+                or manifest['kind'] not in ('build-input-manifest','private-build-input-manifest')
                 or not isinstance(claimed, str)
                 or claimed != hashlib.sha256(_canonical(payload)).hexdigest()
-                or not isinstance(manifest['source_commit'], str)
-                or not re.fullmatch(r'(?:[0-9a-f]{40}|[0-9a-f]{64})', manifest['source_commit'])
+                or not ((manifest['kind']=='private-build-input-manifest' and manifest['source_commit'] is None and 'private' in str(manifest['version'])) or (manifest['kind']=='build-input-manifest' and isinstance(manifest['source_commit'],str) and re.fullmatch(r'(?:[0-9a-f]{40}|[0-9a-f]{64})',manifest['source_commit'])))
                 or not isinstance(manifest['version'], str)
                 or not re.fullmatch(r'[0-9][0-9A-Za-z.+-]{0,63}', manifest['version'])
                 or manifest['python'] != '.'.join(map(str, sys.version_info[:3]))

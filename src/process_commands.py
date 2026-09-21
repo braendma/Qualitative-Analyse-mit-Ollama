@@ -11,6 +11,8 @@ from project_paths import SOURCE_DIR
 
 INTERNAL_SCRIPT_FLAG = '--internal-script'
 APPROVED_SCRIPTS = frozenset({
+    'preparation/download_models.py', 'preparation/download_diarization_model.py',
+    'preparation/transcription_pipeline.py', 'preparation/transcribe_local.py', 'preparation/diarize_sortformer.py',
     '00_WORKFLOW_RUNNER.py', 'local_app.py', 'managed_ollama.py',
     'codebook_refinement.py',
     'clusterer.py', 'code_verification.py', 'blind_coding.py',
@@ -32,7 +34,7 @@ def validate_script(script):
         source = SOURCE_DIR.resolve(strict=True)
         canonical = path.resolve(strict=True)
         valid = (path.is_absolute() and path == canonical
-                 and path.parent == source and path.name in APPROVED_SCRIPTS
+                 and canonical.is_relative_to(source) and canonical.relative_to(source).as_posix() in APPROVED_SCRIPTS
                  and path.is_file())
     except (OSError, RuntimeError, ValueError):
         valid = False
@@ -46,5 +48,5 @@ def python_command(script, args=()):
     """Return argv, never a shell string or a basename-based replacement."""
     checked = validate_script(script)
     if getattr(sys, 'frozen', False):
-        return [sys.executable, INTERNAL_SCRIPT_FLAG, checked.name, *args]
+        return [sys.executable, INTERNAL_SCRIPT_FLAG, checked.relative_to(SOURCE_DIR).as_posix(), *args]
     return [sys.executable, str(script), *args]

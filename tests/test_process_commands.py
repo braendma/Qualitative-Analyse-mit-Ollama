@@ -35,6 +35,8 @@ class ProcessCommandsTests(unittest.TestCase):
         standard = {m['script'] for m in modules}
         self.assertEqual(len(standard), 20)
         self.assertEqual(commands.APPROVED_SCRIPTS, standard | {
+            'preparation/download_models.py', 'preparation/download_diarization_model.py',
+            'preparation/transcription_pipeline.py', 'preparation/transcribe_local.py', 'preparation/diarize_sortformer.py',
             '00_WORKFLOW_RUNNER.py', 'codebook_refinement.py', 'managed_ollama.py', 'local_app.py'})
 
     def test_frozen_approved_targets_and_nested_args(self):
@@ -42,7 +44,7 @@ class ProcessCommandsTests(unittest.TestCase):
             source = Path(temp).resolve() / 'src'; source.mkdir()
             with patch.object(commands, 'SOURCE_DIR', source), patch.object(sys, 'frozen', True, create=True):
                 for name in sorted(commands.APPROVED_SCRIPTS):
-                    script = source / name; script.write_text('pass\n', encoding='utf-8')
+                    script = source / name; script.parent.mkdir(exist_ok=True); script.write_text('pass\n', encoding='utf-8')
                     args = ['--command', 'binary with spaces', '--internal-script', 'clusterer.py', 'ä']
                     self.assertEqual(commands.python_command(script, args),
                                      [sys.executable, '--internal-script', name, *args])

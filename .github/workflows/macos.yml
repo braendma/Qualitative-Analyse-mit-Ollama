@@ -25,6 +25,17 @@ jobs:
       - name: Python regression tests (synthetic data, mocked models)
         shell: pwsh
         run: ./.venv/Scripts/python.exe -m unittest discover -s tests -p 'test_*.py'
+      - name: Audio and coding Python tests (no model downloads)
+        shell: pwsh
+        run: |
+          $env:PYTHONPATH='src;src/preparation;tests'
+          ./.venv/Scripts/python.exe -m unittest discover -s tests/preparation -p 'test_*.py'
+      - name: Audio and coding JavaScript tests
+        shell: pwsh
+        run: |
+          $testFiles = @(Get-ChildItem tests/preparation -Filter 'test_*.js' | Sort-Object Name | ForEach-Object FullName)
+          node --test @testFiles
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: JavaScript regression tests
         shell: pwsh
         run: |
@@ -54,6 +65,10 @@ jobs:
         run: PYTHONPATH=src:tests .venv-macos/bin/python3 -m unittest test_app_lifecycle.LifecycleProcessTests -v
       - name: Python regression tests (synthetic data, mocked models)
         run: .venv-macos/bin/python3 -m unittest discover -s tests -p 'test_*.py'
+      - name: Audio and coding Python tests (no model downloads)
+        run: PYTHONPATH=src:src/preparation:tests .venv-macos/bin/python3 -m unittest discover -s tests/preparation -p 'test_*.py'
+      - name: Audio and coding JavaScript tests
+        run: node --test tests/preparation/test_*.js
       - name: JavaScript regression tests
         run: node --test tests/test_*.cjs
       - name: Start the user launcher and check the local web server

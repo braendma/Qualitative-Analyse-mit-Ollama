@@ -8,7 +8,7 @@ const vm=require('node:vm');
 function setup(){
   const nodes=new Map(), requests=[],timers=new Map();let timerId=0;
   function element(){return {
-    value:'',hidden:false,checked:false,disabled:false,open:false,textContent:'',children:[],listeners:{},
+    style:{},value:'',hidden:false,checked:false,disabled:false,open:false,textContent:'',children:[],listeners:{},
     addEventListener(type,fn){this.listeners[type]=fn;},
     append(...children){this.children.push(...children);},
     replaceChildren(...children){this.children=children;},add(child){this.children.push(child);},
@@ -19,11 +19,12 @@ function setup(){
   function node(id){if(!nodes.has(id)){const n=element();n.id=id;nodes.set(id,n);}return nodes.get(id);}
   const context=vm.createContext({
     document:{addEventListener(){},getElementById:node,createElement:element,querySelectorAll:()=>[]},
-    location:{port:'1234',hash:''},sessionStorage:{getItem:()=>''},history:{},
+    location:{port:'1234',hash:''},sessionStorage:{values:new Map(),getItem(k){return this.values.get(k)||null;},setItem(k,v){this.values.set(k,String(v));},removeItem(k){this.values.delete(k);}},history:{},
     Option:function(text,value){this.text=text;this.value=value;},
     setInterval(){},setTimeout(fn){const id=++timerId;timers.set(id,fn);return id;},clearTimeout(id){timers.delete(id);},URL,URLSearchParams,
     fetch(url,options){return new Promise((resolve,reject)=>requests.push({url,options,reply(data,ok=true){resolve({ok,json:async()=>data,blob:async()=>data});},fail(text='Connection failed'){reject(new Error(text));}}));}
   });
+  context.window=context;
   vm.runInContext(fs.readFileSync(path.join(__dirname,'../src/local_app.js'),'utf8'),context);
   vm.runInContext("state={defaults:{llm:{},context:{},columns:{}},modules:[],projects:[]};project={id:'first',settings:{output_dir:'/synthetic/results'},uploads:{}};document.getElementById('output-dir').value=project.settings.output_dir;outputDirMode='explicit';",context);
   return {node,requests,run:code=>vm.runInContext(code,context),loadIdentity:()=>vm.runInContext(fs.readFileSync(path.join(__dirname,'../src/person_identity_ui.js'),'utf8'),context),

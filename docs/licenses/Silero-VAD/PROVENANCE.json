@@ -1,0 +1,58 @@
+{
+  "retrieved_at": "2026-09-21T09:54:58.926305+02:00",
+  "source_policy": "Official upstream GitHub repositories only; no model download or execution.",
+  "silero": {
+    "repository": "https://github.com/snakers4/silero-vad",
+    "tag": "v6.0",
+    "commit": "fba061dc5559f696e62171e9a0741782b0fdc23c",
+    "license_url": "https://raw.githubusercontent.com/snakers4/silero-vad/fba061dc5559f696e62171e9a0741782b0fdc23c/LICENSE",
+    "license_sha256": "2e63e9a38b6e8fc0c7bc37ce174caca1862870856c6daf5697cfb785e925520b",
+    "license_bytes": 1075,
+    "license_git_blob_sha1": "0bf5e90cac691b999d4a35044f97167d7bbbf0b9",
+    "copyright": "Copyright (c) 2020-present Silero Team",
+    "license": "MIT"
+  },
+  "faster_whisper": {
+    "repository": "https://github.com/SYSTRAN/faster-whisper",
+    "tag": "v1.2.1",
+    "commit": "65882eee9f5cdbeeb2d877f1131d48cf241b327d",
+    "license_url": "https://raw.githubusercontent.com/SYSTRAN/faster-whisper/65882eee9f5cdbeeb2d877f1131d48cf241b327d/LICENSE",
+    "license_sha256": "af6798135e729f8aa6c853936d037dfdea449734d26b8ea6a89805fca758c0d5",
+    "license_matches_bundled_notice": true,
+    "integration_commit": "dea24cbcc6cbef23ff599a63be0bbb647a0b23d6",
+    "integration_commit_subject": "Upgrade to Silero-VAD V6 (#1373)"
+  },
+  "packaged_asset": {
+    "path": "Windows/_internal/faster_whisper/assets/silero_vad_v6.onnx",
+    "bytes": 1245151,
+    "sha256": "4cbf549b8326f60f80f2536d9eefeb450a9abe83365a098031c89719f1be17d2",
+    "git_blob_sha1": "9febab9bc0aa5ae2b27e69243d813427212bfb36",
+    "matches_official_faster_whisper_release_blob": true,
+    "claim_of_byte_identity_to_silero_repo_model": false
+  },
+  "checked_official_metadata_urls": [
+    "https://api.github.com/repos/snakers4/silero-vad/git/ref/tags/v6.0",
+    "https://api.github.com/repos/SYSTRAN/faster-whisper/git/ref/tags/v1.2.1",
+    "https://api.github.com/repos/snakers4/silero-vad/git/trees/fba061dc5559f696e62171e9a0741782b0fdc23c?recursive=1",
+    "https://api.github.com/repos/SYSTRAN/faster-whisper/git/trees/65882eee9f5cdbeeb2d877f1131d48cf241b327d?recursive=1",
+    "https://raw.githubusercontent.com/SYSTRAN/faster-whisper/65882eee9f5cdbeeb2d877f1131d48cf241b327d/faster_whisper/vad.py"
+  ],
+  "package_staging_onedrive_changes": false,
+  "files": [
+    {
+      "path": "faster-whisper-LICENSE.txt",
+      "bytes": 1064,
+      "sha256": "af6798135e729f8aa6c853936d037dfdea449734d26b8ea6a89805fca758c0d5"
+    },
+    {
+      "path": "README.md",
+      "bytes": 1999,
+      "sha256": "e7cc7fe417adabe3cc759f573a2c01ffd5b3e2ef99e10f822ea6aa3f68391aa7"
+    },
+    {
+      "path": "Silero-VAD-LICENSE.txt",
+      "bytes": 1075,
+      "sha256": "2e63e9a38b6e8fc0c7bc37ce174caca1862870856c6daf5697cfb785e925520b"
+    }
+  ]
+}

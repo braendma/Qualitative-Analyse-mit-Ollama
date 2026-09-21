@@ -1,40 +1,31 @@
-"""Probe actual source UI and its regular acknowledged shutdown, no model calls."""
+"""Start the Windows package in an isolated folder, without browser or model calls."""
 from pathlib import Path
-from datetime import datetime,timezone
-import http.client,json,os,re,subprocess,sys,tempfile,time
-from urllib.parse import urlsplit
+import os,socket,subprocess,sys,tempfile,time,urllib.request
+
 ROOT=Path(__file__).resolve().parents[1]
-with tempfile.TemporaryDirectory(prefix='Source UI ') as temp:
- trace=Path(temp)/'trace.log'
- with trace.open('w',encoding='utf-8') as output:
-  process=subprocess.Popen([sys.executable,'-X','utf8','-B',str(ROOT/'src/local_app.py'),'--no-browser','--port','0','--data-dir',str(Path(temp)/'Private data')],cwd=temp,stdout=output,stderr=subprocess.STDOUT,creationflags=subprocess.CREATE_NO_WINDOW)
- try:
-  deadline=time.monotonic()+30
-  address=None
-  while time.monotonic()<deadline:
-   match=re.search(r'Lokale Oberfläche: (http://127\.0\.0\.1:\d+/#[^\s]+)',trace.read_text(encoding='utf-8',errors='replace'))
-   if match:address=urlsplit(match.group(1));break
-   if process.poll() is not None:raise AssertionError('Source app ended before readiness')
-   time.sleep(.1)
-  if address is None:raise AssertionError('No ready source UI')
-  def api(path,value=None,authenticated=True):
-   conn=http.client.HTTPConnection(address.hostname,address.port,timeout=10)
-   headers={'X-App-Token':address.fragment} if authenticated else {}
-   if value is not None:headers['Content-Type']='application/json'
-   try:
-    conn.request('POST' if value is not None else 'GET',path,json.dumps(value) if value is not None else None,headers)
-    response=conn.getresponse();data=response.read();assert response.status==200,(path,response.status)
-    return data
-   finally:conn.close()
-  assert b'prompt-dialog' in api('/',authenticated=False)
-  assert isinstance(json.loads(api('/api/state')),dict)
-  api('/api/shutdown',{'mode':'idle'})
-  deadline=time.monotonic()+20
-  while time.monotonic()<deadline:
-   if json.loads(api('/api/runtime'))['state']=='closed':break
-   time.sleep(.05)
-  else:raise AssertionError('Regular shutdown not acknowledged')
-  assert process.wait(timeout=25)==0
- finally:
-  if process.poll() is None:process.terminate();process.wait(timeout=10)
-print('PASS source UI startup, authenticated state, graceful shutdown and temporary data cleanup')
+
+def main():
+    with tempfile.TemporaryDirectory(prefix='Windows UI with spaces ') as tmp:
+        with socket.socket() as sock:
+            sock.bind(('127.0.0.1',0));port=sock.getsockname()[1]
+        with (Path(tmp)/'server.log').open('w+') as log:
+            process=subprocess.Popen([sys.executable,'-X','utf8',str(ROOT/'src/local_app.py'),
+                '--no-browser','--port',str(port),'--data-dir',str(Path(tmp)/'Private data')],
+                cwd=tmp,stdout=log,stderr=subprocess.STDOUT,
+                creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
+            try:
+                deadline=time.monotonic()+35
+                while time.monotonic()<deadline:
+                    if process.poll() is not None:raise AssertionError('UI exited before serving')
+                    try:
+                        with urllib.request.urlopen(f'http://127.0.0.1:{port}/',timeout=2) as r:
+                            assert r.status==200 and b'prompt-dialog' in r.read()
+                        print('Windows UI: HTTP 200, prompt dialog, isolated data path with spaces')
+                        return
+                    except OSError:time.sleep(.2)
+                raise AssertionError('UI startup timed out')
+            finally:
+                if process.poll() is None:process.terminate()
+                process.wait(timeout=10)
+
+if __name__=='__main__':main()

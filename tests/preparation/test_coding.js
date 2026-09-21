@@ -1,0 +1,15 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),C=require('../../src/preparation/coding_core');
+const p={schema:1,kind:'coded_documents',id:'test',history:[],documents:[{id:'D1',title:'Synthetisch',transcript_sha256:'abc',transcript_confirmed:true,segments:[{id:'1',start:0,end:3,text:'🙂 Spaß; "ja"\nNein',person:'P01',exclude:false}]}],categories:[{id:'C1',code:'Motivation > Freude',definition:'Freude',inclusion:'Positiv',exclusion:'Negativ',anchors:''},{id:'C2',code:'Motivation > Lernen',definition:'Lernen',inclusion:'',exclusion:'',anchors:''}],annotations:[]};
+const a={id:'A1',document_id:'D1',segment_id:'1',start:2,end:6,quote:'Spaß',category_id:'C1',origin:'manual',memo:''};
+const q=C.addAnnotation(p,a);assert.equal(p.annotations.length,0);assert.throws(()=>C.addAnnotation(q,a));assert.throws(()=>C.addAnnotation(p,{...a,quote:'falsch'}));
+const two=C.addAnnotation(q,{...a,id:'A2',category_id:'C2'});const out=C.exportsFor(two);assert.equal(out.count,2);
+assert.equal(out.segments.match(/PASS-/g).length,2);assert.equal(out.categories.includes('Einschluss'),true);
+const bad=structuredClone(two);bad.documents[0].segments[0].person='';assert.throws(()=>C.exportsFor(bad),/Personenzuordnung/);
+const restored=JSON.parse(JSON.stringify(two));assert.deepEqual(C.exportsFor(restored),out);
+const duplicate=structuredClone(two);duplicate.categories[1].code=duplicate.categories[0].code;assert.throws(()=>C.validate(duplicate));
+const ex=structuredClone(two);ex.documents[0].segments[0].exclude=true;assert.throws(()=>C.exportsFor(ex),/ausgeschlossen/);
+const mixed=structuredClone(two);mixed.documents[0].segments.push({id:'excluded',start:3,end:4,text:'EXCLUDED_INTERVIEWER_ONLY',person:'SYN-I',exclude:true});mixed.annotations.push({...a,id:'AX',segment_id:'excluded',start:0,end:25,quote:'EXCLUDED_INTERVIEWER_ONLY'});mixed.annotations.at(-1).end=Array.from(mixed.annotations.at(-1).quote).length;
+const filtered=C.exportsFor(mixed);assert.equal(filtered.count,2);assert.equal(filtered.categories.includes('EXCLUDED_INTERVIEWER_ONLY'),false);assert.equal(filtered.segments.includes('EXCLUDED_INTERVIEWER_ONLY'),false);assert.equal(mixed.annotations.length,3);
+assert.equal(C.slice('🙂x',0,1),'🙂');assert.throws(()=>C.codePath('A > > B'));assert.throws(()=>C.codePath('A>B>C>D>E'));
+const target=path.join(__dirname,'test_export');fs.mkdirSync(target,{recursive:true});fs.writeFileSync(path.join(target,'maxqda_export.csv'),out.segments);fs.writeFileSync(path.join(target,'Kategoriesystem.csv'),out.categories);fs.writeFileSync(path.join(target,'project.json'),JSON.stringify(two,null,2));
+console.log('Coding core: project reload, Unicode offsets, duplicate protection, person gates, multi-coding and CSV tests passed.');

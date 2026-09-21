@@ -5,7 +5,7 @@ from pathlib import Path
 import stat
 
 MAX_ENTRIES = 1000
-KINDS = {'directory', 'segments', 'codebook'}
+KINDS = {'directory', 'segments', 'codebook', 'audio'}
 EXTENSIONS = {'.csv', '.xlsx'}
 
 
@@ -75,7 +75,7 @@ def browse(path='', kind='directory'):
                     row = {'name': entry.name, 'path': str(child)}
                     if stat.S_ISDIR(info.st_mode):
                         directories.append(row)
-                    elif kind != 'directory' and stat.S_ISREG(info.st_mode) and child.suffix.lower() in EXTENSIONS:
+                    elif kind != 'directory' and stat.S_ISREG(info.st_mode) and child.suffix.lower() in ({'.wav','.mp3','.m4a','.mp4','.flac','.ogg','.wma','.aac'} if kind=='audio' else EXTENSIONS):
                         files.append(row)
                 except (OSError, RuntimeError):
                     # A disappearing or inaccessible child is not an alternate path.

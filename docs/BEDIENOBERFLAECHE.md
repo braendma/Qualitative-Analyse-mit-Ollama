@@ -2,7 +2,7 @@
 
 # Lokale Bedienoberfläche
 
-**Version 0.5.1.** Prüfungen und Grenzen stehen im [Testbericht](TEST_REPORT.md).
+**Version 0.5.0-beta.2.** Prüfungen und Grenzen stehen im [Testbericht](TEST_REPORT.md).
 
 Die Oberfläche führt durch **Projekt → Eingaben prüfen → Analyse → Ergebnisse**. Sie startet den bestehenden Workflow-Runner und speichert unveränderliche Dateiversionen pro Lauf. Python- und YAML-Dateien müssen für die normale Bedienung nicht bearbeitet werden.
 

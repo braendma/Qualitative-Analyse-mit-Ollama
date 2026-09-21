@@ -1,20 +1,22 @@
 # Qualitative Analyse mit Ollama
 
-**Version 0.5.1.** Prüfungen und Grenzen stehen im [Testbericht](docs/TEST_REPORT.md).
+**Version 8.0.0-beta.1 – öffentliche Vorabversion.** Zwei Arbeitswege in einem Projekt: **Vorhandener Export** für bereits codierte Daten und **Transkription und Codierung** für Audio oder Text. Das ausklappbare Menü links erlaubt den Wechsel zwischen beiden Wegen.
 
-[Technischer Kurzbericht (PDF, 3 Seiten)](docs/technical_report/technical_report.pdf) · [Methodischer Überblick](docs/METHODOLOGY.md) · [Handbuch](docs/HANDBUCH.md)
+[Beta-Anleitung](docs/BETA_V8.md) · [Sprechererkennung](docs/SPRECHERERKENNUNG.md) · [Handbuch](docs/HANDBUCH.md) · [Änderungen](docs/RELEASE_NOTES.md)
 
-| Download | Voraussetzung | Start |
-|---|---|---|
-| [Windows Standalone](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/download/v0.5.1/QualitativeAnalyse-windows-x64.zip) | Python ist enthalten | ZIP entpacken, `QualitativeAnalyse.exe` öffnen |
-| [Windows mit Python](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/download/v0.5.1/QualitativeAnalyse-0.5.1-windows-python.zip) | Eigene Python-Installation | `Einrichtung.cmd`, dann `Start_Oberflaeche.cmd` |
-| [macOS mit Python](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/download/v0.5.1/QualitativeAnalyse-0.5.1-macos-python.zip) | Eigene Python-Installation | `start/macos/Einrichtung.command`, dann `Start_Oberflaeche.command` |
+| Paket | Einrichtung |
+|---|---|
+| Windows Standalone | ZIP vollständig entpacken, `QualitativeAnalyse.exe` starten. Python ist enthalten. |
+| Windows Python | Python 3.12; `Einrichtung.cmd`, danach `Start_Oberflaeche.cmd`. |
+| macOS Python | Python 3.12; `start/macos/Einrichtung.command`, danach `Start_Oberflaeche.command`. Kein Mac-Standalone. |
 
-Alle ZIPs vollständig entpacken. Die beiden Python-Pakete enthalten denselben geprüften Quellstand und jeweils eine passende Startanleitung. Ollama und Modelle werden separat eingerichtet. Ein natives Mac-Paket ist noch nicht enthalten.
+Projekte liegen standardmäßig in **Dokumente/Qualitative Analyse/Projekte**, Modelle daneben unter **Modelle**. Projektname und tatsächlicher Speicherpfad sind in der Oberfläche sichtbar. Modelle werden nach ausdrücklicher Auswahl einmal zentral heruntergeladen und projektübergreifend wiederverwendet. Audioverarbeitung bleibt lokal auf CPU.
 
-**Patch 0.5.1:** Deutungen im Bericht können mit nachvollziehbarem Verlauf korrigiert werden; Zitate, Quellenkennungen und berechnete Tabellen bleiben gesperrt. Verknüpfte Prüfstellen führen zu betroffenen Meta-SWOT-Elementen oder ausdrücklich gröberen Folgebereichen. Die Ollama-Cloud-Antwortvalidierung wurde ergänzt. Ein synthetischer Gemma4:31b-Test bestand alle 20 Module, beide Perspektiven und die Prüfserien; der vollständige lokale Granite4.2:30b-Nachtest läuft getrennt weiter. Fachliche Vorschläge bleiben menschlich zu prüfen. [Änderungen und Grenzen](docs/RELEASE_NOTES.md).
+Whisper transkribiert; das separat installierbare Sortformer v2 erkennt Sprecherwechsel. Beide Schritte unterstützen **bis 120 Minuten und 2 GiB**. Sprecherlabels und Text müssen geprüft werden; maximal vier Stimmen, keine verlässliche Personenidentifikation. Aufnahmen können nacheinander abgeschlossen und erst danach im selben Projekt codiert werden. Eine automatische Mehrfachdatei-Warteschlange ist nicht vorhanden.
 
-Die 0.5-Reihe ergänzt ein **Windows-Paket mit enthaltener Python-Laufzeit**, lokale Datei- und Ergebnisordnerauswahl sowie kontrolliertes Beenden und technische Fehlerprotokolle. [Windows-Kurzanleitung](docs/WINDOWS_STANDALONE.txt) · [Build und Paketprüfung](packaging/README.md).
+**Prüfstand und Grenzen:** vollständiger Windows-Praxistest mit synthetischem 14:25-Minuten-Interview, zwei Stimmen und Geräuschen einschließlich Bearbeitung, Codierung, Export und Neustart. Zusätzlich 120-Minuten-CPU-Sortformer-Dauertest mit wiederholtem synthetischem Material. Vollständige zweistündige Whisper-Transkription und praktischer macOS-Audiotest stehen aus. Automatisierte Windows/macOS-Installationstests ersetzen diese Praxisprüfung nicht. Granite-Gesamtnachtest einschließlich Serien noch offen; siehe [Beta-Prüfstand](docs/BETA_V8.md). Der synthetische Interview-Solltext liegt unter `demo/interview/`. Die mit ElevenLabs erzeugte Audiodatei wird wegen der Anbieterbedingungen für KI-Testdatensätze nicht mitveröffentlicht.
+
+Ollama-Analyse läuft standardmäßig lokal. Cloud ist nur nach ausdrücklicher Auswahl und Übertragungsbestätigung verfügbar; kein automatischer Wechsel. Modellgewichte, Nutzerprojekte und Schlüssel sind nicht in den Paketen enthalten.
 
 In dieser Version ergänzen **Coverage und Blind Spots**, der
 **Information-Loss-Audit** und die **Codebook-Diagnostik** die 15 Basismodule. Alle drei sind optional, standardmäßig
