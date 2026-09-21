@@ -81,10 +81,10 @@ Seit Beta 3: lesbarere Clusterdiagramme und Konfusionsmatrix, anklickbare Person
 **Source-Version als Alternative:**
 
 1. Das gesamte Repository über **Code → Download ZIP** herunterladen und entpacken; alle Dateien und Unterordner zusammenlassen.
-2. Python **3.10 oder neuer** installieren. Unter Windows einmal `Einrichtung.cmd` öffnen; dabei werden Python-Pakete aus dem Internet installiert, keine Modelle ausgeführt.
+2. Python **3.12** installieren. Unter Windows einmal `Einrichtung.cmd` öffnen; dabei werden Python-Pakete aus dem Internet installiert, keine Modelle ausgeführt.
 3. `Start_Oberflaeche.cmd` öffnen. Alternativ aus einer passenden Python-Umgebung `python -X utf8 src/local_app.py` verwenden.
 
-**macOS:** Eine neue native Mac-Distribution ist pausiert. Die bisherigen Source-Starter bleiben unter `start/macos/` verfügbar. Die Source-Installationsprüfung am Release-Commit `7f14156` bestand einschließlich der Prozess- und HTTP-Starttests. Ein natives Mac-Paket und dessen Abnahme bleiben zurückgestellt. [Mac-Source-Anleitung und Grenzen](start/macos/README.md).
+**macOS:** Das Python-Paket der v8-Beta enthält die Starter unter `start/macos/`. Python 3.12 separat installieren und das gesamte Paket entpacken. Die GitHub-CI prüft Einrichtung, Regressionen und HTTP-Start; ein praktischer Audiotest auf einem physischen Mac steht noch aus. Ein Mac-Standalone wird nicht angeboten. [Mac-Anleitung und Grenzen](start/macos/README.md).
 
 Für lokale Modellanalysen zusätzlich Ollama und ein passendes Modell bereitstellen. Beides ist nicht im Windows-Paket enthalten. Ohne lokales Ollama bleiben Vorbereitung, reine Diagnosen ohne Modellbedarf und ausdrücklich freigegebene Cloud-Anbieter nutzbar.
 

@@ -11,5 +11,18 @@ const ex=structuredClone(two);ex.documents[0].segments[0].exclude=true;assert.th
 const mixed=structuredClone(two);mixed.documents[0].segments.push({id:'excluded',start:3,end:4,text:'EXCLUDED_INTERVIEWER_ONLY',person:'SYN-I',exclude:true});mixed.annotations.push({...a,id:'AX',segment_id:'excluded',start:0,end:25,quote:'EXCLUDED_INTERVIEWER_ONLY'});mixed.annotations.at(-1).end=Array.from(mixed.annotations.at(-1).quote).length;
 const filtered=C.exportsFor(mixed);assert.equal(filtered.count,2);assert.equal(filtered.categories.includes('EXCLUDED_INTERVIEWER_ONLY'),false);assert.equal(filtered.segments.includes('EXCLUDED_INTERVIEWER_ONLY'),false);assert.equal(mixed.annotations.length,3);
 assert.equal(C.slice('🙂x',0,1),'🙂');assert.throws(()=>C.codePath('A > > B'));assert.throws(()=>C.codePath('A>B>C>D>E'));
-const target=path.join(__dirname,'test_export');fs.mkdirSync(target,{recursive:true});fs.writeFileSync(path.join(target,'maxqda_export.csv'),out.segments);fs.writeFileSync(path.join(target,'Kategoriesystem.csv'),out.categories);fs.writeFileSync(path.join(target,'project.json'),JSON.stringify(two,null,2));
+// Test exports belong to an isolated temporary folder, never tracked fixtures.
+const target=fs.mkdtempSync(path.join(os.tmpdir(),'qualitative-coding-export-'));
+try {
+  fs.writeFileSync(path.join(target,'maxqda_export.csv'),out.segments);
+  fs.writeFileSync(path.join(target,'Kategoriesystem.csv'),out.categories);
+  fs.writeFileSync(path.join(target,'project.json'),JSON.stringify(two,null,2));
+  assert.equal(fs.readFileSync(path.join(target,'maxqda_export.csv'),'utf8'),out.segments);
+  assert.equal(fs.readFileSync(path.join(target,'Kategoriesystem.csv'),'utf8'),out.categories);
+  assert.deepEqual(C.exportsFor(JSON.parse(fs.readFileSync(path.join(target,'project.json'),'utf8'))),out);
+} finally {
+  assert.equal(path.dirname(path.resolve(target)),path.resolve(os.tmpdir()));
+  assert.ok(path.basename(target).startsWith('qualitative-coding-export-'));
+  fs.rmSync(target,{recursive:true,force:true});
+}
 console.log('Coding core: project reload, Unicode offsets, duplicate protection, person gates, multi-coding and CSV tests passed.');
