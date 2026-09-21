@@ -21,7 +21,8 @@ class RepetitionFailureHelpTests(unittest.TestCase):
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]['module'], 'blind_coding')
         self.assertEqual(rows[0]['kind'], 'context')
-        self.assertIn('Kontextfenster', rows[0]['cause'])
+        self.assertIn('Rechengrenze', rows[0]['cause'])
+        self.assertIn('Modellfenster', rows[0]['cause'])
         self.assertNotIn('PRIVATE', json.dumps(rows))
         self.assertEqual(manifest, before)
 

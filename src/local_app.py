@@ -820,7 +820,14 @@ class App(ReviewWorkspace):
                 config=job_storage.config_path(folder,job)
             try:
                 checked=self.validate_config(config)
-                llm=yaml.safe_load(config.read_text(encoding='utf-8'))['llm']
+                cfg=yaml.safe_load(config.read_text(encoding='utf-8'))
+                llm=cfg['llm']
+                if not resume:
+                    from output_path_advice import require_new_output_paths, RUN_NAME_RESERVE
+                    from stability_analysis import configured_plan
+                    planned_root=parent / ('QualitativeAnalyse_' + jid) / 'runs' / RUN_NAME_RESERVE
+                    require_new_output_paths(planned_root, RUNNER.topological_order(RUNNER.normalize_modules(cfg)),
+                        plans=(configured_plan(config), configured_plan(config, kind='sensitivity')))
                 needs_model=any(m.get('requires_model',True) for m in checked['modules'])
                 selected=self.authorize_llm(pid,llm) if needs_model else {'provider':'not_required','model':''}
                 from managed_ollama import preflight

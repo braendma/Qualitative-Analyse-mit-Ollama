@@ -1,4 +1,4 @@
-"""Non-blocking path advice for NEW runs; never move or reject existing runs.
+"""Path advice and sync-bound preflight for NEW runs; never relocate old runs.
 
 Lengths use a representative generated checkpoint path, not a promise covering
 every configured output name, filesystem, cloud library or synchronisation app.
@@ -8,6 +8,82 @@ from pathlib import Path
 import sys
 
 from filesystem_paths import canonical_path
+
+
+RUN_NAME_RESERVE = '20000101T000000-00000000'
+
+
+def _path_limits(path):
+    """Known local sync bounds, not a remote library or Explorer guarantee."""
+    path = canonical_path(path)
+    units = lambda value: len(str(value).encode('utf-16-le')) // 2
+    reasons = []
+    if any(units(part) > 255 for part in path.parts if part != path.anchor):
+        reasons.append('eine Datei-/Ordnerkomponente überschreitet 255 UTF-16-Zeichen')
+    relatives = []
+    for key in ('OneDrive', 'OneDriveConsumer', 'OneDriveCommercial'):
+        value = os.environ.get(key)
+        if not value or not Path(value).is_absolute():
+            continue
+        try:
+            relative = path.relative_to(canonical_path(value))
+        except ValueError:
+            continue
+        relatives.append(units(relative.as_posix()))
+    if relatives:
+        cloud = max(relatives)
+        if cloud > 400:
+            reasons.append(f'OneDrive-relativer Pfad {cloud} überschreitet 400 UTF-16-Zeichen')
+        if units(path) > 520:
+            reasons.append(f'lokaler OneDrive-Pfad {units(path)} überschreitet 520 UTF-16-Zeichen')
+    return reasons
+
+
+def require_new_output_paths(run_root, modules, *, plans=()):
+    """Reject overlong NEW layouts before inference; never relocate/resume data.
+
+    Uses configured output names and actual planned diagnostic sample names.
+    Checkpoint names reserve all SHA256 bits and the longer internal namespaces;
+    this conservative reservation is identified explicitly in the error. Custom
+    module side outputs and remote library prefixes cannot be predicted here.
+    """
+    run_root = canonical_path(run_root)
+
+    def check(path, kind):
+        reasons = _path_limits(path)
+        if reasons:
+            raise ValueError('Neuer Ergebnislauf abgewiesen: ' + '; '.join(reasons)
+                             + f' ({kind}). Einen kürzeren Ergebnisordner wählen. '
+                               'Bestehende Läufe bleiben unverändert. Die Prüfung bestätigt keine Cloud-Synchronisation.')
+
+    def outputs(root, selected):
+        check(root / 'workflow_manifest.json', 'Laufmanifest')
+        for module in selected:
+            for name in module.get('outputs', []):
+                check(root / name, 'deklarierte Modulausgabe')
+            check(root / ('execution_' + module['id'] + '.log'), 'Modulprotokoll')
+            if module.get('requires_model', True):
+                # Current internal helpers may use a namespace longer than the
+                # module ID; the thematic namespace is the longest suffix.
+                namespace = max((module['id'] + '_thematic_assignments',
+                                 'comparison_person_reduction'), key=len)
+                check(root / '_checkpoints' / namespace / ('a' * 52 + '.json'),
+                      'konservative Reserve für Teil-Checkpoints')
+
+    outputs(run_root, modules)
+    for plan in plans:
+        if not plan:
+            continue
+        series = run_root / ('_' + plan['kind'] + '_repetitions')
+        if plan['kind'] == 'sensitivity':
+            configs = {item['configuration_id']: item['config'] for item in plan['configurations']}
+        else:
+            configs = {'baseline': plan['config']}
+        for sample in plan['samples']:
+            config = configs[sample.get('configuration_id', 'baseline')]
+            selected = [module for module in config['pipeline']['modules'] if module.get('enabled', True)]
+            outputs(series / sample['sample_id'] / RUN_NAME_RESERVE, selected)
+            check(series / (sample['sample_id'] + '.supervision.request.json'), 'Serienaufsicht')
 
 
 def output_path_check(parent, *, app_layout=True, diagnostics=True, run_prefix=''):
@@ -46,7 +122,7 @@ def output_path_check(parent, *, app_layout=True, diagnostics=True, run_prefix='
             continue
         length = len(cloud_relative.as_posix().encode('utf-16-le')) // 2
         cloud_units = max(cloud_units or 0, length)
-    if cloud_units is not None and (cloud_units >= 400 or units >= 520):
+    if cloud_units is not None and (cloud_units > 400 or units > 520):
         warnings.append(
             'Der Beispielpfad liegt im konfigurierten OneDrive-Ordner und kann dessen Pfadlängengrenzen erreichen. '
             'Vor einem neuen Lauf ein kürzeres Ziel wählen und den Synchronisationsstatus in OneDrive prüfen. '

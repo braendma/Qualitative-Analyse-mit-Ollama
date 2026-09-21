@@ -416,6 +416,8 @@ def main(argv=None):
             print('Hinweis zum Ergebnisordner: ' + warning, file=sys.stderr)
         folder_name = run_id if explicit_root is not None else "QualitativeAnalyse_" + run_id
         output_dir = io_path(output_parent / folder_name)
+        from output_path_advice import require_new_output_paths
+        require_new_output_paths(output_dir, modules, plans=(stability_plan, sensitivity_plan))
         output_dir.mkdir(exist_ok=False)
         completed_steps = []
         manifest = {"run_id": run_id, "started_at": datetime.now().isoformat(),
