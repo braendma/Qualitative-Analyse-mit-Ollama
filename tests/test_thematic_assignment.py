@@ -47,8 +47,13 @@ class ThematicAssignmentTests(unittest.TestCase):
             array = settings['response_schema']['properties']['assignments']
             self.assertEqual(array['minItems'], len(cells))
             self.assertEqual(array['maxItems'], len(cells))
-            self.assertEqual(array['items']['properties']['topic_id']['enum'], sorted({c['topic_id'] for c in cells}))
-            self.assertEqual(array['items']['properties']['unit_id']['enum'], sorted({c['unit_id'] for c in cells}))
+            self.assertFalse(array['additionalItems'])
+            self.assertEqual(len(array['items']), len(cells))
+            for row, cell in zip(array['items'], cells):
+                self.assertEqual(row['properties']['topic_id']['enum'], [cell['topic_id']])
+                self.assertEqual(row['properties']['unit_id']['enum'], [cell['unit_id']])
+                self.assertEqual(row['required'], ['topic_id', 'unit_id', 'status'])
+                self.assertFalse(row['additionalProperties'])
             calls.append(settings['response_schema'])
             return valid(messages, settings)
         rows = execute_assignments(basis, topics, {**PARAMS, 'batch_items': 2}, module='swot', llm=llm)
@@ -79,6 +84,22 @@ class ThematicAssignmentTests(unittest.TestCase):
                          {('T1','u0'),('T1','u1'),('T1','u2'),('T2','u0')})
         self.assertIn('material_content_fingerprint', calls[0]['binding'])
         self.assertEqual(count_topics(basis, topics, result)['topics'][0]['counts']['mentioned']['exact_person_count'], 1)
+
+    def test_cross_pair_is_rejected_even_when_backend_ignores_schema(self):
+        basis, topics = fixture(2)
+        topics[1]['scope_unit_ids'] = ['u0']
+        calls = []
+        def llm(messages, settings):
+            cells = payload(messages)['cells']
+            rows = [{**cell, 'status': 'supported'} for cell in cells]
+            # Both IDs are individually present, but this pair is not requested.
+            rows[-1] = {'topic_id': 'T2', 'unit_id': 'u1', 'status': 'supported'}
+            calls.append(settings['response_schema'])
+            return json.dumps({'assignments': rows})
+        with self.assertRaisesRegex(ValueError, 'nicht angeforderte Zelle'):
+            execute_assignments(basis, topics, PARAMS, module='swot', llm=llm)
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(calls[0], calls[1])
 
     def test_serial_parallel_equivalent_and_flat_coordinator(self):
         basis, topics = fixture(4)
@@ -152,6 +173,35 @@ class ThematicAssignmentTests(unittest.TestCase):
         self.assertIsNone(result['counts']['mentioned']['exact_person_count'])
         self.assertEqual(result['coverage']['status_counts']['unclear'], 1)
         self.assertEqual(calls[-1]['temperature'], 0.0)
+
+    def test_final_failure_retains_safe_specific_reason_without_model_content(self):
+        from failure_help import failure_help
+        basis, topics = fixture(1)
+        private = 'SYNTHETIC_SECRET_DO_NOT_LOG'
+        cell = {'topic_id': 'T1', 'unit_id': 'u0', 'status': 'supported'}
+        cases = [
+            (private, 'kein eindeutiges JSON-Objekt'),
+            (json.dumps({'assignments': []}), 'unvollständig; fehlende Zellen'),
+            (json.dumps({'assignments': [cell, cell]}), 'doppelte Zelle'),
+            (json.dumps({'assignments': [{**cell, 'unit_id': private}]}), 'nicht angeforderte Zelle'),
+            (json.dumps({'assignments': [{**cell, 'status': private}]}), 'nicht erlaubten Status'),
+            (json.dumps({'assignments': [{**cell, 'quote': private}]}), 'Ungültige Felder'),
+        ]
+        for response, reason in cases:
+            with self.subTest(reason=reason):
+                calls = []
+                def llm(messages, settings):
+                    calls.append(messages)
+                    return response
+                with self.assertRaises(ValueError) as raised:
+                    execute_assignments(basis, topics[:1], PARAMS, module='swot', llm=llm)
+                error = str(raised.exception)
+                self.assertIn('nach Korrektur', error)
+                self.assertIn(reason, error)
+                self.assertNotIn(private, error)
+                self.assertNotIn(private, str(calls))
+                self.assertEqual(len(calls), 2)
+                self.assertEqual(failure_help('ValueError: ' + error)['kind'], 'response')
 
     def test_technical_transport_failure_not_converted_to_unclear_or_repaired(self):
         basis, topics = fixture(1)

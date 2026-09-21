@@ -510,6 +510,32 @@ def validate_cluster_segment_ids(clusters, allowed_ids):
 
     return validated
 
+def repair_cluster_coverage(clusters, segments_payload, system_prompt, user_prompt, ollama_params):
+    """Ask for at most two complete replacements; never assign missing text ourselves."""
+    expected = {segment['id'] for segment in segments_payload}
+    for attempt in range(3):
+        assigned = {sid for cluster in clusters for sid in cluster['segments']}
+        missing = expected - assigned
+        if not missing:
+            return clusters
+        if attempt == 2:
+            raise LLMResponseError(f"Clusterantwort unvollständig: {len(missing)} Segmente fehlen nach zwei Vollständigkeitskorrekturen.")
+        logger.warning('[Cluster-Coverage] %d fehlende Segmente; Korrektur %d/2.', len(missing), attempt + 1)
+        correction = (
+            user_prompt
+            + '\n\nDie vorherige Clusterantwort hat folgende Eingabe-IDs ausgelassen: '
+            + json.dumps(sorted(missing), ensure_ascii=False)
+            + '\nErzeuge die vollständige Clusterantwort erneut anhand ALLER oben gelieferten '
+              'Originalsegmente. Ordne jede Eingabe-ID mindestens einem inhaltlich passenden '
+              'Cluster zu; bilde bei Bedarf einen eigenen Cluster. Erfinde keine IDs oder Aussagen. '
+              'Antworte ausschließlich im vorgegebenen JSON-Format.'
+        )
+        repaired = safe_json_loads(llm_self_repair(system_prompt, correction, ollama_params))
+        values = repaired.get('clusters') if isinstance(repaired, dict) else repaired
+        clusters = validate_cluster_segment_ids(normalize_clusters(values), expected)
+    raise AssertionError('unreachable')
+
+
 def run_clustering(
     df: pd.DataFrame,
     ollama_params: dict,
@@ -867,13 +893,8 @@ def run_clustering(
                 [segment["id"] for segment in segments_payload]
             )
 
-            if not clusters:
-                raise LLMResponseError(f"Keine belegten Cluster für vorhandene Eingabe: {code_path}")
-            assigned = {sid for c in clusters for sid in c["segments"]}
-            expected = {s["id"] for s in segments_payload}
-            if assigned != expected:
-                raise LLMResponseError(f"Clusterantwort unvollständig: {len(expected - assigned)} Segmente fehlen.")
-            return clusters
+            return repair_cluster_coverage(
+                clusters, segments_payload, system_prompt, user_prompt, ollama_params)
         clusters = PartCheckpoint('clusterer', ollama_params).run(
             code_path, {'system':system_prompt,'user':user_prompt,'prompts':prompts,'context':context,'segments':segments_payload}, compute_part)
 
@@ -1041,4 +1062,3 @@ def run_clustering(
     )
 
     return md, output
-

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import base64
 import json
 import os
 import tempfile
@@ -61,7 +62,8 @@ def _replace_atomic(temporary, destination):
 def atomic_text(path, text):
     path = io_path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    fd, temporary = tempfile.mkstemp(prefix=path.name + '.', suffix='.tmp', dir=path.parent)
+    # A temporary sibling must not repeat a possibly long artifact filename.
+    fd, temporary = tempfile.mkstemp(prefix='.qa-', suffix='.tmp', dir=path.parent)
     try:
         with os.fdopen(fd, 'w', encoding='utf-8', newline='\n') as handle:
             handle.write(text)
@@ -170,7 +172,16 @@ class PartCheckpoint:
     def run(self, key, inputs, compute):
         if self.directory is None:
             return compute()
-        path = self.directory / (fingerprint(key) + '.json')
+        digest = fingerprint(key)
+        # Lowercase Base32 retains all 256 hash bits and is unambiguous even on
+        # case-insensitive Windows/macOS volumes, saving 12 filename characters.
+        compact = base64.b32encode(bytes.fromhex(digest)).decode('ascii').rstrip('=').lower()
+        path = self.directory / (compact + '.json')
+        legacy = self.directory / (digest + '.json')
+        if legacy.exists():
+            if path.exists():
+                raise ValueError('Teil-Checkpoint liegt unter zwei Dateinamen vor; Originalablage prüfen.')
+            path = legacy
         expected = fingerprint({'identity':self.identity,'key':key,'inputs':inputs})
         if path.exists():
             data = json.loads(path.read_text(encoding='utf-8'))

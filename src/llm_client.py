@@ -1,5 +1,8 @@
 """Bounded Ollama requests. Credentials come only from the named environment variable."""
 import logging
+import copy
+import json
+import math
 import os
 import ssl
 import time
@@ -24,8 +27,17 @@ class ContextBudgetError(LLMError):
     pass
 
 
+def request_timeout_seconds(settings):
+    """Validate a finite transport wait; never accept an unlimited timeout."""
+    value = settings.get('timeout_seconds', 180)
+    if type(value) not in (int, float) or not 1 <= value <= 3600 or not math.isfinite(value):
+        raise ValueError('Die Antwortwartezeit (timeout_seconds) muss eine endliche Zahl zwischen 1 und 3600 Sekunden sein.')
+    return float(value)
+
+
 def request_chat(backend, request, settings, *, api_key=None):
     from llm_providers import transport_selection, HTTPChatClient
+    timeout = request_timeout_seconds(settings)
     try:
         selected = transport_selection(settings, request['model'])
     except ValueError as exc:
@@ -40,6 +52,19 @@ def request_chat(backend, request, settings, *, api_key=None):
             raise LLMTransportError('Ungültige lokale Laufzeitadresse.')
         host = managed_host
     schema = settings.get('response_schema')
+    if provider == 'ollama_cloud' and schema and settings.get('structured_outputs', True):
+        # Cloud has no schema-constrained decoding. Preserve the same response
+        # contract as prompt guidance; callers still validate the real response.
+        request = copy.deepcopy(request)
+        request.pop('format', None)
+        guidance = ('Verbindliches Ausgabeformat für diese einzelne Antwort: Gib genau einen '
+                    'JSON-Wert entsprechend dem folgenden Schema aus, ohne Markdown. '
+                    'Vergleichsmaterial erweitert nicht den Antwortumfang. '
+                    'Beachte insbesondere vorgegebene enum-Werte und den Wurzeltyp. JSON-Schema:\n'
+                    + json.dumps(schema, ensure_ascii=False, separators=(',', ':')))
+        instruction = {'role': 'system', 'content': guidance}
+        if instruction not in request['messages']:
+            request['messages'].insert(0, instruction)
     if schema and not cloud and settings.get('structured_outputs', True):
         request['format'] = schema
     num_ctx = int(settings.get('num_ctx', 32768))
@@ -57,9 +82,9 @@ def request_chat(backend, request, settings, *, api_key=None):
     if provider == 'ollama_cloud': headers['Authorization'] = 'Bearer ' + key
     if provider in ('ollama_local', 'ollama_cloud'):
         client = backend.Client(host=host, headers=headers, verify=ssl.create_default_context(),
-                                timeout=float(settings.get('timeout_seconds', 180))) if hasattr(backend, 'Client') else backend
+                                timeout=timeout) if hasattr(backend, 'Client') else backend
     else:
-        client = HTTPChatClient(provider, key, float(settings.get('timeout_seconds', 180)))
+        client = HTTPChatClient(provider, key, timeout)
     attempts = int(settings.get('max_attempts', 3))
     if not 1 <= attempts <= 5:
         raise ValueError('max_attempts muss zwischen 1 und 5 liegen.')

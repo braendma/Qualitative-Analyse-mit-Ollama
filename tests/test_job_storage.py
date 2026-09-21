@@ -41,7 +41,7 @@ class JobStorageTests(unittest.TestCase):
             folder, config, parent, job = bound_workspace(Path(temp))
             root = storage.research_root(folder, job)
             self.assertEqual(canonical_path(root.parent), parent.resolve())
-            self.assertTrue(root.name.startswith('QualitativeAnalyse_'))
+            self.assertEqual(root.name, 'QualitativeAnalyse_' + folder.name)
             self.assertEqual(storage.config_path(folder, job), config.resolve())
             self.assertEqual(storage.runs_root(folder, job), root / 'runs')
             self.assertEqual(storage.review_root(folder, job), root / 'review')

@@ -1,0 +1,13 @@
+# Zusammenhängende Stellen nach einer Berichtskorrektur prüfen
+
+Nach dem Übernehmen einer Textänderung öffnet der Offline-Bericht eine Liste möglicher weiterer Prüfstellen. Jeder Eintrag erklärt die Verbindung und führt zur betroffenen Deutung oder zum Berichtsteil. Die auslösende Änderung bleibt ebenfalls erreichbar.
+
+- **SWOT → Meta-SWOT:** Gespeicherte `finding_ids` werden über das Befundregister auf die ursprünglichen SWOT-Befunde aufgelöst. Codepfad, Dimension, ursprüngliches Thema, ursprüngliche Analyse und Segmentkennungen müssen zusammenpassen. Eine gleiche laufende Kennung allein genügt nicht. Bei einem passenden Verweis wird das konkrete Meta-SWOT-Element genannt; ein zusätzlicher pauschaler Hinweis auf die gesamte Meta-SWOT entfällt.
+- **Weitere konkrete Beziehungen:** Deutungen desselben Befunds oder Themas, gespeicherte Muster–Gegenfall-Verweise, Seiten eines Ambivalenzpaars und gemeinsame Originalzitate werden verknüpft. Gemeinsame Zitate sind ein Anlass zur Prüfung, kein Beweis für eine inhaltliche Abhängigkeit.
+- **Nachgelagerte Module:** Der gespeicherte Ablaufplan liefert zusätzliche Prüfbereiche, auch über mehrere Stufen. Wenn keine genaue Aussage zugeordnet werden kann, verweist der Bericht ausdrücklich auf den ganzen Abschnitt, beispielsweise die Gesamtsynthese. Fehlende Verknüpfungen bedeuten nicht, dass keine anderen Aussagen betroffen sind.
+
+Die Liste erkennt weder sämtliche semantischen Zusammenhänge noch automatisch eine Bedeutungsumkehr. Ein Herkunftsverweis zeigt die Verwendung eines Befunds als Grundlage, keine bestätigte Richtigkeit der Folgerung. Bei einer Umdeutung von Stärke zu Schwäche auch Einordnung, Empfehlungen und zusammenfassende Aussagen prüfen. Eine Textkorrektur verschiebt keine gespeicherten SWOT-Zuordnungen und berechnet keine Tabellen neu.
+
+Eine Prüfaufgabe wird mit Name, Prüfergebnis und Zeitpunkt dokumentiert. Sie bestätigt eine durchgeführte Prüfung, keine automatische Freigabe aller Aussagen. Nach einer weiteren Textänderung an Ausgangs- oder Zielstelle wird sie wieder offen; frühere Prüfungen bleiben im Verlauf. Textänderungen werden nicht automatisch auf andere Stellen übertragen. Eine Änderung des Prüfstatus ohne Textänderung erzeugt keine neue Abhängigkeitsprüfung.
+
+Über **Bericht mit Änderungen speichern** werden Originale, Textverlauf und Prüfvermerke in einer separaten HTML-Datei gesichert und offline wiederhergestellt. Originalzitate, Kennungen und berechnete Tabellen bleiben gesperrt. Ältere HTML-Dateien besitzen die damals eingebetteten Funktionen; für diese Navigation ist ein neuer Export mit der aktuellen Ausgabeversion erforderlich. Bereits vorhandene Modellresultate müssen dafür nicht neu berechnet werden.

@@ -26,6 +26,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from socketserver import TCPServer
 
 from project_paths import DEFAULT_CONFIG, DEMO_DIR, default_data_dir, resolve_output_parent
+from output_path_advice import output_path_check, output_check_message
 from filesystem_paths import canonical_path
 from process_commands import python_command, validate_script
 import yaml
@@ -498,6 +499,9 @@ class App(ReviewWorkspace):
         reject_secret_settings(settings)
         selected = selection({'model': cfg['llm']['model'], **settings})
         cfg['llm'].update(selected, log_thinking=False)
+        from llm_client import request_timeout_seconds
+        cfg['llm']['timeout_seconds'] = request_timeout_seconds({
+            'timeout_seconds': settings.get('timeout_seconds', cfg['llm'].get('timeout_seconds', 180))})
         from managed_ollama import workers
         cfg['llm']['parallel_workers'] = workers({**cfg['llm'], 'parallel_workers': settings.get('parallel_workers', 1)})
         for key, lower, upper in [('num_ctx',2048,1048576),('max_tokens',128,131072)]:
@@ -619,6 +623,9 @@ class App(ReviewWorkspace):
             cfg['paths']['category_system_csv'] = str(revision/'codebook.csv')
             atomic_text(revision/'config.yaml',yaml.safe_dump(cfg,allow_unicode=True,sort_keys=False))
             checked = self.validate_config(revision/'config.yaml')
+            if settings.get('output_dir'):
+                checked['output_path_check'] = output_path_check(settings['output_dir'],
+                    diagnostics=any(m['id'] in ('stability','sensitivity') for m in checked['modules']))
             atomic_json(revision/'settings.json',settings)
             data = read_json(directory/'project.json')
             data['revision'] = revision.name
@@ -1060,7 +1067,7 @@ class Handler(BaseHTTPRequestHandler):
                 diagnostics=cfg.get('diagnostics')
                 if not isinstance(diagnostics,dict):diagnostics={}
                 return self.json({'projects':app.projects(),'runtime':app.runtime_status(),'telegram':app.telegram.public(),'providers':PROVIDERS,'provider_keys':app.provider_keys.public(),
-                    'defaults':{'llm':{**{k:cfg['llm'].get(k) for k in ('model','num_ctx','max_tokens','temperature','think')},'synthesis_max_calls':cfg['llm'].get('hierarchical_synthesis',{}).get('max_calls',64)},'context':cfg['context'],'columns':cfg['columns'],
+                    'defaults':{'llm':{**{k:cfg['llm'].get(k) for k in ('model','num_ctx','max_tokens','temperature','think')},'timeout_seconds':cfg['llm'].get('timeout_seconds',180),'synthesis_max_calls':cfg['llm'].get('hierarchical_synthesis',{}).get('max_calls',64)},'context':cfg['context'],'columns':cfg['columns'],
                                 'analysis_perspectives':thematic_pipeline.default_modes(cfg),
                                 'stability':diagnostics.get('stability',{'modules':[],'repetitions':3}),
                                 'sensitivity':diagnostics.get('sensitivity',{'modules':[],'repetitions':2,'variants':[]})},
@@ -1128,7 +1135,8 @@ class Handler(BaseHTTPRequestHandler):
                 elif path=='/api/output-check':
                     app.project_dir(data['project'])
                     target=resolve_output_parent(output_dir=data.get('output_dir',''),check_write=True)
-                    result={'output_dir':str(target),'message':'Ordner ist verfügbar und beschreibbar. Beim Start wird erneut geprüft.'}
+                    check=output_path_check(target)
+                    result={'output_dir':str(target),'message':output_check_message(check),'output_path_check':check}
                 elif path=='/api/save': result=app.save(data['project'],data['settings'])
                 elif path=='/api/person-preview': result=app.person_preview(data['project'],data['columns'])
                 elif path=='/api/passage-preview': result=app.passage_preview(data['project'],data['columns'])

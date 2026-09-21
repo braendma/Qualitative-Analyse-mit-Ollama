@@ -1,6 +1,6 @@
 # Handbuch · Qualitative Analyse mit Ollama
 
-Dieses Handbuch begleitet dich vom ersten Start bis zum erneuten Analyselauf mit geprüften Codierungen. Alle Personen, Texte und Beurteilungen in den Beispielen sind erfunden. Stand: Version 0.5.0-beta.2.
+Dieses Handbuch begleitet dich vom ersten Start bis zum erneuten Analyselauf mit geprüften Codierungen. Alle Personen, Texte und Beurteilungen in den Beispielen sind erfunden. Stand: Version 0.5.1.
 
 Du erreichst die bebilderte Fassung jederzeit über **Handbuch** neben **Telegram-Updates** in der Seitenleiste. Sie öffnet sich in einem eigenen Tab, damit deine aktuelle Arbeit geöffnet bleibt. Ohne laufende Oberfläche kannst du im Windows-Paket `_internal/docs/HANDBUCH.html`, in der Source-Version `docs/HANDBUCH.html` doppelklicken. Den Programmordner einschließlich der Bilder zusammenlassen.
 
@@ -64,6 +64,8 @@ Auf der Startseite **Künstliche Beispieldaten laden** wählen. Das erzeugt ein 
 Für eine überschaubare erste Analyse unter **Analyse → Auswahl leeren** nur **Clusteranalyse** auswählen. Module mit Abhängigkeiten können weitere Vorstufen hinzufügen; die Zusammenfassung unter den Häkchen zeigt die tatsächlich ausgeführten Schritte. Erst **Prüfen & neuen Lauf starten** führt die Modellauswertung aus.
 
 Auch für die Demo vorher unter **Projekt & Dateien → Speicherort für Analyseergebnisse** über **Ordner auswählen** ein vorhandenes Ziel wählen und **Ordner prüfen** anklicken. Ohne Ergebnisziel kann kein neuer Lauf starten.
+
+**Pfadlängen vor neuen Läufen:** Bei **Ordner prüfen** erscheint zusätzlich eine Schätzung für einen verschachtelten Zwischenstand. Beim Speichern und Prüfen der Eingaben berücksichtigt der Hinweis, ob Wiederholungsdiagnosen ausgewählt sind. Bei langen Pfaden ein kürzeres Ergebnisziel nahe am Laufwerks- oder Synchronisationsordner wählen. Die Schätzung ist ein Hinweis, keine Startsperre und keine Garantie für alle Ausgabedateien. Bestehende Läufe werden dadurch nicht blockiert; aktive Ergebnisordner nicht verschieben oder umbenennen. Eine erfolgreiche lokale Schreibprüfung bestätigt keine Cloud-Synchronisation. Den Synchronisationsstatus in OneDrive selbst prüfen. Die CLI gibt den Hinweis bei einem neuen Lauf im Protokoll aus; eine Wiederaufnahme behält ihren ursprünglichen Ordner. [Hintergrund zu unterschiedlichen Pfadgrenzen (Microsoft)](https://support.microsoft.com/en-us/onedrive/what-are-file-path-length-limits).
 
 ## 3. Eigenes Projekt und MAXQDA-Dateien
 
@@ -319,7 +321,7 @@ Neue technische Appdaten liegen unter Windows in `%LOCALAPPDATA%\QualitativeAnal
 
 **Datei- und Ordnerauswahl:** Über **Auf diesem Rechner auswählen** lädst du Interviewdatei oder Kategoriensystem aus der Dateiauswahl innerhalb der Oberfläche. Bei einer so gewählten Interviewdatei wird deren Ordner als Ergebnisziel übernommen, sofern du kein eigenes Ziel festgelegt hast. Mit **Ordner auswählen** wählst du ein anderes vorhandenes Ziel; **Ordner der Eingabedatei verwenden** wechselt zurück zum bekannten Eingabeordner. **Ordner prüfen** kontrolliert Verfügbarkeit und Schreibrechte. Die Auswahl zeigt Dateien auf dem Rechner der laufenden Anwendung, nicht auf einem anderen Gerät, mit dem du den Browser bedienst. Der bisherige Browserupload und das manuelle Pfadfeld bleiben verfügbar; beim Browserupload ist der ursprüngliche Dateiordner unbekannt und muss als Ziel ausdrücklich ausgewählt werden.
 
-Jeder neue App-Lauf bekommt im gewählten Ziel einen eigenen Ordner `QualitativeAnalyse_<Datum>_<Job-ID>/`. Analyseberichte und Moduldateien liegen darunter in `runs/<Lauf-ID>/`; Prüfentscheidungen und deren Versionen in `review/`. Geprüfte Folgeeingaben werden zusätzlich unter `review/followups/<Revision-ID>/` mit `segments.csv`, `codebook.csv`, `review_snapshot.json` und einem Inhaltsnachweis abgelegt. Eine Zieländerung gilt nur für neue Läufe. Wiederaufnahme, Berichtsaufruf und Prüfung bestehender Läufe bleiben an deren ursprünglichen Ordner gebunden. Ist er nicht verfügbar oder passt seine gespeicherte Zuordnung nicht mehr, erscheint ein Hinweis; es gibt keinen Ersatzordner in AppData. Alte Läufe behalten ihre bisherige Ablage und bleiben dort lesbar.
+Jeder neue App-Lauf bekommt im gewählten Ziel einen eigenen Ordner `QualitativeAnalyse_<Job-ID>/`. Analyseberichte und Moduldateien liegen darunter in `runs/<Lauf-ID>/`; Prüfentscheidungen und deren Versionen in `review/`. Geprüfte Folgeeingaben werden zusätzlich unter `review/followups/<Revision-ID>/` mit `segments.csv`, `codebook.csv`, `review_snapshot.json` und einem Inhaltsnachweis abgelegt. Eine Zieländerung gilt nur für neue Läufe. Wiederaufnahme, Berichtsaufruf und Prüfung bestehender Läufe bleiben an deren ursprünglichen Ordner gebunden. Ist er nicht verfügbar oder passt seine gespeicherte Zuordnung nicht mehr, erscheint ein Hinweis; es gibt keinen Ersatzordner in AppData. Alte Läufe behalten ihre bisherige Ablage und bleiben dort lesbar.
 
 Die technische Projektverwaltung, Einstellungen und unveränderlichen Eingabe-/Konfigurationskopien bleiben im App-Datenordner. Für eine vollständige Sicherung nach Abschluss aller Läufe sowohl diesen Datenordner als auch die gewählten Forschungsordner sichern.
 
@@ -386,6 +388,12 @@ Bei einer Kontextmeldung prüfe das gewählte Modell, das Kontextfenster und den
 
 In Personenprompts steht ein identischer Clusterkontext künftig einmal in einer gemeinsamen Tabelle. Jedes Segment verweist eindeutig auf seine zugehörigen Kontexte. Alle Segment-IDs, Originaltexte und Zuordnungen bleiben erhalten; gleich benannte, aber inhaltlich unterschiedliche Kontexte bleiben getrennt. Dies verkleinert vor allem Prompts mit vielen wiederholten Clusterinformationen. Es garantiert keine bessere fachliche Modellantwort: Die technische Rückführbarkeit auf dieselben Inhalte ist getestet, die Modellqualität ist vor Veröffentlichung noch anhand künstlicher Vergleichsfälle zu prüfen.
 
+
+## Eingabegrundlage der Personenanalyse
+
+Der vorbereitete Patch beschreibt jede Person anhand ihrer eigenen vollständigen Originalsegmente und der zugehörigen Kategoriehierarchie. Personenübergreifende Clusterzusammenfassungen, generierte Clusterdefinitionen und Clusternamen werden dafür nicht als Eingabe verwendet: Solche Verdichtungen können Erfahrungen anderer Personen enthalten, die sich nicht auf den Einzelfall übertragen lassen. Ein gültiger Belegverweis allein beweist noch nicht, dass eine Interpretation inhaltlich vom Zitat gestützt ist. Prüfe daher zentrale Aussagen weiterhin an den Originalstellen.
+
+Die technische Zuordnung von Dokumenten zu Personen bleibt unverändert. Nach Einspielen dieses Patches einen neuen Lauf erstellen, um die geänderte Eingabegrundlage zu verwenden; bereits gespeicherte Ergebnisse werden nicht rückwirkend verändert. Im Bericht wird die Eingabegrundlage angegeben. Die Quellenprüfung bindet weiterhin die vorgesehenen Vorstufen; eine solche Bindung ist keine Übernahme sämtlicher Vorstufentexte in den Personenprompt.
 
 ## Große Personenvergleiche: zusätzliche Verdichtungsstufe
 
@@ -814,3 +822,8 @@ Clusteranalyse und Blind-Coding werden dabei jeweils **8-mal** ausgeführt: einm
 Das Preset verändert weder Anbieter noch Datenfreigabe, Personenzuordnung oder Originaldateien. Es bescheinigt keine methodische Güte: Wiederholbarkeit ist kein Nachweis der Richtigkeit, und Unterschiede zwischen Varianten sind nicht automatisch Fehler.
 
 Änderst du Einstellungen, während eine Eingabeprüfung noch läuft, wird deren verspätetes Ergebnis nicht als aktuelle Freigabe angezeigt und kein Lauf daraus automatisch gestartet. Prüfe die aktuelle Auswahl anschließend erneut.
+
+
+## Antwortwartezeit bei langsamen Modellen
+
+Unter „Erweiterte Modelleinstellungen“ lässt sich die Antwortwartezeit in Sekunden einstellen (1–3600, bisheriger Standard: 180). Bei einem langsamen lokalen Modell oder Thinking können beispielsweise 1200 Sekunden sinnvoll sein. Der Wert wird als `llm.timeout_seconds` gespeichert und an den Transport des gewählten Anbieters übergeben. Er begrenzt Transportphasen, nicht die gesamte Laufdauer; Verbindung, Antwortübertragung und begrenzte Wiederholungsversuche können zusammen länger dauern. Kurze Einrichtungstests behalten ihre eigenen Wartezeiten. Nach einer Änderung einen neuen Lauf starten. Eine längere Wartezeit behebt keine Speicher- oder Kontextüberschreitung.

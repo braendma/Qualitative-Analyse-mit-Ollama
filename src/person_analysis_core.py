@@ -124,7 +124,9 @@ def get_cluster_summary(cluster: dict, exact_index: dict, name_index: dict) -> s
 
 
 def build_person_payloads(clusters: list, id_to_text: dict, summary_data: dict, metadata=None) -> dict:
-    exact_index, name_index = build_summary_index(summary_data)
+    # Cluster descriptions summarize several people. Including them beside one
+    # person's originals lets valid local IDs mask statements from other people.
+    # Keep the code hierarchy as orientation, but no derived cluster narratives.
     persons = {}
 
     for cluster in clusters:
@@ -136,9 +138,6 @@ def build_person_payloads(clusters: list, id_to_text: dict, summary_data: dict, 
             "subkategorie": cluster.get("subkategorie"),
             "auspraegung": cluster.get("auspraegung"),
             "facette": cluster.get("facette"),
-            "cluster_name": cluster.get("cluster_name", "Unbenannt"),
-            "definition": cluster.get("definition", ""),
-            "summary": get_cluster_summary(cluster, exact_index, name_index),
         }
 
         for raw_sid in cluster.get("segments", []):
@@ -199,7 +198,10 @@ CONTEXT_REFERENCES = (
     'cluster_context_ids jedes Segments verweist auf die dort vollständig aufgeführten Kontexte. '
     'Ordne jedem Segment alle referenzierten Kontexte zu. C-Referenzen sind keine Segment-IDs; '
     'verwende für Belege ausschließlich die id der Originalsegmente. '
-    'Originaltexte sind die empirischen Belege; Clusterzusammenfassungen sind abgeleitete Einordnungen.'
+    'Die Kontexte enthalten nur die Kategoriehierarchie und sind keine empirischen Aussagen. '
+    'Beschreibe ausschließlich die vorliegende Person anhand ihrer Originaltexte. '
+    'Jede Aussage muss durch die angegebenen Originalsegmente inhaltlich gestützt sein. '
+    'Ergänze keine Erfahrungen, Ursachen oder Details aus allgemeinem Wissen oder Kategoriebezeichnungen.'
 )
 
 
@@ -386,10 +388,12 @@ def build_person_analysis(
     json_output = {
         "created_at": datetime.now().isoformat(),
         "source_cluster_created_at": cluster_data.get("created_at"),
+        "input_basis": "Originalsegmente der jeweiligen Person und ihre Kategoriehierarchie; keine personenübergreifenden Clusterbeschreibungen oder Zusammenfassungen.",
         "persons": results,
     }
 
     md = ["# Personenanalysen\n", f"Erstellt am: {json_output['created_at']}\n\n"]
+    md.append(f"**Eingabegrundlage:** {json_output['input_basis']} Die inhaltliche Stützung jeder Interpretation bleibt zu prüfen.\n\n")
 
     for person, analysis in results.items():
         md.append(f"## {person}\n\n")
@@ -424,4 +428,3 @@ def build_person_analysis(
             md.append("_Keine ausgewählten Belege._\n\n")
 
     return "\n".join(md), json_output
-

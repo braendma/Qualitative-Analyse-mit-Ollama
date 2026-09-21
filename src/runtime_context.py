@@ -28,7 +28,7 @@ def require_messages(messages, settings, answer=None):
             SCOPE, MAXIMUM = scope, 0
         if needed > MAXIMUM:
             logging.getLogger('context').info(
-                'Laufzeit-Kontextprüfung: konservative Rechengrenze=%s, Kontext=%s, Antwortreserve=%s; keine automatische Erhöhung.',
+                'Laufzeit-Kontextprüfung: konservativer Bedarf=%s, Programmbudget=%s, Antwortreserve=%s; keine gemessene Tokenzahl und keine automatische Erhöhung.',
                 needed, limit, reserve)
         MAXIMUM = max(MAXIMUM, needed)
         update_progress(context_required=MAXIMUM, context_limit=limit)
@@ -36,9 +36,11 @@ def require_messages(messages, settings, answer=None):
             update_progress(context_blocked=True)
     if needed > limit:
         raise ContextBudgetError(
-            f'Die tatsächlich entstandene Eingabe benötigt nach der konservativen Kontextprüfung '
-            f'bis zu {needed} Tokens einschließlich Antwortreserve; eingestellt sind {limit}. '
-            'Keine Texte wurden gekürzt. Kontext und Speicherschätzung erneut prüfen; '
-            'gegebenenfalls weniger parallele Anfragen wählen. Eine neue Konfiguration benötigt '
-            'einen neuen Lauf. Das reservierte Kontextfenster wird nicht automatisch erhöht.')
+            f'Kontextbudget im Programm überschritten: konservativer Bedarf {needed}, '
+            f'davon Antwortreserve {reserve}; eingestellt sind {limit}. '
+            'Die Eingabeschätzung verwendet UTF-8-Bytes und Aufschläge, keine gemessene Tokenzahl. '
+            'Keine Texte wurden gekürzt. Lokal zusätzlich Modellfenster und Speicher prüfen. '
+            'Bei Cloud begrenzt dieser Wert nur die Vorprüfung im Programm; er verändert das '
+            'Kontextfenster des Anbieters nicht. Dessen Modellgrenze bleibt zusätzlich gültig. '
+            'Geänderte Einstellungen benötigen einen neuen Lauf; das Budget wird nicht automatisch erhöht.')
     return needed

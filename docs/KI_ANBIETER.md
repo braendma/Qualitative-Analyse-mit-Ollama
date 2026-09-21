@@ -22,6 +22,14 @@ Die Anwendung startet auch ohne installierten oder laufenden Ollama-Server. Beim
 
 Die Abfrage liest nur Metadaten des lokalen Servers und startet oder installiert nichts. Sie ersetzt weder die Speicherschätzung noch den ausdrücklich bestätigten kurzen Modelltest. Ist lokales Ollama nicht erreichbar oder ohne Modell, bleiben die Oberfläche, reine Diagnosen ohne modellabhängige Vorstufen und freigegebene Cloud-Anbieter verfügbar. Nur ausgewählte lokale Modellanalysen benötigen wieder einen erreichbaren Server mit installiertem Modell. Cloud-Freigabe und Schlüsselpflicht gelten unverändert; es gibt keinen automatischen Wechsel in die Cloud.
 
+## Kontextbudget und Modellfenster
+
+Das **Kontextbudget im Programm** ist eine konservative Rechengrenze. Es umfasst die Eingaben einschließlich Anweisungen und Schema, UTF-8-Bytes und Nachrichtenaufschläge sowie die reservierte Antwortlänge. Diese Abschätzung ist keine Messung durch den Tokenizer des Modells und kann früher begrenzen als dessen tatsächliches Fenster. Die Fehlerhilfe zeigt bei einem abgewiesenen vorbereiteten Request den konservativen Bedarf, die Antwortreserve und die eingestellte Grenze.
+
+Bei lokalem Ollama wird `llm.num_ctx` zusätzlich als gewünschtes Modellfenster übergeben; Modellunterstützung und verfügbarer Speicher bleiben erforderlich. Bei Ollama Cloud wird `num_ctx` nicht an den Anbieter gesendet: Ein höheres Programmbudget vergrößert dessen Modellfenster nicht. Die tatsächliche Anbietergrenze gilt zusätzlich. Dasselbe Grundprinzip gilt für die übrigen Cloudadapter: Das Programmbudget ersetzt keine Prüfung der Modellgrenze beim Anbieter.
+
+Es gibt keinen verlässlichen allgemeinen Mindestwert je Modul. Der Bedarf hängt unter anderem von Textmenge, Kodierungen, Themen, Anweisungen, Schema und Antwortreserve ab. Ein kurzer erfolgreicher Test liefert deshalb keine allgemeine Budgetempfehlung. Bei einer Abweisung Einstellungen und Materialumfang prüfen; weder Text noch Antwortreserve werden automatisch gekürzt. Geänderte Einstellungen benötigen einen neuen Lauf; bestehende Ergebnisse bleiben erhalten.
+
 ## Kommandozeile
 
 Eine eigene YAML-Kopie erstellen. Beispiel für ausdrücklich freigegebene künstliche Daten:

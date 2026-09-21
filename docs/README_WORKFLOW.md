@@ -1,4 +1,4 @@
-**Version 0.5.0-beta.2.** Prüfungen und Grenzen stehen im [Testbericht](TEST_REPORT.md).
+**Version 0.5.1.** Prüfungen und Grenzen stehen im [Testbericht](TEST_REPORT.md).
 
 **Programmstart:** Das Windows-Paket startet über `QualitativeAnalyse.exe` mit enthaltener Python-Laufzeit. [Kurzanleitung](WINDOWS_STANDALONE.txt) · [Buildprüfung](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/blob/main/packaging/README.md). Die folgenden Python-Aufrufe beschreiben die weiterhin verfügbare Source-Version. Native Mac-Distribution pausiert; bisherige Source-Starter bleiben erhalten.
 

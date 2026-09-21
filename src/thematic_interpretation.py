@@ -61,6 +61,89 @@ SHARED_GUIDANCE = (TABLE_GUIDANCE + '\nBei encoding=shared_fields_rows_v1 gelten
                    'Datensatz aus seinen Zeilenwerten und sämtlichen gemeinsamen Feldern.')
 
 
+COMPACT_GUIDANCE = (SHARED_GUIDANCE + '\nBei encoding=compact_register_rows_v1 ersetzt column_groups '
+    'die columns: Jeder Wert einer Zeile gilt fuer ALLE Feldpfade seiner Spaltengruppe. '
+    'Eine Zelle {"string":i} bezeichnet unveraendert strings[i] (Index ab 0). '
+    'Eine Zelle {"prefix":i,"suffix":text} ist die vollstaendige Zeichenkette aus '
+    'dem Stringwert der Spaltengruppe i derselben Zeile plus text, ohne Trennzeichen. '
+    'Zuerst Stringverweise aufloesen. Alle anderen Werte bleiben woertlich erhalten. '
+    'Die gemeinsame Speicherung ist keine fachliche Gleichsetzung verschiedener Kennzahlen.')
+
+
+def target_basis(row):
+    return {'topic_id':row['topic_id'],'scope_fingerprint':row['scope_fingerprint'],
+            'scope':{'persons':row['scope']['person_count'],'units':row['scope']['unit_count'],
+                     'unit_basis':row['scope']['unit_basis']},
+            'complete':row['coverage']['complete'],
+            'stances':{stance:{'persons':{'observed':v['observed_person_count'],'exact':v['exact_person_count'],'share':v['person_share_in_scope']},
+                              'units':{'observed':v['observed_unit_count'],'exact':v['exact_unit_count'],'share':v['unit_share_in_scope']}}
+                       for stance,v in row['counts'].items()}}
+
+GUIDANCE=('\nDas unkomprimierte target_basis ist die massgebliche Zahlenbasis NUR des aktuellen Themas. '
+          'scope sind Nenner, stances sind beobachtete/exakte Zuordnungen und Anteile. '
+          'Personen und Materialeinheiten niemals vertauschen. Kopiere target_basis exakt in ein '
+          'zusaetzliches Antwortfeld basis_check. Nutze in allen Texten ausschliesslich dazu passende '
+          'Zahlen und Bezugsraeume; keine Fingerprints oder technischen Feldnamen im Fliesstext. '
+          'Bei mehreren Personen im scope nicht von einer einzigen untersuchten Person sprechen. '
+          'Wenn keine Gegenposition belegt ist, schreibe dies explizit bezogen auf das untersuchte Material; '
+          'counterpositions niemals leer lassen und keine Gegenposition erfinden.')
+
+COMPACT_CORRECTION = ('Pruefe die Originaldaten erneut. Antworte exakt mit topic_id, interpretation, '
+    'counterpositions, limitations und basis_check. Kopiere target_basis typsicher in basis_check; '
+    'alle Texte muessen dieselben Personen-/Materialzahlen und Bezugsraeume verwenden. '
+    'Kein Textfeld leer lassen; fehlen belegte Gegenpositionen, benenne das ohne welche zu erfinden.')
+
+def exact_schema(value):
+    if isinstance(value,dict):
+        return {'type':'object','properties':{k:exact_schema(v) for k,v in value.items()},
+                'required':list(value),'additionalProperties':False}
+    if value is None:return {'type':'null'}
+    return {'type':'boolean' if type(value) is bool else 'integer' if type(value) is int else 'number' if type(value) is float else 'string','enum':[value]}
+
+def _same_basis(expected, actual):
+    if type(expected) is float:
+        return type(actual) in (int, float) and expected == actual
+    if type(expected) is not type(actual):
+        return False
+    if isinstance(expected, dict):
+        return set(expected) == set(actual) and all(_same_basis(v, actual[k]) for k, v in expected.items())
+    if isinstance(expected, list):
+        return len(expected) == len(actual) and all(_same_basis(e, a) for e, a in zip(expected, actual))
+    return expected == actual
+
+
+def validate_compact_basis(value,row):
+    fields={'topic_id','interpretation','counterpositions','limitations','basis_check'}
+    if not isinstance(value,dict) or set(value)!=fields or value['topic_id']!=row['topic_id']:raise ValueError('Wrong fields or topic')
+    basis=target_basis(row)
+    # Shares are JSON numbers: 0 and 0.0 express the same value. Booleans,
+    # null, counts and changed values remain distinct; no rounding/tolerance.
+    if not _same_basis(basis, value['basis_check']):raise ValueError('Wrong metric basis')
+    texts=[value[k] for k in fields-{'basis_check','topic_id'}]
+    if any(not isinstance(t,str) or not t.strip() for t in texts):raise ValueError('Missing narrative')
+    text='\n'.join(texts)
+    for actual in re.findall(r'\b[0-9a-f]{64}\b',text):
+        if actual!=row['scope_fingerprint']:raise ValueError('Wrong scope fingerprint in narrative')
+    for key in ['observed_person_count','exact_person_count','observed_unit_count','exact_unit_count','person_share_in_scope','unit_share_in_scope']:
+        allowed={v[key] for v in row['counts'].values() if v[key] is not None}
+        for literal in re.findall(r'\b'+key+r'\s*[=:]\s*(\d+(?:[.,]\d+)?)',text):
+            if float(literal.replace(',','.')) not in allowed:raise ValueError('Wrong named metric '+key)
+    fractions=set()
+    for counts in basis['stances'].values():
+        for unit in ['persons','units']:
+            for kind in ['observed','exact']:
+                n=counts[unit][kind];d=basis['scope'][unit]
+                if n is not None:fractions.add((n,d))
+    for n,d in re.findall(r'(?<![\d.])(\d+)\s*/\s*(\d+)(?![\d.])',text):
+        if (int(n),int(d)) not in fractions:raise ValueError('Wrong count denominator')
+    if re.search(r'\bdecided_cells\b.{0,20}\b(?:true|false)\b',text,re.I):raise ValueError('Count confused with boolean')
+    if basis['scope']['persons'] is not None and basis['scope']['persons']>1 and re.search(
+            r'\b(?:Bezugsmenge|Scope|Untersuchungsgruppe)\s+'
+            r'(?:(?:besteht\s+aus|umfasst|enthaelt|enth\u00e4lt|ist|von)\s+)?'
+            r'(?:nur\s+)?(?:einer?|einem|1)\s+(?:(?:einzigen?|einzelnen?)\s+)?Person\b',text,re.I):
+        raise ValueError('Multiple-person scope described as one person')
+    return {k:v for k,v in value.items() if k!='basis_check'}
+
 def _register_table(register):
     """Share field names, never summarize values or change comparison scopes."""
     def leaves(value, path=()):
@@ -94,6 +177,31 @@ def _interpretation_prompt(payload, params):
                 candidate = dump({**payload, 'comparison_register': _share_table_fields(table)})
                 if size(SYSTEM + SHARED_GUIDANCE, candidate) < size(system, user):
                     system, user = SYSTEM + SHARED_GUIDANCE, candidate
+                if size(system, user) > int(params.get('num_ctx', 32768)):
+                    candidate = dump({**payload, 'comparison_register': _compact_register_table(table)})
+                    if size(SYSTEM + COMPACT_GUIDANCE, candidate) < size(system, user):
+                        system, user = SYSTEM + COMPACT_GUIDANCE, candidate
+    encoded_register = json.loads(user)['comparison_register']
+    if isinstance(encoded_register, dict) and encoded_register.get('encoding') == 'compact_register_rows_v1':
+        own = next(row for row in payload['comparison_register'] if row['topic_id'] == payload['topic']['topic_id'])
+        body = json.loads(user)
+        body['target_basis'] = target_basis(own)
+        user = dump(body)
+        # Replace the four-field instruction only for the new compact protocol.
+        system = system[:system.index('Gib ein JSON-Objekt')] + (
+            'Gib exakt topic_id, interpretation, counterpositions, limitations und basis_check als JSON aus. '
+            'Die drei Textfelder sind nicht leere deutsche Texte. Keine neuen Themen oder Quellen. '
+        ) + COMPACT_GUIDANCE + GUIDANCE
+        persons, units = own['scope']['person_count'], own['scope']['unit_count']
+        if persons is not None and persons > 1:
+            # The conditional single-case advice is irrelevant to this known
+            # multi-person scope; give its actual denominator explicitly.
+            start = system.index('Bei einer Bezugsmenge von einer Person')
+            end = system.index('Gleich benannte', start)
+            system = system[:start] + system[end:]
+            system += (f'\nDie Bezugsmenge DIESES Themas umfasst {persons} Personen und {units} Materialeinheiten. '
+                       'Es ist KEIN Einzelfall und KEINE Bezugsmenge einer einzigen Person. '
+                       'Fehlende Repraesentativitaet nicht mit einer falschen Personenzahl begruenden.')
     # The caller checks EVERY complete prompt before the first model call.
     # Oversized values still fail; no truncation, weaker bound or extra window.
     return system, user
@@ -110,6 +218,39 @@ def _share_table_fields(table):
             'shared_fields': [{'path': table['columns'][i], 'value': table['rows'][0][i]} for i in common],
             'columns': [table['columns'][i] for i in variable],
             'rows': [[row[i] for i in variable] for row in table['rows']]}
+
+
+def _compact_register_table(table):
+    """Reversible sharing of equal columns/strings; every original value survives."""
+    from collections import Counter
+    def dump(value):
+        return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(',', ':'))
+    shared = _share_table_fields(table)
+    groups = {}
+    for index, path in enumerate(shared['columns']):
+        # JSON identity distinguishes false, zero and null, unlike Python equality.
+        key = dump([row[index] for row in shared['rows']])
+        groups.setdefault(key, []).append((index, path))
+    groups = list(groups.values())
+    paths = [[path for _, path in group] for group in groups]
+    rows = [[row[group[0][0]] for group in groups] for row in shared['rows']]
+    label_index = next((i for i, group in enumerate(paths) if ['label'] in group), None)
+    definition_index = next((i for i, group in enumerate(paths) if ['definition'] in group), None)
+    if label_index is not None and definition_index is not None and label_index != definition_index:
+        for row in rows:
+            label, definition = row[label_index], row[definition_index]
+            if isinstance(label, str) and label and isinstance(definition, str) and definition.startswith(label):
+                value = {'prefix': label_index, 'suffix': definition[len(label):]}
+                if len(dump(value).encode('utf-8')) < len(dump(definition).encode('utf-8')):
+                    row[definition_index] = value
+    counts = Counter(value for row in rows for value in row if isinstance(value, str))
+    strings = sorted(value for value, count in counts.items()
+                     if count > 1 and len(value.encode('utf-8')) > 32)
+    indices = {value: index for index, value in enumerate(strings)}
+    return {'encoding': 'compact_register_rows_v1', 'shared_fields': shared['shared_fields'],
+            'column_groups': paths, 'strings': strings,
+            'rows': [[{'string': indices[value]} if isinstance(value, str) and value in indices else value
+                      for value in row] for row in rows]}
 
 
 def comparison_basis(module):
@@ -226,28 +367,49 @@ caller keeps qualitative texts and these frequency texts in separate fields.
         items.append({'key': 'frequency_interpretation:' + tid, 'system': system,
                       'user': user, 'texts': [qualitative_by_topic[tid]], 'topic_id': tid})
 
+    def compact_row(item):
+        if 'target_basis' not in json.loads(item['user']):
+            return None
+        return next(row for row in register if row['topic_id'] == item['topic_id'])
+
+    def correction(item):
+        return COMPACT_CORRECTION if compact_row(item) is not None else CORRECTION
+
+    def check(item, value):
+        row = compact_row(item)
+        if row is not None:
+            validate_compact_basis(value, row)
+            return value  # Preserve the full basis proof in genuine checkpoints.
+        return _validate(value, item['topic_id'])
+
     def compute(item):
         schema = {'type': 'object', 'additionalProperties': False,
                   'properties': {key: {'type': 'string', **({'enum': [item['topic_id']]} if key == 'topic_id' else {})}
                                  for key in ('topic_id', 'interpretation', 'counterpositions', 'limitations')},
                   'required': ['topic_id', 'interpretation', 'counterpositions', 'limitations']}
+        row = compact_row(item)
+        if row is not None:
+            for field in ('interpretation', 'counterpositions', 'limitations'):
+                schema['properties'][field].update(minLength=1, pattern=r'\S')
+            schema['properties']['basis_check'] = exact_schema(target_basis(row))
+            schema['required'].append('basis_check')
         messages = [{'role': 'system', 'content': item['system']}, {'role': 'user', 'content': item['user']}]
         for attempt in range(2):
             require_messages(messages, params)
             raw = (llm or default_llm)(messages, {**params, 'response_schema': schema})
             try:
-                return _validate(_parse(raw), item['topic_id'])
+                return check(item, _parse(raw))
             except ValueError:
                 if attempt:
                     raise
                 # Retry the original evidence without persisting/echoing arbitrary
                 # broken output, which could itself exceed the context window.
-                messages = [*messages, {'role': 'user', 'content': CORRECTION}]
+                messages = [*messages, {'role': 'user', 'content': correction(item)}]
 
     for item in items:
-        require_messages([{'content': item['system']}, {'content': item['user']}, {'content': CORRECTION}], params)
+        require_messages([{'content': item['system']}, {'content': item['user']}, {'content': correction(item)}], params)
     results = analyze_items(items, compute, params, module + '_frequency', 'summaries') if items else []
     # Revalidate cached results too. Checkpoint identity alone is not a schema check.
     for item, result in zip(items, results):
-        _validate(result, item['topic_id'])
-    return results
+        check(item, result)
+    return [{key: value for key, value in result.items() if key != 'basis_check'} for result in results]

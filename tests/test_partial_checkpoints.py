@@ -7,12 +7,29 @@ import unittest
 from unittest.mock import patch
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'src'))
-from runtime_support import PartCheckpoint,atomic_json
+from runtime_support import PartCheckpoint,atomic_json,fingerprint
 import relation_analysis_core as relation
 import evidence_audit_core as audit
 
 
 class PartialCheckpointTests(unittest.TestCase):
+    def test_short_filename_preserves_full_digest_and_legacy_cache_is_reusable(self):
+        import base64
+        with tempfile.TemporaryDirectory() as tmp:
+            cache = PartCheckpoint('test', {'partial_checkpoint_dir': tmp, 'model': 'mock'})
+            cache.run('one', {'input': 'A'}, lambda: {'values': [1]})
+            path = next(Path(tmp).rglob('*.json'))
+            self.assertEqual(len(path.stem), 52)
+            self.assertEqual(path.stem, path.stem.lower())
+            self.assertEqual(base64.b32decode(path.stem.upper() + '====').hex(), fingerprint('one'))
+            legacy = path.with_name(fingerprint('one') + '.json')
+            path.rename(legacy)
+            self.assertEqual(cache.run('one', {'input': 'A'}, lambda: self.fail('Legacy cache recomputed')), {'values': [1]})
+            self.assertFalse(path.exists(), 'Existing cache should not silently migrate')
+            path.write_bytes(legacy.read_bytes())
+            with self.assertRaisesRegex(ValueError, 'zwei Dateinamen'):
+                cache.run('one', {'input': 'A'}, lambda: self.fail('Ambiguous cache recomputed'))
+
     def test_failed_partial_work_is_not_saved_and_integrity_is_enforced(self):
         with tempfile.TemporaryDirectory() as tmp:
             params={'partial_checkpoint_dir':tmp,'model':'mock'}

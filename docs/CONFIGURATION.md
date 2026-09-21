@@ -1,6 +1,6 @@
 # Konfigurationsreferenz der wissenschaftlichen Diagnosen
 
-**Version 0.5.0-beta.2.** Prüfungen und Grenzen stehen im [Testbericht](TEST_REPORT.md).
+**Version 0.5.1.** Prüfungen und Grenzen stehen im [Testbericht](TEST_REPORT.md).
 
 ## Programmeinstiege in Paket und Source
 
@@ -30,7 +30,9 @@ Neue technische Appdaten liegen unter Windows in `%LOCALAPPDATA%\QualitativeAnal
 
 **Datei- und Ordnerauswahl:** Über **Auf diesem Rechner auswählen** lädst du Interviewdatei oder Kategoriensystem aus der Dateiauswahl innerhalb der Oberfläche. Bei einer so gewählten Interviewdatei wird deren Ordner als Ergebnisziel übernommen, sofern du kein eigenes Ziel festgelegt hast. Mit **Ordner auswählen** wählst du ein anderes vorhandenes Ziel; **Ordner der Eingabedatei verwenden** wechselt zurück zum bekannten Eingabeordner. **Ordner prüfen** kontrolliert Verfügbarkeit und Schreibrechte. Die Auswahl zeigt Dateien auf dem Rechner der laufenden Anwendung, nicht auf einem anderen Gerät, mit dem du den Browser bedienst. Der bisherige Browserupload und das manuelle Pfadfeld bleiben verfügbar; beim Browserupload ist der ursprüngliche Dateiordner unbekannt und muss als Ziel ausdrücklich ausgewählt werden.
 
-Jeder neue App-Lauf bekommt im gewählten Ziel einen eigenen Ordner `QualitativeAnalyse_<Datum>_<Job-ID>/`. Analyseberichte und Moduldateien liegen darunter in `runs/<Lauf-ID>/`; Prüfentscheidungen und deren Versionen in `review/`. Geprüfte Folgeeingaben werden zusätzlich unter `review/followups/<Revision-ID>/` mit `segments.csv`, `codebook.csv`, `review_snapshot.json` und einem Inhaltsnachweis abgelegt. Eine Zieländerung gilt nur für neue Läufe. Wiederaufnahme, Berichtsaufruf und Prüfung bestehender Läufe bleiben an deren ursprünglichen Ordner gebunden. Ist er nicht verfügbar oder passt seine gespeicherte Zuordnung nicht mehr, erscheint ein Hinweis; es gibt keinen Ersatzordner in AppData. Alte Läufe behalten ihre bisherige Ablage und bleiben dort lesbar.
+**Pfadlängen vor neuen Läufen:** Bei **Ordner prüfen** erscheint zusätzlich eine Schätzung für einen verschachtelten Zwischenstand. Beim Speichern und Prüfen der Eingaben berücksichtigt der Hinweis, ob Wiederholungsdiagnosen ausgewählt sind. Bei langen Pfaden ein kürzeres Ergebnisziel nahe am Laufwerks- oder Synchronisationsordner wählen. Die Schätzung ist ein Hinweis, keine Startsperre und keine Garantie für alle Ausgabedateien. Bestehende Läufe werden dadurch nicht blockiert; aktive Ergebnisordner nicht verschieben oder umbenennen. Eine erfolgreiche lokale Schreibprüfung bestätigt keine Cloud-Synchronisation. Den Synchronisationsstatus in OneDrive selbst prüfen. Die CLI gibt den Hinweis bei einem neuen Lauf im Protokoll aus; eine Wiederaufnahme behält ihren ursprünglichen Ordner. [Hintergrund zu unterschiedlichen Pfadgrenzen (Microsoft)](https://support.microsoft.com/en-us/onedrive/what-are-file-path-length-limits).
+
+Jeder neue App-Lauf bekommt im gewählten Ziel einen eigenen Ordner `QualitativeAnalyse_<Job-ID>/`. Analyseberichte und Moduldateien liegen darunter in `runs/<Lauf-ID>/`; Prüfentscheidungen und deren Versionen in `review/`. Geprüfte Folgeeingaben werden zusätzlich unter `review/followups/<Revision-ID>/` mit `segments.csv`, `codebook.csv`, `review_snapshot.json` und einem Inhaltsnachweis abgelegt. Eine Zieländerung gilt nur für neue Läufe. Wiederaufnahme, Berichtsaufruf und Prüfung bestehender Läufe bleiben an deren ursprünglichen Ordner gebunden. Ist er nicht verfügbar oder passt seine gespeicherte Zuordnung nicht mehr, erscheint ein Hinweis; es gibt keinen Ersatzordner in AppData. Alte Läufe behalten ihre bisherige Ablage und bleiben dort lesbar.
 
 Die technische Projektverwaltung, Einstellungen und unveränderlichen Eingabe-/Konfigurationskopien bleiben im App-Datenordner. Für eine vollständige Sicherung nach Abschluss aller Läufe sowohl diesen Datenordner als auch die gewählten Forschungsordner sichern.
 
@@ -70,6 +72,14 @@ erstellt eine neue Revision mit der aktuellen Vorlage; neue Diagnosen bleiben
 ohne Auswahl ausgeschaltet. Frühere Revisionen und Berichte bleiben erhalten.
 Lesbarkeit alter Ergebnisse ist keine Freigabe zum Fortsetzen mit verändertem
 Code oder anderen Eingaben: Die bisherige Fingerprintprüfung bleibt bestehen.
+
+## Kontextbudget und Modellfenster
+
+Das **Kontextbudget im Programm** ist eine konservative Rechengrenze. Es umfasst die Eingaben einschließlich Anweisungen und Schema, UTF-8-Bytes und Nachrichtenaufschläge sowie die reservierte Antwortlänge. Diese Abschätzung ist keine Messung durch den Tokenizer des Modells und kann früher begrenzen als dessen tatsächliches Fenster. Die Fehlerhilfe zeigt bei einem abgewiesenen vorbereiteten Request den konservativen Bedarf, die Antwortreserve und die eingestellte Grenze.
+
+Bei lokalem Ollama wird `llm.num_ctx` zusätzlich als gewünschtes Modellfenster übergeben; Modellunterstützung und verfügbarer Speicher bleiben erforderlich. Bei Ollama Cloud wird `num_ctx` nicht an den Anbieter gesendet: Ein höheres Programmbudget vergrößert dessen Modellfenster nicht. Die tatsächliche Anbietergrenze gilt zusätzlich. Dasselbe Grundprinzip gilt für die übrigen Cloudadapter: Das Programmbudget ersetzt keine Prüfung der Modellgrenze beim Anbieter.
+
+Es gibt keinen verlässlichen allgemeinen Mindestwert je Modul. Der Bedarf hängt unter anderem von Textmenge, Kodierungen, Themen, Anweisungen, Schema und Antwortreserve ab. Ein kurzer erfolgreicher Test liefert deshalb keine allgemeine Budgetempfehlung. Bei einer Abweisung Einstellungen und Materialumfang prüfen; weder Text noch Antwortreserve werden automatisch gekürzt. Geänderte Einstellungen benötigen einen neuen Lauf; bestehende Ergebnisse bleiben erhalten.
 
 ## Sensitivität: interner Entwicklungsvertrag
 
@@ -525,3 +535,8 @@ Inhaltliche Relationszuordnungen und deterministische Codeüberschneidungen
 erscheinen getrennt. Die inhaltliche Matrix und ihre Interpretation führen zusätzliche Modell-
 anfragen aus; Codeüberschneidungen werden ohne Modell berechnet. Die Zahl der
 Kandidaten ist keine vollständige Nennungshäufigkeit einer Relation.
+
+
+## Antwortwartezeit bei langsamen Modellen
+
+Unter „Erweiterte Modelleinstellungen“ lässt sich die Antwortwartezeit in Sekunden einstellen (1–3600, bisheriger Standard: 180). Bei einem langsamen lokalen Modell oder Thinking können beispielsweise 1200 Sekunden sinnvoll sein. Der Wert wird als `llm.timeout_seconds` gespeichert und an den Transport des gewählten Anbieters übergeben. Er begrenzt Transportphasen, nicht die gesamte Laufdauer; Verbindung, Antwortübertragung und begrenzte Wiederholungsversuche können zusammen länger dauern. Kurze Einrichtungstests behalten ihre eigenen Wartezeiten. Nach einer Änderung einen neuen Lauf starten. Eine längere Wartezeit behebt keine Speicher- oder Kontextüberschreitung.

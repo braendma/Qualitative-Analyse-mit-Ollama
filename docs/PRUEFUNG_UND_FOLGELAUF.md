@@ -1,5 +1,37 @@
 # Codierungen prüfen und weiterarbeiten
 
+## Deutungen im Gesamtbericht korrigieren
+
+Der interaktive HTML-Gesamtbericht erlaubt die menschliche Bearbeitung eindeutig
+zugeordneter Deutungsfelder (etwa SWOT-Analyse, Interpretation, Gegenpositionen und
+Grenzen). **Originalzitate, Quellen- und Personenkennungen sowie berechnete Tabellen
+sind schreibgeschützt.** Ohne eindeutige Zuordnung zur gespeicherten JSON-Quelle
+bleibt ein Absatz ebenfalls schreibgeschützt. Ältere Berichte müssen mit der neuen
+Programmversion separat neu exportiert werden; sie erhalten den Editor nicht nachträglich.
+
+1. Beim betreffenden Absatz **Deutung prüfen / bearbeiten** öffnen.
+2. Den unveränderten Modellvorschlag mit den **zugeordneten Originalzitaten** vergleichen.
+   Fehlt eine direkte Zuordnung im Export, wird das ausdrücklich angezeigt. Der
+   unveränderte Originalbericht mit seinen Herkunftsdetails bleibt darunter verfügbar.
+3. Nur den Deutungstext bearbeiten, Namen oder Prüfkürzel und Begründung eintragen.
+   Den Status bewusst wählen: weiterer Prüfbedarf, menschlich bearbeitet oder
+   anhand der Quellen geprüft. **Änderung übernehmen** dokumentiert diese Fassung.
+4. **Bericht mit Änderungen speichern** lädt eine eigene HTML-Kopie herunter.
+   Diese Datei enthält Originale, menschliche Änderungen und deren Verlauf und lässt
+   sich offline wieder öffnen und weiterbearbeiten, auch ohne Modell oder Server.
+   Übernehmen allein speichert noch keine Datei. Den Download im Zielordner prüfen.
+
+**Original als Entwurf einsetzen** ermöglicht eine Rücknahme mit neuer Begründung;
+frühere Änderungen bleiben im Verlauf erhalten. Offene Entwürfe müssen vor dem
+Export übernommen oder verworfen werden. Beim Drucken/PDF erscheint die aktuelle
+Fassung samt menschlicher Kennzeichnung; der vollständige Verlauf bleibt in HTML.
+
+Berichtskorrekturen verändern keine Zitate, Codierungen, Kennzahlen, ursprünglichen
+Ergebnisdateien oder abhängigen Analysen. Sie lösen keine Modellanfrage aus und
+synchronisieren sich nicht automatisch mit anderen Berichtskopien. Für Änderungen
+der Codierung selbst den folgenden Prüf- und Folgelauf verwenden. Freie Deutungen
+bleiben prüfbare Vorschläge; technisch gültige Antworten können inhaltlich falsch sein.
+
 Dieser Ablauf gehört zur lokalen Oberfläche. Voraussetzung ist ein abgeschlossener Lauf mit dem Modul **Prüfliste der Codierungen** und seinen Vorstufen. Die Beispiele und Screenshots zeigen ausschließlich künstliche Daten und erfundene Beurteilungen.
 
 ## Entscheidungen im Projekt speichern

@@ -39,7 +39,7 @@ class RepetitionFailureHelpTests(unittest.TestCase):
         self.assertNotIn('PRIVATE', json.dumps(custom))
 
     def test_parent_classifier_preserves_concrete_child_cause(self):
-        for kind in ('context', 'memory', 'quota', 'credentials', 'connection', 'response',
+        for kind in ('context', 'memory', 'quota', 'credentials', 'connection', 'timeout', 'response',
                      'call_budget', 'reduction', 'unknown'):
             with self.subTest(kind=kind):
                 result = {'conditions': [{'status': 'failed', 'failure_guidance': [{'kind': kind}]}]}

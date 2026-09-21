@@ -6,6 +6,8 @@ function renderProvider(){
   $('provider-badge').textContent=state?.providers?.[p]?.name||'Ollama · lokal';
   $('processing-badge').textContent=cloud?'Cloud freigegeben · '+$('provider-badge').textContent:'Verarbeitung auf diesem PC';
   $('provider-help').textContent=cloud?'Exakten Modellnamen aus deinem Anbieter-Konto eintragen. API-Nutzung kann kostenpflichtig sein.'+(p==='huggingface'?' Hugging Face kann Anfragen an weitere Inference Provider routen.':''):'Ollama starten und ein installiertes lokales Modell auswählen.';
+  $('context-budget-label').textContent=cloud?'Kontextbudget im Programm':'Lokales Kontextfenster / Programmbudget';
+  $('context-budget-hint').textContent='Die konservative Vorprüfung zählt UTF-8-Bytes mit Aufschlägen und Antwortreserve, keine gemessenen Tokens. '+(cloud?'Dieses Budget verändert das Kontextfenster des Anbieters nicht. Dessen Modellgrenze gilt zusätzlich und muss für Eingabe und Antwort ausreichen.':'Dieser Wert begrenzt auch das angeforderte lokale Modellfenster. Modellunterstützung und ausreichend Speicher bleiben erforderlich.');
   $('temperature').disabled=cloud&&!p.startsWith('ollama');$('think').disabled=$('temperature').disabled;
   const info=state?.provider_keys?.providers?.[p];
   $('provider-key-state').textContent=info?.has_key?'Schlüssel vorhanden · '+(info.persist?'unter Windows geschützt gespeichert.':'nur für diese Sitzung.'):'Noch kein Schlüssel gespeichert.';

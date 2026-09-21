@@ -18,7 +18,7 @@ class FailureHelpTests(unittest.TestCase):
             self.assertIn('Vollständigkeitsprüfung', result['action'])
 
     def test_final_exception_overrides_earlier_failure_or_prompt_keywords(self):
-        self.assertEqual(failure_help('LLMResponseError: failed\nhttpx.ReadTimeout: timed out')['kind'], 'connection')
+        self.assertEqual(failure_help('LLMResponseError: failed\nhttpx.ReadTimeout: timed out')['kind'], 'timeout')
         self.assertEqual(failure_help('Interview: CUDA out of memory\nValueError: unbekannter Fehler')['kind'], 'unknown')
         self.assertEqual(failure_help('[DEBUG] connect_tcp.started timeout=180.0\nUnbekannter Fehler')['kind'], 'unknown')
 
@@ -32,6 +32,14 @@ class FailureHelpTests(unittest.TestCase):
             self.assertEqual(result['kind'],kind)
             self.assertNotIn('PRIVATE_CONTENT',str(result))
         self.assertIn('erneut berechnet',result['action'])
+
+    def test_slow_response_explains_saved_wait_setting_without_echoing_transport_details(self):
+        result = failure_help('llm_client.LLMTransportError: KI-Anfrage fehlgeschlagen (ReadTimeout, Status None). SECRET_TEST')
+        self.assertEqual(result['kind'], 'timeout')
+        self.assertIn('llm.timeout_seconds', result['action'])
+        self.assertIn('neuen Lauf', result['action'])
+        self.assertNotIn('SECRET_TEST', str(result))
+        self.assertEqual(failure_help('httpx.ConnectTimeout: SECRET_TEST')['kind'], 'connection')
 
     def test_invalid_audit_references_explain_preserved_results_and_validation(self):
         for marker in ('Audit enthält ungültige Gegenbeleg-IDs.', 'Unbekannte oder doppelte Audit-ID.', 'Audit unvollständig: erwartete Audit-IDs fehlen.'):

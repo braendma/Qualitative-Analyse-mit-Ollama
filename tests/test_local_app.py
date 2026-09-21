@@ -58,6 +58,15 @@ def attach_supervision(app,folder,process):
 
 
 class DesktopTests(unittest.TestCase):
+    def test_save_returns_path_advice_for_chosen_destination_without_creating_run(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            app=App(tmp);pid=app.create('Synthetic path advice',True)['id'];opts=settings(app)
+            check=app.save(pid,opts)['output_path_check']
+            self.assertNotIn('_sensitivity_repetitions',check['example_relative_path'])
+            self.assertIn('keine Cloud-Synchronisation',check['note'])
+            self.assertEqual(app.jobs(pid),[])
+            self.assertEqual(list(Path(opts['output_dir']).iterdir()),[])
+
     def test_rejected_parallel_start_is_saved_without_spawning_or_research_folder(self):
         with tempfile.TemporaryDirectory() as tmp:
             app=App(tmp);pid=app.create('Synthetic start rejection',True)['id']
@@ -215,6 +224,14 @@ class DesktopTests(unittest.TestCase):
                 self.assertEqual(request('GET','/DIAGNOSTICS.md',headers={'Origin':'https://attacker.invalid'})[0],403)
                 self.assertEqual(request('GET','/api/state')[0],403)
                 headers={'X-App-Token':server.token,'Content-Type':'application/json'}
+                pid=app.create('Synthetic output check',True)['id']
+                status,body=request('POST','/api/output-check',{'project':pid,'output_dir':tmp},headers)
+                self.assertEqual(status,200)
+                output_check=json.loads(body)
+                self.assertEqual(output_check['output_dir'],str(canonical_path(tmp)))
+                self.assertIn('_sensitivity_repetitions',output_check['output_path_check']['example_relative_path'])
+                self.assertIn('keine Cloud-Synchronisation',output_check['message'])
+                self.assertEqual(app.jobs(pid),[])
                 self.assertEqual(request('GET','/api/state',headers={**headers,'Origin':'https://attacker.invalid'})[0],403)
                 self.assertEqual(request('GET','/',headers={'Host':'attacker.invalid'})[0],403)
                 self.assertEqual(request('POST','/api/create',[],headers)[0],400)

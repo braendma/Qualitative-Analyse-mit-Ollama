@@ -1,5 +1,4 @@
 """Bind external research storage to existing local jobs, never adopt other runs."""
-from datetime import datetime
 from contextlib import contextmanager, ExitStack
 import json
 from pathlib import Path
@@ -81,7 +80,9 @@ def create_binding(folder, config, parent):
     lock = _child(folder, LOCK)
     with _binding_lock(lock):
         _require(not (folder / LOCAL_MARKER).exists(), 'Dieser Job besitzt bereits einen Forschungsordner.')
-        root = io_path(parent / ('QualitativeAnalyse_' + datetime.now().strftime('%Y%m%d_%H%M%S') + '_' + folder.name))
+        # Creation time is already stored on the job; avoid repeating it in
+        # every nested output/checkpoint path. Keep the complete unique job ID.
+        root = io_path(parent / ('QualitativeAnalyse_' + folder.name))
         root.mkdir(exist_ok=False)
         storage = {'schema_version': 1, 'kind': 'external', 'project_id': folder.parent.parent.name,
                    'job_id': folder.name, 'job_folder': str(folder), 'research_root': str(canonical_path(root)),

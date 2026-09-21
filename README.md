@@ -1,18 +1,18 @@
 # Qualitative Analyse mit Ollama
 
-**Version 0.5.0-beta.2.** Prüfungen und Grenzen stehen im [Testbericht](docs/TEST_REPORT.md).
+**Version 0.5.1.** Prüfungen und Grenzen stehen im [Testbericht](docs/TEST_REPORT.md).
 
 [Technischer Kurzbericht (PDF, 3 Seiten)](docs/technical_report/technical_report.pdf) · [Methodischer Überblick](docs/METHODOLOGY.md) · [Handbuch](docs/HANDBUCH.md)
 
 | Download | Voraussetzung | Start |
 |---|---|---|
-| [Windows Standalone](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/download/v0.5.0-beta.2/QualitativeAnalyse-windows-x64.zip) | Python ist enthalten | ZIP entpacken, `QualitativeAnalyse.exe` öffnen |
-| [Windows mit Python](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/download/v0.5.0-beta.2/QualitativeAnalyse-0.5.0-beta.2-windows-python.zip) | Eigene Python-Installation | `Einrichtung.cmd`, dann `Start_Oberflaeche.cmd` |
-| [macOS mit Python](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/download/v0.5.0-beta.2/QualitativeAnalyse-0.5.0-beta.2-macos-python.zip) | Eigene Python-Installation | `start/macos/Einrichtung.command`, dann `Start_Oberflaeche.command` |
+| [Windows Standalone](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/download/v0.5.1/QualitativeAnalyse-windows-x64.zip) | Python ist enthalten | ZIP entpacken, `QualitativeAnalyse.exe` öffnen |
+| [Windows mit Python](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/download/v0.5.1/QualitativeAnalyse-0.5.1-windows-python.zip) | Eigene Python-Installation | `Einrichtung.cmd`, dann `Start_Oberflaeche.cmd` |
+| [macOS mit Python](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/download/v0.5.1/QualitativeAnalyse-0.5.1-macos-python.zip) | Eigene Python-Installation | `start/macos/Einrichtung.command`, dann `Start_Oberflaeche.command` |
 
 Alle ZIPs vollständig entpacken. Die beiden Python-Pakete enthalten denselben geprüften Quellstand und jeweils eine passende Startanleitung. Ollama und Modelle werden separat eingerichtet. Ein natives Mac-Paket ist noch nicht enthalten.
 
-**Bugfixrunde 0.5.0-beta.2:** Startfehler erscheinen direkt am Startknopf und bleiben bei abgewiesenen Startversuchen in der Laufübersicht. Die Speicherprüfung erklärt unbekannte Architekturen und bereits geladene Modelle genauer. Der macOS-Prozessabschluss wartet bei kurzzeitig verweigerter Statusabfrage weiter auf einen eindeutigen Abschlussnachweis. Die bewusste Personenkontrolle bleibt erforderlich. [Änderungen und Grenzen](docs/RELEASE_NOTES.md).
+**Patch 0.5.1:** Deutungen im Bericht können mit nachvollziehbarem Verlauf korrigiert werden; Zitate, Quellenkennungen und berechnete Tabellen bleiben gesperrt. Verknüpfte Prüfstellen führen zu betroffenen Meta-SWOT-Elementen oder ausdrücklich gröberen Folgebereichen. Die Ollama-Cloud-Antwortvalidierung wurde ergänzt. Ein synthetischer Gemma4:31b-Test bestand alle 20 Module, beide Perspektiven und die Prüfserien; der vollständige lokale Granite4.2:30b-Nachtest läuft getrennt weiter. Fachliche Vorschläge bleiben menschlich zu prüfen. [Änderungen und Grenzen](docs/RELEASE_NOTES.md).
 
 Die 0.5-Reihe ergänzt ein **Windows-Paket mit enthaltener Python-Laufzeit**, lokale Datei- und Ergebnisordnerauswahl sowie kontrolliertes Beenden und technische Fehlerprotokolle. [Windows-Kurzanleitung](docs/WINDOWS_STANDALONE.txt) · [Build und Paketprüfung](packaging/README.md).
 

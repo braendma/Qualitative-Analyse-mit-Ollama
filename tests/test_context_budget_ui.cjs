@@ -1,0 +1,21 @@
+const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
+test('provider selection explains program budget without silently changing it',()=>{
+ const nodes=new Map();const node=id=>{if(!nodes.has(id))nodes.set(id,{value:'',checked:false,addEventListener(){},replaceChildren(){}});return nodes.get(id);};
+ node('provider').value='ollama_cloud';node('num-ctx').value='65536';
+ const scope=vm.createContext({$:node,state:{providers:{},provider_keys:{}},action(){}});
+ vm.runInContext(fs.readFileSync(path.join(__dirname,'../src/providers_ui.js'),'utf8'),scope);
+ vm.runInContext('renderProvider()',scope);
+ assert.equal(node('context-budget-label').textContent,'Kontextbudget im Programm');
+ assert.match(node('context-budget-hint').textContent,/keine gemessenen Tokens/);
+ assert.match(node('context-budget-hint').textContent,/Modellgrenze gilt zusätzlich/);
+ assert.doesNotMatch(node('context-budget-hint').textContent,/num_ctx/);
+ assert.equal(node('num-ctx').value,'65536');
+ node('provider').value='ollama_local';vm.runInContext('renderProvider()',scope);
+ assert.equal(node('context-budget-label').textContent,'Lokales Kontextfenster / Programmbudget');
+ assert.match(node('context-budget-hint').textContent,/ausreichend Speicher/);
+ assert.equal(node('num-ctx').value,'65536');
+ const html=fs.readFileSync(path.join(__dirname,'../src/local_app.html'),'utf8');
+ assert.match(html,/<input aria-describedby="context-budget-hint" id="num-ctx"/);
+ assert.match(html,/Ein größeres lokales Modellfenster kann mehr Speicher benötigen/);
+ assert.doesNotMatch(html,/Höhere Kontextwerte benötigen mehr Speicher|Bei Cloud ist das Kontextfenster eine lokale Eingabegrenze/);
+});

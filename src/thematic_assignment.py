@@ -29,7 +29,7 @@ analytische Stützung, keine behauptete wörtliche Nennung. membership bezeichne
 Gruppenzugehörigkeit, keine wörtliche Aussage. Zähle keine Personen oder Häufigkeiten.
 Antworte nur als JSON-Objekt {"assignments":[{"topic_id":"...","unit_id":"...",
 "status":"supported|opposed|both|no_evidence|unclear"}]}. Jede angeforderte Zelle
-genau einmal, keine weiteren Felder, IDs oder Zellen.'''
+genau einmal in der Reihenfolge der angeforderten cells; keine weiteren Felder, IDs oder Zellen.'''
 CORRECTION = '\nDie vorherige Antwort hatte ein ungültiges Format oder unvollständige Zellen. Prüfe erneut jede angeforderte Zelle und das genaue JSON-Schema.'
 SCHEMA = {'type': 'object', 'additionalProperties': False, 'required': ['assignments'],
           'properties': {'assignments': {'type': 'array', 'items': {
@@ -60,8 +60,12 @@ def _validate(raw, expected):
         if any(not isinstance(row[key], str) for key in row):
             raise ValueError('Ungültiger Wert einer thematischen Zuordnung.')
         key = (row['topic_id'], row['unit_id'])
-        if key not in expected or key in seen or row['status'] not in MODEL_STATUSES:
-            raise ValueError('Unbekannte, doppelte oder ungültige thematische Zuordnung.')
+        if key not in expected:
+            raise ValueError('Thematische Antwort enthält eine nicht angeforderte Zelle.')
+        if key in seen:
+            raise ValueError('Thematische Antwort enthält eine doppelte Zelle.')
+        if row['status'] not in MODEL_STATUSES:
+            raise ValueError('Thematische Antwort enthält einen nicht erlaubten Status.')
         seen.add(key)
     if seen != expected:
         raise ValueError('Thematische Antwort ist unvollständig; fehlende Zellen sind keine Negativbefunde.')
@@ -85,7 +89,7 @@ def execute_assignments(material, topics, params, *, module, llm=None):
     cells = [{'topic_id': row['topic_id'], 'unit_id': row['unit_id']} for row in planned['assignments']]
     binding = {key: planned[key] for key in ('basis_fingerprint', 'material_content_fingerprint')}
     binding['topics_fingerprint'] = fingerprint(planned['definitions'])
-    binding['schema_version'] = 1
+    binding['schema_version'] = 2
     settings = {'max_tokens': 4000, 'num_ctx': 32768, **params, 'response_schema': SCHEMA}
     backend = llm or default_llm
 
@@ -128,11 +132,21 @@ def execute_assignments(material, topics, params, *, module, llm=None):
         schema = copy.deepcopy(SCHEMA)
         array = schema['properties']['assignments']
         array.update(minItems=len(expected), maxItems=len(expected))
-        fields = array['items']['properties']
-        fields['topic_id']['enum'] = sorted({tid for tid, _ in expected})
-        fields['unit_id']['enum'] = sorted({uid for _, uid in expected})
-        # The schema constrains identifiers/count; the validator still checks
-        # every exact pair, uniqueness and status. No missing cell is inferred.
+        # Draft-07 tuple items fix each requested pair at its own position.
+        # Independent ID enums permit unrequested cross-pairs; a union of pairs
+        # still permits duplicate rows and omitted cells. Positional objects
+        # leave only the semantic status to the model. Use items (not prefixItems)
+        # for the Ollama/llama.cpp grammar converter. Keep _validate as a separate
+        # boundary check for backends that ignore or incompletely apply schemas.
+        schema['$schema'] = 'http://json-schema.org/draft-07/schema#'
+        template = array['items']
+        array['items'] = []
+        array['additionalItems'] = False
+        for cell in item['cells']:
+            row = copy.deepcopy(template)
+            row['properties']['topic_id']['enum'] = [cell['topic_id']]
+            row['properties']['unit_id']['enum'] = [cell['unit_id']]
+            array['items'].append(row)
         for attempt in range(2):
             messages = [{'role': 'system', 'content': item['system']},
                         {'role': 'user', 'content': item['user'] + (CORRECTION if attempt else '')}]
@@ -141,9 +155,12 @@ def execute_assignments(material, topics, params, *, module, llm=None):
                                      **({'temperature': 0.0} if attempt else {})})
             try:
                 return _validate(raw, expected)
-            except ValueError:
+            except ValueError as error:
                 if attempt:
-                    raise ValueError('Thematische Zuordnung bleibt nach Korrektur ungültig oder unvollständig; Teilanalyse erneut starten.') from None
+                    # _validate emits only application-authored messages. Keep
+                    # the concrete reason, never raw output, identifiers or text.
+                    raise ValueError('Thematische Zuordnung bleibt nach Korrektur ungültig oder unvollständig; '
+                                     'Teilanalyse erneut starten. Ursache: ' + str(error)) from None
 
     blocks = analyze_items(items, compute, settings, module + '_thematic_assignments', 'batches')
     assignments = []

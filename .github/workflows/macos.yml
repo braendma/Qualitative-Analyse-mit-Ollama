@@ -26,7 +26,12 @@ jobs:
         shell: pwsh
         run: ./.venv/Scripts/python.exe -m unittest discover -s tests -p 'test_*.py'
       - name: JavaScript regression tests
-        run: node --test tests/test_local_app_frontend.cjs tests/test_review_frontend.cjs tests/test_progress_display.cjs tests/test_source_display.cjs
+        shell: pwsh
+        run: |
+          $testFiles = @(Get-ChildItem -LiteralPath tests -Filter 'test_*.cjs' | Sort-Object Name | ForEach-Object FullName)
+          if ($testFiles.Count -eq 0) { throw 'No JavaScript tests found.' }
+          node --test @testFiles
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Check the installed local web server
         run: ./.venv/Scripts/python.exe tests/smoke_windows.py
   macos:
@@ -50,6 +55,6 @@ jobs:
       - name: Python regression tests (synthetic data, mocked models)
         run: .venv-macos/bin/python3 -m unittest discover -s tests -p 'test_*.py'
       - name: JavaScript regression tests
-        run: node --test tests/test_local_app_frontend.cjs tests/test_review_frontend.cjs tests/test_progress_display.cjs tests/test_source_display.cjs
+        run: node --test tests/test_*.cjs
       - name: Start the user launcher and check the local web server
         run: .venv-macos/bin/python3 tests/smoke_macos.py

@@ -1,5 +1,8 @@
 # plot_core.py
 
+import matplotlib
+# Reports save files and never open plot windows, including direct CLI runs.
+matplotlib.use('Agg', force=True)
 import matplotlib.pyplot as plt
 import numpy as np
 import os

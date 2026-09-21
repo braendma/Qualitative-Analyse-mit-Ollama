@@ -335,6 +335,7 @@ function loadFields(){
   $('parallel-workers').value=String(s.parallel_workers??1);
   $('model').value=s.model??llm.model;$('num-ctx').value=s.num_ctx??llm.num_ctx;$('max-tokens').value=s.max_tokens??llm.max_tokens;
   $('synthesis-max-calls').value=s.synthesis_max_calls??llm.synthesis_max_calls??64;
+  $('timeout-seconds').value=s.timeout_seconds??llm.timeout_seconds??180;
   $('temperature').value=s.temperature??llm.temperature;$('think').value=String(s.think??llm.think);
   $('label-mode').value=s.label_mode||'multi_label';
   const context=s.context||state.defaults.context;
@@ -366,7 +367,7 @@ function settings(){
   const columns={},book_columns={};Object.keys(columnLabels).forEach(k=>columns[k]=$('segment-columns-'+k).value);
   Object.keys(bookLabels).forEach(k=>book_columns[k]=$('book-columns-'+k).value);
   const think=$('think').value;
-  return {output_dir:$('output-dir').value.trim(),output_dir_mode:outputDirMode,...(typeof providerSelection==='function'?providerSelection():{}),columns,book_columns,person_identity:typeof personIdentitySettings==='function'?personIdentitySettings():null,parallel_workers:$('provider').value==='ollama_local'?Number($('parallel-workers').value):1,model:$('model').value,num_ctx:Number($('num-ctx').value),max_tokens:Number($('max-tokens').value),synthesis_max_calls:Number($('synthesis-max-calls').value),temperature:Number($('temperature').value),
+  return {output_dir:$('output-dir').value.trim(),output_dir_mode:outputDirMode,...(typeof providerSelection==='function'?providerSelection():{}),columns,book_columns,person_identity:typeof personIdentitySettings==='function'?personIdentitySettings():null,parallel_workers:$('provider').value==='ollama_local'?Number($('parallel-workers').value):1,model:$('model').value,num_ctx:Number($('num-ctx').value),max_tokens:Number($('max-tokens').value),synthesis_max_calls:Number($('synthesis-max-calls').value),timeout_seconds:Number($('timeout-seconds').value),temperature:Number($('temperature').value),
     think:think==='true'?true:think==='false'?false:think,label_mode:$('label-mode').value,
     context:{project_description:$('context-project').value,participants:$('context-persons').value,methodology:$('context-method').value},
     analysis_perspectives:perspectiveSettings(),stability:stabilitySettings(),...([...document.querySelectorAll('[name=module]:checked')].some(n=>n.value==='sensitivity')?{sensitivity:sensitivitySettings()}:{}),modules:[...document.querySelectorAll('[name=module]:checked')].map(n=>n.value)};
@@ -378,6 +379,11 @@ async function saveAndValidate(pid=needProject()){
   if(settingsRevision!==revision)throw new Error('Einstellungen während der Prüfung geändert. Bitte die aktuelle Auswahl erneut prüfen und starten.');
   project.settings=s;
   const box=$('validation-result');box.replaceChildren(el('h3','Eingaben sind gültig'));box.hidden=false;
+  if(result.output_path_check){
+    const check=result.output_path_check;
+    for(const warning of check.warnings||[])box.append(el('p',warning,'selection-summary'));
+    const details=el('details');details.append(el('summary','Ergebnisordner und Pfadlänge'),el('p',check.note));box.append(details);
+  }
   if(result.stability_plan)box.append(el('p',`HOHER RECHENAUFWAND: ${result.stability_plan.repetitions} zusätzliche Wiederholungen mit ${result.stability_plan.module_executions} Modulausführungen einschließlich Vorstufen. Tatsächliche Modellanfragen können zahlreicher sein. Wiederholbarkeit ist kein Richtigkeitsnachweis.`,'selection-summary'));
   if(result.sensitivity_plan)box.append(el('p',`SEHR HOHER RECHENAUFWAND: ${result.sensitivity_plan.configuration_count} Einstellungen einschließlich Basis, je ${result.sensitivity_plan.repetitions} Wiederholungen: ${result.sensitivity_plan.module_executions} zusätzliche Modulausführungen. Alle Varianten wurden vorgeprüft. Das ist keine Qualitätsrangfolge.`,'selection-summary'));
   if(result.effort){const effortBox=el('div');renderEffortSummary(effortBox,result.effort,true);box.append(effortBox);const p=result.effort.analysis_perspectives;if(p?.additional_work_required)box.append(el('p',`Analyseperspektiven: ${p.shared_assignment_bases} gemeinsame Zählbasis/Basen und ${p.additional_frequency_interpretation_phases} zusätzliche Interpretationsphase(n) im Hauptlauf; ${p.additional_countability_selection_phases??0} zusätzliche Auswahlphase(n) für zählbare Synthesebefunde. Die Zahl der zusätzlichen Modellanfragen ist vorab nicht verlässlich bekannt. Wiederholungsserien kommen hinzu.`, 'selection-summary'));}
@@ -385,7 +391,7 @@ async function saveAndValidate(pid=needProject()){
   if(result.codebook_fields)box.append(el('p',`${result.codebook_fields.einschluss} Codes mit Einschlussregeln · ${result.codebook_fields.ausschluss} mit Ausschlussregeln · ${result.codebook_fields.abgrenzung||0} mit weiteren Codierhinweisen · ${result.codebook_fields.ankerbeispiel} mit Ankerbeispielen. Die zugeordneten Regeln werden bei der Codierung und Codeprüfung berücksichtigt.`));
   if(result.context_check){
     const check=result.context_check,details=el('details');details.append(el('summary','Kontextprüfung vor dem Start'));
-    details.append(el('p',`${check.context} Tokens Kontext · ${check.answer_limit} Tokens Antwortlimit. ${check.note}`));
+    details.append(el('p',`Programmbudget ${check.context} · Antwortreserve ${check.answer_limit}. ${check.note}`));
     for(const row of check.checks||[])details.append(el('p',`${row.module}: ${row.requests_checked} Eingaben geprüft, größte Rechengrenze ${row.required_bound}.`));
     box.append(details);
     for(const warning of check.warnings||[])box.append(el('p','Hinweis: '+warning,'hint'));
@@ -434,7 +440,7 @@ function renderProgressDetails(card,d,status,label='Modulfortschritt'){
   if(known)card.append(el('p','Der Prozentwert bezieht sich auf die angezeigten Arbeitseinheiten dieser Phase, nicht auf die benötigte Zeit.','hint'));
   if(d.reused)card.append(el('p',`${count(d.reused)} davon aus geprüften Zwischenergebnissen wiederverwendet`,'hint'));
   if(d.failed)card.append(el('p',`${count(d.failed)} Teilaufgabe(n) fehlgeschlagen. ${status==='running'?'Bereits laufende Anfragen werden noch abgeschlossen und erfolgreiche Ergebnisse gespeichert. Neue Teilaufgaben starten nicht.':'Erfolgreiche Zwischenergebnisse bleiben für die Wiederaufnahme erhalten.'}`,'error'));
-  if(d.context_blocked)card.append(el('p',`Kontext reicht für die entstandenen Eingaben nicht: konservative Rechengrenze ${d.context_required}, eingestellt ${d.context_limit}. Kontext und Speicherbedarf erneut prüfen und mit geänderten Einstellungen einen neuen Lauf starten.`,'error'));
+  if(d.context_blocked)card.append(el('p',`Programmbudget reicht für die entstandenen Eingaben nicht: konservativer Bedarf ${d.context_required}, eingestellt ${d.context_limit}. Dies ist keine gemessene Tokenzahl. Lokal Modellfenster und Speicher, bei Cloud zusätzlich die Modellgrenze des Anbieters prüfen. Mit geänderten Einstellungen einen neuen Lauf starten.`,'error'));
   const active=Number.isInteger(d.active_requests)?count(d.active_requests):(d.request_active?1:0);
   if(!series)card.append(el('p',`${count(d.requests)} Modellantworten empfangen`+(status==='running'?(active?(Number.isInteger(d.active_requests)?` · ${active} Modellanfrage(n) aktiv`:' · Modellanfrage läuft'):' · nächste Arbeitsschritte werden vorbereitet'):''),'hint'));
   if(d.last_response_at)card.append(el('p','Letzte Modellantwort: '+new Date(d.last_response_at*1000).toLocaleTimeString('de-DE'),'hint'));

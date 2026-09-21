@@ -408,6 +408,12 @@ def main(argv=None):
             except OSError as exc:
                 raise ValueError("Der angegebene Ergebnisordner ist nicht verfügbar oder nicht beschreibbar. Anderes Ziel wählen.") from exc
         output_parent = resolve_output_parent(csv_path, explicit_root, check_write=True)
+        from output_path_advice import output_path_check
+        path_check = output_path_check(output_parent, app_layout=False,
+                                       diagnostics=bool(stability_plan or sensitivity_plan),
+                                       run_prefix='' if explicit_root is not None else 'QualitativeAnalyse_')
+        for warning in path_check['warnings']:
+            print('Hinweis zum Ergebnisordner: ' + warning, file=sys.stderr)
         folder_name = run_id if explicit_root is not None else "QualitativeAnalyse_" + run_id
         output_dir = io_path(output_parent / folder_name)
         output_dir.mkdir(exist_ok=False)

@@ -3,6 +3,9 @@ import hashlib
 import json
 from pathlib import Path
 import re
+import os
+import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -15,6 +18,26 @@ from html_report import build_html_report
 
 
 class PlotFilenameTests(unittest.TestCase):
+    def test_direct_plot_uses_no_desktop_backend_even_with_tk_default(self):
+        root=Path(__file__).resolve().parents[1]
+        code='''
+import sys
+from pathlib import Path
+sys.path.insert(0,sys.argv[1])
+from plot_core import plot_clusters
+import matplotlib
+import pandas as pd
+assert matplotlib.get_backend().lower() == 'agg'
+frame=pd.DataFrame([{'_SegmentID':'SYN-1','Dokumentname':'SYN-P01'}])
+path=Path(plot_clusters('Category','Factor',[{'cluster_name':'Synthetic','segments':['SYN-1']}],frame,out_dir=sys.argv[2]))
+assert path.is_file() and path.with_suffix('.svg').is_file()
+'''
+        with tempfile.TemporaryDirectory() as tmp:
+            result=subprocess.run([sys.executable,'-c',code,str(root/'src'),tmp],
+                                  env={**os.environ,'MPLBACKEND':'TkAgg','PYTHONUTF8':'1'},
+                                  capture_output=True,text=True,encoding='utf-8',timeout=45)
+            self.assertEqual(result.returncode,0,result.stderr)
+
     def test_existing_short_names_remain_identical(self):
         for cat, sub, facet in [('Category', 'Factor', None), ('Äußere Lage', 'A/B', ''),
                                 ('', '', None), ('A', 'B', 'C > D')]:

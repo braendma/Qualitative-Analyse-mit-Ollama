@@ -1,6 +1,8 @@
 'use strict';
 function el(tag,text,className){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(className)n.className=className;return n;}
 const reportData=JSON.parse(document.getElementById('report-data').textContent);
+let reportEditor=null;
+try{reportEditor=installReportEditor(reportData);}catch(error){document.getElementById('report-warnings').append(el('p','Berichtskorrekturen konnten nicht zugeordnet werden: '+error.message,'warning'));}
 const reportSections=[],reportSearch=document.getElementById('report-search');
 document.getElementById('metadata').textContent=`Lauf: ${reportData.run_id} · Erstellt: ${reportData.created_at} · Modell: ${reportData.model}`;
 if(reportData.review_note){const n=document.getElementById('review-note');n.hidden=false;n.textContent=reportData.review_note;}
@@ -9,7 +11,8 @@ for(const section of reportData.sections){
   const box=el('details',undefined,'report-section');box.id=section.id;box.open=true;
   const summary=el('summary',section.title),content=el('div',undefined,'report-content');
   const media={};for(const [reference,key] of Object.entries(section.images))media[reference]=reportData.images[key];
-  markdownReport(section.markdown,content,media,section.source_refs||{},reportData.charts?.evidence||{});box.append(summary,content);document.getElementById('report-sections').append(box);
+  markdownReport(section.markdown,content,media,section.source_refs||{},reportData.charts?.evidence||{},(node,line)=>reportEditor?.decorate(section,node,line));
+  const original=el('details',undefined,'original-report');original.append(el('summary','Originalbericht und Quellen (unverändert)'));const originalContent=el('div');markdownReport(section.markdown,originalContent,media,section.source_refs||{},reportData.charts?.evidence||{});original.append(originalContent);box.append(summary,content,original);document.getElementById('report-sections').append(box);
   const button=el('button',section.title,'nav-link');button.onclick=()=>{reportSearch.value='';filterReport();box.open=true;box.scrollIntoView({behavior:'smooth',block:'start'});summary.focus();};
   document.getElementById('report-nav').append(button);
   reportSections.push({box,text:(section.title+' '+section.markdown).toLocaleLowerCase('de-DE')});
@@ -48,7 +51,7 @@ if(charts.person_categories?.length){
 }
 function filterReport(){
   const query=reportSearch.value.trim().toLocaleLowerCase('de-DE');let matches=0;
-  for(const item of reportSections){const visible=!query||item.text.includes(query);item.box.hidden=!visible;if(query&&visible)item.box.open=true;if(visible)matches++;}
+  for(const item of reportSections){const visible=!query||item.text.includes(query)||item.box.textContent.toLocaleLowerCase('de-DE').includes(query);item.box.hidden=!visible;if(query&&visible)item.box.open=true;if(visible)matches++;}
   document.getElementById('search-status').textContent=query?`${matches} von ${reportSections.length} Berichtsteilen enthalten „${reportSearch.value.trim()}“.`:reportSections.length?`${reportSections.length} Berichtsteile. Über die Navigation direkt zu einem Abschnitt springen.`:'Für die gewählten Module liegen keine Markdown-Berichtsteile vor. Einzeldateien in der Ergebnisliste öffnen.';
 }
 reportSearch.oninput=filterReport;

@@ -18,7 +18,7 @@ IMAGE = re.compile(r'^\s*!\[([^\]]*)\]\(([^)]+)\)\s*$', re.M)
 def inline_assets():
     """Exact bundled code/style shared by export and the app's CSP allowlist."""
     return {'script': [(ROOT/'report_viewer.js').read_text(encoding='utf-8'),
-                       (ROOT/'html_report.js').read_text(encoding='utf-8')],
+                       (ROOT/'report_editor.js').read_text(encoding='utf-8')+'\n'+(ROOT/'html_report.js').read_text(encoding='utf-8')],
             'style': [(ROOT/'html_report.css').read_text(encoding='utf-8')]}
 
 
@@ -28,6 +28,12 @@ LEGACY_REPORT_HASHES = {'script': ["'sha256-JdfchCVaDDGNds3x6iSiftJcX+HtnB1TcppP
 LEGACY_REPORT_HASHES['script'] += ["'sha256-QhZRvxCAVmoP7DLRZaIUmMuxRwrxbQlVK3w6hjGBGUo='",
                                   "'sha256-Mm42f8rjjBHIcY0pfLbPLAo1snQs+paoL+fLgCG9mQo='"]
 
+
+LEGACY_REPORT_HASHES['script'] += ["'sha256-rSd1pLZCgqIbm88Iviz6xvN1KCWpp8mfY0QpC4o5XLw='", "'sha256-bRycXlNmG7gM/aniahjWCq1bLbVqA6jZ21EWdpm1DPE='"]
+LEGACY_REPORT_HASHES['style'] += ["'sha256-BoZhQluroM6mHh7wrdiVlMxWrNSZ/uwtrDSOJF9YomI='"]
+
+
+LEGACY_REPORT_HASHES['script'] += ["'sha256-bGCK6yoHLXqci6DwzTa0wgBfx7ZsWS8HaBe27ag/Tvk='"]
 
 def csp_hashes():
     return {tag: ["'sha256-"+base64.b64encode(hashlib.sha256(value.encode()).digest()).decode()+"'"
@@ -65,6 +71,15 @@ def build_html_report(directory, modules, created_at, *, filename='gesamtbericht
         path=directory/'config_snapshot.yaml'
         config=yaml.safe_load(path.read_text(encoding='utf-8')) if path.is_file() else {}
     config=config or {};sections=[];warnings=[];assets={};image_bytes=0
+    flags_path=local_file(directory,'report_review_flags.json')
+    if flags_path.is_file():
+        try:
+            flags=json.loads(flags_path.read_text(encoding='utf-8'))
+            if flags.get('schema_version')!=1: raise ValueError('Unknown review flags')
+            for flag in flags['flags']:
+                warnings.append('Dokumentierter menschlicher Prüfbedarf ('+str(flag['module_id'])+', '+str(flag['topic_id'])+'): '+str(flag['note']))
+        except (ValueError,KeyError,TypeError,OSError):
+            warnings.append('Gespeicherte fachliche Prüfhinweise sind nicht lesbar. Bericht nicht als fachlich freigegeben verwenden.')
     for module in modules:
         if not module.get('enabled',True):continue
         report=module.get('report',{})
@@ -107,12 +122,18 @@ def build_html_report(directory, modules, created_at, *, filename='gesamtbericht
             except (OSError, ValueError, TypeError, KeyError, IndexError, AttributeError):
                 warnings.append('Herkunftsdetails der Gesamtsynthese fehlen oder sind nicht lesbar. Kennungen sind keine Interviewzitate.')
             text = clarify_source_lines(text, source_refs)
-        sections.append({'id':'section-'+str(len(sections)+1),'title':str(report.get('title',module['name'])),
+        from report_annotations import load_fields
+        try: fields = load_fields(directory, module, text, local_file)
+        except (OSError, ValueError, TypeError, KeyError, IndexError, AttributeError):
+            fields = {}
+            warnings.append('Bearbeitbare Deutungen konnten nicht eindeutig aus der JSON-Quelle zugeordnet werden: '+str(module.get('name', module['id'])))
+        sections.append({'editable_fields': fields, 'module_id': module['id'], 'id':'section-'+str(len(sections)+1),'title':str(report.get('title',module['name'])),
                          'markdown':text,'images':section_assets,'source_refs':source_refs})
     source=config.get('review_provenance') or {}
     data={'schema_version':1,'created_at':str(created_at),'run_id':directory.name,
           'model':str(config.get('llm',{}).get('model','Nicht dokumentiert')),
-          'review_note':str(source.get('note','')),'sections':sections,'images':assets,'warnings':list(dict.fromkeys(warnings))}
+          'review_note':str(source.get('note','')),'sections':sections,'images':assets,'warnings':list(dict.fromkeys(warnings)),
+          'review_dependencies': {m['id']: list(m.get('depends_on', [])) for m in modules}}
     from report_charts import chart_data
     try: data['charts']=chart_data(directory,modules)
     except (ValueError,TypeError,KeyError,OSError,AttributeError):

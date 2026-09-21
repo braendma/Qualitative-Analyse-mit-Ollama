@@ -34,7 +34,7 @@ function sourceReferenceDetails(root,line,references,evidence={}){
     box.append(el('small','Technische Referenz: '+id));root.append(box);
   }
 }
-function markdownReport(text,root,media={},sourceRefs={},evidence={}){
+function markdownReport(text,root,media={},sourceRefs={},evidence={},onNarrative=null){
   root.replaceChildren();const lines=text.split(/\r?\n/);let fenced=false,code=[];
   const cells=line=>line.replace(/^\s*\||\|\s*$/g,'').split(/(?<!\\)\|/).map(x=>x.trim().replace(/\\\|/g,'|'));
   for(let i=0;i<lines.length;i++){
@@ -62,6 +62,7 @@ function markdownReport(text,root,media={},sourceRefs={},evidence={}){
     const heading=line.match(/^(#{1,6})\s+(.+)/),item=line.match(/^\s*[-*]\s+(.+)/);
     const node=el(heading?'h'+Math.min(heading[1].length+1,6):line.startsWith('>')?'blockquote':'p');
     reportInline(node,heading?heading[2]:item?'• '+item[1]:line.replace(/^>\s?/,''));root.append(node);
+    if(onNarrative&&node.tagName.toLowerCase()==='p')onNarrative(node,i);
   }
   if(code.length)root.append(el('pre',code.join('\n')));
 }

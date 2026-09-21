@@ -6,7 +6,7 @@ import re
 # actions, module names and log text are deliberately not trusted as display text.
 _KIND_MARKERS = {
     'memory': 'CUDA out of memory', 'context': 'ContextBudgetError',
-    'credentials': 'Status 401', 'quota': 'Status 429', 'connection': 'ConnectError',
+    'credentials': 'Status 401', 'quota': 'Status 429', 'connection': 'ConnectError', 'timeout': 'ReadTimeout',
     'response': 'LLMResponseError', 'reduction': 'Zwischenzusammenfassung',
     'call_budget': 'Synthese-Aufrufbudget', 'diagnostic_integrity': 'Diagnose abgelehnt',
     'diagnostic_output': 'Diagnoseausgabe existiert bereits',
@@ -106,8 +106,12 @@ def failure_help(text):
         action='Unter „Erweiterte Modelleinstellungen“ das Aufrufbudget der Gesamtsynthese prüfen (YAML: llm.hierarchical_synthesis.max_calls). Ein höheres Limit erlaubt mehr Modellaufrufe und kann bei Cloud-Anbietern Kosten erhöhen. Danach einen neuen Lauf anlegen; unverändertes Fortsetzen hebt die Grenze nicht an. Vorhandene Ergebnisse bleiben erhalten. Ein größeres Kontextfenster allein behebt dieses Aufruflimit nicht.'
     elif any(x in value for x in ('contextbudgeterror','kontextfenster','kontextbudget','zu wenig kontext','kontext reicht','eingabe zu groß')):
         kind='context'
-        cause='Die entstandene Eingabe und das Antwortbudget passen nicht in das Kontextfenster.'
-        action='Kontext- und Speicherprüfung erneut ausführen. Ein größeres Kontextfenster nur bei ausreichender Modell- und Speicherkapazität verwenden; mit geänderten Einstellungen einen neuen Lauf starten. Bleibt der Fehler, Modulprotokoll prüfen und eine bereinigte Fehlermeldung melden.'
+        cause='Eingabe und Antwortreserve überschreiten die konfigurierte Rechengrenze oder das Modellfenster.'
+        sizes=re.search(r'konservativer bedarf (\d{1,9}), davon antwortreserve (\d{1,9}); eingestellt sind (\d{1,9})',value)
+        if sizes:
+            needed,reserve,limit=map(int,sizes.groups())
+            cause=f'Programmbudget überschritten: konservativer Bedarf {needed}, davon Antwortreserve {reserve}; eingestellt sind {limit}. Keine gemessene Tokenzahl.'
+        action='Eingabeprüfung und vollständigen Bedarf einschließlich Antwortreserve prüfen. Lokal zusätzlich Modellfenster und Speicher berücksichtigen. Bei Cloud verändert das Programmbudget nicht das Kontextfenster des Anbieters; dessen Modellgrenze gilt zusätzlich. Die UTF-8-basierte Programmschätzung kann früher stoppen als die tatsächliche Tokenbegrenzung. Antwortreserve nicht pauschal reduzieren. Geänderte Einstellungen benötigen einen neuen Lauf; das Budget wird nicht automatisch erhöht.'
     elif any(x in value for x in ('kürzungsversuchen','zwischenzusammenfassung','zusammenfassungsstufen','personenverdichtung')):
         kind='reduction'
         cause='Die Modellantwort ließ sich nicht ausreichend verdichten.'
@@ -129,6 +133,10 @@ def failure_help(text):
         kind='response'
         cause='Das Modell hat trotz Antwortkorrektur eine ungültige oder unvollständige Antwort geliefert.'
         action='Erfolgreiche Teilanalysen bleiben gespeichert. Bei einem einzelnen Modellfehler denselben Lauf fortsetzen. Bei wiederholten Fehlern Modell, Unterstützung strukturierter Antworten und Antwortlimit prüfen; geänderte Einstellungen benötigen einen neuen Lauf. Fehlende Zuordnungen nicht als negative Befunde zählen und die Vollständigkeitsprüfung nicht abschalten.'
+    elif 'readtimeout' in value:
+        kind='timeout'
+        cause='Innerhalb der eingestellten Antwortwartezeit kam keine vollständige Modellantwort an.'
+        action='Bei einem langsamen lokalen Modell oder Thinking unter „Erweiterte Modelleinstellungen“ die Antwortwartezeit erhöhen (YAML: llm.timeout_seconds, maximal 3600 Sekunden). Beispielsweise erlauben 1200 Sekunden zwanzig Minuten Wartezeit pro Transportphase. Anschließend mit geänderten Einstellungen einen neuen Lauf starten; erfolgreiche alte Ergebnisse bleiben erhalten. Bei Cloud zusätzlich Anbieterstatus prüfen. Eine längere Wartezeit behebt keinen Speicher- oder Kontextfehler und ist keine Grenze für die gesamte Laufdauer.'
     elif any(x in value for x in ('timeout','timed out','connection','connecterror','llmtransporterror','nicht erreichbar')):
         kind='connection'
         cause='Eine Modellanfrage konnte nicht rechtzeitig abgeschlossen oder die Verbindung nicht hergestellt werden.'

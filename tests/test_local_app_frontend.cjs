@@ -33,6 +33,19 @@ function setup(){
 const checkResult={segments:2,passages:1,persons:1,codes:1,modules:[]};
 const settle=()=>new Promise(resolve=>setImmediate(resolve));
 
+test('path advice remains visible after validation and does not create an approval gate',async()=>{
+  const app=setup();
+  const pending=app.run('saveAndValidate()');
+  app.requests.find(r=>r.url==='/api/save').reply({...checkResult,output_path_check:{
+    warnings:['Langer Ergebnispfad: kürzeres Ziel wählen.'],note:'Schätzung, keine Cloud-Synchronisation.'}});
+  await pending;
+  const flatten=n=>[n.textContent||'',...n.children.map(flatten)].join(' ');
+  assert.match(flatten(app.node('validation-result')),/Langer Ergebnispfad/);
+  assert.match(flatten(app.node('validation-result')),/keine Cloud-Synchronisation/);
+  assert.equal(app.node('validation-result').hidden,false);
+  assert.equal(app.requests.some(r=>r.url==='/api/start'),false);
+});
+
 test('start rejection stays visible beside the start button and clears on the next attempt',async()=>{
   const app=setup();let scrolled=false;
   app.node('start-error').scrollIntoView=()=>{scrolled=true;};
@@ -725,4 +738,20 @@ test('scheduled status does not block field rendering or repeat for an unchanged
   app.flushTimers();assert.equal(app.requests.filter(r=>r.url==='/api/models').length,1);
   lastRequest(app,'/api/models').reply({models:['one']});await settle();
   app.run('scheduleOllamaStatus()');app.flushTimers();assert.equal(app.requests.filter(r=>r.url==='/api/models').length,1);
+});
+
+
+test('answer wait follows project settings, defaults and the actual save payload',async()=>{
+  const app=setup();
+  app.run('state.defaults.llm.timeout_seconds=180;loadFields();');
+  assert.equal(Number(app.node('timeout-seconds').value),180);
+  app.node('timeout-seconds').value='1200';
+  const pending=app.run('saveAndValidate()');
+  const request=app.requests.find(r=>r.url==='/api/save');
+  assert.equal(JSON.parse(request.options.body).settings.timeout_seconds,1200);
+  request.reply(checkResult);await pending;
+  app.run('loadFields()');
+  assert.equal(Number(app.node('timeout-seconds').value),1200);
+  app.run('project.settings={timeout_seconds:90};loadFields();');
+  assert.equal(Number(app.node('timeout-seconds').value),90);
 });

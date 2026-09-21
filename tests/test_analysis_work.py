@@ -117,6 +117,26 @@ class AnalysisWorkTests(unittest.TestCase):
         self.assertEqual({c['auspraegung'] for c in compact['cluster_contexts'].values()}, {'A','B'})
         self.assertEqual(len(compact['segments'][0]['cluster_context_ids']),2)
 
+    def test_person_prompt_excludes_other_people_and_derived_cluster_claims(self):
+        texts={'P1#SEG1':'Die Simulation startet nicht.',
+               'P2#SEG1':'Ich muss jedes Mal mein Passwort zurücksetzen.'}
+        clusters=[{'hauptkategorie':'Organisation','subkategorie':'Zugang','auspraegung':'Technik','facette':None,
+                   'cluster_name':'Passwort bei jedem Start zurücksetzen',
+                   'definition':'Alle Personen berichten vom Passwortproblem.',
+                   'segments':list(texts)}]
+        summaries={'cluster_summaries':[{**clusters[0],'summary':'Passwort und Simulation sind bei beiden gestört.'}]}
+        before=copy.deepcopy((clusters,texts,summaries))
+        payloads=build_person_payloads(clusters,texts,summaries)
+        first=compact_person_payload(payloads['P1'])
+        serialized=json.dumps(first,ensure_ascii=False)
+        self.assertNotIn('Passwort',serialized)
+        self.assertNotIn('P2#SEG1',serialized)
+        self.assertEqual(first['segments'][0]['text'],texts['P1#SEG1'])
+        self.assertEqual(list(first['cluster_contexts'].values()),[{
+            'hauptkategorie':'Organisation','subkategorie':'Zugang','auspraegung':'Technik','facette':None}])
+        self.assertEqual((clusters,texts,summaries),before)
+        self.assertIn('Passwort',json.dumps(payloads['P2'],ensure_ascii=False))
+
     def test_real_analysis_assembly_parallel_matches_serial_and_preserves_evidence(self):
         texts = {f'P{i}#SEG1':f'Unverändertes Zitat {i}' for i in range(4)}
         clusters = [{'hauptkategorie':f'K{i//2}', 'subkategorie':'U', 'auspraegung':'A',

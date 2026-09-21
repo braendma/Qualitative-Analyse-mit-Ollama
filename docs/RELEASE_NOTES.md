@@ -1,3 +1,13 @@
+# Version 0.5.1 · Berichtskorrektur und Cloudvalidierung
+
+Eindeutig getrennte Deutungen lassen sich im HTML-Bericht mit Name, Begründung und Verlauf korrigieren. Originalzitate, Quellenkennungen, gespeicherte Zuordnungen und berechnete Tabellen bleiben gesperrt. Der Bericht kann mit Änderungen als eigene offline bearbeitbare HTML-Kopie gespeichert werden. Textänderungen zeigen verknüpfte Prüfstellen: belegte SWOT-Meta-SWOT-Zuordnungen führen zu konkreten Elementen; andere Verweise unterscheiden genaue Herkunft, gemeinsame Zitate und gröbere abhängige Modulbereiche. Weitere Textänderungen öffnen betroffene Prüfaufgaben wieder. Keine automatische Umklassifikation oder Änderung von Analyseartefakten und Folgemodulen.
+
+Ollama Cloud erhält das Antwortschema als ausdrückliche Promptanweisung. Der Cloudanbieter erzwingt das Schema nicht; die unabhängige Programmvalidierung bleibt deshalb verbindlich. Lokales Ollama und der Datenschutzstandard bleiben erhalten. Weitere Korrekturen betreffen Antwortwartezeit, Clusterabdeckung, Quellen-/Personenbezug und numerisch gleiche Anteilsschreibweisen.
+
+Das Kontextfeld und die Fehlerhilfe unterscheiden nun das konservative Programmbudget mit Antwortreserve vom tatsächlichen Modellfenster. Bei Cloudanbietern vergrößert eine höhere Programmeinstellung nicht das Anbieterfenster. Die bisherigen Grenzen und die vollständige Übergabe des Materials bleiben erhalten.
+
+Ein separater synthetischer Gemma4:31b-Test bestand alle 20 Module, beide Analyseperspektiven, zwei Stabilitäts- und vier Sensitivitätswiederholungen. Menschliche Prüfung fand weiterhin einzelne semantische Überdehnungen; technische Vollständigkeit beweist keine fachliche Richtigkeit. Der lokale Granite4.2:30b-Gesamtnachtest ist noch offen und wird durch den Cloudtest nicht ersetzt. Einzelheiten im [Testbericht](TEST_REPORT.md). Finale Paket-/CI-Abnahme dieses Versionsstands ist vor Veröffentlichung erforderlich.
+
 # Version 0.5.0-beta.2 · Bugfixrunde
 
 - Abgewiesene Starts nennen den Grund direkt am Startknopf. Serverseitige Startprüfungen hinterlassen einen nachvollziehbaren Eintrag statt eines leeren Jobordners; ohne gestartete Analyse gibt es keine unbrauchbare Fortsetzen-Aktion.

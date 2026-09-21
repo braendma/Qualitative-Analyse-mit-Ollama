@@ -91,6 +91,7 @@ def check_context(config, segments, codebook, modules):
 def require_context(report):
     if report['blocked']:
         details='; '.join(f"{x['module']}: Rechengrenze {x['required_bound']:,}".replace(',','.') for x in report['blocked'][:5])
-        raise ValueError(f"Start gesperrt: Kontextfenster {report['context']:,} reicht nach der konservativen Anfrageprüfung nicht ({details}). "
-            'Größeres Kontextfenster wählen und die Speicherschätzung erneut prüfen; dafür können weniger parallele Anfragen nötig sein. '
-            'Alternativ das Antwortlimit angemessen verringern. Texte und Codierregeln werden nicht automatisch gekürzt.')
+        raise ValueError(f"Start gesperrt: Programmbudget {report['context']:,} reicht nach der konservativen Anfrageprüfung nicht ({details}); Antwortreserve {report['answer_limit']:,}. "
+            'Die UTF-8-basierte Rechengrenze ist keine gemessene Tokenzahl. Lokal zusätzlich Modellfenster und Speicher prüfen. '
+            'Bei Cloud verändert das Programmbudget das Kontextfenster des Anbieters nicht; dessen Modellgrenze bleibt zusätzlich gültig. '
+            'Antwortreserve nicht pauschal reduzieren: Sie muss zur vollständigen Antwort passen. Texte und Codierregeln werden nicht automatisch gekürzt.')

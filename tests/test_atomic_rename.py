@@ -22,6 +22,21 @@ def permission_error(code):
 
 
 class AtomicRenameTests(unittest.TestCase):
+    def test_long_target_name_does_not_inflate_atomic_temporary_name(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = io_path(Path(tmp) / ('x' * 245 + '.json'))
+            names = []
+            real_replace = runtime._replace_atomic
+            def capture(source, destination):
+                names.append(Path(source).name)
+                return real_replace(source, destination)
+            with patch.object(runtime, '_replace_atomic', side_effect=capture):
+                runtime.atomic_json(path, {'complete': True})
+            self.assertEqual(path.read_text(encoding='utf-8'), '{\n  "complete": true\n}')
+            self.assertTrue(all(len(name) <= 20 for name in names))
+            self.assertEqual(len(list(io_path(tmp).iterdir())), 1)
+            path.unlink()
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix='atomic rename ä ')
         self.addCleanup(self.temp.cleanup)
