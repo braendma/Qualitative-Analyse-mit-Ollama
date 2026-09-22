@@ -1,4 +1,4 @@
-# v8 Beta: Transkription und Codierung
+# v0.6.0 Beta: Transkription und Codierung
 
 Diese Beta-Version verbindet die vorhandene Analyse mit Transkription und Codierung. Ein Projekt bietet zwei Einstiege: bereits codierte MAXQDA-Dateien importieren oder unter „Transkribieren / Codieren“ Material vorbereiten. Die Analysefunktionen und der Berichtseditor stehen anschließend in beiden Wegen zur Verfügung.
 

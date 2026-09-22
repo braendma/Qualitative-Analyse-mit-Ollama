@@ -1,6 +1,6 @@
 # Qualitative Analyse mit Ollama
 
-**Version 8.0.0-beta.1 – öffentliche Vorabversion.** Zwei Arbeitswege in einem Projekt: **Vorhandener Export** für bereits codierte Daten und **Transkription und Codierung** für Audio oder Text. Das ausklappbare Menü links erlaubt den Wechsel zwischen beiden Wegen.
+**Version 0.6.0 – öffentliche Vorabversion.** Zwei Arbeitswege in einem Projekt: **Vorhandener Export** für bereits codierte Daten und **Transkription und Codierung** für Audio oder Text. Das ausklappbare Menü links erlaubt den Wechsel zwischen beiden Wegen.
 
 [Beta-Anleitung](docs/BETA_V8.md) · [Sprechererkennung](docs/SPRECHERERKENNUNG.md) · [Handbuch](docs/HANDBUCH.md) · [Änderungen](docs/RELEASE_NOTES.md)
 
@@ -84,7 +84,7 @@ Seit Beta 3: lesbarere Clusterdiagramme und Konfusionsmatrix, anklickbare Person
 2. Python **3.12** installieren. Unter Windows einmal `Einrichtung.cmd` öffnen; dabei werden Python-Pakete aus dem Internet installiert, keine Modelle ausgeführt.
 3. `Start_Oberflaeche.cmd` öffnen. Alternativ aus einer passenden Python-Umgebung `python -X utf8 src/local_app.py` verwenden.
 
-**macOS:** Das Python-Paket der v8-Beta enthält die Starter unter `start/macos/`. Python 3.12 separat installieren und das gesamte Paket entpacken. Die GitHub-CI prüft Einrichtung, Regressionen und HTTP-Start; ein praktischer Audiotest auf einem physischen Mac steht noch aus. Ein Mac-Standalone wird nicht angeboten. [Mac-Anleitung und Grenzen](start/macos/README.md).
+**macOS:** Das Python-Paket der v0.6.0-Beta enthält die Starter unter `start/macos/`. Python 3.12 separat installieren und das gesamte Paket entpacken. Die GitHub-CI prüft Einrichtung, Regressionen und HTTP-Start; ein praktischer Audiotest auf einem physischen Mac steht noch aus. Ein Mac-Standalone wird nicht angeboten. [Mac-Anleitung und Grenzen](start/macos/README.md).
 
 Für lokale Modellanalysen zusätzlich Ollama und ein passendes Modell bereitstellen. Beides ist nicht im Windows-Paket enthalten. Ohne lokales Ollama bleiben Vorbereitung, reine Diagnosen ohne Modellbedarf und ausdrücklich freigegebene Cloud-Anbieter nutzbar.
 

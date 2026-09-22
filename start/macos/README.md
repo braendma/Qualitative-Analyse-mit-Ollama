@@ -1,6 +1,6 @@
-# v8-Beta als Python-Version auf dem Mac
+# v0.6.0-Beta als Python-Version auf dem Mac
 
-Das gesamte macOS-Python-ZIP in einen neuen Programmordner entpacken. Die Starter in diesem Unterordner gehören zu den gemeinsamen Quellen der **8.0.0-beta.1**; die übrigen Dateien und Unterordner müssen zusammenbleiben. Es gibt kein Mac-Standalone.
+Das gesamte macOS-Python-ZIP in einen neuen Programmordner entpacken. Die Starter in diesem Unterordner gehören zu den gemeinsamen Quellen der **0.6.0**; die übrigen Dateien und Unterordner müssen zusammenbleiben. Es gibt kein Mac-Standalone.
 
 1. Python 3.12 installieren.
 2. `Einrichtung.command` öffnen. Sie erstellt `.venv-macos` im Programmordner und installiert die Python-Abhängigkeiten aus dem Internet. Modelle werden dabei nicht heruntergeladen.

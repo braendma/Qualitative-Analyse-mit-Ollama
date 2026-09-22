@@ -1,4 +1,4 @@
-# 8.0.0-beta.1
+# 0.6.0
 
 - Öffentliche Beta mit integriertem Audio-/Text-/Codierweg und dauerhaft erreichbarem Seitenmenü.
 - Zentrale explizite Installation/Wiederverwendung von Whisper und Sortformer v2; Projekte/Modelle unter Dokumente.

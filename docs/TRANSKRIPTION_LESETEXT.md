@@ -1,4 +1,4 @@
-# Transkription und Codierung in v8 Beta
+# Transkription und Codierung in v0.6.0 Beta
 
 Aktuelle Bedienung, Installation und Prüfgrenzen: [Beta-Anleitung](BETA_V8.md).
 

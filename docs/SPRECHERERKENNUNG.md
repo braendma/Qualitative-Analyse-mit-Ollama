@@ -1,4 +1,4 @@
-# Automatische Sprecherwechsel in v8 Beta
+# Automatische Sprecherwechsel in v0.6.0 Beta
 
 Whisper erzeugt den Text. Sortformer v2 erkennt anschließend Sprecherwechsel auf der CPU. Beide Schritte unterstützen Aufnahmen bis 120 Minuten und 2 GiB. Die tatsächliche Rechenzeit hängt vom Rechner ab.
 

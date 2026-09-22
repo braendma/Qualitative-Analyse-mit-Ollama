@@ -1,4 +1,4 @@
-Qualitative Analyse – Windows Beta 8.0.0-beta.1
+Qualitative Analyse – Windows Beta 0.6.0
 
 ZIP vollständig entpacken und QualitativeAnalyse.exe öffnen. _internal muss daneben bleiben.
 Anleitung: _internal/docs/BETA_V8.md. Modelle nach ausdrücklicher Auswahl zentral installieren.
