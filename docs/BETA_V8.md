@@ -1,4 +1,4 @@
-# v0.6.0 Beta: Transkription und Codierung
+# v0.6.1 Beta: Transkription und Codierung
 
 Diese Beta-Version verbindet die vorhandene Analyse mit Transkription und Codierung. Ein Projekt bietet zwei Einstiege: bereits codierte MAXQDA-Dateien importieren oder unter „Transkribieren / Codieren“ Material vorbereiten. Die Analysefunktionen und der Berichtseditor stehen anschließend in beiden Wegen zur Verfügung.
 
@@ -38,6 +38,6 @@ Das Kontextfeld bezeichnet bei Cloudanbietern das konservative Programmbudget f�
 
 Mit Windows-Standalone wurde ein vollständiges synthetisches 14:25-Minuten-Interview mit Hintergrundgeräuschen verarbeitet: zwei Sprecherlabels, 2110 Wörter, 114 Wörter ohne eindeutige Sprecherzuordnung. Bearbeiten, Speichern, Personenprüfung, Zusammenführen benachbarter bestätigter gleicher Personen, manuelle Codierung, CSV-Export und Prozessneustart bestanden. Fachliche Kontrolle bleibt erforderlich; kein allgemeiner Qualitätsnachweis für reale Interviews.
 
-Separat wurde Sortformer auf 120 Minuten wiederholtem synthetischem Audio vollständig auf CPU geprüft. Kein vollständiger zweistündiger Whisper-Test, kein praktischer macOS-Audiotest. Die bestehenden Analysefunktionen wurden mit synthetischen Cloudtests geprüft; der gesamte lokale Granite-Nachtest einschließlich Stabilitäts- und Sensitivitätsserien ist noch offen. Eine Beta-Kennzeichnung ersetzt diese Prüfung nicht.
+Separat wurde Sortformer auf 120 Minuten wiederholtem synthetischem Audio vollständig auf CPU geprüft. Kein vollständiger zweistündiger Whisper-Test, kein praktischer macOS-Audiotest. Die bestehenden Analysefunktionen wurden mit synthetischen Cloudtests geprüft; der gesamte lokale Granite-Nachtest einschließlich Stabilitäts- und Sensitivitätsserien ist technisch abgeschlossen, mit dokumentierten fachlichen Deutungsfehlern. Eine Beta-Kennzeichnung ersetzt diese Prüfung nicht.
 
 Projekte werden standardmäßig in Dokumente/Qualitative Analyse/Projekte gespeichert, zentrale Modelle in Dokumente/Qualitative Analyse/Modelle. Ein explizites `--data-dir` bleibt vorrangig. Es wird keine Cloud-Synchronisation zugesichert.

@@ -109,6 +109,7 @@ def perspective_markdown(result):
     """Expose actual computed counts separately from model interpretation prose."""
     if result is None:
         return ''
+    from interpretation_review import count_explanation
     counted = result['counting']
     definitions = {t['topic_id']: t for t in counted['definitions']}
     outputs = result['interpretations']
@@ -151,6 +152,7 @@ def perspective_markdown(result):
                          f"{c['observed_unit_count']} | {value(c['exact_unit_count'])} |")
         lines.append('\n„Beide Positionen“ bei Personen umfasst auch gegensätzliche Aussagen in verschiedenen Passagen. '
                      'Bei unvollständiger Zuordnung sind beobachtete Werte lediglich Untergrenzen der Modellzuordnung.')
+        lines.append('\n**Berechnete Grundlage, keine fachliche Freigabe**\n\n' + escape(count_explanation(row)))
         if scope['person_count'] == 1:
             lines.append('\nDiese Bezugsmenge enthält eine einzelne Person. Die Zahlen beschreiben die '
                          'Materialbreite innerhalb dieses Falles; eine Personenquote von 1/1 wäre keine '

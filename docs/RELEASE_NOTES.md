@@ -1,3 +1,13 @@
+# Version 0.6.1 · Prüfhinweise für Deutungen (Beta)
+
+Der integrierte Beta-Zweig übernimmt aus dem stabilen 0.5.2-Patch lokale, regelbasierte Hinweise für ausgewählte deutsche Formulierungen: mögliche verlorene Verneinung bei ähnlichem Vorgang und Quellenkontext, Überdehnung von Häufigkeiten zu Repräsentativität/Kausalität/Wirksamkeit, Vollständigkeit als vermeintliche Validierung, falsche Bedeutung von `both`, fehlende Evidenz als vermeintliche Widerlegung, Verwechslung einer Person mit jeder Person sowie direkte Zustimmung zu analytisch abgeleiteten Themen. Die Hinweise sind exakt an den unveränderten Modellabsatz gebunden und ändern weder Texte noch Zuordnungen.
+
+Im HTML-Bericht sind die berechnete Bezugsmenge, beobachtete und vollständig bestimmbare Werte sowie deren Grenzen am jeweiligen Themenfeld nachlesbar. Neu erzeugte thematische Markdown-Berichte enthalten dieselbe Erklärung. Unbekannte Werte bleiben unbekannt. Bestehende Ergebnisse können ohne neuen Modelllauf separat als HTML exportiert werden; frühere HTML-Dateien ändern sich nicht von selbst.
+
+Diese begrenzten Sprachregeln können Fehler übersehen und Fehlalarme erzeugen. Es gibt keine gemessene allgemeine Erkennungsquote und keine automatische fachliche Freigabe. Hinweise betreffen den Originalvorschlag; nach menschlicher Textbearbeitung werden sie nicht neu berechnet. Zitate, Kennungen, Codierungen und Tabellen bleiben geschützt. Eine Textkorrektur berechnet keine Analysedaten neu. Quellenprüfung und vorhandener Verlauf bleiben erforderlich. Einzelheiten: [Prüfstellen](BERICHT_PRUEFSTELLEN.md).
+
+Die synthetischen Granite-Ergebnisse wurden am 28. September technisch vollständig abgeschlossen (20 Module, zwei Stabilitäts- und vier Sensitivitätswiederholungen). Sie zeigen weiterhin fachliche Deutungsfehler. Dieser Patch verändert die Ausgabeprüfung, nicht Modellprompts oder Zähllogik. Transkription, Sprecherzuordnung und Codierung aus 0.6.0 bleiben unverändert enthalten. Die Beta-Einstufung bleibt bestehen; eine neue Audio-Qualitätsprüfung wird durch diesen Ausgabepatch nicht behauptet. [Prüfstand](TEST_REPORT.md).
+
 # 0.6.0
 
 - Öffentliche Beta mit integriertem Audio-/Text-/Codierweg und dauerhaft erreichbarem Seitenmenü.

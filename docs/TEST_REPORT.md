@@ -1,3 +1,13 @@
+# 0.6.1 Beta: quellengebundene Deutungsprüfung · 29. September 2026
+
+Der gemeinsame Berichtspatch aus 0.5.2 ist in die integrierte 0.6.0-Basis übernommen. Die vollständige modellfreie Hauptsuite lief mit 1031 Tests (1029 bestanden, zwei vorgesehene Auslassungen). Zusätzlich bestanden 45 Python-Tests für Transkription/Codierung, 97 JavaScript-Prüfungen der Hauptanwendung und fünf JavaScript-Prüfungen der Vorbereitung. Die Transkriptions-, Sprecher- und Codierquellen bleiben gegenüber 0.6.0 bytegleich; dieser Patch führt keine neue ASR- oder Sprecherqualitätsmessung durch.
+
+Der separate Export vorhandener synthetischer Ergebnisse umfasst 20 Module, 1299 gebundene editierbare Felder, elf automatische Hinweise in zehn Feldern und 1227 berechnete Feldgrundlagen. 70 Eingabedateien blieben hashgleich. Offline-Chrome prüfte Bearbeiten, Verlauf, Export, Wiederöffnen, geschützte Zitate/Tabellen sowie die Bindung der Hinweise an das Original; ohne Seitenfehler oder Modell-/Netzanfragen. Acht bekannte Regressionen decken sieben bestätigte Problemfälle und den früheren Fehlalarm bei ausdrücklichem Ausschluss von Repräsentativität ab. Weitere positive und negative Formulierungen prüfen ausgewählte Grenzen.
+
+Die Erkennung ist heuristisch und unvollständig. Kein Hinweis bedeutet keine fachliche Freigabe. Hinweise bleiben nach manuellen Änderungen beim Original und werden nicht automatisch auf den bearbeiteten Text neu angewandt. Zählwerte, Zitate, Personenbindungen und Modellberechnungen werden durch den Berichtspatch nicht geändert.
+
+Paket- und exakte GitHub-Prüfungen werden zusätzlich vor Veröffentlichung abgeschlossen. Der Release bleibt Beta; die älteren Abschnitte dokumentieren historische Zwischenstände.
+
 # Feste Themen-/Textstellen-Paare im Antwortschema – 20. September 2026
 
 Entwicklungspatch: Die Antwort enthält ein festes Array mit genau einer vorgegebenen Thema/Textstellen-Kombination je Position (Draft-07 `items`-Tupel). Das Modell wählt nur einen der fünf bisherigen Bewertungsstatus. Damit verbietet das Schema auch unerlaubte Kreuzkombinationen, doppelte/fehlende Zellen und zusätzliche Zeilen. Der unabhängige Ergebnisvalidator bleibt erhalten, auch für Backends, die das Schema nicht vollständig anwenden. Material und Definitionen werden weiterhin vollständig übergeben. Prompt-/Bindungsvertrag auf Version 2; kein unveränderter Resume mit alten Fingerprints behauptet.

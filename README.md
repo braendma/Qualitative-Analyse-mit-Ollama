@@ -1,6 +1,8 @@
 # Qualitative Analyse mit Ollama
 
-**Version 0.6.0 – öffentliche Vorabversion.** Zwei Arbeitswege in einem Projekt: **Vorhandener Export** für bereits codierte Daten und **Transkription und Codierung** für Audio oder Text. Das ausklappbare Menü links erlaubt den Wechsel zwischen beiden Wegen.
+**Version 0.6.1 – öffentliche Vorabversion.** Zwei Arbeitswege in einem Projekt: **Vorhandener Export** für bereits codierte Daten und **Transkription und Codierung** für Audio oder Text. Das ausklappbare Menü links erlaubt den Wechsel zwischen beiden Wegen.
+
+**Neu in 0.6.1:** Quellengebundene automatische Prüfhinweise und Erklärungen berechneter Bezugsgrößen aus dem stabilen 0.5.2-Patch. Die Hinweise sind begrenzt und ersetzen keine fachliche Prüfung. Transkription, Sprecherzuordnung und Codierung bleiben erhalten.
 
 [Beta-Anleitung](docs/BETA_V8.md) · [Sprechererkennung](docs/SPRECHERERKENNUNG.md) · [Handbuch](docs/HANDBUCH.md) · [Änderungen](docs/RELEASE_NOTES.md)
 
@@ -14,7 +16,7 @@ Projekte liegen standardmäßig in **Dokumente/Qualitative Analyse/Projekte**, M
 
 Whisper transkribiert; das separat installierbare Sortformer v2 erkennt Sprecherwechsel. Beide Schritte unterstützen **bis 120 Minuten und 2 GiB**. Sprecherlabels und Text müssen geprüft werden; maximal vier Stimmen, keine verlässliche Personenidentifikation. Aufnahmen können nacheinander abgeschlossen und erst danach im selben Projekt codiert werden. Eine automatische Mehrfachdatei-Warteschlange ist nicht vorhanden.
 
-**Prüfstand und Grenzen:** vollständiger Windows-Praxistest mit synthetischem 14:25-Minuten-Interview, zwei Stimmen und Geräuschen einschließlich Bearbeitung, Codierung, Export und Neustart. Zusätzlich 120-Minuten-CPU-Sortformer-Dauertest mit wiederholtem synthetischem Material. Vollständige zweistündige Whisper-Transkription und praktischer macOS-Audiotest stehen aus. Automatisierte Windows/macOS-Installationstests ersetzen diese Praxisprüfung nicht. Granite-Gesamtnachtest einschließlich Serien noch offen; siehe [Beta-Prüfstand](docs/BETA_V8.md). Der synthetische Interview-Solltext liegt unter `demo/interview/`. Die mit ElevenLabs erzeugte Audiodatei wird wegen der Anbieterbedingungen für KI-Testdatensätze nicht mitveröffentlicht.
+**Prüfstand und Grenzen:** vollständiger Windows-Praxistest mit synthetischem 14:25-Minuten-Interview, zwei Stimmen und Geräuschen einschließlich Bearbeitung, Codierung, Export und Neustart. Zusätzlich 120-Minuten-CPU-Sortformer-Dauertest mit wiederholtem synthetischem Material. Vollständige zweistündige Whisper-Transkription und praktischer macOS-Audiotest stehen aus. Automatisierte Windows/macOS-Installationstests ersetzen diese Praxisprüfung nicht. Granite-Gesamtnachtest einschließlich Serien technisch abgeschlossen, mit fachlichen Prüfhinweisen; siehe [Beta-Prüfstand](docs/BETA_V8.md). Der synthetische Interview-Solltext liegt unter `demo/interview/`. Die mit ElevenLabs erzeugte Audiodatei wird wegen der Anbieterbedingungen für KI-Testdatensätze nicht mitveröffentlicht.
 
 Ollama-Analyse läuft standardmäßig lokal. Cloud ist nur nach ausdrücklicher Auswahl und Übertragungsbestätigung verfügbar; kein automatischer Wechsel. Modellgewichte, Nutzerprojekte und Schlüssel sind nicht in den Paketen enthalten.
 
@@ -84,7 +86,7 @@ Seit Beta 3: lesbarere Clusterdiagramme und Konfusionsmatrix, anklickbare Person
 2. Python **3.12** installieren. Unter Windows einmal `Einrichtung.cmd` öffnen; dabei werden Python-Pakete aus dem Internet installiert, keine Modelle ausgeführt.
 3. `Start_Oberflaeche.cmd` öffnen. Alternativ aus einer passenden Python-Umgebung `python -X utf8 src/local_app.py` verwenden.
 
-**macOS:** Das Python-Paket der v0.6.0-Beta enthält die Starter unter `start/macos/`. Python 3.12 separat installieren und das gesamte Paket entpacken. Die GitHub-CI prüft Einrichtung, Regressionen und HTTP-Start; ein praktischer Audiotest auf einem physischen Mac steht noch aus. Ein Mac-Standalone wird nicht angeboten. [Mac-Anleitung und Grenzen](start/macos/README.md).
+**macOS:** Das Python-Paket der v0.6.1-Beta enthält die Starter unter `start/macos/`. Python 3.12 separat installieren und das gesamte Paket entpacken. Die GitHub-CI prüft Einrichtung, Regressionen und HTTP-Start; ein praktischer Audiotest auf einem physischen Mac steht noch aus. Ein Mac-Standalone wird nicht angeboten. [Mac-Anleitung und Grenzen](start/macos/README.md).
 
 Für lokale Modellanalysen zusätzlich Ollama und ein passendes Modell bereitstellen. Beides ist nicht im Windows-Paket enthalten. Ohne lokales Ollama bleiben Vorbereitung, reine Diagnosen ohne Modellbedarf und ausdrücklich freigegebene Cloud-Anbieter nutzbar.
 

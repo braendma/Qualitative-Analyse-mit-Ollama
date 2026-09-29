@@ -35,6 +35,9 @@ LEGACY_REPORT_HASHES['style'] += ["'sha256-BoZhQluroM6mHh7wrdiVlMxWrNSZ/uwtrDSOJ
 
 LEGACY_REPORT_HASHES['script'] += ["'sha256-bGCK6yoHLXqci6DwzTa0wgBfx7ZsWS8HaBe27ag/Tvk='"]
 
+# Keep the 0.5.1 offline editor usable inside the current app.
+LEGACY_REPORT_HASHES['script'] += ["'sha256-RyDW+N+8t9S9mocbq48y/09gZAP8s0a99ty0LdkdsPo='"]
+
 def csp_hashes():
     return {tag: ["'sha256-"+base64.b64encode(hashlib.sha256(value.encode()).digest()).decode()+"'"
                   for value in values] + LEGACY_REPORT_HASHES.get(tag, []) for tag,values in inline_assets().items()}

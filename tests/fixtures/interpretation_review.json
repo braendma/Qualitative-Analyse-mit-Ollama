@@ -1,0 +1,368 @@
+[
+  {
+    "case": 1,
+    "text": "Der aktive Vergleich eigener Messwerte mit anderen Gruppen dient der Identifikation von Abweichungen in Bezugspunkten und Aufbauten und trägt zur gemeinsamen Reflexion und Verbesserung der Messmethodik bei. Die beobachteten Anteile zeigen, dass 75 % der Personen und 80 % der Materialpassagen diesen Befund stützen, ohne direkte Gegenpositionen im untersuchten Material. Die Häufigkeit der Stützung informiert die Einordnung, beweist jedoch weder Bedeutung, Repräsentativität noch Kausalität.",
+    "evidence": [
+      {
+        "id": "S1",
+        "text": "Wir haben unsere Messwerte verglichen. Dabei fiel auf, dass wir verschiedene Bezugspunkte verwendet hatten."
+      },
+      {
+        "id": "S2",
+        "text": "Die andere Gruppe kam zu einem anderen Ergebnis. Erst im Gespräch haben wir den Unterschied im Aufbau gefunden."
+      },
+      {
+        "id": "S3",
+        "text": "In der offenen Sprechstunde haben wir gemeinsam unsere Messwerte verglichen. Die Kursleitung half uns, den unterschiedlichen Aufbau zu erkennen."
+      }
+    ],
+    "row": {
+      "kind": "derived",
+      "scope": {
+        "person_count": 4,
+        "unit_count": 5
+      },
+      "coverage": {
+        "decided_cells": 5,
+        "expected_cells": 5
+      },
+      "counts": {
+        "supporting": {
+          "observed_person_count": 3,
+          "observed_unit_count": 4,
+          "exact_person_count": 3,
+          "exact_unit_count": 4
+        },
+        "opposing": {
+          "observed_person_count": 0,
+          "observed_unit_count": 0,
+          "exact_person_count": 0,
+          "exact_unit_count": 0
+        },
+        "both": {
+          "observed_person_count": 0,
+          "observed_unit_count": 0,
+          "exact_person_count": 0,
+          "exact_unit_count": 0
+        }
+      }
+    },
+    "expected": []
+  },
+  {
+    "case": 2,
+    "text": "Die Simulation startet auf Leihgeräten ohne Fehlermeldung, was die Fehlersuche erheblich erschwert, da keine diagnostischen Hinweise bereitgestellt werden, um Ursachen zu identifizieren oder Lösungen zu entwickeln. Dies beeinträchtigt die Effizienz und Effektivität des Lern- und Anwendungsprozesses, insbesondere in Kontexten, in denen Leihgeräte eingesetzt werden müssen.",
+    "evidence": [
+      {
+        "id": "S1",
+        "text": "Am eigenen Rechner läuft die Simulation. Auf dem Leihgerät startet sie nicht; die Fehlermeldung bleibt leer."
+      },
+      {
+        "id": "S2",
+        "text": "Die Simulation startete auch nach dem dritten Versuch nicht. Die Betreuung antwortete schnell und grenzte den Fehler ein. Ich würde mir für solche Fälle zusätzlich eine Anleitung zur Fehlersuche wünschen."
+      }
+    ],
+    "row": {
+      "kind": "derived",
+      "scope": {
+        "person_count": 4,
+        "unit_count": 4
+      },
+      "coverage": {
+        "decided_cells": 4,
+        "expected_cells": 4
+      },
+      "counts": {
+        "supporting": {
+          "observed_person_count": 1,
+          "observed_unit_count": 1,
+          "exact_person_count": 1,
+          "exact_unit_count": 1
+        },
+        "opposing": {
+          "observed_person_count": 0,
+          "observed_unit_count": 0,
+          "exact_person_count": 0,
+          "exact_unit_count": 0
+        },
+        "both": {
+          "observed_person_count": 0,
+          "observed_unit_count": 0,
+          "exact_person_count": 0,
+          "exact_unit_count": 0
+        }
+      }
+    },
+    "expected": [
+      "possible_negation_loss"
+    ]
+  },
+  {
+    "case": 3,
+    "text": "Das Risiko unzureichender Wiederholungsmöglichkeiten beruht auf der Abhängigkeit von eigenständiger Anwendung und Wiederholung, wie in den Aussagen beschrieben. In der untersuchten Bezugsmenge (4 Personen, 4 Materialpassagen) ist das Thema in allen Fällen explizit thematisiert (mentioned: 100% Personen und Einheiten). Zwei der vier Personen äußern sich direkt ablehnend (opposing: 50%), zwei unterstützen die Notwendigkeit von Wiederholung (supporting: 50%). Die Häufigkeit der Erwähnung und die ausgewogene Aufteilung zwischen ablehnenden und unterstützenden Positionen zeigen, dass das Material sowohl Risikobewusstsein als auch praktische Erfahrungen zur Wiederholung enthält. Die beobachteten Anteile (exakte und beobachtete Zählungen) spiegeln die gleiche Verteilung wider. Die Häufigkeit informiert die Einordnung, beweist jedoch weder Bedeutung, Repräsentativität noch Kausalität. Die Gegenpositionen beziehen sich explizit auf das untersuchte Material und sind nicht erfunden.",
+    "evidence": [
+      {
+        "id": "S1",
+        "text": "Die Fehlersuche aus dem Kurs konnte ich am nächsten Tag an unserem Übungsgerät wiederholen. Erst danach habe ich den Ablauf verstanden."
+      },
+      {
+        "id": "S2",
+        "text": "Das Beispiel war anders als meine Aufgabe, aber das Vorgehen ließ sich übertragen. Ganz ohne Rückfrage ging es noch nicht."
+      }
+    ],
+    "row": {
+      "kind": "derived",
+      "scope": {
+        "person_count": 4,
+        "unit_count": 4
+      },
+      "coverage": {
+        "decided_cells": 4,
+        "expected_cells": 4
+      },
+      "counts": {
+        "supporting": {
+          "observed_person_count": 2,
+          "observed_unit_count": 2,
+          "exact_person_count": 2,
+          "exact_unit_count": 2
+        },
+        "opposing": {
+          "observed_person_count": 2,
+          "observed_unit_count": 2,
+          "exact_person_count": 2,
+          "exact_unit_count": 2
+        },
+        "both": {
+          "observed_person_count": 0,
+          "observed_unit_count": 0,
+          "exact_person_count": 0,
+          "exact_unit_count": 0
+        }
+      }
+    },
+    "expected": [
+      "derived_not_explicit"
+    ]
+  },
+  {
+    "case": 4,
+    "text": "Die Zuordnung beruht auf 2 beobachteten Personen und 2 Materialpassagen aus einer Gesamtbezugsmenge von 4 Personen und 4 Passagen; die Häufigkeit von 50 % zeigt, dass die Aussage nicht für alle untersuchten Fälle gilt. Da keine Gegenposition im Material belegt ist, bleibt die Aussage auf das beobachtete Material beschränkt. Die Aussage informiert die Einordnung aufgrund der Häufigkeit, beruht jedoch auf keiner quantitativen Repräsentativität oder Kausalität. Personen- und Materialanteile sind separat zu betrachten; die Analyse berücksichtigt nicht die mögliche Interaktion zwischen Personen und Materialien über die gegebene Bezugsmenge hinaus.",
+    "evidence": [
+      {
+        "id": "S1",
+        "text": "Vielleicht könnte die Abgabe in zwei kleine Schritte geteilt werden. Dann gäbe es Rückmeldung, bevor alles fertig ist."
+      }
+    ],
+    "row": {
+      "kind": "derived",
+      "scope": {
+        "person_count": 4,
+        "unit_count": 4
+      },
+      "coverage": {
+        "decided_cells": 4,
+        "expected_cells": 4
+      },
+      "counts": {
+        "supporting": {
+          "observed_person_count": 2,
+          "observed_unit_count": 2,
+          "exact_person_count": 2,
+          "exact_unit_count": 2
+        },
+        "opposing": {
+          "observed_person_count": 0,
+          "observed_unit_count": 0,
+          "exact_person_count": 0,
+          "exact_unit_count": 0
+        },
+        "both": {
+          "observed_person_count": 0,
+          "observed_unit_count": 0,
+          "exact_person_count": 0,
+          "exact_unit_count": 0
+        }
+      }
+    },
+    "expected": [
+      "missing_not_false"
+    ]
+  },
+  {
+    "case": 5,
+    "text": "Die Beurteilung basiert auf einer einzigen beobachteten Passage pro Person und Einheit (25% der jeweiligen Basis). Es gibt keine gegengewärtigen Aussagen oder weitere empirische Evidenz aus dem Material, die die Häufigkeit oder Auswirkungen der Passwortanfragen überprüfen. Die Einschätzung ist daher auf das untersuchte Material beschränkt und kann nicht auf andere Kontexte oder längere Beobachtungszeiträume verallgemeinert werden.",
+    "evidence": [
+      {
+        "id": "S1",
+        "text": "Die Anmeldung klappt inzwischen. Für jede Sitzung muss ich aber erneut ein Passwort anfordern."
+      }
+    ],
+    "row": {
+      "kind": "derived",
+      "scope": {
+        "person_count": 4,
+        "unit_count": 4
+      },
+      "coverage": {
+        "decided_cells": 4,
+        "expected_cells": 4
+      },
+      "counts": {
+        "supporting": {
+          "observed_person_count": 1,
+          "observed_unit_count": 1,
+          "exact_person_count": 1,
+          "exact_unit_count": 1
+        },
+        "opposing": {
+          "observed_person_count": 0,
+          "observed_unit_count": 0,
+          "exact_person_count": 0,
+          "exact_unit_count": 0
+        },
+        "both": {
+          "observed_person_count": 0,
+          "observed_unit_count": 0,
+          "exact_person_count": 0,
+          "exact_unit_count": 0
+        }
+      }
+    },
+    "expected": [
+      "single_not_each"
+    ]
+  },
+  {
+    "case": 6,
+    "text": "Die Beurteilung basiert auf einer Beobachtungsmenge von ausschließlich 3 Personen und 3 Materialpassagen, was die allgemeine Repräsentativität des Befunds begrenzt. Die Aussage ist als mentioned und supporting klassifiziert, nicht als both, da sie nicht in allen untersuchten Passagen oder von allen Personen geäußert wurde. Die Häufigkeit der Nennung (Anteil von jeweils 0,333) informiert die Einordnung, beweist aber weder kausale Wirkung noch universelle Gültigkeit. Es gibt keine beobachteten Gegenpositionen im Material, sodass mögliche abweichende Erfahrungen nicht berücksichtigt sind. Die Analyse beruht auf der interpretativen Zuordnung der Materialien gemäß den vorgegebenen inclusion-Kriterien und ist nicht durch weitere empirische Daten validiert.",
+    "evidence": [
+      {
+        "id": "S1",
+        "text": "Die kleinen Übungsgruppen fand ich angenehm. Ob ich das später allein kann, weiß ich noch nicht."
+      }
+    ],
+    "row": {
+      "kind": "derived",
+      "scope": {
+        "person_count": 3,
+        "unit_count": 3
+      },
+      "coverage": {
+        "decided_cells": 3,
+        "expected_cells": 3
+      },
+      "counts": {
+        "supporting": {
+          "observed_person_count": 1,
+          "observed_unit_count": 1,
+          "exact_person_count": 1,
+          "exact_unit_count": 1
+        },
+        "opposing": {
+          "observed_person_count": 0,
+          "observed_unit_count": 0,
+          "exact_person_count": 0,
+          "exact_unit_count": 0
+        },
+        "both": {
+          "observed_person_count": 0,
+          "observed_unit_count": 0,
+          "exact_person_count": 0,
+          "exact_unit_count": 0
+        }
+      }
+    },
+    "expected": [
+      "both_not_universal"
+    ]
+  },
+  {
+    "case": 7,
+    "text": "Das Material deutet darauf hin, dass Lernende bei nicht startenden Simulationen ohne eigenständige Fehlersuche auf Betreuung angewiesen bleiben, was die Abhängigkeit von externer Unterstützung verstärkt. Die Häufigkeit dieser Beobachtung betrifft 2 der 4 untersuchten Personen und 2 der 4 Materialpassagen (je 50 %), was die Repräsentativität des Befunds im Kontext der Bezugsmenge (4 Personen, 4 Materialpassagen) bestätigt. Die qualitative Analyse unterstreicht das Risiko, dass fehlende strukturierte Fehlersuchhilfen die Selbstständigkeit eindämmen.",
+    "evidence": [
+      {
+        "id": "S1",
+        "text": "Die Simulation startete auch nach dem dritten Versuch nicht. Die Betreuung antwortete schnell und grenzte den Fehler ein. Ich würde mir für solche Fälle zusätzlich eine Anleitung zur Fehlersuche wünschen."
+      }
+    ],
+    "row": {
+      "kind": "derived",
+      "scope": {
+        "person_count": 4,
+        "unit_count": 4
+      },
+      "coverage": {
+        "decided_cells": 4,
+        "expected_cells": 4
+      },
+      "counts": {
+        "supporting": {
+          "observed_person_count": 2,
+          "observed_unit_count": 2,
+          "exact_person_count": 2,
+          "exact_unit_count": 2
+        },
+        "opposing": {
+          "observed_person_count": 0,
+          "observed_unit_count": 0,
+          "exact_person_count": 0,
+          "exact_unit_count": 0
+        },
+        "both": {
+          "observed_person_count": 0,
+          "observed_unit_count": 0,
+          "exact_person_count": 0,
+          "exact_unit_count": 0
+        }
+      }
+    },
+    "expected": [
+      "unsupported_inference"
+    ]
+  },
+  {
+    "case": 8,
+    "text": "Die beobachteten und exakt zugeordneten Aussagen (share: 0.25 bei Personen, 0.2 bei Einheiten) zeigen, dass die Kursleitung bereits aktiv dazu beigetragen hat, abweichende Messpunkte und Aufbauten zu identifizieren. Dies deutet darauf hin, dass die vermittelnde Rolle der Kursleitung strukturell genutzt werden kann, um Abweichungen systematisch zu erkennen und gemeinsam zu besprechen. Die vollständige Modellzuordnung (complete: true) stützt die qualitative Einschätzung, dass diese Nutzung als wirksame Praxis im Kontext der Messwertvergleiche zu sehen ist.",
+    "evidence": [
+      {
+        "id": "S1",
+        "text": "In der offenen Sprechstunde haben wir gemeinsam unsere Messwerte verglichen. Die Kursleitung half uns, den unterschiedlichen Aufbau zu erkennen."
+      }
+    ],
+    "row": {
+      "kind": "derived",
+      "scope": {
+        "person_count": 4,
+        "unit_count": 5
+      },
+      "coverage": {
+        "decided_cells": 5,
+        "expected_cells": 5
+      },
+      "counts": {
+        "supporting": {
+          "observed_person_count": 1,
+          "observed_unit_count": 1,
+          "exact_person_count": 1,
+          "exact_unit_count": 1
+        },
+        "opposing": {
+          "observed_person_count": 0,
+          "observed_unit_count": 0,
+          "exact_person_count": 0,
+          "exact_unit_count": 0
+        },
+        "both": {
+          "observed_person_count": 0,
+          "observed_unit_count": 0,
+          "exact_person_count": 0,
+          "exact_unit_count": 0
+        }
+      }
+    },
+    "expected": [
+      "completion_not_validity"
+    ]
+  }
+]
