@@ -4,6 +4,7 @@ import json
 import re
 from collections import defaultdict
 from coverage_core import markdown_escape
+from interpretation_review import count_explanation, review_hints
 
 NARRATIVE = {'interpretation', 'counterpositions', 'limitations', 'analyse', 'summary', 'verdichtung',
              'zusammenfassung', 'interpretation_text'}
@@ -121,6 +122,12 @@ def editable_fields(markdown, payload, texts=None):
         index = positions[0]
         fields[str(index)] = {**entries[0], 'original_markdown': line,
                              'source_sha256': hashlib.sha256(json.dumps(entries[0], sort_keys=True, ensure_ascii=False).encode()).hexdigest()}
+    rows = {row['topic_id']: row for row in perspective.get('counting', {}).get('topics', [])}
+    for field in fields.values():
+        row = rows.get(field['topic_id'])
+        field['automatic_review_hints'] = review_hints(field['original'], field['evidence'], row)
+        if row:
+            field['count_explanation'] = count_explanation(row)
     return fields
 
 

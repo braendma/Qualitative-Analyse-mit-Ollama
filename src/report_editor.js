@@ -84,6 +84,7 @@ function installReportEditor(data){
   const toolbar=el('div',undefined,'report-review-tools'),save=el('button','Bericht mit Änderungen speichern'),status=el('p',undefined,'hint');
   toolbar.id='report-review-tools';status.setAttribute('role','status');
   toolbar.append(el('p','Deutungen prüfen und berichtigen: Originalzitate, Quellenkennungen und berechnete Daten sind schreibgeschützt. Textkorrekturen verändern keine Analysedaten oder Folgemodule.'),save,status);
+  toolbar.append(el('p','Automatische Prüfhinweise prüfen ausgewählte deutsche Formulierungen im Originalvorschlag. Sie können fehlen oder unzutreffend sein und werden nach Textänderungen nicht neu berechnet. Kein Hinweis bedeutet keine fachliche Freigabe.','hint'));
   document.getElementById('report-sections').before(toolbar);
   const followups=el('details',undefined,'related-review-tasks');toolbar.append(followups);
   const panels=new Map();
@@ -137,7 +138,9 @@ function installReportEditor(data){
     for(const [value,text] of [['needs_review','Weiterer Prüfbedarf'],['edited','Menschlich bearbeitet'],['reviewed','Von mir anhand der Quellen geprüft']]){const option=el('option',text);option.value=value;state.append(option);}state.id='review-state-'+section.id+'-'+line;labelState.htmlFor=state.id;
     const original=el('details');original.append(el('summary','Unveränderter Modellvorschlag'),el('p',field.original));
     if(field.review_note)node.after(el('p','Dokumentierter Prüfbedarf am Originalvorschlag: '+field.review_note,'warning'));
+    for(const hint of field.automatic_review_hints||[])node.after(el('p','Automatischer Prüfhinweis zum unveränderten Originalvorschlag: '+hint.message+(hint.evidence_ids?.length?' Belege: '+hint.evidence_ids.join(', '):''),'warning automatic-review-hint'));
     const sources=el('details');sources.append(el('summary','Zugeordnete Originalzitate (schreibgeschützt)'));
+    if(field.count_explanation){const counts=el('details',undefined,'count-explanation');counts.append(el('summary','Berechnete Grundlage dieser Deutung'),el('p',field.count_explanation));sources.append(counts);}
     if(field.evidence_note)sources.append(el('p',field.evidence_note,'hint'));
     if(!field.evidence?.length)sources.append(el('p','Für dieses Feld ist kein direktes Originalzitat im Export zugeordnet. Herkunft und Originalbericht unten prüfen; fehlende Belege werden nicht ergänzt.','hint'));
     for(const quote of field.evidence||[]){sources.append(el('p',[quote.person||'Person nicht dokumentiert',quote.id].join(' · ')),el('blockquote',quote.text||'Originaltext in diesem Export nicht verfügbar.'));}

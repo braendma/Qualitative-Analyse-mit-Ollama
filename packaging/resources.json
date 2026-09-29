@@ -107,6 +107,7 @@
     "src/html_report_template.html",
     "src/information_loss_analysis.py",
     "src/information_loss_core.py",
+    "src/interpretation_review.py",
     "src/job_storage.py",
     "src/llm_client.py",
     "src/llm_providers.py",
