@@ -4,6 +4,7 @@
 - **MAXQDA.** `A>B` und `A > B` bezeichnen denselben Pfad. Leere Ebenen wie in `A > > B` führen sowohl in der Segmentdatei als auch im Codebuch zu einer Fehlermeldung mit Zeilennummer. Betroffene Zellen anhand des Originalexports prüfen.
 - **Evidence-Audit.** Signalisiert das Modell ein ausgeschöpftes Antwortlimit, teilt der Audit den betroffenen Block. Jedes Paar aus Befund und möglichem Gegenbeleg wird geprüft. Ist bereits ein einzelnes Paar zu groß, endet der Schritt mit einem sichtbaren Fehler. Teilantworten werden erst nach Prüfung als Ergebnis gespeichert.
 - **Berichtsexport.** Gleiche Kandidatenvorschauen derselben Analysestufe erscheinen einmal im Informationsverlustbericht. Referenzen verbinden sie mit sämtlichen Prüfstellen. Ein Fehler bei der Berichterstellung wird im Laufmanifest der Exportphase zugeordnet. Bereits erfolgreiche Analyseschritte behalten ihren Erfolgsstatus.
+- **Windows-Einrichtung.** Der Starter bevorzugt ein installiertes Python 3.12. Damit verwenden Einrichtung und Paketprüfung die gemeinsam getestete Python-Version.
 - **Bestehende Projekte.** Für die neue Version einen neuen Lauf anlegen. Vorhandene Ergebnisordner und exportierte Berichte bleiben lesbar.
 
 # Version 0.5.2 · Prüfhinweise für Deutungen
