@@ -4,7 +4,7 @@ import json
 import os
 import re
 from pathlib import Path
-from llm_providers import PROVIDERS
+from llm_providers import PROVIDERS, credential_slot
 from runtime_support import atomic_json
 from telegram_notifications import protect
 
@@ -45,7 +45,11 @@ class ProviderKeys:
             try:
                 saved = json.loads(self.path.read_text(encoding='utf-8'))
                 for provider, value in saved.items():
-                    if provider not in PROVIDERS or not PROVIDERS[provider]['env']: continue
+                    if provider.startswith('litellm@'):
+                        if provider != credential_slot('litellm', provider.split('@', 1)[1]):
+                            continue
+                    elif provider == 'litellm' or provider not in PROVIDERS or not PROVIDERS[provider]['env']:
+                        continue
                     self.encrypted[provider] = value
                     self.keys[provider] = protect(base64.b64decode(value, validate=True), decrypt=True).decode()
             except (ValueError, TypeError, UnicodeError, AttributeError, OSError):
@@ -54,12 +58,18 @@ class ProviderKeys:
     def public(self):
         return {'providers': {p: {'has_key': bool(self.keys.get(p)), 'persist': p in self.encrypted}
                               for p in PROVIDERS if PROVIDERS[p]['env']},
+                'proxies': {slot.split('@', 1)[1]: {'has_key': True, 'persist': slot in self.encrypted}
+                            for slot in self.keys if slot.startswith('litellm@')},
                 'can_persist': os.name == 'nt', 'warning': self.warning}
 
-    def save(self, provider, key='', persist=False, remove=False):
+    def get(self, selected):
+        return self.keys.get(credential_slot(selected['provider'], selected.get('proxy_base_url')))
+
+    def save(self, provider, key='', persist=False, remove=False, *, base=None):
         if provider not in PROVIDERS or not PROVIDERS[provider]['env']:
             raise ValueError('Einen Cloud-Anbieter auswählen.')
         if not isinstance(key, str): raise ValueError('Ungültiger API-Schlüssel.')
+        provider = credential_slot(provider, base)
         key = key.strip() or self.keys.get(provider, '')
         if remove: key = ''
         if key and (len(key) > 4096 or any(ord(c) < 33 or ord(c) > 126 for c in key)):

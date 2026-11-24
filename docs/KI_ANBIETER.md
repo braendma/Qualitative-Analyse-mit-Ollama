@@ -9,8 +9,19 @@ Die Oberfläche startet mit `gdpr_relevant: true` und `provider: ollama_local`. 
 | OpenAI | Responses API | `OPENAI_API_KEY` |
 | Anthropic | Messages API | `ANTHROPIC_API_KEY` |
 | Hugging Face | Inference Providers, Chat Completions | `HF_TOKEN` |
+| LiteLLM | Konfigurierbare HTTPS-Basis, Chat Completions | `LITELLM_API_KEY` |
 
-In der Oberfläche werden feste Anbieteradressen verwendet. Eigene Gateways und weitere Anbieter sind noch nicht vorgesehen. Hugging Face kann an weitere Anbieter routen. Das Modell muss im jeweiligen API-Konto verfügbar sein; Namen direkt dort nachsehen. Chat-Abonnements und API-Zugang können unterschiedliche Abrechnung und Berechtigungen haben.
+### LiteLLM und der UP-Proxy
+
+1. Öffne für einen ersten Test ein Projekt mit synthetischen Segmenten und einem passenden Codebuch. Gib im Projekt die Cloud-Verarbeitung ausdrücklich frei.
+2. Wähle **LiteLLM / OpenAI-kompatibler Proxy**. Voreingestellt ist `https://llm.ki.k8s.rz.uni-potsdam.de`. Für einen anderen Proxy gib dessen HTTPS-Basisadresse einschließlich eines gegebenenfalls erforderlichen Pfads wie `/v1` ein.
+3. Speichere den zu dieser Adresse gehörenden Schlüssel im Schlüsselfeld. Die Oberfläche ordnet ihn der vollständigen Basisadresse zu. Für eine andere Adresse ist ein eigener Schlüsseleintrag erforderlich.
+4. Klicke auf **Modelle vom Proxy abrufen** und wähle im Modellfeld eine freigeschaltete Chatmodell-ID. Du kannst die exakte ID auch direkt eingeben. **Modelltest** sendet eine kurze synthetische Anfrage. Ein kleiner Analyselauf prüft zusätzlich, ob das Modell die strukturierten Antworten des gewählten Moduls liefert.
+5. Für die Kommandozeile setze unter `llm` die Felder `provider: litellm`, `gdpr_relevant: false`, `proxy_base_url` und `model`. Stelle den zum gewählten Proxy gehörenden Schlüssel im Prozess als `LITELLM_API_KEY` bereit.
+
+Der Modellabruf übermittelt den Schlüssel an `/models`. Eine Analyse sendet die für das Modul zusammengestellten Texte und Codebuchinformationen an `/chat/completions`. Die Projektfreigabe gilt weiterhin. Die LiteLLM-Option gehört zur Auswertung codierter Texte. [Nutzungshinweise der Universität Potsdam](https://www.uni-potsdam.de/de/gptup/llm-proxy/llm-proxy-nutzungshinweise)
+
+Die direkten Anbieter verwenden weiterhin ihre hinterlegten Adressen. Hugging Face kann an weitere Anbieter routen. Das Modell muss im jeweiligen API-Konto verfügbar sein; Namen direkt dort nachsehen. Chat-Abonnements und API-Zugang können unterschiedliche Abrechnung und Berechtigungen haben.
 
 Schlüssel im separaten Feld speichern, ersetzen oder entfernen. Ohne Windows-Speicheroption bleiben sie nur im laufenden Serverprozess. Optional speichert Windows sie über DPAPI an das Benutzerkonto gebunden verschlüsselt. Die Datei `llm_keys.private.json` liegt außerhalb der Projektordner und gehört nicht in GitHub. Die Anwendung schreibt diese Schlüssel nicht in Argumentlisten, Projektkonfigurationen, Berichtsmetadaten oder Prüfexporte.
 

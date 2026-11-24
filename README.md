@@ -1,6 +1,8 @@
 # Qualitative Analyse mit Ollama
 
-**Version 0.6.1 – öffentliche Vorabversion.** Zwei Arbeitswege in einem Projekt: **Vorhandener Export** für bereits codierte Daten und **Transkription und Codierung** für Audio oder Text. Das ausklappbare Menü links erlaubt den Wechsel zwischen beiden Wegen.
+**Version 0.6.2 – öffentliche Vorabversion.** Zwei Arbeitswege in einem Projekt: **Vorhandener Export** für bereits codierte Daten und **Transkription und Codierung** für Audio oder Text. Das ausklappbare Menü links erlaubt den Wechsel zwischen beiden Wegen.
+
+**Neu in 0.6.2.** LiteLLM verbindet die Analyse mit dem UP-Proxy oder einem eigenen HTTPS-Gateway. Große Informationsverlustberichte bündeln wiederkehrende Vorschauen. Der Evidence-Audit kann Blöcke bei erreichtem Antwortlimit aufteilen. [Einrichtung und Modellwahl](docs/KI_ANBIETER.md) · [Änderungen](docs/RELEASE_NOTES.md)
 
 **Neu in 0.6.1:** Quellengebundene automatische Prüfhinweise und Erklärungen berechneter Bezugsgrößen aus dem stabilen 0.5.2-Patch. Die Hinweise sind begrenzt und ersetzen keine fachliche Prüfung. Transkription, Sprecherzuordnung und Codierung bleiben erhalten.
 

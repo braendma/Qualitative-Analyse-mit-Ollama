@@ -12,7 +12,7 @@ from clusterer_core import ollama_chat, safe_json_loads
 from runtime_support import person_for_segment
 from meta_swot_core import DIMENSIONS, flatten_findings
 from utils_prompt import build_prompt_for_module
-from llm_client import ContextBudgetError
+from llm_client import ContextBudgetError, LLMOutputLimitError
 from parallel_items import completed_items
 from progress_events import update_progress
 
@@ -72,8 +72,30 @@ def map_audit_blocks(audits, counters, build_prompt, params):
                     else:
                         # Fresh full-input retry avoids repeatedly copying invalid prior IDs.
                         raw = _llm(system, user, constrained)
+        def complete_or_split():
+            try:
+                return run()
+            except LLMOutputLimitError:
+                if len(batch) <= 1 and len(candidates) <= 1:
+                    raise
+                split_audits = len(batch) > 1
+                values = batch if split_audits else candidates
+                middle = len(values) // 2
+                children = []
+                for half in (values[:middle], values[middle:]):
+                    aa, cc = (half, candidates) if split_audits else (batch, half)
+                    sy, us = build_prompt(aa, cc)
+                    children.append(compute((aa, cc, sy, us)))
+                merged = {}
+                for aid in sorted(audit_ids):
+                    parts = [child[aid] for child in children if aid in child]
+                    merged[aid] = {
+                        'gegenbeleg_ids': list(dict.fromkeys(cid for part in parts for cid in part['gegenbeleg_ids'])),
+                        'einordnung': '\n\n'.join('Antwortlimit-Teilprüfung: ' + part['einordnung']
+                                                for part in parts if part['einordnung'])}
+                return merged
         return PartCheckpoint('evidence_audit', params).run(
-            {'audits': sorted(audit_ids), 'counters': sorted(allowed)}, {'system': system, 'user': user}, run)
+            {'audits': sorted(audit_ids), 'counters': sorted(allowed)}, {'system': system, 'user': user}, complete_or_split)
     for done, (index, value) in enumerate(completed_items(blocks, compute, min(4, int(params.get('parallel_workers', 1)))), 1):
         results[index] = value
         update_progress(completed=done, total=len(blocks), unit='batches')

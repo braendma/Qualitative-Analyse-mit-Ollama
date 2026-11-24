@@ -23,6 +23,10 @@ class LLMResponseError(LLMError):
     pass
 
 
+class LLMOutputLimitError(LLMResponseError):
+    """The selected model stopped at its output limit."""
+
+
 class ContextBudgetError(LLMError):
     pass
 
@@ -36,7 +40,7 @@ def request_timeout_seconds(settings):
 
 
 def request_chat(backend, request, settings, *, api_key=None):
-    from llm_providers import transport_selection, HTTPChatClient
+    from llm_providers import transport_selection, HTTPChatClient, ProviderOutputLimit
     timeout = request_timeout_seconds(settings)
     try:
         selected = transport_selection(settings, request['model'])
@@ -52,7 +56,7 @@ def request_chat(backend, request, settings, *, api_key=None):
             raise LLMTransportError('Ungültige lokale Laufzeitadresse.')
         host = managed_host
     schema = settings.get('response_schema')
-    if provider == 'ollama_cloud' and schema and settings.get('structured_outputs', True):
+    if provider in ('ollama_cloud', 'litellm') and schema and settings.get('structured_outputs', True):
         # Cloud has no schema-constrained decoding. Preserve the same response
         # contract as prompt guidance; callers still validate the real response.
         request = copy.deepcopy(request)
@@ -84,7 +88,7 @@ def request_chat(backend, request, settings, *, api_key=None):
         client = backend.Client(host=host, headers=headers, verify=ssl.create_default_context(),
                                 timeout=timeout) if hasattr(backend, 'Client') else backend
     else:
-        client = HTTPChatClient(provider, key, timeout)
+        client = HTTPChatClient(provider, key, timeout, base=selected.get('proxy_base_url'))
     attempts = int(settings.get('max_attempts', 3))
     if not 1 <= attempts <= 5:
         raise ValueError('max_attempts muss zwischen 1 und 5 liegen.')
@@ -96,9 +100,16 @@ def request_chat(backend, request, settings, *, api_key=None):
             from progress_events import request_event
             request_event(start=True)
             response = client.chat(**request)
+            if getattr(response, 'done_reason', None) == 'length' or (
+                    isinstance(response, dict) and response.get('done_reason') == 'length'):
+                raise ProviderOutputLimit('Antwortlimit erreicht.')
             request_event()
             logger.info('LLM request completed: model=%s attempt=%s elapsed=%.2fs',
                         request['model'], attempt + 1, time.monotonic() - started)
+        except ProviderOutputLimit:
+            request_event(success=False)
+            receipt.fail('output_limit')
+            raise LLMOutputLimitError('Abgeschnittene Modellantwort; Antwortlimit erreicht.') from None
         except Exception as exc:
             request_event(success=False)
             status = getattr(exc, 'status_code', None)

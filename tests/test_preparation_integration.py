@@ -43,6 +43,21 @@ class Integration(unittest.TestCase):
         second=self.handoff();self.assertNotEqual(first['handoff']['analysis_revision'],second['handoff']['analysis_revision'])
         self.assertEqual(original,(self.service.root/'handoffs'/first['handoff']['snapshot']/'project.json').read_bytes())
         restored=Preparation(App(self.tmp.name),self.pid);self.assertEqual(restored.state()['revision'],2)
+    def test_reviewed_transcript_handoff_retains_litellm_analysis_settings(self):
+        initial = self.app.project(self.pid)['settings']
+        initial.update(provider='litellm', proxy_base_url='https://gateway.example/v1',
+                       model='team/example', gdpr_relevant=False, modules=['clusterer'])
+        atomic_write(self.app.project_dir(self.pid)/'settings.json',initial)
+        checked = self.handoff()['handoff']['validation']
+        self.assertTrue(checked['valid'])
+        self.assertEqual(checked['segments'],1)
+        self.assertEqual(checked['model_calls'],0)
+        analysis = self.app.project(self.pid)['settings']
+        self.assertEqual((analysis['provider'],analysis['proxy_base_url'],analysis['model']),
+                         ('litellm','https://gateway.example/v1','team/example'))
+        with self.assertRaisesRegex(ValueError,'Ollama'):
+            self.service.suggest({'revision':1,'document_id':'d1','mode':'categories','reviewer':'Test'})
+
     def test_reject_stale_unconfirmed_and_modified_quote(self):
         with self.assertRaises(ValueError):self.handoff(revision=0)
         with self.assertRaises(ValueError):self.handoff(confirmed=False)

@@ -190,7 +190,13 @@ FLAGS = {
     'multiple_origins_check_distinct_positions': 'Nachfolgeeintrag mit Referenzen mehrerer Ursprungseinträge: prüfen, ob unterschiedliche Positionen und Kontexte erkennbar bleiben.'}
 
 
-def render_information_loss(result):
+def render_information_loss(result, *, deduplicate_previews=True):
+    catalog = {}
+    def reference(module, row):
+        key = fingerprint([module, row])
+        if key not in catalog:
+            catalog[key] = ('P' + str(len(catalog)+1).zfill(6), module, row)
+        return catalog[key][0]
     lines = ['# Information-Loss-Audit', '', result['methodological_note'], '']
     if result['processing_status'] != 'completed':
         lines += ['Vorläufige Diagnose: Quelle unvollständig oder ungültig. Fehler beheben und Lauf fortsetzen.', '']
@@ -243,6 +249,10 @@ def render_information_loss(result):
             lines += ['### Prüfpunkt ' + markdown_escape(source['record_key']), '']
             lines += ['- ' + FLAGS[flag] for flag in review['flags']] + ['']
             for label, row in [('Vorher', source)] + [('Möglicher Nachfolgeeintrag', r) for r in review['candidates']]:
+                if deduplicate_previews:
+                    mid = edge['source'] if label == 'Vorher' else edge['target']
+                    lines += [label + ': Prüftext ' + reference(mid, row) + ' (' + markdown_escape(row['record_key']) + ')', '']
+                    continue
                 lines += [label + ': ' + markdown_escape(row['record_key']), '',
                           'Referenzen: ' + markdown_escape(', '.join(row['segment_ids'] + row['persons']) or 'keine'), '',
                           markdown_escape(row['text_preview']) or '(kein projizierter Prüftext)', '']
@@ -250,4 +260,17 @@ def render_information_loss(result):
                     lines += [f"Vorschau gekürzt; vollständiger Prüftext umfasst {row['text_characters']} Zeichen. Originalartefakt am angegebenen Eintrag öffnen.", '']
             if review['candidate_previews_omitted']:
                 lines += [f"Weitere {review['candidate_previews_omitted']} Kandidaten im Originalartefakt prüfen; Vorschau begrenzt.", '']
+    if deduplicate_previews:
+        lines += ['## Katalog unveränderter Prüfvorschauen', '',
+                  'Identische Vorschauen derselben Analysestufe werden einmal gezeigt. Sämtliche Prüfpunkte, '
+                  'Kandidatenzuordnungen und Hinweise oben bleiben erhalten. P-Kennungen verweisen auf diesen '
+                  'Katalog. Die vollständigen Originaltexte stehen weiterhin in den benannten Analyseartefakten; '
+                  'die bereits bestehende Vorschaugrenze wird nicht verändert.', '']
+        for rid, module, row in catalog.values():
+            lines += ['### Prüftext ' + rid, '', 'Analysestufe: ' + markdown_escape(module), '',
+                      'Eintrag: ' + markdown_escape(row['record_key']), '',
+                      'Referenzen: ' + markdown_escape(', '.join(row['segment_ids'] + row['persons']) or 'keine'), '',
+                      markdown_escape(row['text_preview']) or '(kein projizierter Prüftext)', '']
+            if row['preview_truncated']:
+                lines += [f"Vorschau gekürzt; vollständiger Prüftext umfasst {row['text_characters']} Zeichen. Originalartefakt am angegebenen Eintrag öffnen.", '']
     return '\n'.join(lines)
