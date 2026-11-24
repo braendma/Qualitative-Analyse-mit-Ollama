@@ -8,9 +8,9 @@
 
 | Download | Voraussetzung | Start |
 |---|---|---|
-| [Windows Standalone](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/download/v0.5.2/QualitativeAnalyse-windows-x64.zip) | Python ist enthalten | ZIP entpacken, `QualitativeAnalyse.exe` öffnen |
-| [Windows mit Python](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/download/v0.5.2/QualitativeAnalyse-0.5.2-windows-python.zip) | Eigene Python-Installation | `Einrichtung.cmd`, dann `Start_Oberflaeche.cmd` |
-| [macOS mit Python](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/download/v0.5.2/QualitativeAnalyse-0.5.2-macos-python.zip) | Eigene Python-Installation | `start/macos/Einrichtung.command`, dann `Start_Oberflaeche.command` |
+| [Windows Standalone](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/download/v0.5.3/QualitativeAnalyse-windows-x64.zip) | Python ist enthalten | ZIP entpacken, `QualitativeAnalyse.exe` öffnen |
+| [Windows mit Python](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/download/v0.5.3/QualitativeAnalyse-0.5.3-windows-python.zip) | Eigene Python-Installation | `Einrichtung.cmd`, dann `Start_Oberflaeche.cmd` |
+| [macOS mit Python](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/download/v0.5.3/QualitativeAnalyse-0.5.3-macos-python.zip) | Eigene Python-Installation | `start/macos/Einrichtung.command`, dann `Start_Oberflaeche.command` |
 
 Alle ZIPs vollständig entpacken. Die beiden Python-Pakete enthalten denselben geprüften Quellstand und jeweils eine passende Startanleitung. Ollama und Modelle werden separat eingerichtet. Ein natives Mac-Paket ist noch nicht enthalten.
 
