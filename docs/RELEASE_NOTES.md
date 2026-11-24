@@ -1,3 +1,14 @@
+# Version 0.6.2 · LiteLLM und Korrekturen für die Auswertung
+
+- **Modellanbindung.** Im Analyseprojekt kann ein LiteLLM-Proxy mit eigener Basisadresse, adressgebundenem Schlüssel und Modellabruf eingerichtet werden. Die Universität Potsdam ist als Vorgabe hinterlegt. Eine ausdrückliche Cloud-Freigabe im Projekt ist erforderlich. [Einrichtung](KI_ANBIETER.md)
+- **MAXQDA.** `A>B` und `A > B` bezeichnen denselben Pfad. Leere Ebenen wie in `A > > B` führen sowohl in der Segmentdatei als auch im Codebuch zu einer Fehlermeldung mit Zeilennummer. Betroffene Zellen anhand des Originalexports prüfen.
+- **Evidence-Audit.** Signalisiert das Modell ein ausgeschöpftes Antwortlimit, teilt der Audit den betroffenen Block. Jedes Paar aus Befund und möglichem Gegenbeleg wird geprüft. Ist bereits ein einzelnes Paar zu groß, endet der Schritt mit einem sichtbaren Fehler. Teilantworten werden erst nach Prüfung als Ergebnis gespeichert.
+- **Berichtsexport.** Gleiche Kandidatenvorschauen derselben Analysestufe erscheinen einmal im Informationsverlustbericht. Referenzen verbinden sie mit sämtlichen Prüfstellen. Ein Fehler bei der Berichterstellung wird im Laufmanifest der Exportphase zugeordnet. Bereits erfolgreiche Analyseschritte behalten ihren Erfolgsstatus.
+- **Windows-Einrichtung der Beta.** Bei mehreren installierten Interpretern bevorzugt die neue Einrichtung Python 3.12 für die festgelegten Transkriptionspakete. Vorhandene Projektumgebungen werden weiterverwendet.
+- **Bestehende Projekte.** Für die neue Version einen neuen Lauf anlegen. Vorhandene Ergebnisordner und exportierte Berichte bleiben lesbar.
+
+Die Vorbereitung mit Transkription, Sprecherzuordnung und Codierung behält ihre bisherige Anbieterwahl. Nach der Übergabe kann LiteLLM im Analyseprojekt verwendet werden.
+
 # Version 0.6.1 · Prüfhinweise für Deutungen (Beta)
 
 Der integrierte Beta-Zweig übernimmt aus dem stabilen 0.5.2-Patch lokale, regelbasierte Hinweise für ausgewählte deutsche Formulierungen: mögliche verlorene Verneinung bei ähnlichem Vorgang und Quellenkontext, Überdehnung von Häufigkeiten zu Repräsentativität/Kausalität/Wirksamkeit, Vollständigkeit als vermeintliche Validierung, falsche Bedeutung von `both`, fehlende Evidenz als vermeintliche Widerlegung, Verwechslung einer Person mit jeder Person sowie direkte Zustimmung zu analytisch abgeleiteten Themen. Die Hinweise sind exakt an den unveränderten Modellabsatz gebunden und ändern weder Texte noch Zuordnungen.

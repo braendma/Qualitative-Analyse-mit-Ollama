@@ -118,6 +118,13 @@ CODEBOOK_RULE_GUIDANCE = (
 )
 
 
+def input_code_parts(code, source, row):
+    parts = [part.strip() for part in str(code).split(">")]
+    if not all(parts) or len(parts) > 4:
+        raise ValueError(f"{source} Zeile {row}: Codepfad benötigt 1 bis 4 ausgefüllte Ebenen, getrennt durch >.")
+    return parts
+
+
 def load_codebook(path: str | Path) -> tuple[list[CodebookEntry], dict[str, CodebookEntry]]:
     path = Path(path)
     if not path.is_file():
@@ -145,9 +152,7 @@ def load_codebook(path: str | Path) -> tuple[list[CodebookEntry], dict[str, Code
         hierarchy = ("kategorie", "unterkategorie", "auspraegung", "facette")
         parts = [values[x] for x in hierarchy if values[x]]
         if values["code"]:
-            explicit = [p.strip() for p in values["code"].split(">")]
-            if not all(explicit) or len(explicit) > 4:
-                raise ValueError(f"Kategoriesystem Zeile {row_index + 2}: Codepfad benötigt 1 bis 4 ausgefüllte Ebenen, getrennt durch >.")
+            explicit = input_code_parts(values["code"], "Kategoriesystem", row_index + 2)
             if parts and parts != explicit:
                 raise ValueError(f"Kategoriesystem Zeile {row_index + 2}: Codepfad und Hierarchiespalten widersprechen sich.")
             if not parts:
@@ -231,7 +236,7 @@ def segments_from_frame(frame, columns_config=None):
     for index, row in frame.reset_index(drop=True).iterrows():
         person = _clean(row[person_col])
         text = str(row[text_col])
-        human_code = PATH_SEPARATOR.join(x.strip() for x in str(row[code_col]).split(">") if x.strip())
+        human_code = PATH_SEPARATOR.join(input_code_parts(row[code_col], "Segmentdatei", index + 2))
         segment_id = _clean(row[id_col]) if id_col else f"{person}#SEG{index:05d}"
         if not segment_id or segment_id in seen:
             raise ValueError(f"Ungültige oder doppelte Segment-ID in Eingabezeile {index + 2}: {segment_id!r}")

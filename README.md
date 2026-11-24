@@ -1,6 +1,8 @@
 # Qualitative Analyse mit Ollama
 
-**Version 0.6.1 – öffentliche Vorabversion.** Zwei Arbeitswege in einem Projekt: **Vorhandener Export** für bereits codierte Daten und **Transkription und Codierung** für Audio oder Text. Das ausklappbare Menü links erlaubt den Wechsel zwischen beiden Wegen.
+**Version 0.6.2 – Betazweig.** Zwei Arbeitswege in einem Projekt: **Vorhandener Export** für bereits codierte Daten und **Transkription und Codierung** für Audio oder Text. Das ausklappbare Menü links erlaubt den Wechsel zwischen beiden Wegen.
+
+**Neu in 0.6.2.** LiteLLM verbindet die Analyse mit dem UP-Proxy oder einem eigenen HTTPS-Gateway. Große Informationsverlustberichte bündeln wiederkehrende Vorschauen. Der Evidence-Audit kann Blöcke bei erreichtem Antwortlimit aufteilen. [Einrichtung und Modellwahl](docs/KI_ANBIETER.md) · [Änderungen](docs/RELEASE_NOTES.md)
 
 **Neu in 0.6.1:** Quellengebundene automatische Prüfhinweise und Erklärungen berechneter Bezugsgrößen aus dem stabilen 0.5.2-Patch. Die Hinweise sind begrenzt und ersetzen keine fachliche Prüfung. Transkription, Sprecherzuordnung und Codierung bleiben erhalten.
 
@@ -8,9 +10,9 @@
 
 | Paket | Einrichtung |
 |---|---|
-| Windows Standalone | ZIP vollständig entpacken, `QualitativeAnalyse.exe` starten. Python ist enthalten. |
-| Windows Python | Python 3.12; `Einrichtung.cmd`, danach `Start_Oberflaeche.cmd`. |
-| macOS Python | Python 3.12; `start/macos/Einrichtung.command`, danach `Start_Oberflaeche.command`. Kein Mac-Standalone. |
+| [Windows Standalone](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/download/v0.6.2/QualitativeAnalyse-0.6.2-windows-x64.zip) | ZIP vollständig entpacken, `QualitativeAnalyse.exe` starten. Python ist enthalten. |
+| [Windows Python](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/download/v0.6.2/QualitativeAnalyse-0.6.2-windows-python.zip) | Python 3.12; `Einrichtung.cmd`, danach `Start_Oberflaeche.cmd`. |
+| [macOS Python](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/download/v0.6.2/QualitativeAnalyse-0.6.2-macos-python.zip) | Python 3.12; `start/macos/Einrichtung.command`, danach `Start_Oberflaeche.command`. Kein Mac-Standalone. |
 
 Projekte liegen standardmäßig in **Dokumente/Qualitative Analyse/Projekte**, Modelle daneben unter **Modelle**. Projektname und tatsächlicher Speicherpfad sind in der Oberfläche sichtbar. Modelle werden nach ausdrücklicher Auswahl einmal zentral heruntergeladen und projektübergreifend wiederverwendet. Audioverarbeitung bleibt lokal auf CPU.
 
