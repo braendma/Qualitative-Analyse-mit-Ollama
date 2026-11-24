@@ -99,7 +99,8 @@
 <label class="checkbox"><input id="gdpr-relevant" type="checkbox" checked> DSGVO-relevantes Material · nur lokal verarbeiten</label>
 <p class="hint">Standardmäßig aktiviert. Nur abwählen, wenn du die Inhalte an einen Cloud-Anbieter übermitteln darfst. Das Abwählen anonymisiert nichts: Textstellen, Kategoriensystem und Projektkontext können an den ausgewählten Dienst gesendet werden. Gilt für neue und fortgesetzte Läufe.</p>
 <fieldset id="cloud-fields" disabled><legend>Optionale Cloud-Verbindung</legend>
-<label for="provider">KI-Anbieter</label><select id="provider"><option value="ollama_local">Ollama · lokal</option><option value="ollama_cloud">Ollama Cloud</option><option value="openai">OpenAI</option><option value="anthropic">Anthropic</option><option value="huggingface">Hugging Face</option></select>
+<label for="provider">KI-Anbieter</label><select id="provider"><option value="ollama_local">Ollama · lokal</option><option value="ollama_cloud">Ollama Cloud</option><option value="openai">OpenAI</option><option value="anthropic">Anthropic</option><option value="huggingface">Hugging Face</option><option value="litellm">LiteLLM / OpenAI-kompatibler Proxy</option></select>
+<div id="proxy-fields" hidden><label for="proxy-base">HTTPS-Basisadresse des Proxys</label><input id="proxy-base" type="url" autocomplete="off" spellcheck="false"><button type="button" id="proxy-models" class="secondary">Modelle vom Proxy abrufen</button></div>
 <div id="key-fields" hidden><label for="provider-key">API-Schlüssel eingeben oder ersetzen</label><input id="provider-key" type="password" autocomplete="off" spellcheck="false" maxlength="4096">
 <label class="file-button compact">Schlüssel aus Textdatei laden<input id="provider-key-file" type="file" accept=".txt,text/plain"></label>
 <label class="checkbox"><input id="persist-provider-key" type="checkbox"> Unter Windows geschützt speichern</label>

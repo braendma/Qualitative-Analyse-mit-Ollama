@@ -1,14 +1,16 @@
 # Qualitative Analyse mit Ollama
 
-**Version 0.5.2.** Prüfungen und Grenzen stehen im [Testbericht](docs/TEST_REPORT.md).
+**Version 0.5.3.** Prüfungen und Grenzen stehen im [Testbericht](docs/TEST_REPORT.md).
+
+**Neu in 0.5.3.** LiteLLM verbindet die Analyse mit dem UP-Proxy oder einem eigenen HTTPS-Gateway. Große Informationsverlustberichte bündeln wiederkehrende Vorschauen. Der Evidence-Audit kann Blöcke bei erreichtem Antwortlimit aufteilen. [Einrichtung und Modellwahl](docs/KI_ANBIETER.md) · [Änderungen](docs/RELEASE_NOTES.md)
 
 [Technischer Kurzbericht (PDF, 3 Seiten)](docs/technical_report/technical_report.pdf) · [Methodischer Überblick](docs/METHODOLOGY.md) · [Handbuch](docs/HANDBUCH.md)
 
 | Download | Voraussetzung | Start |
 |---|---|---|
-| [Windows Standalone](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/download/v0.5.2/QualitativeAnalyse-windows-x64.zip) | Python ist enthalten | ZIP entpacken, `QualitativeAnalyse.exe` öffnen |
-| [Windows mit Python](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/download/v0.5.2/QualitativeAnalyse-0.5.2-windows-python.zip) | Eigene Python-Installation | `Einrichtung.cmd`, dann `Start_Oberflaeche.cmd` |
-| [macOS mit Python](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/download/v0.5.2/QualitativeAnalyse-0.5.2-macos-python.zip) | Eigene Python-Installation | `start/macos/Einrichtung.command`, dann `Start_Oberflaeche.command` |
+| [Windows Standalone](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/download/v0.5.3/QualitativeAnalyse-windows-x64.zip) | Python ist enthalten | ZIP entpacken, `QualitativeAnalyse.exe` öffnen |
+| [Windows mit Python](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/download/v0.5.3/QualitativeAnalyse-0.5.3-windows-python.zip) | Eigene Python-Installation | `Einrichtung.cmd`, dann `Start_Oberflaeche.cmd` |
+| [macOS mit Python](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/download/v0.5.3/QualitativeAnalyse-0.5.3-macos-python.zip) | Eigene Python-Installation | `start/macos/Einrichtung.command`, dann `Start_Oberflaeche.command` |
 
 Alle ZIPs vollständig entpacken. Die beiden Python-Pakete enthalten denselben geprüften Quellstand und jeweils eine passende Startanleitung. Ollama und Modelle werden separat eingerichtet. Ein natives Mac-Paket ist noch nicht enthalten.
 

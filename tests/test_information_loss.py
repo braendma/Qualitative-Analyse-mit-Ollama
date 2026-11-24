@@ -37,6 +37,19 @@ def diagnose(snap):
 
 
 class InformationLossTests(unittest.TestCase):
+    def test_deduplicated_render_preserves_every_review_and_candidate_without_changing_analysis(self):
+        result=diagnose(snapshot(stage(row('b1',['s1'],'Source alpha'),row('b2',['s1'],'Source beta')),
+                                 stage(row('a',['s1'],'Unique candidate preview'))))
+        original=copy.deepcopy(result)
+        compact=render_information_loss(result);legacy=render_information_loss(result,deduplicate_previews=False)
+        self.assertEqual(compact.count('### Prüfpunkt '),legacy.count('### Prüfpunkt '))
+        self.assertEqual(compact.count('Unique candidate preview'),1)
+        self.assertEqual(legacy.count('Unique candidate preview'),2)
+        self.assertEqual(compact.count('Möglicher Nachfolgeeintrag: Prüftext'),2)
+        self.assertEqual(compact.count('### Prüftext '),3)
+        self.assertEqual(result,original)
+
+
     def test_multiple_codes_do_not_turn_row_change_into_lost_material(self):
         snap = snapshot(stage(row('b', ['s1', 's3'])), stage(row('a', ['s2'])))
         original = copy.deepcopy(snap)

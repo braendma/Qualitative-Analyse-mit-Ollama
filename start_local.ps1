@@ -4,10 +4,15 @@ Set-Location -LiteralPath $PSScriptRoot
 $taskPython = Join-Path $PSScriptRoot '.venv\Scripts\python.exe'
 try {
     if (-not (Test-Path -LiteralPath $taskPython)) {
-        $taskLauncher = Get-Command py -ErrorAction SilentlyContinue
+        $taskLauncher = Get-Command py -CommandType Application -ErrorAction SilentlyContinue
+        $taskPathPython = Get-Command python -CommandType Application -ErrorAction SilentlyContinue
         $taskPrefix = @('-3')
-        if (-not $taskLauncher) {
-            $taskLauncher = Get-Command python -ErrorAction SilentlyContinue
+        # The desktop application and its release builds are tested with CPython 3.12.
+        # A generic py -3 can silently select a different installation than PATH.
+        if ($taskLauncher -and ((& $taskLauncher.Source -0p) -match '^\s*-(?:V:)?3\.12(?:[\s-]|$)')) {
+            $taskPrefix = @('-3.12')
+        } elseif ($taskPathPython) {
+            $taskLauncher = $taskPathPython
             $taskPrefix = @()
         }
         if (-not $taskLauncher) { throw 'Python fehlt. Python 3.10 oder neuer installieren und danach Einrichtung.cmd starten.' }
