@@ -1,3 +1,9 @@
+# 0.6.2 · Prüfung vom 24. November 2026
+
+Ein Funktionstest über den LiteLLM-Proxy der Universität Potsdam mit `microsoft/claude-fable-5-2` lief bis zum HTML-Bericht. Ein bestätigtes Segment aus der Transkriptvorbereitung wurde in ein Analyseprojekt übernommen und dort mit dem Clusterer ausgewertet. Die 45 separaten Python-Tests der Vorbereitung bestanden. Die Eingaben waren synthetisch. Ein separater lokaler Modelltest wurde auf Wunsch beendet.
+
+Der Importcheck mit CSV und XLSX erkannte Leerzeichen vor und nach dem Trenner. Eine leere Ebene in `A > > B` führte beim Prüfen der Segmentdatei zur Meldung für Zeile 4 und beim Codebuch zur Meldung für Zeile 3. Modul- und Oberflächentests verwenden simulierte Antworten für Antwortlimits, Teilprüfungen, Wiederaufnahme und Exportfehler. Die Plattform- und Windows-Paketprüfungen sind mit dem jeweiligen Quellstand auf GitHub verknüpft. [Prüfungen des Releasezweigs](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/pull/4/checks)
+
 # 0.6.1 Beta: quellengebundene Deutungsprüfung · 29. September 2026
 
 Der gemeinsame Berichtspatch aus 0.5.2 ist in die integrierte 0.6.0-Basis übernommen. Die vollständige modellfreie Hauptsuite lief mit 1031 Tests (1029 bestanden, zwei vorgesehene Auslassungen). Zusätzlich bestanden 45 Python-Tests für Transkription/Codierung, 97 JavaScript-Prüfungen der Hauptanwendung und fünf JavaScript-Prüfungen der Vorbereitung. Die Transkriptions-, Sprecher- und Codierquellen bleiben gegenüber 0.6.0 bytegleich; dieser Patch führt keine neue ASR- oder Sprecherqualitätsmessung durch.
