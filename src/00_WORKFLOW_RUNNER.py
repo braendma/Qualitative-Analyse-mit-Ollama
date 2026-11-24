@@ -443,7 +443,7 @@ def main(argv=None):
         handlers=[logging.FileHandler(output_dir / "workflow.log", encoding="utf-8"), logging.StreamHandler()], force=True)
     runtime = {"config": str(config_path), "input_csv": str(csv_path), "output_dir": str(output_dir),
                "python": sys.executable, "log_raw_flag": "--log-raw" if args.log_raw else ""}
-    manifest.update(status="running", output_dir=str(canonical_path(output_dir)))
+    manifest.update(status="running", phase="analysis", output_dir=str(canonical_path(output_dir)))
     if "error" in manifest:
         manifest.setdefault("failure_history", []).append({"failed_at": manifest.pop("failed_at", None), "error": manifest.pop("error")})
     manifest.pop("finished_at", None)
@@ -541,16 +541,21 @@ def main(argv=None):
         if any(m['id'] not in completed_steps for m in modules):
             raise RuntimeError('Einige Module warten auf fehlende Vorstufen; kein vollständiger Bericht erstellt.')
         finished_at = datetime.now().isoformat()
+        manifest.update(current_module=None, phase='report_export')
+        atomic_json(output_dir / 'workflow_manifest.json', manifest)
         report_path = build_full_report(output_dir, modules, finished_at)
         manifest['output_hashes'].update({name:file_hash(output_dir/name) for name in ('gesamtbericht.md','gesamtbericht.html')})
-        manifest.update(status="success", current_module=None, finished_at=finished_at, gesamtbericht=str(report_path),
+        manifest.update(status="success", phase="completed", current_module=None, finished_at=finished_at, gesamtbericht=str(report_path),
                         gesamtbericht_html=str(output_dir/'gesamtbericht.html'))
         atomic_json(output_dir / "workflow_manifest.json", manifest)
         LOGGER.info("Workflow abgeschlossen. Lauf-ID: %s. Bericht: %s", run_id, report_path)
     except Exception as exc:
         if manifest.get('current_module'):
             manifest.setdefault('module_status', {})[manifest['current_module']] = 'failed'
-        manifest.update(status="failed", failed_at=datetime.now().isoformat(), error=str(exc))
+        error = str(exc)
+        if manifest.get('phase') == 'report_export':
+            error = 'Berichtsexport fehlgeschlagen. Die Analyseschritte sind abgeschlossen. ' + error
+        manifest.update(status="failed", failed_at=datetime.now().isoformat(), error=error)
         atomic_json(output_dir / "workflow_manifest.json", manifest)
         raise
     finally:

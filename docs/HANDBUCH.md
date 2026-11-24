@@ -4,6 +4,8 @@ Dieses Handbuch begleitet dich vom ersten Start bis zum erneuten Analyselauf mit
 
 Du erreichst die bebilderte Fassung jederzeit über **Handbuch** neben **Telegram-Updates** in der Seitenleiste. Sie öffnet sich in einem eigenen Tab, damit deine aktuelle Arbeit geöffnet bleibt. Ohne laufende Oberfläche kannst du im Windows-Paket `_internal/docs/HANDBUCH.html`, in der Source-Version `docs/HANDBUCH.html` doppelklicken. Den Programmordner einschließlich der Bilder zusammenlassen.
 
+**LiteLLM in der Analyse.** Unter **Analyse** die Cloud-Verarbeitung freigeben, **LiteLLM / OpenAI-kompatibler Proxy** wählen, Basisadresse prüfen und Schlüssel speichern. Anschließend **Modelle vom Proxy abrufen** oder die Modell-ID eintragen. [Anleitung und Kommandozeile](KI_ANBIETER.md)
+
 ## 1. Einrichten und starten
 
 1. **Windows-Paket:** Das vollständige Windows-Paket in einen neuen Ordner entpacken und `QualitativeAnalyse.exe` öffnen. EXE und `_internal` zusammenlassen. Python ist enthalten; keine eigene Python-Installation oder CMD-Einrichtung nötig. [Windows-Kurzanleitung](WINDOWS_STANDALONE.txt).

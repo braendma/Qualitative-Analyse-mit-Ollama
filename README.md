@@ -1,6 +1,8 @@
 # Qualitative Analyse mit Ollama
 
-**Version 0.5.2.** Prüfungen und Grenzen stehen im [Testbericht](docs/TEST_REPORT.md).
+**Version 0.5.3.** Prüfungen und Grenzen stehen im [Testbericht](docs/TEST_REPORT.md).
+
+**Neu in 0.5.3.** LiteLLM verbindet die Analyse mit dem UP-Proxy oder einem eigenen HTTPS-Gateway. Große Informationsverlustberichte bündeln wiederkehrende Vorschauen. Der Evidence-Audit kann Blöcke bei erreichtem Antwortlimit aufteilen. [Einrichtung und Modellwahl](docs/KI_ANBIETER.md) · [Änderungen](docs/RELEASE_NOTES.md)
 
 [Technischer Kurzbericht (PDF, 3 Seiten)](docs/technical_report/technical_report.pdf) · [Methodischer Überblick](docs/METHODOLOGY.md) · [Handbuch](docs/HANDBUCH.md)
 

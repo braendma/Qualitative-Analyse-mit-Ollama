@@ -847,7 +847,7 @@ class App(ReviewWorkspace):
             command=self.runner_command(config,run_parent,pause,run if resume else None)
             env={k:v for k,v in os.environ.items() if k not in KEY_ENVS and not k.startswith('WORKFLOW_') and k not in ('QUALITATIVE_MANAGED_OLLAMA_HOST','OLLAMA_API_KEY','OLLAMA_HOST')}
             if needs_model and selected['provider']!='ollama_local':
-                env[selected['api_key_env']]=self.provider_keys.keys[selected['provider']]
+                env[selected['api_key_env']]=self.provider_keys.get(selected)
             env.update(PYTHONUTF8='1',PYTHONIOENCODING='utf-8',MPLBACKEND='Agg')
             job.update(modules=checked['modules'],error='',provider=selected['provider'],model=selected['model'])
             attempt=uuid.uuid4().hex
@@ -904,7 +904,7 @@ class App(ReviewWorkspace):
         if selected['provider'] != 'ollama_local':
             if self.project(pid)['settings'].get('gdpr_relevant', True):
                 raise ValueError('Cloud-Lauf gesperrt: Für dieses Projekt ist DSGVO-relevantes Material aktiviert. Freigabe unter Analyse prüfen.')
-            if not self.provider_keys.keys.get(selected['provider']):
+            if not self.provider_keys.get(selected):
                 raise ValueError('API-Schlüssel für den gewählten Anbieter zuerst separat speichern.')
         else:
             if os.environ.get('QUALITATIVE_CLOUD_TEST_ONLY') == '1':
@@ -917,7 +917,13 @@ class App(ReviewWorkspace):
         if self.project(pid)['settings'].get('gdpr_relevant', True) and not values.get('remove'):
             raise ValueError('Schlüsselfelder sind bei DSGVO-relevantem Material gesperrt.')
         return self.provider_keys.save(values.get('provider'), values.get('key',''),
-                                       values.get('persist',False), values.get('remove',False))
+                                       values.get('persist',False), values.get('remove',False), base=values.get('proxy_base_url'))
+
+    def list_proxy_models(self, pid, values):
+        from llm_providers import proxy_models
+        # Discovery has no chosen model yet and uses the same project consent as inference.
+        selected = self.authorize_llm(pid, {**values, 'provider': 'litellm', 'model': 'discovery'}, installed=False)
+        return {'models': proxy_models(selected['proxy_base_url'], self.provider_keys.get(selected))}
 
     def model_test(self, pid, values):
         selected = self.authorize_llm(pid, values)
@@ -926,7 +932,7 @@ class App(ReviewWorkspace):
         cfg = {**selected, 'num_ctx': 4096, 'max_attempts': 1, 'timeout_seconds': 90}
         request = {'model': selected['model'], 'messages': [{'role':'user','content':'Antworte ausschließlich mit OK.'}],
                    'options': {'num_predict': 256, 'temperature': 0}, 'think': False}
-        response = request_chat(ollama, request, cfg, api_key=self.provider_keys.keys.get(selected['provider']))
+        response = request_chat(ollama, request, cfg, api_key=self.provider_keys.get(selected))
         if not response['message']['content'].strip(): raise ValueError('Keine sichtbare Modellantwort.')
         return {'ok': True, 'message': PROVIDERS[selected['provider']]['name'] + ': kurze künstliche Testanfrage beantwortet. Kein vollständiger Analysetest.'}
 
@@ -1138,6 +1144,7 @@ class Handler(BaseHTTPRequestHandler):
                 elif path=='/api/upload': result=app.upload(data['project'],data['kind'],data['name'],data['data'],data.get('sheet'))
                 elif path=='/api/local-import': result=app.local_import(data['project'],data['kind'],data['path'],data.get('sheet'),data.get('receipt'))
                 elif path=='/api/privacy': result=app.privacy(data['project'],data['gdpr_relevant'])
+                elif path=='/api/proxy-models': result=app.list_proxy_models(data['project'],data)
                 elif path=='/api/provider-key': result=app.save_provider_key(data['project'],data)
                 elif path=='/api/output-check':
                     app.project_dir(data['project'])
