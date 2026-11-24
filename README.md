@@ -10,9 +10,9 @@
 
 | Paket | Einrichtung |
 |---|---|
-| Windows Standalone | ZIP vollständig entpacken, `QualitativeAnalyse.exe` starten. Python ist enthalten. |
-| Windows Python | Python 3.12; `Einrichtung.cmd`, danach `Start_Oberflaeche.cmd`. |
-| macOS Python | Python 3.12; `start/macos/Einrichtung.command`, danach `Start_Oberflaeche.command`. Kein Mac-Standalone. |
+| [Windows Standalone](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/download/v0.6.2/QualitativeAnalyse-0.6.2-windows-x64.zip) | ZIP vollständig entpacken, `QualitativeAnalyse.exe` starten. Python ist enthalten. |
+| [Windows Python](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/download/v0.6.2/QualitativeAnalyse-0.6.2-windows-python.zip) | Python 3.12; `Einrichtung.cmd`, danach `Start_Oberflaeche.cmd`. |
+| [macOS Python](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/releases/download/v0.6.2/QualitativeAnalyse-0.6.2-macos-python.zip) | Python 3.12; `start/macos/Einrichtung.command`, danach `Start_Oberflaeche.command`. Kein Mac-Standalone. |
 
 Projekte liegen standardmäßig in **Dokumente/Qualitative Analyse/Projekte**, Modelle daneben unter **Modelle**. Projektname und tatsächlicher Speicherpfad sind in der Oberfläche sichtbar. Modelle werden nach ausdrücklicher Auswahl einmal zentral heruntergeladen und projektübergreifend wiederverwendet. Audioverarbeitung bleibt lokal auf CPU.
 

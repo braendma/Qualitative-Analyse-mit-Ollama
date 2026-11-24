@@ -1,6 +1,6 @@
 # 0.6.2 · Prüfung vom 24. November 2026
 
-Ein Funktionstest über den LiteLLM-Proxy der Universität Potsdam mit `microsoft/claude-fable-5-2` lief bis zum HTML-Bericht. Ein bestätigtes Segment aus der Transkriptvorbereitung wurde in ein Analyseprojekt übernommen und dort mit dem Clusterer ausgewertet. Die 45 separaten Python-Tests der Vorbereitung bestanden. Die Eingaben waren synthetisch. Ein separater lokaler Modelltest wurde auf Wunsch beendet.
+Ein Funktionstest über den LiteLLM-Proxy der Universität Potsdam mit `microsoft/claude-fable-5-2` lief bis zum HTML-Bericht. Ein bestätigtes Segment aus der Transkriptvorbereitung wurde in ein Analyseprojekt übernommen und dort mit dem Clusterer ausgewertet. Die 45 separaten Python-Tests der Vorbereitung bestanden. Die Eingaben waren synthetisch. Beim anschließenden lokalen Windows-Test mit `llama3.2:latest` (Q4_K_M) ordnete der Clusterer die beiden synthetischen MAXQDA-Segmente einem Cluster zu. Der Workflow erzeugte den HTML-Bericht.
 
 Der Importcheck mit CSV und XLSX erkannte Leerzeichen vor und nach dem Trenner. Eine leere Ebene in `A > > B` führte beim Prüfen der Segmentdatei zur Meldung für Zeile 4 und beim Codebuch zur Meldung für Zeile 3. Modul- und Oberflächentests verwenden simulierte Antworten für Antwortlimits, Teilprüfungen, Wiederaufnahme und Exportfehler. Die Plattform- und Windows-Paketprüfungen sind mit dem jeweiligen Quellstand auf GitHub verknüpft. [Prüfungen des Releasezweigs](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/pull/4/checks)
 
