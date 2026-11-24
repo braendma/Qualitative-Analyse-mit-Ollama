@@ -1,6 +1,7 @@
 """Synthetic release checks for the desktop proxy and MAXQDA import."""
 import copy
 import json
+import os
 from pathlib import Path
 import sys
 import tempfile
@@ -79,7 +80,7 @@ class ProxyTests(unittest.TestCase):
             opts = {**settings(app), "modules":["clusterer"]}
             app.save(pid, opts)
             config = app.project_dir(pid)/"revisions"/app.project(pid)["revision"]/"config.yaml"
-            with patch("logging.basicConfig"), patch("logging.FileHandler"), \
+            with patch.dict(os.environ), patch("logging.basicConfig"), patch("logging.FileHandler"), \
                     patch.object(RUNNER, "run_step"), patch("managed_ollama.ManagedOllama.start", return_value={}), \
                     patch.object(RUNNER, "build_full_report", side_effect=ValueError("HTML-Grenze")), \
                     self.assertRaisesRegex(ValueError, "HTML-Grenze"):
