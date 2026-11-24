@@ -1,3 +1,9 @@
+# 0.5.3 · Prüfung vom 24. November 2026
+
+Ein Funktionstest über den LiteLLM-Proxy der Universität Potsdam mit `microsoft/claude-fable-5-2` lief bis zum HTML-Bericht. Zwei synthetische MAXQDA-Segmente mit den Schreibweisen `A>B` und `A > B` wurden einem Code zugeordnet. Der Clusterer bildete einen Cluster. Die Eingaben waren synthetisch. Ein separater lokaler Modelltest wurde auf Wunsch beendet.
+
+Der Importcheck mit CSV und XLSX erkannte Leerzeichen vor und nach dem Trenner. Eine leere Ebene in `A > > B` führte beim Prüfen der Segmentdatei zur Meldung für Zeile 4 und beim Codebuch zur Meldung für Zeile 3. Modul- und Oberflächentests verwenden simulierte Antworten für Antwortlimits, Teilprüfungen, Wiederaufnahme und Exportfehler. Die Plattform- und Windows-Paketprüfungen sind mit dem jeweiligen Quellstand auf GitHub verknüpft. [Prüfungen des Releasezweigs](https://github.com/braendma/Qualitative-Analyse-mit-Ollama/pull/5/checks)
+
 # Prüfung des 0.5.2-Patches · 29. September 2026
 
 Der unveränderte Kandidat bestand lokal 1.021 Python-Tests (1.019 bestanden, zwei vorgesehene Skips) und 97 JavaScript-Tests. Acht aus einem synthetischen Granite-Lauf bekannte Originalfelder bilden eine Regression: sieben bestätigte Problemfälle werden markiert, eine ausdrückliche Ausschlussformulierung zur Repräsentativität bleibt ungewarnt. Zusätzliche positive und negative Formulierungen prüfen Regelgrenzen. Das ist keine allgemeine Erkennungsquote oder fachliche Freigabe.
